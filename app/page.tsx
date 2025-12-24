@@ -6,15 +6,19 @@ import { ScrollReveal } from '@/components/scroll-reveal'
 import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Database } from '@/lib/supabase/database.types'
+
+type Product = Database['public']['Tables']['products']['Row']
+type Collection = Database['public']['Tables']['collections']['Row']
 
 async function getProducts() {
   const { data, error } = await supabase
     .from('products')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(8)
+    .limit(8) as { data: Product[] | null; error: any }
 
-  if (error) {
+  if (error || !data) {
     console.error('Error fetching products:', error)
     return []
   }
@@ -26,9 +30,9 @@ async function getCollections() {
   const { data, error } = await supabase
     .from('collections')
     .select('*')
-    .order('display_order', { ascending: true })
+    .order('display_order', { ascending: true }) as { data: Collection[] | null; error: any }
 
-  if (error) {
+  if (error || !data) {
     console.error('Error fetching collections:', error)
     return []
   }
@@ -42,9 +46,9 @@ async function getNewArrivals() {
     .select('*')
     .eq('is_new', true)
     .order('created_at', { ascending: false })
-    .limit(6)
+    .limit(6) as { data: Product[] | null; error: any }
 
-  if (error) {
+  if (error || !data) {
     console.error('Error fetching new arrivals:', error)
     return []
   }

@@ -2,13 +2,17 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/product-card'
+import { Database } from '@/lib/supabase/database.types'
+
+type Collection = Database['public']['Tables']['collections']['Row']
+type Product = Database['public']['Tables']['products']['Row']
 
 async function getCollection(slug: string) {
   const { data, error } = await supabase
     .from('collections')
     .select('*')
     .eq('slug', slug)
-    .single()
+    .single() as { data: Collection | null; error: any }
 
   if (error || !data) {
     return null
@@ -22,9 +26,9 @@ async function getCollectionProducts(collectionName: string) {
     .from('products')
     .select('*')
     .eq('collection', collectionName)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }) as { data: Product[] | null; error: any }
 
-  if (error) {
+  if (error || !data) {
     return []
   }
 

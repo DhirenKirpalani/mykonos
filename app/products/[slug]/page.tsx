@@ -5,13 +5,16 @@ import { formatPrice } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ShoppingBag, Heart } from 'lucide-react'
 import { ProductCarousel } from '@/components/product-carousel'
+import { Database } from '@/lib/supabase/database.types'
+
+type Product = Database['public']['Tables']['products']['Row']
 
 async function getProduct(slug: string) {
   const { data, error } = await supabase
     .from('products')
     .select('*')
     .eq('slug', slug)
-    .single()
+    .single() as { data: Product | null; error: any }
 
   if (error || !data) {
     return null
@@ -26,9 +29,9 @@ async function getRelatedProducts(category: string, currentId: string) {
     .select('*')
     .eq('category', category)
     .neq('id', currentId)
-    .limit(4)
+    .limit(4) as { data: Product[] | null; error: any }
 
-  if (error) {
+  if (error || !data) {
     return []
   }
 
