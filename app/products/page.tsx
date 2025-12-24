@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/product-card'
 import { ProductFilters } from '@/components/product-filters'
+import { Database } from '@/lib/supabase/database.types'
+
+type Product = Database['public']['Tables']['products']['Row']
 
 async function getProducts(searchParams: {
   category?: string
@@ -36,9 +39,9 @@ async function getProducts(searchParams: {
       query = query.order('created_at', { ascending: false })
   }
 
-  const { data, error } = await query
+  const { data, error } = await query as { data: Product[] | null; error: any }
 
-  if (error) {
+  if (error || !data) {
     console.error('Error fetching products:', error)
     return []
   }

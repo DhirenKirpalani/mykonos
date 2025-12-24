@@ -1,13 +1,16 @@
 import { supabase } from '@/lib/supabase/client'
 import { CollectionCard } from '@/components/collection-card'
+import { Database } from '@/lib/supabase/database.types'
+
+type Collection = Database['public']['Tables']['collections']['Row']
 
 async function getCollections() {
   const { data, error } = await supabase
     .from('collections')
     .select('*')
-    .order('display_order', { ascending: true })
+    .order('display_order', { ascending: true }) as { data: Collection[] | null; error: any }
 
-  if (error) {
+  if (error || !data) {
     console.error('Error fetching collections:', error)
     return []
   }

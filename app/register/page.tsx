@@ -49,8 +49,7 @@ export default function RegisterPage() {
 
       // Create user profile in users table
       if (data.user) {
-        const { error: profileError } = await supabase
-          .from('users')
+        const { error: profileError } = await (supabase.from('users') as any)
           .insert({
             id: data.user.id,
             first_name: formData.firstName,
