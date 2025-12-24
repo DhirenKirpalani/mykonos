@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
+import { Database } from '@/lib/supabase/database.types'
+
+type UserProfile = Database['public']['Tables']['users']['Row']
 
 export default function AccountPage() {
   const router = useRouter()
@@ -32,9 +35,9 @@ export default function AccountPage() {
           .from('users')
           .select('*')
           .eq('id', session.user.id)
-          .single()
+          .single() as { data: UserProfile | null; error: any }
 
-        if (profile) {
+        if (profile && !error) {
           setUserData({
             firstName: profile.first_name || '',
             lastName: profile.last_name || '',
@@ -52,13 +55,13 @@ export default function AccountPage() {
             phone: metadata?.phone || '',
           }
 
-          await supabase.from('users').insert(newProfile)
+          await (supabase.from('users') as any).insert(newProfile)
           
           setUserData({
             firstName: newProfile.first_name,
             lastName: newProfile.last_name,
             email: newProfile.email,
-            phone: newProfile.phone,
+            phone: newProfile.phone || '',
           })
         }
       }
@@ -189,15 +192,16 @@ export default function AccountPage() {
                     onClick={async () => {
                       if (!userId) return
 
-                      const { error } = await supabase
-                        .from('users')
-                        .update({
-                          first_name: userData.firstName,
-                          last_name: userData.lastName,
-                          email: userData.email,
-                          phone: userData.phone,
-                          updated_at: new Date().toISOString(),
-                        })
+                      const updateData = {
+                        first_name: userData.firstName,
+                        last_name: userData.lastName,
+                        email: userData.email,
+                        phone: userData.phone,
+                        updated_at: new Date().toISOString(),
+                      }
+
+                      const { error } = await (supabase.from('users') as any)
+                        .update(updateData)
                         .eq('id', userId)
 
                       if (error) {
