@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, Playfair_Display } from 'next/font/google'
+import { Suspense } from 'react'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { AnnouncementBar } from '@/components/layout/announcement-bar'
@@ -39,7 +40,9 @@ export default function RootLayout({
         <Providers>
           <div className="flex min-h-screen flex-col">
             <AnnouncementBar />
-            <Header />
+            <Suspense fallback={<div className="h-16 bg-luxury-navy" />}>
+              <Header />
+            </Suspense>
             <main className="flex-1">{children}</main>
             <Footer />
             <ScrollToTop />
