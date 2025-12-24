@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/product-card'
 import { ProductFilters } from '@/components/product-filters'
@@ -73,7 +74,9 @@ export default async function ProductsPage({
 
       <div className="container mx-auto px-4 py-12 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
-          <ProductFilters />
+          <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-lg bg-gray-100" />}>
+            <ProductFilters />
+          </Suspense>
           <div>
             {products.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
