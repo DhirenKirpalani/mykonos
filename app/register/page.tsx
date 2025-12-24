@@ -37,6 +37,7 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -63,7 +64,12 @@ export default function RegisterPage() {
         }
       }
 
-      // Redirect to login page after successful registration
+      // Show success message and redirect
+      if (data.user && !data.session) {
+        // Email confirmation required
+        alert('Registration successful! Please check your email to confirm your account.')
+      }
+      
       router.push('/login')
     } catch (error: any) {
       setError(error.message || 'Failed to create account')
