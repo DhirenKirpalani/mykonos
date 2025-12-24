@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabase/client'
 import { CollectionCard } from '@/components/collection-card'
 import { Database } from '@/lib/supabase/database.types'
 
+export const dynamic = 'force-dynamic'
+
 type Collection = Database['public']['Tables']['collections']['Row']
 
 async function getCollections() {

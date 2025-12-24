@@ -8,6 +8,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Database } from '@/lib/supabase/database.types'
 
+export const dynamic = 'force-dynamic'
+
 type Product = Database['public']['Tables']['products']['Row']
 type Collection = Database['public']['Tables']['collections']['Row']
 
