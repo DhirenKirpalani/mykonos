@@ -3,6 +3,8 @@ import { ProductCard } from '@/components/product-card'
 import { ProductFilters } from '@/components/product-filters'
 import { Database } from '@/lib/supabase/database.types'
 
+export const dynamic = 'force-dynamic'
+
 type Product = Database['public']['Tables']['products']['Row']
 
 async function getProducts(searchParams: {

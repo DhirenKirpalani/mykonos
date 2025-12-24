@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/product-card'
 import { Database } from '@/lib/supabase/database.types'
 
+export const dynamic = 'force-dynamic'
+
 type Collection = Database['public']['Tables']['collections']['Row']
 type Product = Database['public']['Tables']['products']['Row']
 

@@ -7,6 +7,8 @@ import { ShoppingBag, Heart } from 'lucide-react'
 import { ProductCarousel } from '@/components/product-carousel'
 import { Database } from '@/lib/supabase/database.types'
 
+export const dynamic = 'force-dynamic'
+
 type Product = Database['public']['Tables']['products']['Row']
 
 async function getProduct(slug: string) {
