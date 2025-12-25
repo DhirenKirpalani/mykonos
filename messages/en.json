@@ -1,0 +1,57 @@
+{
+  "nav": {
+    "home": "HOME",
+    "catalog": "CATALOG",
+    "contact": "CONTACT",
+    "sale": "SALE"
+  },
+  "hero": {
+    "title": "Discover Luxury Fragrances",
+    "subtitle": "Experience the art of fine perfumery"
+  },
+  "footer": {
+    "brand": "MYKONOS",
+    "followUs": "FOLLOW US for exclusive news and updates:",
+    "houseOfMykonos": "THE HOUSE OF MYKONOS",
+    "ourStory": "Our Story",
+    "contactUs": "Contact Us",
+    "customerService": "CUSTOMER SERVICE",
+    "shippingPolicy": "Shipping Policy",
+    "returnPolicy": "Return Policy",
+    "helpCenter": "Help Center",
+    "legal": "LEGAL",
+    "termsConditions": "Terms & Conditions",
+    "privacyPolicy": "Privacy Policy",
+    "copyright": "© {year} Mykonos. All rights reserved."
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "We'd love to hear from you. Get in touch with our team.",
+    "sendMessage": "Send us a message",
+    "name": "Name",
+    "email": "Email",
+    "message": "Message",
+    "yourName": "Your name",
+    "yourEmail": "your@email.com",
+    "yourMessage": "Your message...",
+    "submit": "Send Message",
+    "getInTouch": "Get in touch",
+    "whatsapp": "WhatsApp",
+    "businessHours": "Business Hours",
+    "mondayFriday": "Monday - Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "closed": "Closed"
+  },
+  "products": {
+    "new": "NEW",
+    "sale": "SALE",
+    "addToCart": "Add to Cart",
+    "quickAdd": "Quick Add"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  }
+}
