@@ -5,70 +5,58 @@ import { ChevronDown } from 'lucide-react'
 
 const faqs = [
   {
-    category: 'Orders & Shipping',
+    category: 'Ordering',
     questions: [
       {
-        q: 'How long does shipping take?',
-        a: 'Standard shipping takes 5-7 business days. Express shipping is available for 2-3 day delivery.',
+        q: 'HOW TO ORDER?',
+        a: '1. Browse and Select Products - From the home page, click on a category to browse our fragrances. Click the picture of the fragrance you are interested in for their complete description and detailed pictures.\n\n2. Add to Cart and Review Order - Choose your desired size and quantity, and proceed to click the "Add to cart" button. Click the bag icon on the top right of your screen to review your order before payment. However, for an immediate redirection to payment, click the "Buy it now" button after choosing your desired size and quantity.\n\n3. Sign In - For registered shoppers, kindly fill in your registered details and sign in to your account. For unregistered shoppers, kindly fill your details accordingly or create an account for faster checkouts on your next purchase. Please note that the availability of your desired product is not guaranteed before you checkout.\n\n4. Checkout - Choose your desired payment and shipping method, and review and double check your order before payment. If you are ready to finalize your order, click "Pay now".\n\n5. Confirm Payment - Confirm your payment (if you choose the "Bank Transfer" payment method).\n\n6. Finish Shopping - Once done, you can sit back and wait patiently for your order to arrive. Check your order status on the "Orders" page or your registered email.',
       },
       {
-        q: 'Do you offer free shipping?',
-        a: 'Yes, we offer free standard shipping on all orders over $100.',
+        q: 'HOW TO CHECK MY ORDER STATUS?',
+        a: 'You can check your order status on the "Orders" page in your account or through the confirmation email sent to your registered email address.',
       },
       {
-        q: 'Can I track my order?',
-        a: 'Absolutely! Once your order ships, you will receive a tracking number via email.',
+        q: 'CAN I EDIT MY ORDER?',
+        a: 'Once an order has been placed and payment confirmed, we cannot guarantee changes. Please contact us immediately at +62 857-8021-8514 if you need to modify your order.',
       },
     ],
   },
   {
-    category: 'Returns & Refunds',
+    category: 'Shipping & Delivery',
     questions: [
       {
-        q: 'What is your return policy?',
-        a: 'We accept returns within 30 days of delivery for unused products in original packaging.',
+        q: 'WHY IS MY DELIVERY STATUS PENDING OR DELAYED?',
+        a: 'Delivery delays can occur due to courier services, weather conditions, or high order volumes. We work closely with trusted courier partners, but once your package has been handed over to the courier, Mykonos is not responsible for delays. Please contact us at +62 857-8021-8514 for assistance.',
       },
       {
-        q: 'How long do refunds take?',
-        a: 'Refunds are processed within 5-7 business days after we receive your return.',
-      },
-      {
-        q: 'Can I exchange a product?',
-        a: 'Yes, please contact us via WhatsApp at +62 857-8021-8514 to arrange an exchange.',
+        q: 'DO YOU SHIP WORLDWIDE?',
+        a: 'Yes, we offer international shipping. Domestic orders (Indonesia) take 3-5 working days, while international orders take 5-15 working days depending on the destination and customs processing.',
       },
     ],
   },
   {
-    category: 'Products',
+    category: 'Returns & Issues',
     questions: [
       {
-        q: 'Are your fragrances authentic?',
-        a: 'Yes, all our fragrances are 100% authentic and sourced directly from authorized distributors.',
+        q: 'I RECEIVED DAMAGED OR WRONG ITEM.',
+        a: 'Upon receiving your order, please inspect the items and record an unboxing video. If you find any defects, damage, or receive the wrong item, contact us right away at +62 857-8021-8514. Please note that an unboxing video is required to claim a return or refund.',
       },
       {
-        q: 'How should I store my perfume?',
-        a: 'Store perfumes in a cool, dry place away from direct sunlight to maintain their quality.',
-      },
-      {
-        q: 'Do you offer samples?',
-        a: 'Yes, we offer sample sets so you can try our fragrances before committing to a full bottle.',
+        q: 'I ORDERED THE WRONG ITEM.',
+        a: 'We have a 3-day return policy. Contact us at +62 857-8021-8514 to request a return. If accepted, we will send you a return shipping label and instructions. For the quickest exchange, return the item and place a new order for the correct item.',
       },
     ],
   },
   {
-    category: 'Account & Payment',
+    category: 'Store & Products',
     questions: [
       {
-        q: 'Do I need an account to place an order?',
-        a: 'No, you can checkout as a guest. However, creating an account allows you to track orders and save preferences.',
+        q: 'DO YOU HAVE OFFLINE STORE?',
+        a: 'Currently, Mykonos operates exclusively online to provide you with the best prices and widest selection. All orders are processed through our website.',
       },
       {
-        q: 'What payment methods do you accept?',
-        a: 'We accept all major credit cards, PayPal, and other secure payment methods.',
-      },
-      {
-        q: 'Is my payment information secure?',
-        a: 'Yes, we use industry-standard encryption to protect your payment information.',
+        q: 'WILL THERE BE RESTOCKS FOR THE SOLD OUT ITEMS?',
+        a: 'We regularly restock popular items. Please contact us at +62 857-8021-8514 or follow our social media for restock announcements.',
       },
     ],
   },
@@ -87,11 +75,11 @@ export default function FAQsPage() {
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
-          <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
-            Frequently Asked Questions
+          <h1 className="mb-4 font-canela text-4xl font-bold lg:text-5xl">
+            Find your answers here
           </h1>
           <p className="text-lg text-muted-foreground">
-            Find answers to common questions about our products and services
+            Common questions about our products and services
           </p>
         </div>
       </div>
@@ -136,11 +124,11 @@ export default function FAQsPage() {
           ))}
 
           <div className="mt-12 rounded-lg bg-luxury-navy p-8 text-center text-white">
-            <h3 className="mb-4 font-serif text-2xl font-bold">
-              Still have questions?
+            <h3 className="mb-4 font-canela text-2xl font-bold">
+              Couldn't find your answer?
             </h3>
             <p className="mb-6 text-gray-300">
-              Our customer service team is here to help
+              We're here to help. If you couldn't find the information you were looking for, please reach out to us directly. Our team is eager to assist you.
             </p>
             <a
               href="https://wa.me/6285780218514"
@@ -148,7 +136,7 @@ export default function FAQsPage() {
               rel="noopener noreferrer"
               className="inline-block rounded-md bg-luxury-gold px-8 py-3 font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light"
             >
-              Contact Us on WhatsApp
+              Contact Us
             </a>
           </div>
         </div>

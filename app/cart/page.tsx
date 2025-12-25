@@ -39,16 +39,16 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-12 lg:px-8">
-        <h1 className="mb-8 font-serif text-4xl font-bold">Shopping Cart</h1>
+      <div className="container mx-auto px-4 py-6 sm:py-12 lg:px-8">
+        <h1 className="mb-6 font-serif text-3xl font-bold sm:mb-8 sm:text-4xl">Shopping Cart</h1>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-3 lg:gap-8">
           <div className="lg:col-span-2">
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {cartItems.map((item) => (
                 <div
                   key={item.id}
-                  className="flex gap-4 rounded-lg border border-border/40 p-4"
+                  className="flex flex-col gap-3 rounded-lg border border-border/40 p-3 sm:flex-row sm:gap-4 sm:p-4"
                 >
                   <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-luxury-gray-light">
                     <Image
@@ -60,8 +60,8 @@ export default function CartPage() {
                     />
                   </div>
                   <div className="flex flex-1 flex-col">
-                    <div className="flex justify-between">
-                      <div>
+                    <div className="flex justify-between gap-2">
+                      <div className="flex-1">
                         <h3 className="font-medium">{item.name}</h3>
                         <p className="text-sm text-muted-foreground">
                           {item.size}
@@ -69,17 +69,17 @@ export default function CartPage() {
                       </div>
                       <p className="font-medium">{formatPrice(item.price)}</p>
                     </div>
-                    <div className="mt-auto flex items-center justify-between">
+                    <div className="mt-3 flex items-center justify-between sm:mt-auto">
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8">
+                        <Button variant="outline" size="icon" className="h-9 w-9 sm:h-8 sm:w-8">
                           <Minus className="h-4 w-4" />
                         </Button>
-                        <span className="w-8 text-center">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-8 w-8">
+                        <span className="w-10 text-center sm:w-8">{item.quantity}</span>
+                        <Button variant="outline" size="icon" className="h-9 w-9 sm:h-8 sm:w-8">
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-8 sm:w-8">
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     </div>
@@ -90,23 +90,23 @@ export default function CartPage() {
           </div>
 
           <div className="lg:col-span-1">
-            <div className="rounded-lg border border-border/40 p-6">
-              <h2 className="mb-4 font-serif text-2xl font-bold">
+            <div className="sticky top-24 rounded-lg border border-border/40 p-4 sm:p-6">
+              <h2 className="mb-4 font-serif text-xl font-bold sm:text-2xl">
                 Order Summary
               </h2>
               <div className="space-y-3">
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm sm:text-base">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm sm:text-base">
                   <span className="text-muted-foreground">Shipping</span>
                   <span>
                     {shipping === 0 ? 'Free' : formatPrice(shipping)}
                   </span>
                 </div>
                 {subtotal < 150 && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground sm:text-sm">
                     Add {formatPrice(150 - subtotal)} more for free shipping
                   </p>
                 )}
@@ -117,13 +117,13 @@ export default function CartPage() {
                   </div>
                 </div>
               </div>
-              <Link href="/checkout" className="mt-6 block">
-                <Button variant="luxury" size="lg" className="w-full">
+              <Link href="/checkout" className="mt-4 block sm:mt-6">
+                <Button variant="luxury" size="lg" className="h-12 w-full text-base sm:h-auto">
                   Proceed to Checkout
                 </Button>
               </Link>
               <Link href="/products" className="mt-3 block">
-                <Button variant="outline" size="lg" className="w-full">
+                <Button variant="outline" size="lg" className="h-12 w-full text-base sm:h-auto">
                   Continue Shopping
                 </Button>
               </Link>

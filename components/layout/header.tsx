@@ -1,24 +1,32 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react'
+import { Search, ShoppingBag, User, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-
-const navigation = [
-  { name: 'HOME', href: '/' },
-  { name: 'CATALOG', href: '/products' },
-  { name: 'CONTACT', href: '/contact' },
-  { name: 'SALE', href: '/products?sale=true' },
-]
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const { t } = useLanguage()
+
+  const navigation = [
+    { name: t.nav.home, href: '/' },
+    { name: t.nav.catalog, href: '/products' },
+    { name: t.nav.contact, href: '/contact' },
+    { name: t.nav.sale, href: '/products?sale=true' },
+  ]
+
+  // Close search when pathname changes
+  useEffect(() => {
+    setSearchOpen(false)
+  }, [pathname])
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/'
@@ -42,7 +50,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-luxury-navy text-white shadow-lg">
+    <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg">
       <nav className="container mx-auto px-4 lg:px-8">
         {/* Mobile-first header */}
         <div className="flex h-16 items-center justify-between md:h-18">
@@ -64,15 +72,22 @@ export function Header() {
           
           {/* Centered Brand Name */}
           <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-            <span className="font-serif text-2xl font-bold tracking-[0.2em] text-luxury-gold transition-all hover:text-luxury-gold-light md:text-3xl lg:text-4xl">
-              MYKONOS
-            </span>
-          </Link>
+            <span className="font-canela text-2xl font-medium tracking-[0.25em] text-luxury-gold transition-all duration-300 hover:opacity-90 md:text-3xl lg:text-4xl">
+    MYKONOS
+  </span>
+</Link>
+
           
           {/* Right side icons */}
           <div className="flex items-center gap-3 text-white md:gap-4">
+            <LanguageSwitcher />
             <button 
-              className="hidden h-10 w-10 items-center justify-center rounded-lg transition-all hover:bg-white/10 active:scale-95 md:flex"
+              className={cn(
+                "hidden h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95 md:flex",
+                searchOpen 
+                  ? "bg-white/10 text-luxury-gold" 
+                  : "text-white hover:bg-white/10"
+              )}
               onClick={() => setSearchOpen(!searchOpen)}
               aria-label="Search"
             >
@@ -80,14 +95,24 @@ export function Header() {
             </button>
             <Link 
               href="/cart"
-              className="flex h-10 w-10 items-center justify-center rounded-lg transition-all hover:bg-white/10 active:scale-95"
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                pathname === '/cart'
+                  ? "bg-white/10 text-luxury-gold"
+                  : "text-white hover:bg-white/10"
+              )}
               aria-label="Shopping cart"
             >
               <ShoppingBag className="h-5 w-5" />
             </Link>
             <Link 
               href="/account"
-              className="flex h-10 w-10 items-center justify-center rounded-lg transition-all hover:bg-white/10 active:scale-95"
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                pathname.startsWith('/account')
+                  ? "bg-white/10 text-luxury-gold"
+                  : "text-white hover:bg-white/10"
+              )}
               aria-label="Account"
             >
               <User className="h-5 w-5" />

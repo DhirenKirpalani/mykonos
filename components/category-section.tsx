@@ -58,7 +58,7 @@ export function CategorySection() {
           <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold">
             Discover Your Signature
           </p>
-          <h2 className="mb-6 font-serif text-4xl font-bold text-luxury-navy lg:text-5xl">
+          <h2 className="mb-6 font-canela text-4xl font-bold text-luxury-navy lg:text-5xl">
             Fragrance Families
           </h2>
           <p className="mx-auto max-w-2xl text-base text-gray-600 lg:text-lg">
@@ -66,46 +66,46 @@ export function CategorySection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 lg:gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {categories.map((category, index) => {
             const Icon = category.icon
             return (
               <Link
                 key={category.name}
                 href={category.href}
-                className="group relative overflow-hidden rounded-none transition-all duration-500 hover:scale-105"
+                className="group relative overflow-hidden rounded-2xl shadow-lg transition-transform duration-500 hover:scale-105 hover:shadow-2xl"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {/* Background Image */}
-                <div className="relative aspect-[3/4] w-full overflow-hidden">
+                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl">
                   <Image
                     src={category.image}
                     alt={category.name}
                     fill
-                    className="object-cover transition-all duration-700 group-hover:scale-110 group-hover:brightness-110"
+                    className="object-cover transition-transform duration-700 group-hover:scale-110"
                   />
-                  {/* Gradient overlays */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-70" />
-                  <div className="absolute inset-0 bg-luxury-gold/0 transition-all duration-500 group-hover:bg-luxury-gold/10" />
+                  {/* Cinematic Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-80 rounded-2xl" />
+                  <div className="absolute inset-0 bg-luxury-gold/0 transition-all duration-500 group-hover:bg-luxury-gold/10 rounded-2xl" />
                 </div>
 
                 {/* Content Overlay */}
                 <div className="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6 lg:p-6 lg:pb-8">
-                  {/* Icon */}
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-luxury-gold/30 bg-luxury-gold/10 backdrop-blur-md transition-all duration-500 group-hover:border-luxury-gold group-hover:bg-luxury-gold lg:h-12 lg:w-12">
-                    <Icon className="h-5 w-5 text-luxury-gold transition-all duration-500 group-hover:scale-110 lg:h-6 lg:w-6" />
+                  {/* Icon with glow on hover */}
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-luxury-gold/30 bg-black/20 backdrop-blur-md transition-all duration-500 group-hover:border-luxury-gold group-hover:bg-luxury-gold/20 group-hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]">
+                    <Icon className="h-6 w-6 text-luxury-gold transition-transform duration-500 group-hover:scale-125" />
                   </div>
                   
-                  {/* Text */}
-                  <h3 className="mb-2 text-center font-serif text-base font-bold tracking-wide text-white transition-all duration-500 group-hover:text-luxury-gold lg:text-lg">
+                  {/* Title */}
+                  <h3 className="mb-2 text-center font-serif text-base font-bold tracking-wide text-white transition-colors duration-500 group-hover:text-luxury-gold lg:text-lg">
                     {category.name}
                   </h3>
-                  <p className="text-center text-[10px] uppercase tracking-wider text-gray-300 opacity-0 transition-all duration-500 group-hover:opacity-100 lg:text-xs">
+                  <p className="text-center text-[10px] uppercase tracking-wider text-gray-300 opacity-0 transition-opacity duration-500 group-hover:opacity-100 lg:text-xs">
                     {category.description}
                   </p>
-                  
-                  {/* Hover indicator */}
-                  <div className="mt-3 h-0.5 w-0 bg-luxury-gold transition-all duration-500 group-hover:w-12" />
+
+                  {/* Hover underline */}
+                  <div className="mt-3 h-0.5 w-0 bg-luxury-gold transition-all duration-500 group-hover:w-14 rounded-full" />
                 </div>
               </Link>
             )
@@ -115,3 +115,4 @@ export function CategorySection() {
     </section>
   )
 }
+

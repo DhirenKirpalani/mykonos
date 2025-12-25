@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { validatePassword, validateEmail } from '@/lib/validation'
+import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator'
+import { toast } from 'sonner'
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -24,6 +27,31 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    // Validate email format
+    if (!validateEmail(formData.email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
+    // Check if email already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', formData.email)
+      .single()
+
+    if (existingUser) {
+      setError('An account with this email already exists')
+      return
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(formData.password)
+    if (!passwordValidation.isValid) {
+      setError('Password does not meet security requirements. Please check the password strength indicator.')
+      return
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
@@ -48,29 +76,25 @@ export default function RegisterPage() {
 
       if (error) throw error
 
-      // Create user profile in users table
-      if (data.user) {
-        const { error: profileError } = await (supabase.from('users') as any)
-          .insert({
-            id: data.user.id,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            phone: formData.phone,
-          })
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError)
-        }
-      }
-
+      // User profile is automatically created by database trigger
       // Show success message and redirect
       if (data.user && !data.session) {
         // Email confirmation required
-        alert('Registration successful! Please check your email to confirm your account.')
+        toast.success('Registration successful!', {
+          description: 'Please check your email to confirm your account.',
+          duration: 6000,
+        })
+      } else if (data.session) {
+        toast.success('Account created successfully!', {
+          description: 'You can now sign in to your account.',
+          duration: 4000,
+        })
       }
       
-      router.push('/login')
+      // Delay redirect to show toast
+      setTimeout(() => {
+        router.push('/login')
+      }, 1500)
     } catch (error: any) {
       setError(error.message || 'Failed to create account')
     } finally {
@@ -164,6 +188,7 @@ export default function RegisterPage() {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
+                    minLength={8}
                     className="w-full rounded-md border border-input bg-background px-4 py-3 pr-12 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                   />
                   <button
@@ -174,6 +199,7 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                <PasswordStrengthIndicator password={formData.password} />
               </div>
 
               <div>

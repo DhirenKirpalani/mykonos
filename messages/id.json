@@ -1,0 +1,57 @@
+{
+  "nav": {
+    "home": "BERANDA",
+    "catalog": "KATALOG",
+    "contact": "KONTAK",
+    "sale": "DISKON"
+  },
+  "hero": {
+    "title": "Temukan Parfum Mewah",
+    "subtitle": "Rasakan seni parfum berkualitas tinggi"
+  },
+  "footer": {
+    "brand": "MYKONOS",
+    "followUs": "IKUTI KAMI untuk berita dan pembaruan eksklusif:",
+    "houseOfMykonos": "RUMAH MYKONOS",
+    "ourStory": "Cerita Kami",
+    "contactUs": "Hubungi Kami",
+    "customerService": "LAYANAN PELANGGAN",
+    "shippingPolicy": "Kebijakan Pengiriman",
+    "returnPolicy": "Kebijakan Pengembalian",
+    "helpCenter": "Pusat Bantuan",
+    "legal": "HUKUM",
+    "termsConditions": "Syarat & Ketentuan",
+    "privacyPolicy": "Kebijakan Privasi",
+    "copyright": "© {year} Mykonos. Hak cipta dilindungi."
+  },
+  "contact": {
+    "title": "Hubungi Kami",
+    "subtitle": "Kami ingin mendengar dari Anda. Hubungi tim kami.",
+    "sendMessage": "Kirim pesan kepada kami",
+    "name": "Nama",
+    "email": "Email",
+    "message": "Pesan",
+    "yourName": "Nama Anda",
+    "yourEmail": "email@anda.com",
+    "yourMessage": "Pesan Anda...",
+    "submit": "Kirim Pesan",
+    "getInTouch": "Hubungi kami",
+    "whatsapp": "WhatsApp",
+    "businessHours": "Jam Operasional",
+    "mondayFriday": "Senin - Jumat",
+    "saturday": "Sabtu",
+    "sunday": "Minggu",
+    "closed": "Tutup"
+  },
+  "products": {
+    "new": "BARU",
+    "sale": "DISKON",
+    "addToCart": "Tambah ke Keranjang",
+    "quickAdd": "Tambah Cepat"
+  },
+  "common": {
+    "loading": "Memuat...",
+    "error": "Kesalahan",
+    "success": "Berhasil"
+  }
+}

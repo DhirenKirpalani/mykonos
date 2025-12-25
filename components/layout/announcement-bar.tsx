@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const messages = [
   'Discover our redeemable sampler sets. *T&Cs Apply.',
@@ -10,30 +10,72 @@ const messages = [
 ]
 
 export function AnnouncementBar() {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [key, setKey] = useState(0)
+  const [index, setIndex] = useState(0)
+  const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % messages.length)
-      setKey((prev) => prev + 1)
-    }, 10000)
+    const textEl = textRef.current
+    if (!textEl) return
 
-    return () => clearInterval(interval)
-  }, [])
+    const container = textEl.parentElement!
+    const bannerWidth = container.offsetWidth
+    const textWidth = textEl.offsetWidth
+
+    // Center position
+    const centerX = (bannerWidth - textWidth) / 2
+
+    // Reset: start off-screen right
+    textEl.style.transform = `translateX(${bannerWidth}px)`
+
+    // 1️⃣ Right → Center
+    const enter = textEl.animate(
+      [
+        { transform: `translateX(${bannerWidth}px)` },
+        { transform: `translateX(${centerX}px)` },
+      ],
+      {
+        duration: 6000,
+        easing: 'linear',
+        fill: 'forwards',
+      }
+    )
+
+    enter.onfinish = () => {
+      // 2️⃣ Pause at center
+      setTimeout(() => {
+        // 3️⃣ Center → Left (exit)
+        const exit = textEl.animate(
+          [
+            { transform: `translateX(${centerX}px)` },
+            { transform: `translateX(-${textWidth}px)` },
+          ],
+          {
+            duration: 6000,
+            easing: 'linear',
+            fill: 'forwards',
+          }
+        )
+
+        exit.onfinish = () => {
+          // 4️⃣ Next message
+          setIndex((prev) => (prev + 1) % messages.length)
+        }
+      }, 2000)
+    }
+  }, [index])
 
   return (
-    <div className="relative overflow-hidden bg-black text-white shadow-lg">
-      <div className="py-3">
+    <div className="sticky top-0 z-[60] relative overflow-hidden bg-black text-white">
+      <div className="h-10 flex items-center">
         <div
-          key={key}
-          className="animate-scroll-message whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.2em] md:text-xs"
+          ref={textRef}
+          className="absolute whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.2em] md:text-xs"
           style={{
-            textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
             fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            textShadow: '0 2px 8px rgba(0,0,0,0.3)',
           }}
         >
-          {messages[currentIndex]}
+          {messages[index]}
         </div>
       </div>
     </div>
