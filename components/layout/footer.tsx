@@ -1,148 +1,136 @@
-import Link from 'next/link'
-import { Instagram, Facebook, Twitter, MessageCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+'use client'
 
-const footerLinks = {
-  shop: [
-    { name: 'Catalog', href: '/products' },
-    { name: 'Sale', href: '/products?sale=true' },
-    { name: 'Collections', href: '/collections' },
-    { name: 'New Arrivals', href: '/products?new=true' },
-  ],
-  about: [
-    { name: 'Our Story', href: '/about' },
-    { name: 'Contact Us', href: '/contact' },
-  ],
-  customerService: [
-    { name: 'Shipping', href: '/shipping' },
-    { name: 'Return & Refund', href: '/returns' },
-    { name: 'Terms of Service', href: '/terms' },
-    { name: 'FAQs', href: '/faqs' },
-  ],
-}
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Instagram } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { FaTiktok } from 'react-icons/fa'
+import { cn } from '@/lib/utils'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export function Footer() {
+  const pathname = usePathname()
+  const { t } = useLanguage()
+
+  const footerLinks = {
+    about: [
+      { name: t.footer.ourStory, href: '/about' },
+    ],
+    customerService: [
+      { name: t.footer.shippingPolicy, href: '/shipping' },
+      { name: t.footer.returnPolicy, href: '/returns' },
+      { name: t.footer.helpCenter, href: '/faqs' },
+      { name: t.footer.contactUs, href: '/contact' },
+    ],
+    legal: [
+      { name: t.footer.termsConditions, href: '/terms' },
+      { name: t.footer.privacyPolicy, href: '/terms' },
+    ],
+  }
+
+  const isActive = (href: string) => {
+    return pathname === href
+  }
+
   return (
     <footer className="bg-luxury-navy text-white overflow-hidden">
-      <div className="container mx-auto px-4 py-12 lg:px-8 max-w-full">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-5 break-words">
-          <div className="lg:col-span-2 overflow-hidden">
+      <div className="container mx-auto px-4 py-8 sm:py-12 lg:px-8 max-w-full">
+        <div className="flex flex-col gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 break-words">
+          {/* Brand Column */}
+          <div className="overflow-hidden">
             <Link href="/" className="inline-block">
-              <span className="font-serif text-2xl font-bold tracking-tight text-luxury-gold break-words">
+              <span className="font-canela text-2xl font-medium tracking-[0.25em] text-luxury-gold">
                 MYKONOS
               </span>
             </Link>
-            <p className="mt-4 max-w-xs text-sm text-gray-300 break-words">
-              Discover the art of fine perfumery. Each fragrance is a masterpiece,
-              crafted with the finest ingredients from around the world.
-            </p>
-            <div className="mt-6 overflow-hidden">
-              <a
-                href="https://wa.me/6285780218514"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-luxury-gold transition-colors hover:text-luxury-gold-light break-all"
-              >
-                <MessageCircle className="h-4 w-4 flex-shrink-0" />
-                <span className="break-all">WhatsApp: +62 857-8021-8514</span>
-              </a>
-            </div>
-            <div className="mt-6 overflow-hidden">
-              <p className="text-sm font-medium text-white">Subscribe to our newsletter</p>
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="w-full flex-1 rounded-md border border-white/20 bg-luxury-navy-light px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
-                />
-                <Button variant="luxury" size="sm" className="w-full sm:w-auto">
-                  Subscribe
-                </Button>
+            <div className="mt-6">
+              <p className="text-sm font-medium text-white">{t.footer.followUs}</p>
+              <div className="mt-3 flex gap-3">
+                <Link
+                  href="https://www.instagram.com/officialmykonos/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-gray-300 transition-colors hover:border-luxury-gold hover:text-luxury-gold"
+                >
+                  <Instagram className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="https://www.tiktok.com/@mykonosofficial"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-gray-300 transition-colors hover:border-luxury-gold hover:text-luxury-gold"
+                >
+                  <FaTiktok className="h-4 w-4" />
+                </Link>
               </div>
             </div>
           </div>
 
-          {/* Mobile: Horizontal sections */}
-          <div className="col-span-1 grid grid-cols-3 gap-6 lg:col-span-3 lg:grid-cols-3">
-            <div>
-              <h3 className="font-medium text-white">Shop</h3>
-              <ul className="mt-4 space-y-2">
-                {footerLinks.shop.map((link) => (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-gray-300 transition-colors hover:text-luxury-gold"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* About Column */}
+          <div>
+            <h3 className="text-sm font-medium uppercase tracking-wider text-white">{t.footer.houseOfMykonos}</h3>
+            <ul className="mt-4 space-y-2">
+              {footerLinks.about.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "text-sm transition-colors hover:text-luxury-gold",
+                      isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
+                    )}
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            <div>
-              <h3 className="font-medium text-white">About</h3>
-              <ul className="mt-4 space-y-2">
-                {footerLinks.about.map((link) => (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-gray-300 transition-colors hover:text-luxury-gold"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Customer Service Column */}
+          <div>
+            <h3 className="text-sm font-medium uppercase tracking-wider text-white">{t.footer.customerService}</h3>
+            <ul className="mt-4 space-y-2">
+              {footerLinks.customerService.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "text-sm transition-colors hover:text-luxury-gold",
+                      isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
+                    )}
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            <div>
-              <h3 className="font-medium text-white">Customer Service</h3>
-              <ul className="mt-4 space-y-2">
-                {footerLinks.customerService.map((link) => (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-gray-300 transition-colors hover:text-luxury-gold"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Legal Column */}
+          <div>
+            <h3 className="text-sm font-medium uppercase tracking-wider text-white">{t.footer.legal}</h3>
+            <ul className="mt-4 space-y-2">
+              {footerLinks.legal.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "text-sm transition-colors hover:text-luxury-gold",
+                      isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
+                    )}
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
-        <div className="mt-12 border-t border-white/10 pt-8">
-          <div className="flex justify-center gap-4 mb-4">
-            <Link
-              href="https://instagram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 transition-colors hover:text-luxury-gold"
-            >
-              <Instagram className="h-5 w-5" />
-            </Link>
-            <Link
-              href="https://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 transition-colors hover:text-luxury-gold"
-            >
-              <Facebook className="h-5 w-5" />
-            </Link>
-            <Link
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 transition-colors hover:text-luxury-gold"
-            >
-              <Twitter className="h-5 w-5" />
-            </Link>
-          </div>
-          <p className="text-center text-sm text-gray-400">
-            © {new Date().getFullYear()} Mykonos. All rights reserved.
+        {/* Copyright Section */}
+        <div className="mt-8 border-t border-white/10 pt-6">
+          <p className="text-center text-xs text-gray-400">
+            © {new Date().getFullYear()} {t.footer.copyright}
           </p>
         </div>
       </div>

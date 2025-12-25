@@ -2,17 +2,21 @@
 
 import { Button } from '@/components/ui/button'
 import { Mail, Phone, MapPin } from 'lucide-react'
+import { WhatsappLogo } from 'phosphor-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function ContactPage() {
+  const { t } = useLanguage()
+
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
           <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
-            Contact Us
+            {t.contact.title}
           </h1>
           <p className="text-lg text-muted-foreground">
-            We'd love to hear from you. Get in touch with our team.
+            {t.contact.subtitle}
           </p>
         </div>
       </div>
@@ -20,110 +24,82 @@ export default function ContactPage() {
       <div className="container mx-auto px-4 py-12 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-2">
           <div>
-            <h2 className="mb-6 font-serif text-2xl font-bold">Send us a message</h2>
+            <h2 className="mb-6 font-serif text-2xl font-bold">{t.contact.sendMessage}</h2>
             <form className="space-y-6">
               <div>
                 <label htmlFor="name" className="mb-2 block text-sm font-medium">
-                  Name
+                  {t.contact.name}
                 </label>
                 <input
                   type="text"
                   id="name"
                   className="w-full rounded-md border border-input bg-background px-4 py-3 focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
-                  placeholder="Your name"
+                  placeholder={t.contact.yourName}
                 />
               </div>
               <div>
                 <label htmlFor="email" className="mb-2 block text-sm font-medium">
-                  Email
+                  {t.contact.email}
                 </label>
                 <input
                   type="email"
                   id="email"
                   className="w-full rounded-md border border-input bg-background px-4 py-3 focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
-                  placeholder="your@email.com"
-                />
-              </div>
-              <div>
-                <label htmlFor="subject" className="mb-2 block text-sm font-medium">
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  id="subject"
-                  className="w-full rounded-md border border-input bg-background px-4 py-3 focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
-                  placeholder="How can we help?"
+                  placeholder={t.contact.yourEmail}
                 />
               </div>
               <div>
                 <label htmlFor="message" className="mb-2 block text-sm font-medium">
-                  Message
+                  {t.contact.message}
                 </label>
                 <textarea
                   id="message"
                   rows={6}
                   className="w-full rounded-md border border-input bg-background px-4 py-3 focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
-                  placeholder="Your message..."
+                  placeholder={t.contact.yourMessage}
                 />
               </div>
               <Button variant="luxury" size="lg" className="w-full">
-                Send Message
+                {t.contact.submit}
               </Button>
             </form>
           </div>
 
           <div className="space-y-8">
             <div>
-              <h2 className="mb-6 font-serif text-2xl font-bold">Get in touch</h2>
+              <h2 className="mb-6 font-serif text-2xl font-bold">{t.contact.getInTouch}</h2>
               <div className="space-y-6">
-                <div className="flex items-start gap-4">
+                <a
+                  href="https://wa.me/6285780218514"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-4 transition-opacity hover:opacity-80"
+                >
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-luxury-gold/10">
-                    <Mail className="h-6 w-6 text-luxury-gold" />
+                    <WhatsappLogo className="h-6 w-6 text-luxury-gold" weight="fill" />
                   </div>
                   <div>
-                    <p className="font-medium">Email</p>
-                    <p className="text-muted-foreground">contact@mykonos.com</p>
+                    <p className="font-medium">{t.contact.whatsapp}</p>
+                    <p className="text-muted-foreground">+62 857-8021-8514</p>
                   </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-luxury-gold/10">
-                    <Phone className="h-6 w-6 text-luxury-gold" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Phone</p>
-                    <p className="text-muted-foreground">+1 (555) 123-4567</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-luxury-gold/10">
-                    <MapPin className="h-6 w-6 text-luxury-gold" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Address</p>
-                    <p className="text-muted-foreground">
-                      123 Luxury Avenue
-                      <br />
-                      New York, NY 10001
-                    </p>
-                  </div>
-                </div>
+                </a>
               </div>
             </div>
 
             <div className="rounded-lg bg-luxury-gray-light p-6">
-              <h3 className="mb-4 font-serif text-xl font-bold">Business Hours</h3>
+              <h3 className="mb-4 font-serif text-xl font-bold">{t.contact.businessHours}</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Monday - Friday</span>
-                  <span>9:00 AM - 6:00 PM</span>
+                  <span className="text-muted-foreground">{t.contact.mondayFriday}</span>
+                  <span>{t.contact.hours.weekday}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Saturday</span>
-                  <span>10:00 AM - 4:00 PM</span>
+                  <span className="text-muted-foreground">{t.contact.saturday}</span>
+                  <span>{t.contact.hours.saturday}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Sunday</span>
-                  <span>Closed</span>
+                  <span className="text-muted-foreground">{t.contact.sunday}</span>
+                  <span>{t.contact.closed}</span>
                 </div>
               </div>
             </div>
