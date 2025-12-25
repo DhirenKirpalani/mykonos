@@ -80,6 +80,27 @@ CREATE INDEX idx_cart_items_user ON cart_items(user_id);
 CREATE INDEX idx_orders_user ON orders(user_id);
 CREATE INDEX idx_order_items_order ON order_items(order_id);
 
+-- Function to handle new user creation
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, first_name, last_name, email, phone)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'phone', '')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to automatically create user profile
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- Row Level Security (RLS) Policies
 
 -- Users: Users can only access their own profile
@@ -87,6 +108,8 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own profile" ON users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Users can insert their own profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);
+-- Allow service role to insert user profiles (for the trigger)
+CREATE POLICY "Service role can insert user profiles" ON users FOR INSERT WITH CHECK (true);
 
 -- Products: Public read access
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
