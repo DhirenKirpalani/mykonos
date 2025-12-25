@@ -75,23 +75,23 @@ export default async function HomePage() {
         <ProductCarousel title="New Arrivals" products={newArrivals} />
       )}
 
-      <section className="relative bg-luxury-gray-light py-24 lg:py-32">
-        <div className="container mx-auto px-4 lg:px-8">
+      <section className="relative bg-luxury-gray-light py-12 md:py-20 lg:py-32">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <ScrollReveal>
-            <div className="mb-16 text-center">
-              <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold">
+            <div className="mb-8 text-center md:mb-12 lg:mb-16">
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold md:mb-3 md:text-xs md:tracking-[0.3em]">
                 Curated Excellence
               </p>
-              <h2 className="mb-6 font-canela text-4xl font-bold lg:text-5xl">
+              <h2 className="mb-4 font-canela text-2xl font-bold md:mb-6 md:text-3xl lg:text-5xl">
                 Our Collections
               </h2>
-              <p className="mx-auto max-w-2xl text-base text-gray-600 lg:text-lg">
+              <p className="mx-auto max-w-2xl text-sm text-gray-600 md:text-base lg:text-lg">
                 Explore our curated collections, each designed to capture a unique
                 essence and emotion.
               </p>
             </div>
           </ScrollReveal>
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
             {collections.map((collection, index) => (
               <ScrollReveal key={collection.id} delay={index * 100}>
                 <CollectionCard collection={collection} />
@@ -105,24 +105,24 @@ export default async function HomePage() {
         <ProductCarousel title="Trending Now" products={products} />
       )}
 
-      <section className="relative bg-luxury-navy py-32 text-white lg:py-40">
+      <section className="relative bg-luxury-navy py-16 text-white md:py-24 lg:py-40">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.05)_1px,_transparent_0)] bg-[length:40px_40px]" />
-        <div className="container relative mx-auto px-4 text-center lg:px-8">
+        <div className="container relative mx-auto px-4 text-center md:px-6 lg:px-8">
           <ScrollReveal>
-            <p className="mb-4 text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold">
+            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold md:mb-4 md:text-xs md:tracking-[0.3em]">
               The Art of Perfumery
             </p>
-            <h2 className="mb-6 font-serif text-4xl font-bold lg:text-6xl">
+            <h2 className="mb-4 font-serif text-2xl font-bold md:mb-6 md:text-4xl lg:text-6xl">
               Experience Luxury
             </h2>
-            <p className="mx-auto mb-12 max-w-3xl text-lg text-gray-300 lg:text-xl">
+            <p className="mx-auto mb-8 max-w-3xl text-sm text-gray-300 md:mb-12 md:text-base lg:text-xl">
               Each fragrance is a masterpiece, meticulously crafted to evoke
               emotions and create lasting memories.
             </p>
             <Link href="/about">
               <Button
                 size="lg"
-                className="border-2 border-luxury-gold bg-luxury-gold px-8 py-6 text-base font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-white hover:text-luxury-navy hover:border-white"
+                className="border-2 border-luxury-gold bg-luxury-gold px-6 py-3 text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-white hover:text-luxury-navy hover:border-white md:px-8 md:py-6 md:text-base"
               >
                 Discover Our Story
               </Button>
@@ -131,19 +131,19 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="bg-white py-24 lg:py-32">
-        <div className="container mx-auto px-4 lg:px-8">
+      <section className="bg-white py-12 md:py-20 lg:py-32">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <ScrollReveal>
-            <div className="mb-16 text-center">
-              <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold">
+            <div className="mb-8 text-center md:mb-12 lg:mb-16">
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold md:mb-3 md:text-xs md:tracking-[0.3em]">
                 Why Choose Mykonos
               </p>
-              <h2 className="font-serif text-3xl font-bold lg:text-4xl">
+              <h2 className="font-serif text-2xl font-bold md:text-3xl lg:text-4xl">
                 Uncompromising Excellence
               </h2>
             </div>
           </ScrollReveal>
-          <div className="grid gap-12 md:grid-cols-3 lg:gap-16">
+          <div className="grid gap-8 md:grid-cols-3 md:gap-10 lg:gap-16">
             <ScrollReveal delay={0}>
               <div className="group text-center">
               <div className="mb-6 flex justify-center">

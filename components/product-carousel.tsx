@@ -98,78 +98,91 @@ export function ProductCarousel({ title, products }: ProductCarouselProps) {
   }
 
   return (
-    <section className="relative bg-[#FAF9F7] py-28">
-      <div className="mx-auto max-w-7xl px-4 lg:px-8">
+    <section className="relative bg-[#FAF9F7] py-12 md:py-20 lg:py-28">
+      <div className="mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         {/* Title */}
-        <div className="mb-16 text-center">
+        <div className="mb-8 text-center md:mb-12 lg:mb-16">
           <h2
             className="
               font-canela
-              text-3xl
+              text-xl
               uppercase
-              tracking-[0.4em]
+              tracking-[0.3em]
               text-[#C9B27C]
+              md:text-2xl
+              md:tracking-[0.35em]
               lg:text-4xl
+              lg:tracking-[0.4em]
             "
           >
             {title}
           </h2>
-          <div className="mx-auto mt-6 h-px w-16 bg-[#C9B27C]/50" />
+          <div className="mx-auto mt-4 h-px w-12 bg-[#C9B27C]/50 md:mt-6 md:w-16" />
         </div>
 
         <div className="relative">
-          {/* Left Arrow */}
+          {/* Left Arrow - Now visible on mobile */}
           <button
             onClick={() => scroll('left')}
             aria-label="Previous"
             className="
-              absolute left-0 top-1/2 z-10
-              hidden -translate-x-1/2 -translate-y-1/2
+              absolute left-2 top-1/2 z-10
+              flex -translate-y-1/2
               rounded-full
-              bg-[#0F1F36]/90
-              p-3
+              bg-[#0F1F36]/95
+              p-2
               text-[#C9B27C]
-              shadow-xl
+              shadow-lg
               backdrop-blur
-              transition
+              transition-all
+              active:scale-95
               hover:bg-[#162742]
-              lg:flex
+              md:left-0 md:-translate-x-1/2
+              md:p-2.5
+              lg:p-3
             "
           >
-            <ChevronLeft size={22} />
+            <ChevronLeft size={18} className="md:h-5 md:w-5 lg:h-[22px] lg:w-[22px]" />
           </button>
 
-          {/* Right Arrow */}
+          {/* Right Arrow - Now visible on mobile */}
           <button
             onClick={() => scroll('right')}
             aria-label="Next"
             className="
-              absolute right-0 top-1/2 z-10
-              hidden translate-x-1/2 -translate-y-1/2
+              absolute right-2 top-1/2 z-10
+              flex -translate-y-1/2
               rounded-full
-              bg-[#0F1F36]/90
-              p-3
+              bg-[#0F1F36]/95
+              p-2
               text-[#C9B27C]
-              shadow-xl
+              shadow-lg
               backdrop-blur
-              transition
+              transition-all
+              active:scale-95
               hover:bg-[#162742]
-              lg:flex
+              md:right-0 md:translate-x-1/2
+              md:p-2.5
+              lg:p-3
             "
           >
-            <ChevronRight size={22} />
+            <ChevronRight size={18} className="md:h-5 md:w-5 lg:h-[22px] lg:w-[22px]" />
           </button>
 
           {/* Track */}
           <div
             ref={scrollRef}
             className="
-              flex gap-10
+              -mx-4 flex gap-4
               overflow-x-auto
               scroll-smooth
               snap-x snap-mandatory
-              pb-8
+              px-4
+              pb-6
               scrollbar-hide
+              md:mx-0 md:gap-6 md:px-0
+              lg:gap-10
+              lg:pb-8
             "
           >
             {products.map((product) => (
@@ -178,9 +191,12 @@ export function ProductCarousel({ title, products }: ProductCarouselProps) {
                 className="
                   snap-start
                   flex-shrink-0
-                  w-[260px]
-                  sm:w-[300px]
-                  lg:w-[340px]
+                  w-[75vw]
+                  max-w-[280px]
+                  sm:w-[45vw]
+                  sm:max-w-[300px]
+                  md:w-[340px]
+                  md:max-w-none
                 "
               >
                 <ProductCard product={product} />

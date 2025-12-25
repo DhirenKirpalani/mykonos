@@ -73,25 +73,26 @@ export function ProductCard({ product }: ProductCardProps) {
       transition={{ duration: 0.45, ease: 'easeOut' }}
       className="
         group relative
+        w-full
         overflow-hidden
-        rounded-2xl
+        rounded-xl md:rounded-2xl
         bg-gradient-to-b
         from-[#162742]
         via-[#0F1F36]
         to-[#0B1527]
-        shadow-[0_35px_70px_-20px_rgba(0,0,0,0.55)]
+        shadow-lg md:shadow-[0_35px_70px_-20px_rgba(0,0,0,0.55)]
       "
     >
       {/* NEW badge */}
       {product.is_new && (
         <span className="
-          absolute left-5 top-5 z-10
+          absolute left-3 top-3 z-10 md:left-5 md:top-5
           rounded-sm
           border border-[#C9B27C]/70
           bg-black/30
-          px-3 py-1
-          text-[11px]
-          uppercase tracking-[0.3em]
+          px-2 py-0.5 md:px-3 md:py-1
+          text-[10px] md:text-[11px]
+          uppercase tracking-[0.2em] md:tracking-[0.3em]
           text-[#C9B27C]
           backdrop-blur
         ">
@@ -108,11 +109,11 @@ export function ProductCard({ product }: ProductCardProps) {
             alt={product.name}
             fill
             className="
-              object-contain p-10
+              object-contain p-6 md:p-10
               transition-transform duration-700
               group-hover:scale-105
             "
-            sizes="(max-width: 768px) 80vw, 340px"
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 340px"
           />
 
           {/* Light reflection */}
@@ -128,19 +129,20 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Text */}
-        <div className="px-6 py-6 text-center">
+        <div className="px-4 py-4 text-center md:px-6 md:py-6">
           <h3 className="
-            text-sm
+            text-xs md:text-sm
             uppercase
-            tracking-[0.35em]
+            tracking-[0.25em] md:tracking-[0.35em]
             text-[#E6ECF5]
+            line-clamp-1
           ">
             {product.name}
           </h3>
 
           <p className="
-            mt-2
-            text-sm
+            mt-1.5 md:mt-2
+            text-sm md:text-base
             text-[#A8B4C8]
           ">
             {formatPrice(product.price)}

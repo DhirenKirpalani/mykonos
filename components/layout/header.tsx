@@ -51,39 +51,38 @@ export function Header() {
 
   return (
     <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg">
-      <nav className="container mx-auto px-4 lg:px-8">
+      <nav className="container mx-auto px-3 md:px-4 lg:px-8">
         {/* Mobile-first header */}
-        <div className="flex h-16 items-center justify-between md:h-18">
+        <div className="flex h-16 items-center justify-between md:h-18 lg:justify-center">
           {/* Mobile menu button - left side */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg transition-all hover:bg-white/10 active:scale-95 lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:bg-white/10 active:scale-95 md:h-10 md:w-10 lg:hidden"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5 md:h-6 md:w-6" />
             ) : (
-              <Menu className="h-6 w-6" />
+              <Menu className="h-5 w-5 md:h-6 md:w-6" />
             )}
           </button>
 
-          {/* Empty space for alignment */}
-          <div className="hidden lg:block lg:w-20"></div>
+          {/* Left spacer for desktop centering */}
+          <div className="hidden lg:block lg:flex-1"></div>
           
           {/* Centered Brand Name */}
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-            <span className="font-canela text-2xl font-medium tracking-[0.25em] text-luxury-gold transition-all duration-300 hover:opacity-90 md:text-3xl lg:text-4xl">
-    MYKONOS
-  </span>
-</Link>
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
+            <span className="font-canela text-xl font-medium tracking-[0.2em] text-luxury-gold transition-all duration-300 hover:opacity-90 md:text-2xl md:tracking-[0.25em] lg:text-4xl lg:tracking-[0.25em]">
+              MYKONOS
+            </span>
+          </Link>
 
-          
-          {/* Right side icons */}
-          <div className="flex items-center gap-3 text-white md:gap-4">
+          {/* Right spacer and icons */}
+          <div className="flex items-center gap-1.5 text-white md:gap-3 lg:flex-1 lg:justify-end lg:gap-4">
             <LanguageSwitcher />
             <button 
               className={cn(
-                "hidden h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95 md:flex",
+                "hidden h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:flex md:h-10 md:w-10",
                 searchOpen 
                   ? "bg-white/10 text-luxury-gold" 
                   : "text-white hover:bg-white/10"
@@ -91,31 +90,31 @@ export function Header() {
               onClick={() => setSearchOpen(!searchOpen)}
               aria-label="Search"
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-4 w-4 md:h-5 md:w-5" />
             </button>
             <Link 
               href="/cart"
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10",
                 pathname === '/cart'
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
               aria-label="Shopping cart"
             >
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
             </Link>
             <Link 
               href="/account"
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10",
                 pathname.startsWith('/account')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
               aria-label="Account"
             >
-              <User className="h-5 w-5" />
+              <User className="h-4 w-4 md:h-5 md:w-5" />
             </Link>
           </div>
         </div>
