@@ -3,7 +3,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
-          <h1 className="mb-4 font-canela text-4xl font-bold lg:text-5xl">
+          <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
             Terms of Service
           </h1>
           <p className="text-lg text-muted-foreground">

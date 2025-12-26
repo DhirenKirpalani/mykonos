@@ -104,7 +104,7 @@ export function ProductCarousel({ title, products }: ProductCarouselProps) {
         <div className="mb-8 text-center md:mb-12 lg:mb-16">
           <h2
             className="
-              font-canela
+              font-serif
               text-xl
               uppercase
               tracking-[0.3em]

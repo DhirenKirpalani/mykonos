@@ -72,7 +72,7 @@ export function Header() {
           
           {/* Centered Brand Name */}
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
-            <span className="font-canela text-xl font-medium tracking-[0.2em] text-luxury-gold transition-all duration-300 hover:opacity-90 md:text-2xl md:tracking-[0.25em] lg:text-4xl lg:tracking-[0.25em]">
+            <span className="font-serif text-xl font-medium tracking-[0.2em] text-luxury-gold transition-all duration-300 hover:opacity-90 md:text-2xl md:tracking-[0.25em] lg:text-4xl lg:tracking-[0.25em]">
               MYKONOS
             </span>
           </Link>
