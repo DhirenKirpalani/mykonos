@@ -82,7 +82,7 @@ export default async function HomePage() {
               <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold md:mb-3 md:text-xs md:tracking-[0.3em]">
                 Curated Excellence
               </p>
-              <h2 className="mb-4 font-canela text-2xl font-bold md:mb-6 md:text-3xl lg:text-5xl">
+              <h2 className="mb-4 font-serif text-2xl font-bold md:mb-6 md:text-3xl lg:text-5xl">
                 Our Collections
               </h2>
               <p className="mx-auto max-w-2xl text-sm text-gray-600 md:text-base lg:text-lg">

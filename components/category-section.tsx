@@ -58,7 +58,7 @@ export function CategorySection() {
           <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold">
             Discover Your Signature
           </p>
-          <h2 className="mb-6 font-canela text-4xl font-bold text-luxury-navy lg:text-5xl">
+          <h2 className="mb-6 font-serif text-4xl font-bold text-luxury-navy lg:text-5xl">
             Fragrance Families
           </h2>
           <p className="mx-auto max-w-2xl text-base text-gray-600 lg:text-lg">

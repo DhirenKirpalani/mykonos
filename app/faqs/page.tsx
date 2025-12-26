@@ -75,7 +75,7 @@ export default function FAQsPage() {
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
-          <h1 className="mb-4 font-canela text-4xl font-bold lg:text-5xl">
+          <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
             Find your answers here
           </h1>
           <p className="text-lg text-muted-foreground">
@@ -124,7 +124,7 @@ export default function FAQsPage() {
           ))}
 
           <div className="mt-12 rounded-lg bg-luxury-navy p-8 text-center text-white">
-            <h3 className="mb-4 font-canela text-2xl font-bold">
+            <h3 className="mb-4 font-serif text-2xl font-bold">
               Couldn't find your answer?
             </h3>
             <p className="mb-6 text-gray-300">
