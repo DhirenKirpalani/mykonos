@@ -7,6 +7,7 @@ import { AnnouncementBar } from '@/components/layout/announcement-bar'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { ScrollToTop } from '@/components/scroll-to-top'
+import { AssistantWidget } from '@/components/assistant-widget'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -46,6 +47,7 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <ScrollToTop />
+            <AssistantWidget />
           </div>
         </Providers>
       </body>
