@@ -187,14 +187,14 @@ export function AssistantWidget() {
       {/* Toggle Button */}
       <button
         onClick={toggleWidget}
-        className={`group fixed bottom-6 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-luxury-gold to-luxury-gold-light shadow-xl transition-all hover:shadow-2xl md:bottom-8 md:right-8 md:h-16 md:w-16 ${
+        className={`group fixed bottom-6 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-black shadow-xl transition-all hover:shadow-2xl hover:bg-black/90 md:bottom-8 md:right-8 md:h-16 md:w-16 ${
           isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100 hover:scale-110'
         } active:scale-95`}
         aria-label="Open chat"
       >
         <div className="relative">
-          <MessageCircle className="h-6 w-6 text-luxury-navy transition-transform group-hover:scale-110 md:h-7 md:w-7" />
-          <div className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-green-500 ring-2 ring-white"></div>
+          <MessageCircle className="h-6 w-6 text-white transition-transform group-hover:scale-110 md:h-7 md:w-7" />
+          <div className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-green-500 ring-2 ring-black"></div>
         </div>
       </button>
     </>

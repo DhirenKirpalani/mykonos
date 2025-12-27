@@ -69,81 +69,83 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   return (
     <motion.div
-      whileHover={{ y: -6 }}
-      transition={{ duration: 0.45, ease: 'easeOut' }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
       className="
         group relative
         w-full
         overflow-hidden
-        rounded-xl md:rounded-2xl
-        bg-gradient-to-b
-        from-[#162742]
-        via-[#0F1F36]
-        to-[#0B1527]
-        shadow-lg md:shadow-[0_35px_70px_-20px_rgba(0,0,0,0.55)]
+        rounded-lg
+        bg-[#FBF9F5]
+        shadow-[0_2px_8px_rgba(0,0,0,0.08)]
+        hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)]
+        transition-shadow duration-300
       "
     >
       {/* NEW badge */}
       {product.is_new && (
-        <span className="
-          absolute left-3 top-3 z-10 md:left-5 md:top-5
-          rounded-sm
-          border border-[#C9B27C]/70
-          bg-black/30
-          px-2 py-0.5 md:px-3 md:py-1
-          text-[10px] md:text-[11px]
-          uppercase tracking-[0.2em] md:tracking-[0.3em]
-          text-[#C9B27C]
-          backdrop-blur
-        ">
-          New
-        </span>
+        <motion.span
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="
+            absolute left-3 top-3 z-10
+            rounded-sm
+            border border-[#C2A36B]
+            bg-[#1C2E4A]
+            px-2.5 py-1
+            text-[10px]
+            uppercase tracking-[0.2em]
+            text-[#FFFFFF]
+            font-medium
+          "
+        >
+          NEW
+        </motion.span>
       )}
 
       {/* Card link */}
-      <Link href={`/products/${product.slug}`} className="block h-full">
-        {/* Image */}
-        <div className="relative aspect-[3/4]">
+      <Link href={`/products/${product.slug}`} className="block h-full" aria-label={`View ${product.name}`}>
+        {/* Image Frame */}
+        <div className="relative aspect-[3/4] bg-[#F1F4F8] overflow-hidden">
           <Image
             src={product.image_urls[0]}
-            alt={product.name}
+            alt={`${product.name} - ${product.category} fragrance`}
             fill
             className="
-              object-contain p-6 md:p-10
-              transition-transform duration-700
-              group-hover:scale-105
+              object-contain p-6 md:p-8
+              transition-transform duration-500 ease-out
+              group-hover:scale-[1.04]
             "
-            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 340px"
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
+            quality={90}
+            loading="lazy"
           />
-
-          {/* Light reflection */}
-          <div className="
-            pointer-events-none
-            absolute inset-0
-            bg-gradient-to-t
-            from-black/40
-            via-transparent
-            to-white/10
-            opacity-70
-          " />
         </div>
 
         {/* Text */}
-        <div className="px-4 py-4 text-center md:px-6 md:py-6">
+        <div className="px-3 py-3 text-center md:px-4 md:py-4">
           <h3 className="
-            text-xs md:text-sm
+            text-[11px] md:text-xs
             uppercase
-            tracking-[0.25em] md:tracking-[0.35em]
-            text-[#E6ECF5]
+            tracking-[0.15em] md:tracking-[0.2em]
+            text-[#1C2E4A]
+            font-medium
             line-clamp-1
+            transition-colors duration-200
+            group-hover:text-[#1C2E4A]
           ">
             {product.name}
           </h3>
 
           <p className="
             mt-1.5 md:mt-2
-            text-sm md:text-base
-            text-[#A8B4C8]
+            text-xs md:text-sm
+            text-[#8A6A3F]
+            font-medium
+            tracking-wide
+            transition-all duration-300
+            group-hover:tracking-wider
           ">
             {formatPrice(product.price)}
           </p>

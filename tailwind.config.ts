@@ -91,12 +91,27 @@ const config: Config = {
           from: { transform: 'translateX(100%)' },
           to: { transform: 'translateX(0)' },
         },
+        'spin-smooth': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        'pulse-subtle': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.6' },
+        },
+        'pulse-glow': {
+          '0%, 100%': { opacity: '0.3', transform: 'scale(1)' },
+          '50%': { opacity: '0.6', transform: 'scale(1.05)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.5s ease-out',
         'slide-in-right': 'slide-in-right 0.3s ease-out',
+        'spin-smooth': 'spin-smooth 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+        'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
+        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
       },
     },
   },

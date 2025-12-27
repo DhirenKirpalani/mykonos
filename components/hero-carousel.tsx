@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAccessibility } from '@/contexts/AccessibilityContext'
 
 const slides = [
   {
@@ -38,19 +38,34 @@ const slides = [
 
 export function HeroCarousel() {
   const [[currentSlide, direction], setCurrentSlide] = useState([0, 0])
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const { isAccessibilityMode } = useAccessibility()
 
-  // Auto-play
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setPrefersReducedMotion(mediaQuery.matches)
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches)
+    }
+
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
+  useEffect(() => {
+    if (prefersReducedMotion || isAccessibilityMode) return
+
     const timer = setInterval(() => {
       setCurrentSlide(([prev]) => [(prev + 1) % slides.length, 1])
     }, 6000)
     return () => clearInterval(timer)
-  }, [])
+  }, [prefersReducedMotion, isAccessibilityMode])
 
-  const nextSlide = () => setCurrentSlide(([prev]) => [(prev + 1) % slides.length, 1])
-  const prevSlide = () => setCurrentSlide(([prev]) => [(prev - 1 + slides.length) % slides.length, -1])
-  const goToSlide = (index: number) =>
-    setCurrentSlide(([prev]) => [index, index > prev ? 1 : -1])
+  const nextSlide = useCallback(() => setCurrentSlide(([prev]) => [(prev + 1) % slides.length, 1]), [])
+  const prevSlide = useCallback(() => setCurrentSlide(([prev]) => [(prev - 1 + slides.length) % slides.length, -1]), [])
+  const goToSlide = useCallback((index: number) =>
+    setCurrentSlide(([prev]) => [index, index > prev ? 1 : -1]), [])
 
   const variants = {
     enter: (dir: number) => ({
@@ -68,21 +83,29 @@ export function HeroCarousel() {
   }
 
   return (
-    <div className="relative h-[60vh] md:h-[70vh] lg:h-[85vh] overflow-hidden bg-black">
+    <div 
+      className="relative h-[60vh] md:h-[70vh] lg:h-[85vh] overflow-hidden bg-black"
+      role="region"
+      aria-label="Hero carousel"
+      aria-roledescription="carousel"
+    >
       {/* Slides */}
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={currentSlide}
           custom={direction}
           variants={variants}
-          initial="enter"
+          initial={prefersReducedMotion || isAccessibilityMode ? "center" : "enter"}
           animate="center"
-          exit="exit"
-          transition={{
+          exit={prefersReducedMotion || isAccessibilityMode ? "center" : "exit"}
+          transition={prefersReducedMotion || isAccessibilityMode ? { duration: 0 } : {
             x: { type: 'spring', stiffness: 300, damping: 30 },
             opacity: { duration: 0.5 },
           }}
           className="absolute inset-0"
+          role="group"
+          aria-roledescription="slide"
+          aria-label={`Slide ${currentSlide + 1} of ${slides.length}: ${slides[currentSlide].title}`}
         >
           {/* Background */}
           <div className="absolute inset-0">
@@ -92,6 +115,10 @@ export function HeroCarousel() {
               fill
               className="object-cover opacity-70"
               priority
+              quality={90}
+              sizes="100vw"
+              placeholder="blur"
+              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k="
             />
             <div className="absolute inset-0 bg-black/40" />
           </div>
@@ -140,32 +167,21 @@ export function HeroCarousel() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Arrows */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/20 p-2.5 backdrop-blur-md transition-all hover:bg-white/30 active:scale-95 md:left-4 md:p-3 lg:left-8"
-        aria-label="Previous slide"
-      >
-        <ChevronLeft className="h-5 w-5 text-white md:h-6 md:w-6" />
-      </button>
-      <button
-        onClick={nextSlide}
-        className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/20 p-2.5 backdrop-blur-md transition-all hover:bg-white/30 active:scale-95 md:right-4 md:p-3 lg:right-8"
-        aria-label="Next slide"
-      >
-        <ChevronRight className="h-5 w-5 text-white md:h-6 md:w-6" />
-      </button>
-
       {/* Dots */}
-      <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3">
+      <div 
+        className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3"
+        role="group"
+        aria-label="Carousel navigation"
+      >
         {slides.map((_, i) => (
           <button
             key={i}
             onClick={() => goToSlide(i)}
-            className={`h-2 rounded-full transition-all ${
+            className={`h-2 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 ${
               i === currentSlide ? 'w-12 bg-yellow-400' : 'w-2 bg-white/40 hover:bg-white/60'
             }`}
             aria-label={`Go to slide ${i + 1}`}
+            aria-current={i === currentSlide ? 'true' : 'false'}
           />
         ))}
       </div>
