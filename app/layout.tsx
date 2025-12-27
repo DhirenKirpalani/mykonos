@@ -50,20 +50,11 @@ export const metadata: Metadata = {
     siteName: 'Mykonos',
     title: 'Mykonos - Luxury Fragrances & Perfumes',
     description: 'Discover exquisite luxury fragrances and perfumes. Experience the art of fine perfumery with our exclusive collections of niche and haute perfumery.',
-    images: [
-      {
-        url: '/assets/images/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Mykonos Luxury Fragrances',
-      },
-    ],
   },
   twitter: {
-    card: 'summary_large_image',
+    card: 'summary',
     title: 'Mykonos - Luxury Fragrances & Perfumes',
     description: 'Discover exquisite luxury fragrances and perfumes. Experience the art of fine perfumery with our exclusive collections.',
-    images: ['/assets/images/og-image.jpg'],
     creator: '@mykonos',
   },
   robots: {
@@ -98,8 +89,6 @@ export default function RootLayout({
     name: 'Mykonos',
     description: 'Luxury fragrances and perfumes boutique offering exclusive niche and haute perfumery collections',
     url: 'https://mykonos.com',
-    logo: 'https://mykonos.com/assets/images/logo.png',
-    image: 'https://mykonos.com/assets/images/og-image.jpg',
     priceRange: '$$$$',
     '@id': 'https://mykonos.com/#store',
     potentialAction: {
