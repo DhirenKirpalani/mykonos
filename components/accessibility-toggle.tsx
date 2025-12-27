@@ -16,7 +16,7 @@ export function AccessibilityToggle() {
   if (!mounted) return null
 
   return (
-    <div className="fixed bottom-8 left-24 z-50 flex flex-col items-start gap-2">
+    <div className="fixed bottom-24 left-8 lg:bottom-8 lg:left-24 z-50 flex flex-col items-start gap-2">
       <AnimatePresence>
         {isExpanded && (
           <motion.div
