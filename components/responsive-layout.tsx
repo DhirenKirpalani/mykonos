@@ -6,7 +6,7 @@ import { Database } from '@/lib/supabase/database.types'
 
 const HomeDesktop = dynamic(() => import('@/components/home-desktop').then(mod => ({ default: mod.HomeDesktop })), {
   loading: () => (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy overflow-hidden">
       <div className="flex flex-col items-center gap-6">
         <div className="relative">
           <h2 className="font-serif text-4xl font-medium tracking-[0.3em] text-luxury-gold md:text-5xl animate-pulse-subtle">
@@ -31,7 +31,7 @@ const HomeDesktop = dynamic(() => import('@/components/home-desktop').then(mod =
 
 const HomeMobile = dynamic(() => import('@/components/home-mobile').then(mod => ({ default: mod.HomeMobile })), {
   loading: () => (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy overflow-hidden">
       <div className="flex flex-col items-center gap-6">
         <div className="relative">
           <h2 className="font-serif text-4xl font-medium tracking-[0.3em] text-luxury-gold md:text-5xl animate-pulse-subtle">
@@ -93,7 +93,7 @@ export function ResponsiveLayout({ products, collections, newArrivals }: Respons
 
   if (!isClient) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy">
+      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy overflow-hidden">
         <div className="flex flex-col items-center gap-6">
           <div className="relative">
             <h2 className="font-serif text-4xl font-medium tracking-[0.3em] text-luxury-gold md:text-5xl animate-pulse-subtle">

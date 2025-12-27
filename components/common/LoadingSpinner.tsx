@@ -1,6 +1,6 @@
 export function LoadingSpinner() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy overflow-hidden">
       <div className="flex flex-col items-center gap-6">
         {/* Brand Logo */}
         <div className="relative">
