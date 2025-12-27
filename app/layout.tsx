@@ -39,9 +39,12 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: '/assets/images/favicon.ico',
-    apple: '/assets/images/favicon.ico',
-    shortcut: '/assets/images/favicon.ico',
+    icon: [
+      { url: '/assets/images/mykonos-logo.png', type: 'image/png' },
+      { url: '/assets/images/favicon.ico', sizes: 'any' },
+    ],
+    apple: '/assets/images/mykonos-logo.png',
+    shortcut: '/assets/images/mykonos-logo.png',
   },
   openGraph: {
     type: 'website',
