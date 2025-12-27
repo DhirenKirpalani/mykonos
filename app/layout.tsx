@@ -8,6 +8,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { AssistantWidget } from '@/components/assistant-widget'
+import { AccessibilityToggle } from '@/components/accessibility-toggle'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -48,6 +49,7 @@ export default function RootLayout({
             <Footer />
             <ScrollToTop />
             <AssistantWidget />
+            <AccessibilityToggle />
           </div>
         </Providers>
       </body>

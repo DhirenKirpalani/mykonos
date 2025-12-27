@@ -117,4 +117,156 @@
   .active\:scale-95:active {
     transform: scale(0.95);
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
 }
+
+/* Accessibility Mode Styles */
+html[data-accessibility="true"] {
+  /* Reduced Motion */
+  --transition-duration: 0ms !important;
+}
+
+html[data-accessibility="true"] *,
+html[data-accessibility="true"] *::before,
+html[data-accessibility="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* High Contrast Mode */
+html[data-accessibility="true"] {
+  /* Enhanced text contrast */
+  --text-contrast-boost: 1.2;
+}
+
+html[data-accessibility="true"] body {
+  color: #000000;
+}
+
+html[data-accessibility="true"] .text-gray-600 {
+  color: #333333 !important;
+}
+
+html[data-accessibility="true"] .text-gray-400 {
+  color: #555555 !important;
+}
+
+html[data-accessibility="true"] .text-gray-300 {
+  color: #666666 !important;
+}
+
+/* Enhanced Focus Visibility */
+html[data-accessibility="true"] *:focus {
+  outline: 3px solid #D4AF37 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3) !important;
+}
+
+html[data-accessibility="true"] button:focus,
+html[data-accessibility="true"] a:focus,
+html[data-accessibility="true"] input:focus,
+html[data-accessibility="true"] select:focus,
+html[data-accessibility="true"] textarea:focus {
+  outline: 3px solid #D4AF37 !important;
+  outline-offset: 3px !important;
+}
+
+/* Readable Typography */
+html[data-accessibility="true"] {
+  font-size: 17px !important;
+  line-height: 1.7 !important;
+}
+
+html[data-accessibility="true"] body {
+  line-height: 1.7 !important;
+}
+
+html[data-accessibility="true"] p,
+html[data-accessibility="true"] li,
+html[data-accessibility="true"] span {
+  line-height: 1.7 !important;
+}
+
+html[data-accessibility="true"] h1,
+html[data-accessibility="true"] h2,
+html[data-accessibility="true"] h3,
+html[data-accessibility="true"] h4,
+html[data-accessibility="true"] h5,
+html[data-accessibility="true"] h6 {
+  line-height: 1.4 !important;
+  font-weight: 700 !important;
+}
+
+/* Button and Interactive Element Enhancements */
+html[data-accessibility="true"] button,
+html[data-accessibility="true"] a {
+  border: 2px solid transparent !important;
+  transition: none !important;
+}
+
+html[data-accessibility="true"] button:hover,
+html[data-accessibility="true"] a:hover {
+  border-color: #D4AF37 !important;
+}
+
+/* Disable Auto-scroll and Animations */
+html[data-accessibility="true"] .animate-scroll-left,
+html[data-accessibility="true"] .animate-scroll-message,
+html[data-accessibility="true"] .animate-fade-in,
+html[data-accessibility="true"] .animate-slide-in-right,
+html[data-accessibility="true"] .animate-pulse,
+html[data-accessibility="true"] .animate-spin,
+html[data-accessibility="true"] .animate-spin-smooth,
+html[data-accessibility="true"] .animate-pulse-subtle,
+html[data-accessibility="true"] .animate-pulse-glow {
+  animation: none !important;
+}
+
+/* Ensure smooth transitions are disabled */
+html[data-accessibility="true"] .transition-all,
+html[data-accessibility="true"] .transition-colors,
+html[data-accessibility="true"] .transition-transform,
+html[data-accessibility="true"] .transition-opacity {
+  transition: none !important;
+}
+
+/* Respect prefers-reduced-motion system setting */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-spin-smooth,
+  .animate-pulse-subtle,
+  .animate-pulse-glow,
+  .animate-spin,
+  .animate-pulse {
+    animation: none !important;
+  }
+}
+

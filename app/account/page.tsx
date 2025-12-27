@@ -82,10 +82,23 @@ export default function AccountPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-luxury-gold border-t-transparent mx-auto"></div>
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <h2 className="font-serif text-4xl font-medium tracking-[0.3em] text-luxury-gold md:text-5xl animate-pulse-subtle">
+              MYKONOS
+            </h2>
+            <div className="absolute -inset-4 bg-luxury-gold/5 blur-2xl rounded-full"></div>
+          </div>
+          <div className="relative h-14 w-14 md:h-16 md:w-16">
+            <div className="absolute inset-0 rounded-full border-[3px] border-luxury-gold/20"></div>
+            <div className="absolute inset-0 animate-spin-smooth rounded-full border-[3px] border-transparent border-t-luxury-gold border-r-luxury-gold/60"></div>
+            <div className="absolute inset-2 rounded-full bg-luxury-gold/5 animate-pulse-glow"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-2 w-2 rounded-full bg-luxury-gold animate-pulse-subtle"></div>
+            </div>
+          </div>
+          <span className="sr-only">Loading content, please wait</span>
         </div>
       </div>
     )

@@ -49,19 +49,19 @@ const categories = [
 
 export function CategorySection() {
   return (
-    <section className="relative bg-white py-20 lg:py-32">
+    <section className="relative bg-[#EFE6D3] py-20 lg:py-32">
       {/* Subtle pattern overlay */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(0,0,0,0.02)_1px,_transparent_0)] bg-[length:40px_40px]" />
       
       <div className="container relative mx-auto px-4 lg:px-8">
         <div className="mb-16 text-center">
-          <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-[#8A6A3F]/80">
             Discover Your Signature
           </p>
-          <h2 className="mb-6 font-serif text-4xl font-bold text-luxury-navy lg:text-5xl">
+          <h2 className="mb-6 font-serif text-4xl font-bold text-[#3A2A1A] lg:text-5xl">
             Fragrance Families
           </h2>
-          <p className="mx-auto max-w-2xl text-base text-gray-600 lg:text-lg">
+          <p className="mx-auto max-w-2xl text-base text-[#5A4A3A]/90 lg:text-lg">
             Each scent tells a story. Find yours among our carefully curated collections
           </p>
         </div>
@@ -73,7 +73,7 @@ export function CategorySection() {
               <Link
                 key={category.name}
                 href={category.href}
-                className="group relative overflow-hidden rounded-2xl shadow-lg transition-transform duration-500 hover:scale-105 hover:shadow-2xl"
+                className="group relative overflow-hidden rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all duration-500 hover:scale-105 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {/* Background Image */}
@@ -84,28 +84,27 @@ export function CategorySection() {
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                   />
-                  {/* Cinematic Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-80 rounded-2xl" />
-                  <div className="absolute inset-0 bg-luxury-gold/0 transition-all duration-500 group-hover:bg-luxury-gold/10 rounded-2xl" />
+                  {/* Photographic Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent transition-opacity duration-500 group-hover:from-black/55 rounded-2xl" />
                 </div>
 
                 {/* Content Overlay */}
                 <div className="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6 lg:p-6 lg:pb-8">
-                  {/* Icon with glow on hover */}
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-luxury-gold/30 bg-black/20 backdrop-blur-md transition-all duration-500 group-hover:border-luxury-gold group-hover:bg-luxury-gold/20 group-hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]">
-                    <Icon className="h-6 w-6 text-luxury-gold transition-transform duration-500 group-hover:scale-125" />
+                  {/* Icon with navy background */}
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#1C2E4A]/55 backdrop-blur-sm transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] group-hover:bg-[#1C2E4A]/75">
+                    <Icon className="h-6 w-6 text-[#C2A36B] transition-transform duration-300 group-hover:scale-110" />
                   </div>
                   
                   {/* Title */}
-                  <h3 className="mb-2 text-center font-serif text-base font-bold tracking-wide text-white transition-colors duration-500 group-hover:text-luxury-gold lg:text-lg">
+                  <h3 className="mb-2 text-center font-serif text-base font-bold tracking-wide text-white/95 transition-all duration-300 lg:text-lg">
                     {category.name}
                   </h3>
-                  <p className="text-center text-[10px] uppercase tracking-wider text-gray-300 opacity-0 transition-opacity duration-500 group-hover:opacity-100 lg:text-xs">
+                  <p className="text-center text-[10px] uppercase tracking-wider text-white/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100 lg:text-xs">
                     {category.description}
                   </p>
 
                   {/* Hover underline */}
-                  <div className="mt-3 h-0.5 w-0 bg-luxury-gold transition-all duration-500 group-hover:w-14 rounded-full" />
+                  <div className="mt-3 h-0.5 w-0 bg-[#C2A36B] transition-all duration-300 group-hover:w-14 rounded-full" />
                 </div>
               </Link>
             )
