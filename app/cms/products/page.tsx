@@ -1,0 +1,209 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { Plus, Search, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+interface Product {
+  id: string
+  name: string
+  slug: string
+  price: number
+  stock_quantity: number
+  is_visible: boolean
+  created_at: string
+  image_url?: string
+}
+
+export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products/admin')
+      if (response.ok) {
+        const data = await response.json()
+        setProducts(data)
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleVisibility = async (productId: string, currentVisibility: boolean) => {
+    try {
+      const response = await fetch(`/api/products/admin/${productId}/visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_visible: !currentVisibility }),
+      })
+      if (response.ok) {
+        fetchProducts()
+      }
+    } catch (error) {
+      console.error('Error toggling visibility:', error)
+    }
+  }
+
+  const deleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return
+    
+    try {
+      const response = await fetch(`/api/products/admin/${productId}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        fetchProducts()
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error)
+    }
+  }
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.slug.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-gray-500">Loading products...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Products</h1>
+          <p className="mt-2 text-gray-600">Manage your product catalog</p>
+        </div>
+        <Link href="/cms/products/new">
+          <Button className="bg-luxury-gold text-luxury-navy hover:bg-luxury-gold/90">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
+        </Link>
+      </div>
+
+      <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-sm font-medium text-gray-500">
+                <th className="pb-3">Product</th>
+                <th className="pb-3">Price</th>
+                <th className="pb-3">Stock</th>
+                <th className="pb-3">Status</th>
+                <th className="pb-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredProducts.map((product) => (
+                <tr key={product.id} className="text-sm">
+                  <td className="py-4">
+                    <div className="flex items-center gap-3">
+                      {product.image_url && (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="h-12 w-12 rounded-lg object-cover"
+                        />
+                      )}
+                      <div>
+                        <div className="font-medium text-gray-900">{product.name}</div>
+                        <div className="text-gray-500">{product.slug}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 text-gray-900">${product.price.toFixed(2)}</td>
+                  <td className="py-4">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                        product.stock_quantity > 10
+                          ? 'bg-green-100 text-green-800'
+                          : product.stock_quantity > 0
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {product.stock_quantity} units
+                    </span>
+                  </td>
+                  <td className="py-4">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                        product.is_visible
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {product.is_visible ? 'Visible' : 'Hidden'}
+                    </span>
+                  </td>
+                  <td className="py-4">
+                    <div className="flex items-center gap-2">
+                      <Link href={`/cms/products/${product.id}`}>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleVisibility(product.id, product.is_visible)}
+                      >
+                        {product.is_visible ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteProduct(product.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filteredProducts.length === 0 && (
+            <div className="py-12 text-center text-gray-500">
+              No products found. Create your first product to get started.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

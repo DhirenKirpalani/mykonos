@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User } from 'lucide-react'
+import { Search, ShoppingBag, User, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { NotificationIcon } from '@/components/notification-icon'
 import { NotificationDialog, type Notification } from '@/components/notification-dialog'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useUserRole } from '@/hooks/useUserRole'
 
 export function HeaderDesktop() {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -16,6 +17,7 @@ export function HeaderDesktop() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t } = useLanguage()
+  const { role } = useUserRole()
 
   // Sample notifications - replace with actual data from your backend
   const [notifications, setNotifications] = useState<Notification[]>([
@@ -60,7 +62,6 @@ export function HeaderDesktop() {
   const navigation = [
     { name: t.nav.home, href: '/' },
     { name: t.nav.catalog, href: '/products' },
-    { name: 'Collections', href: '/collections' },
     { name: t.nav.contact, href: '/contact' },
     { name: t.nav.sale, href: '/products?sale=true' },
   ]
@@ -101,9 +102,23 @@ export function HeaderDesktop() {
 
           <div className="flex items-center gap-4 flex-1 justify-end">
             <LanguageSwitcher />
+            {role !== 'customer' && (
+              <Link
+                href="/cms"
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                  pathname.startsWith('/cms')
+                    ? "bg-white/10 text-luxury-gold"
+                    : "text-white hover:bg-white/10"
+                )}
+                aria-label="Admin Panel"
+              >
+                <Settings className="h-5 w-5" aria-hidden="true" />
+              </Link>
+            )}
             <button 
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy",
+                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
                 searchOpen 
                   ? "bg-white/10 text-luxury-gold" 
                   : "text-white hover:bg-white/10"
@@ -123,7 +138,7 @@ export function HeaderDesktop() {
             <Link 
               href="/cart"
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy",
+                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
                 pathname === '/cart'
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
@@ -135,7 +150,7 @@ export function HeaderDesktop() {
             <Link 
               href="/account"
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy",
+                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
                 pathname.startsWith('/account')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
@@ -147,7 +162,7 @@ export function HeaderDesktop() {
           </div>
         </div>
 
-        <div className="border-t border-white/10">
+        <div>
           <nav 
             className="flex items-center justify-center gap-10 py-5"
             role="navigation"
@@ -158,9 +173,9 @@ export function HeaderDesktop() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "text-sm font-medium uppercase tracking-wider transition-all hover:text-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy rounded px-2 py-1",
+                  "text-sm font-medium uppercase tracking-wider transition-all hover:text-luxury-gold rounded px-2 py-1",
                   isActive(item.href)
-                    ? "text-luxury-gold border-b-2 border-luxury-gold pb-1"
+                    ? "text-luxury-gold"
                     : "text-white"
                 )}
                 aria-current={isActive(item.href) ? 'page' : undefined}
@@ -186,7 +201,7 @@ export function HeaderDesktop() {
                 type="search"
                 placeholder="Search for fragrances..."
                 aria-label="Search for fragrances"
-                className="w-full rounded-lg border border-luxury-gold/30 bg-luxury-navy-dark py-4 pl-12 pr-4 text-sm text-white placeholder:text-gray-400 transition-all focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/50"
+                className="w-full rounded-lg border border-luxury-gold/30 bg-luxury-navy-dark py-4 pl-12 pr-4 text-sm text-white placeholder:text-gray-400 transition-all focus:border-luxury-gold focus:ring-2 focus:ring-luxury-gold/50"
                 autoFocus
               />
             </div>
