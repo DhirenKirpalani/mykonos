@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 import { getEffectivePrice } from '@/lib/utils/pricing'
 
@@ -161,21 +161,16 @@ export async function POST(request: Request) {
       })
     } else {
       // Insert new item
-      const insertData: any = {
+      const insertData: Database['public']['Tables']['cart_items']['Insert'] = {
         product_id,
         quantity,
         price_at_add: priceAtAdd,
+        user_id: session?.user ? session.user.id : null,
+        session_id: session?.user ? null : session_id,
       }
 
-      if (session?.user) {
-        insertData.user_id = session.user.id
-      } else {
-        insertData.session_id = session_id
-      }
-
-      const { error: insertError } = await supabase
-        .from('cart_items')
-        .insert(insertData as any)
+      const query3 = supabase.from('cart_items')
+      const { error: insertError } = await (query3.insert as any)(insertData)
 
       if (insertError) throw insertError
 

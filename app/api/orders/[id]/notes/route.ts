@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 
 /**
@@ -30,7 +30,7 @@ export async function GET(
       .eq('id', session.user.id)
       .single()
 
-    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes(user.role || '')) {
+    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes((user as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Staff access required' },
         { status: 403 }
@@ -88,7 +88,7 @@ export async function POST(
       .eq('id', session.user.id)
       .single()
 
-    if (!user || !['inventory_manager', 'admin'].includes(user.role || '')) {
+    if (!user || !['inventory_manager', 'admin'].includes((user as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Inventory manager access required' },
         { status: 403 }
@@ -107,13 +107,14 @@ export async function POST(
     }
 
     // Add note
-    const { data: newNote, error } = await supabase
-      .from('order_notes')
-      .insert({
-        order_id: id,
-        note,
-        created_by: session.user.id,
-      } as any)
+    const insertData: Database['public']['Tables']['order_notes']['Insert'] = {
+      order_id: id,
+      note,
+      created_by: session.user.id,
+    }
+
+    const query = supabase.from('order_notes')
+    const { data: newNote, error } = await (query.insert as any)(insertData)
       .select()
       .single()
 
