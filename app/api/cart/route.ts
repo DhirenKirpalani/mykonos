@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
+export const dynamic = 'force-dynamic'
 import { getEffectivePrice } from '@/lib/utils/pricing'
 
 type CartItem = Database['public']['Tables']['cart_items']['Row']
