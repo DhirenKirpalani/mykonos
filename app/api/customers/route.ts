@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       .eq('id', session.user.id)
       .single()
 
-    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes(user.role || '')) {
+    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes((user as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Staff access required' },
         { status: 403 }
@@ -70,8 +70,8 @@ export async function GET(request: Request) {
         .select('user_id')
         .eq('tag_id', tagId)
 
-      const taggedUserIds = new Set(taggedUsers?.map(t => t.user_id) || [])
-      filteredCustomers = customers.filter(c => taggedUserIds.has(c.id))
+      const taggedUserIds = new Set(taggedUsers?.map(t => (t as any).user_id) || [])
+      filteredCustomers = customers.filter(c => taggedUserIds.has((c as any).id))
     }
 
     return NextResponse.json({

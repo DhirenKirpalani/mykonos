@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 
 /**
@@ -57,9 +57,8 @@ export async function PATCH(
       updated_at: new Date().toISOString()
     }
     
-    const { error: updateError } = await supabase
-      .from('cart_items')
-      .update(updateData as never)
+    const query = supabase.from('cart_items')
+    const { error: updateError } = await (query.update as any)(updateData)
       .eq('id', params.id)
 
     if (updateError) throw updateError

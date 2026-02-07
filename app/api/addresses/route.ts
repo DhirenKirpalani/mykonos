@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 
 export async function GET(request: Request) {
@@ -70,26 +70,28 @@ export async function POST(request: Request) {
 
     // If setting as default, unset other defaults first
     if (is_default) {
-      await supabase
-        .from('shipping_addresses')
-        .update({ is_default: false } as any)
-        .eq('user_id', session.user.id)
+      const updateDefault: Database['public']['Tables']['shipping_addresses']['Update'] = {
+        is_default: false
+      }
+      const query = supabase.from('shipping_addresses')
+      await (query.update as any)(updateDefault).eq('user_id', session.user.id)
     }
 
-    const { data: address, error } = await supabase
-      .from('shipping_addresses')
-      .insert({
-        user_id: session.user.id,
-        full_name,
-        address_line1,
-        address_line2: address_line2 || null,
-        city,
-        state_province,
-        postal_code,
-        country,
-        phone,
-        is_default: is_default || false,
-      } as any)
+    const insertData: Database['public']['Tables']['shipping_addresses']['Insert'] = {
+      user_id: session.user.id,
+      full_name,
+      address_line1,
+      address_line2: address_line2 || null,
+      city,
+      state_province,
+      postal_code,
+      country,
+      phone,
+      is_default: is_default || false,
+    }
+
+    const query2 = supabase.from('shipping_addresses')
+    const { data: address, error } = await (query2.insert as any)(insertData)
       .select()
       .single()
 

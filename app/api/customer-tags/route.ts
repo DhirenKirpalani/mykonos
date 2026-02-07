@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 
 /**
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       .eq('id', session.user.id)
       .single()
 
-    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes(user.role || '')) {
+    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes((user as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Staff access required' },
         { status: 403 }
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       .eq('id', session.user.id)
       .single()
 
-    if (!user || user.role !== 'admin') {
+    if (!user || (user as any).role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
@@ -95,13 +95,14 @@ export async function POST(request: Request) {
     }
 
     // Create tag
-    const { data: tag, error } = await supabase
-      .from('customer_tags')
-      .insert({
-        name,
-        color: color || null,
-        description: description || null,
-      } as any)
+    const insertData: Database['public']['Tables']['customer_tags']['Insert'] = {
+      name,
+      color: color || null,
+      description: description || null,
+    }
+
+    const query = supabase.from('customer_tags')
+    const { data: tag, error } = await (query.insert as any)(insertData)
       .select()
       .single()
 

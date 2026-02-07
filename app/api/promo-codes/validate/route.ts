@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       p_user_id: session.user.id,
       p_region_id: region_id,
       p_cart_total: cart_total,
-    }) as { data: any; error: any }
+    } as any) as { data: any; error: any }
 
     if (error) {
       console.error('Promo code validation error:', error)

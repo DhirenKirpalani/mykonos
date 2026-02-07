@@ -83,7 +83,7 @@ export async function GET(
       .eq('id', session.user.id)
       .single()
 
-    if (!user || !['inventory_manager', 'admin'].includes(user.role || '')) {
+    if (!user || !['inventory_manager', 'admin'].includes((user as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Inventory manager access required' },
         { status: 403 }

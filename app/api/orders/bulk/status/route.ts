@@ -46,8 +46,8 @@ export async function POST(request: Request) {
 
     if (error) throw error
 
-    const successCount = results?.filter((r: any) => r.success).length || 0
-    const failureCount = results?.filter((r: any) => !r.success).length || 0
+    const successCount = (results as any)?.filter((r: any) => r.success).length || 0
+    const failureCount = (results as any)?.filter((r: any) => !r.success).length || 0
 
     return NextResponse.json({
       message: `Bulk update completed: ${successCount} succeeded, ${failureCount} failed`,

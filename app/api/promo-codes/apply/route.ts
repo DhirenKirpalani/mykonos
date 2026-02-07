@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       p_user_id: session.user.id,
       p_order_id: order_id,
       p_discount_amount: discount_amount,
-    })
+    } as any)
 
     if (error) {
       console.error('Promo code application error:', error)

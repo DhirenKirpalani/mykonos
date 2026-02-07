@@ -48,7 +48,7 @@ export async function GET(request: Request) {
           .eq('is_read', false)
 
         return {
-          ...conv,
+          ...(conv as any),
           unread_count: count || 0,
         }
       })

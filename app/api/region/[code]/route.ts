@@ -35,19 +35,19 @@ export async function GET(
     const { data: shippingZone } = await supabase
       .from('shipping_zones')
       .select('*')
-      .eq('region_id', region.id)
+      .eq('region_id', (region as any).id)
       .single()
 
     // Get a sample country for this region
     const { data: countryRegion } = await supabase
       .from('country_regions')
       .select('*')
-      .eq('region_id', region.id)
+      .eq('region_id', (region as any).id)
       .limit(1)
       .single()
 
     return NextResponse.json({
-      country_code: countryRegion?.country_code || 'US',
+      country_code: (countryRegion as any)?.country_code || 'US',
       region,
       country_region: countryRegion,
       shipping_zone: shippingZone,

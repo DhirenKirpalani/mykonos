@@ -40,7 +40,7 @@ export async function GET(
       )
     }
 
-    if (!order.tracking_number) {
+    if (!(order as any).tracking_number) {
       return NextResponse.json({
         has_tracking: false,
         message: 'Tracking information not yet available',
@@ -65,19 +65,19 @@ export async function GET(
     const { data: carrierInfo } = await supabase
       .from('carrier_tracking_urls')
       .select('carrier_name, tracking_url_template')
-      .eq('carrier_code', order.carrier_code || '')
+      .eq('carrier_code', (order as any).carrier_code || '')
       .single()
 
     return NextResponse.json({
       has_tracking: true,
-      tracking_number: order.tracking_number,
-      carrier_code: order.carrier_code,
-      carrier_name: carrierInfo?.carrier_name || order.carrier_code,
+      tracking_number: (order as any).tracking_number,
+      carrier_code: (order as any).carrier_code,
+      carrier_name: (carrierInfo as any)?.carrier_name || (order as any).carrier_code,
       tracking_url: trackingUrl,
-      shipped_at: order.shipped_at,
-      delivered_at: order.delivered_at,
-      estimated_delivery_date: order.estimated_delivery_date,
-      status: order.status,
+      shipped_at: (order as any).shipped_at,
+      delivered_at: (order as any).delivered_at,
+      estimated_delivery_date: (order as any).estimated_delivery_date,
+      status: (order as any).status,
       events: events || [],
     })
   } catch (error: any) {

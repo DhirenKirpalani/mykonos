@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     // Validate each shipment has required fields
     for (const shipment of shipments) {
-      if (!shipment.order_id || !shipment.carrier_code || !shipment.tracking_number) {
+      if (!(shipment as any).order_id || !(shipment as any).carrier_code || !(shipment as any).tracking_number) {
         return NextResponse.json(
           { error: 'Each shipment must have order_id, carrier_code, and tracking_number' },
           { status: 400 }
@@ -47,8 +47,8 @@ export async function POST(request: Request) {
 
     if (error) throw error
 
-    const successCount = results?.filter((r: any) => r.success).length || 0
-    const failureCount = results?.filter((r: any) => !r.success).length || 0
+    const successCount = (results as any)?.filter((r: any) => r.success).length || 0
+    const failureCount = (results as any)?.filter((r: any) => !r.success).length || 0
 
     return NextResponse.json({
       message: `Bulk shipping assignment completed: ${successCount} succeeded, ${failureCount} failed`,
