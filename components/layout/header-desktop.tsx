@@ -60,6 +60,7 @@ export function HeaderDesktop() {
   const navigation = [
     { name: t.nav.home, href: '/' },
     { name: t.nav.catalog, href: '/products' },
+    { name: 'Collections', href: '/collections' },
     { name: t.nav.contact, href: '/contact' },
     { name: t.nav.sale, href: '/products?sale=true' },
   ]
