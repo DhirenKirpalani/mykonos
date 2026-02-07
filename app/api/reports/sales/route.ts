@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       .eq('id', session.user.id)
       .single()
 
-    if (!user || !['marketing_manager', 'admin'].includes(user.role || '')) {
+    if (!user || !['marketing_manager', 'admin'].includes((user as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Marketing manager or admin access required' },
         { status: 403 }
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 
     if (error) throw error
 
-    const salesData = report && report.length > 0 ? report[0] : {
+    const salesData = (report as any) && (report as any).length > 0 ? (report as any)[0] : {
       total_orders: 0,
       gross_sales: 0,
       total_discounts: 0,
@@ -71,15 +71,15 @@ export async function GET(request: Request) {
         end_date: endDate,
       },
       metrics: {
-        total_orders: parseInt(salesData.total_orders || '0'),
-        gross_sales: parseFloat(salesData.gross_sales || '0'),
-        total_discounts: parseFloat(salesData.total_discounts || '0'),
-        total_shipping: parseFloat(salesData.total_shipping || '0'),
-        total_tax: parseFloat(salesData.total_tax || '0'),
-        net_sales: parseFloat(salesData.net_sales || '0'),
-        avg_order_value: parseFloat(salesData.avg_order_value || '0'),
-        completed_orders: parseInt(salesData.completed_orders || '0'),
-        unique_customers: parseInt(salesData.unique_customers || '0'),
+        total_orders: parseInt(String(salesData.total_orders || '0')),
+        gross_sales: parseFloat(String(salesData.gross_sales || '0')),
+        total_discounts: parseFloat(String(salesData.total_discounts || '0')),
+        total_shipping: parseFloat(String(salesData.total_shipping || '0')),
+        total_tax: parseFloat(String(salesData.total_tax || '0')),
+        net_sales: parseFloat(String(salesData.net_sales || '0')),
+        avg_order_value: parseFloat(String(salesData.avg_order_value || '0')),
+        completed_orders: parseInt(String(salesData.completed_orders || '0')),
+        unique_customers: parseInt(String(salesData.unique_customers || '0')),
       },
     })
   } catch (error: any) {

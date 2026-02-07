@@ -30,7 +30,7 @@ export async function PATCH(
       .eq('id', session.user.id)
       .single()
 
-    if (!adminUser || adminUser.role !== 'admin') {
+    if (!adminUser || (adminUser as any).role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }

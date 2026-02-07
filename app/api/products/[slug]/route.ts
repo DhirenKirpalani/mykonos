@@ -46,8 +46,8 @@ export async function GET(
         const { data: pricing } = await supabase
           .from('product_regional_pricing')
           .select('*')
-          .eq('product_id', product.id)
-          .eq('region_id', region.id)
+          .eq('product_id', (product as any).id)
+          .eq('region_id', (region as any).id)
           .single()
 
         regionalPricing = pricing

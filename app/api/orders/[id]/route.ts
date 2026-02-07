@@ -49,7 +49,7 @@ export async function GET(
 
     // Get tracking events if available
     let trackingEvents = null
-    if (order.tracking_number) {
+    if ((order as any).tracking_number) {
       const { data: events } = await supabase
         .from('shipment_tracking_events')
         .select('*')
@@ -61,7 +61,7 @@ export async function GET(
 
     // Get tracking URL if available
     let trackingUrl = null
-    if (order.tracking_number && order.carrier_code) {
+    if ((order as any).tracking_number && (order as any).carrier_code) {
       const { data: urlData } = await supabase.rpc('get_tracking_url', {
         p_order_id: (order as any).id,
       } as any)

@@ -30,7 +30,7 @@ export async function GET(
       .eq('id', session.user.id)
       .single()
 
-    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes(user.role || '')) {
+    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes((user as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Staff access required' },
         { status: 403 }
