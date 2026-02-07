@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 import { DEFAULT_REGION_CODE } from '@/lib/utils/region'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Detect user region based on priority:
  * 1. User profile country (if logged in)
