@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User, Menu, X } from 'lucide-react'
+import { Search, ShoppingBag, User, Menu, X, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { NotificationIcon } from '@/components/notification-icon'
 import { NotificationDialog, type Notification } from '@/components/notification-dialog'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useUserRole } from '@/hooks/useUserRole'
 
 export function HeaderMobile() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -16,6 +17,7 @@ export function HeaderMobile() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t } = useLanguage()
+  const { role } = useUserRole()
 
   const [notifications, setNotifications] = useState<Notification[]>([
     {
@@ -59,7 +61,6 @@ export function HeaderMobile() {
   const navigation = [
     { name: t.nav.home, href: '/' },
     { name: t.nav.catalog, href: '/products' },
-    { name: 'Collections', href: '/collections' },
     { name: t.nav.contact, href: '/contact' },
     { name: t.nav.sale, href: '/products?sale=true' },
   ]
@@ -107,6 +108,20 @@ export function HeaderMobile() {
           </Link>
 
           <div className="flex items-center gap-1.5 text-white md:gap-3">
+            {role !== 'customer' && (
+              <Link
+                href="/cms"
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy md:h-10 md:w-10",
+                  pathname.startsWith('/cms')
+                    ? "bg-white/10 text-luxury-gold"
+                    : "hover:bg-white/10"
+                )}
+                aria-label="Admin Panel"
+              >
+                <Settings className="h-5 w-5 md:h-5 md:w-5" aria-hidden="true" />
+              </Link>
+            )}
             <NotificationIcon 
               count={unreadCount} 
               onClick={() => setNotificationsOpen(!notificationsOpen)}
