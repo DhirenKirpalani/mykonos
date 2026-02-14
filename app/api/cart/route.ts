@@ -17,29 +17,21 @@ export async function GET(request: Request) {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
 
-    const { searchParams } = new URL(request.url)
-    const sessionId = searchParams.get('session_id')
-
     const { data: { session } } = await supabase.auth.getSession()
     
-    let query = supabase
+    if (!session) {
+      return NextResponse.json({ items: [], item_count: 0, subtotal: 0 })
+    }
+
+    // Fetch cart for user (anonymous or registered)
+    const { data: items, error } = await supabase
       .from('cart_items')
       .select(`
         *,
         product:products(*)
       `)
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
-
-    // Filter by user or session
-    if (session?.user) {
-      query = query.eq('user_id', session.user.id)
-    } else if (sessionId) {
-      query = query.eq('session_id', sessionId)
-    } else {
-      return NextResponse.json({ items: [], item_count: 0, subtotal: 0 })
-    }
-
-    const { data: items, error } = await query
 
     if (error) throw error
 
@@ -76,11 +68,26 @@ export async function POST(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    
+    // Get auth header from request
+    const authHeader = request.headers.get('authorization')
+    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: authHeader ? { Authorization: authHeader } : {}
+      }
+    })
 
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please refresh the page' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
-    const { product_id, quantity = 1, session_id } = body
+    const { product_id, quantity = 1 } = body
 
     if (!product_id) {
       return NextResponse.json(
@@ -116,23 +123,12 @@ export async function POST(request: Request) {
     const priceAtAdd = getEffectivePrice(typedProduct.price, typedProduct.sale_price)
 
     // Check if item already in cart
-    let existingQuery = supabase
+    const { data: existing } = await supabase
       .from('cart_items')
       .select('*')
       .eq('product_id', product_id)
-
-    if (session?.user) {
-      existingQuery = existingQuery.eq('user_id', session.user.id)
-    } else if (session_id) {
-      existingQuery = existingQuery.eq('session_id', session_id)
-    } else {
-      return NextResponse.json(
-        { error: 'Session ID required for guest cart' },
-        { status: 400 }
-      )
-    }
-
-    const { data: existing } = await existingQuery.single()
+      .eq('user_id', user.id)
+      .single()
 
     if (existing) {
       const typedExisting = existing as CartItem
@@ -166,8 +162,7 @@ export async function POST(request: Request) {
         product_id,
         quantity,
         price_at_add: priceAtAdd,
-        user_id: session?.user ? session.user.id : null,
-        session_id: session?.user ? null : session_id,
+        user_id: user.id,
       }
 
       const query3 = supabase.from('cart_items')

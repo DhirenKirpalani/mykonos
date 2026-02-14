@@ -20,6 +20,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
   })
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -58,9 +59,18 @@ export default function RegisterPage() {
       return
     }
 
+    if (!termsAccepted) {
+      setError('You must accept the Terms of Service and Privacy Policy to continue')
+      return
+    }
+
     setLoading(true)
 
     try {
+      // Get anonymous user ID before registration (if exists)
+      const { data: { session: anonSession } } = await supabase.auth.getSession()
+      const anonymousUserId = anonSession?.user?.is_anonymous ? anonSession.user.id : null
+
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -75,6 +85,47 @@ export default function RegisterPage() {
       })
 
       if (error) throw error
+
+      // Merge anonymous cart to new registered user
+      if (anonymousUserId && data.user) {
+        try {
+          await supabase.rpc('merge_anonymous_cart_to_user', {
+            p_anonymous_user_id: anonymousUserId,
+            p_logged_in_user_id: data.user.id
+          } as any)
+          
+          await supabase.rpc('merge_anonymous_wishlist_to_user', {
+            p_anonymous_user_id: anonymousUserId,
+            p_logged_in_user_id: data.user.id
+          } as any)
+          
+          // Clear anonymous user_id and cached cart from localStorage after merge
+          localStorage.removeItem('anonymous_user_id')
+          localStorage.removeItem('cached_cart')
+        } catch (mergeError) {
+          console.error('Cart merge error:', mergeError)
+          // Don't block registration if merge fails
+        }
+      } else {
+        // No anonymous cart to merge, just clear cached cart
+        localStorage.removeItem('cached_cart')
+      }
+
+      // Record terms acceptance
+      if (data.user) {
+        try {
+          await fetch('/api/auth/accept-terms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              terms_version: '1.0',
+              privacy_version: '1.0'
+            })
+          })
+        } catch (termsError) {
+          console.error('Failed to record terms acceptance:', termsError)
+        }
+      }
 
       // User profile is automatically created by database trigger
       // Show success message and redirect
@@ -229,16 +280,18 @@ export default function RegisterPage() {
                 <input
                   type="checkbox"
                   id="terms"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
                   required
                   className="mt-1 h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
                 />
                 <label htmlFor="terms" className="ml-2 text-sm text-muted-foreground">
                   I agree to the{' '}
-                  <Link href="/terms" className="text-luxury-gold hover:underline">
+                  <Link href="/terms" target="_blank" className="text-luxury-gold hover:underline">
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link href="/privacy" className="text-luxury-gold hover:underline">
+                  <Link href="/privacy" target="_blank" className="text-luxury-gold hover:underline">
                     Privacy Policy
                   </Link>
                 </label>

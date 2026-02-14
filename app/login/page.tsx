@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -20,6 +21,10 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
+      // Get anonymous user ID before login (if exists)
+      const { data: { session: anonSession } } = await supabase.auth.getSession()
+      const anonymousUserId = anonSession?.user?.is_anonymous ? anonSession.user.id : null
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -27,8 +32,36 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      // Redirect to home page on success
-      router.push('/')
+      // Merge anonymous cart to logged-in user
+      if (anonymousUserId && data.user) {
+        try {
+          await supabase.rpc('merge_anonymous_cart_to_user', {
+            p_anonymous_user_id: anonymousUserId,
+            p_logged_in_user_id: data.user.id
+          } as any)
+          
+          await supabase.rpc('merge_anonymous_wishlist_to_user', {
+            p_anonymous_user_id: anonymousUserId,
+            p_logged_in_user_id: data.user.id
+          } as any)
+          
+          // Clear anonymous user_id and cached cart from localStorage after merge
+          localStorage.removeItem('anonymous_user_id')
+          localStorage.removeItem('cached_cart')
+        } catch (mergeError) {
+          console.error('Cart merge error:', mergeError)
+          // Don't block login if merge fails
+        }
+      } else {
+        // No anonymous cart to merge, just clear cached cart
+        localStorage.removeItem('cached_cart')
+      }
+
+      toast.success('Welcome back!', {
+        description: 'You have successfully logged in.',
+      })
+      
+      router.push('/account')
     } catch (error: any) {
       setError(error.message || 'Failed to sign in')
     } finally {

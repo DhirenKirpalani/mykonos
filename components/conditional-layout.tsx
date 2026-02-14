@@ -7,7 +7,6 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { AssistantWidget } from '@/components/assistant-widget'
-import { AccessibilityToggle } from '@/components/accessibility-toggle'
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -27,7 +26,6 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
       <Footer />
       <ScrollToTop />
       <AssistantWidget />
-      <AccessibilityToggle />
     </div>
   )
 }

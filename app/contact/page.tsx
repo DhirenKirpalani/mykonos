@@ -1,12 +1,23 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { LoadingSpinner } from '@/components/common'
 import { Mail, Phone, MapPin } from 'lucide-react'
 import { WhatsappLogo } from 'phosphor-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function ContactPage() {
   const { t } = useLanguage()
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    setIsLoading(false)
+  }, [])
+
+  if (isLoading) {
+    return <LoadingSpinner />
+  }
 
   return (
     <div className="min-h-screen bg-white">
