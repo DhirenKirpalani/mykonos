@@ -2,9 +2,8 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase/client'
 import { formatPrice } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { ShoppingBag, Heart } from 'lucide-react'
 import { ProductCarousel } from '@/components/product-carousel'
+import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { Database } from '@/lib/supabase/database.types'
 
 export const dynamic = 'force-dynamic'
@@ -131,16 +130,7 @@ export default async function ProductDetailPage({
               <p className="text-muted-foreground">{product.description}</p>
             </div>
 
-            <div className="space-y-3">
-              <Button variant="luxury" size="lg" className="w-full">
-                <ShoppingBag className="mr-2 h-5 w-5" />
-                Add to Cart
-              </Button>
-              <Button variant="outline" size="lg" className="w-full">
-                <Heart className="mr-2 h-5 w-5" />
-                Add to Wishlist
-              </Button>
-            </div>
+            <ProductDetailClient productId={product.id} productName={product.name} />
 
             <div className="border-t border-border/40 pt-6">
               <div className="space-y-4">

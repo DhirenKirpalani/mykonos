@@ -3,21 +3,27 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User, Menu, X, Settings } from 'lucide-react'
+import { Search, ShoppingBag, User, Menu, X, Settings, ChevronDown, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
 import { NotificationIcon } from '@/components/notification-icon'
 import { NotificationDialog, type Notification } from '@/components/notification-dialog'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useUserRole } from '@/hooks/useUserRole'
+import { useCartCount } from '@/hooks/useCartCount'
+import { useWishlistCount } from '@/hooks/useWishlistCount'
 
 export function HeaderMobile() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [catalogExpanded, setCatalogExpanded] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t } = useLanguage()
   const { role } = useUserRole()
+  const { count: cartCount } = useCartCount()
+  const { count: wishlistCount } = useWishlistCount()
 
   const [notifications, setNotifications] = useState<Notification[]>([
     {
@@ -107,19 +113,19 @@ export function HeaderMobile() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-1.5 text-white md:gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             {role !== 'customer' && (
               <Link
                 href="/cms"
                 className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy md:h-10 md:w-10",
+                  "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10",
                   pathname.startsWith('/cms')
                     ? "bg-white/10 text-luxury-gold"
                     : "hover:bg-white/10"
                 )}
                 aria-label="Admin Panel"
               >
-                <Settings className="h-5 w-5 md:h-5 md:w-5" aria-hidden="true" />
+                <Settings className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
               </Link>
             )}
             <NotificationIcon 
@@ -128,22 +134,10 @@ export function HeaderMobile() {
               isActive={notificationsOpen}
             />
             <Link 
-              href="/cart"
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy md:h-10 md:w-10",
-                pathname === '/cart'
-                  ? "bg-white/10 text-luxury-gold"
-                  : "text-white hover:bg-white/10"
-              )}
-              aria-label="Shopping cart"
-            >
-              <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
-            </Link>
-            <Link 
               href="/account"
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy md:h-10 md:w-10",
-                pathname.startsWith('/account')
+                "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10",
+                pathname.startsWith('/account') && !pathname.startsWith('/account/wishlist')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
@@ -158,7 +152,7 @@ export function HeaderMobile() {
       {mobileMenuOpen && (
         <div 
           id="mobile-menu"
-          className="animate-slide-in-right border-t border-white/10 bg-luxury-navy-light"
+          className="absolute top-full left-0 right-0 max-h-[calc(100vh-5rem)] overflow-y-auto animate-slide-in-right border-t border-white/10 bg-luxury-navy-light shadow-2xl"
           role="navigation"
           aria-label="Mobile navigation"
         >
@@ -176,25 +170,145 @@ export function HeaderMobile() {
             </div>
 
             <nav className="space-y-1" role="menu">
-              {navigation.map((item) => (
+              <Link
+                href="/"
+                role="menuitem"
+                className={cn(
+                  "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98",
+                  pathname === '/' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.home}
+              </Link>
+
+              {/* Expandable Catalog */}
+              <div>
+                <button
+                  onClick={() => setCatalogExpanded(!catalogExpanded)}
+                  className="w-full flex items-center justify-between rounded-lg px-4 py-4 text-base font-medium text-white transition-all hover:bg-luxury-gold/20"
+                >
+                  <span>{t.nav.catalog}</span>
+                  <ChevronDown className={cn(
+                    "h-5 w-5 transition-transform",
+                    catalogExpanded && "rotate-180"
+                  )} />
+                </button>
+                {catalogExpanded && (
+                  <div className="ml-4 mt-1 space-y-1 border-l-2 border-luxury-gold/30 pl-4">
+                    <Link
+                      href="/products"
+                      className={cn(
+                        "block rounded-lg px-4 py-3 text-sm transition-all",
+                        pathname === '/products' && !searchParams.toString()
+                          ? "bg-luxury-gold/20 text-luxury-gold"
+                          : "text-white/80 hover:bg-luxury-gold/20 hover:text-white"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      All Products
+                    </Link>
+                    <Link
+                      href="/products?category=perfume"
+                      className={cn(
+                        "block rounded-lg px-4 py-3 text-sm transition-all",
+                        pathname === '/products' && searchParams.get('category') === 'perfume'
+                          ? "bg-luxury-gold/20 text-luxury-gold"
+                          : "text-white/80 hover:bg-luxury-gold/20 hover:text-white"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Perfumes
+                    </Link>
+                    <Link
+                      href="/products?category=cologne"
+                      className={cn(
+                        "block rounded-lg px-4 py-3 text-sm transition-all",
+                        pathname === '/products' && searchParams.get('category') === 'cologne'
+                          ? "bg-luxury-gold/20 text-luxury-gold"
+                          : "text-white/80 hover:bg-luxury-gold/20 hover:text-white"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Colognes
+                    </Link>
+                    <Link
+                      href="/products?sale=true"
+                      className={cn(
+                        "block rounded-lg px-4 py-3 text-sm transition-all",
+                        pathname === '/products' && searchParams.get('sale') === 'true'
+                          ? "bg-luxury-gold/20 text-luxury-gold"
+                          : "text-white/80 hover:bg-luxury-gold/20 hover:text-white"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Sale Items
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              <Link
+                href="/contact"
+                role="menuitem"
+                className={cn(
+                  "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98",
+                  pathname === '/contact' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.contact}
+              </Link>
+
+              {/* Wishlist and Cart */}
+              <div className="pt-4 border-t border-white/10 mt-4 space-y-1">
                 <Link
-                  key={item.name}
-                  href={item.href}
-                  role="menuitem"
+                  href="/account/wishlist"
                   className={cn(
-                    "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-offset-2 focus:ring-offset-luxury-navy-light",
-                    isActive(item.href)
+                    "flex items-center justify-between rounded-lg px-4 py-4 text-base font-medium transition-all",
+                    pathname === '/account/wishlist'
                       ? "bg-luxury-gold/20 text-luxury-gold"
-                      : "text-white"
+                      : "text-white hover:bg-luxury-gold/20"
                   )}
                   onClick={() => setMobileMenuOpen(false)}
-                  aria-current={isActive(item.href) ? 'page' : undefined}
                 >
-                  {item.name}
+                  <div className="flex items-center gap-3">
+                    <Heart className="h-5 w-5" />
+                    <span>Wishlist</span>
+                  </div>
+                  {wishlistCount > 0 && (
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-luxury-gold text-xs font-bold text-luxury-navy">
+                      {wishlistCount}
+                    </span>
+                  )}
                 </Link>
-              ))}
+                <Link
+                  href="/cart"
+                  className={cn(
+                    "flex items-center justify-between rounded-lg px-4 py-4 text-base font-medium transition-all",
+                    pathname === '/cart'
+                      ? "bg-luxury-gold/20 text-luxury-gold"
+                      : "text-white hover:bg-luxury-gold/20"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div className="flex items-center gap-3">
+                    <ShoppingBag className="h-5 w-5" />
+                    <span>Shopping Cart</span>
+                  </div>
+                  {cartCount > 0 && (
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-luxury-gold text-xs font-bold text-luxury-navy">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
               
-              <div className="pt-4 border-t border-white/10 mt-4">
+              <div className="pt-4 border-t border-white/10 mt-4 space-y-2">
+                <div className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-luxury-gold/20 transition-all">
+                  <span className="text-base font-medium text-white">Region</span>
+                  <RegionCurrencySelector />
+                </div>
                 <div className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-luxury-gold/20 transition-all">
                   <span className="text-base font-medium text-white">Language</span>
                   <LanguageSwitcher />

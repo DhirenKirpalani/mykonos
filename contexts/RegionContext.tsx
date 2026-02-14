@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { Region, RegionDetectionResult } from '@/lib/types/region'
 import { DEFAULT_REGION_CODE } from '@/lib/utils/region'
+import { supabase } from '@/lib/supabase/client'
 
 interface RegionContextType {
   region: Region | null
@@ -14,6 +15,24 @@ interface RegionContextType {
 
 const RegionContext = createContext<RegionContextType | undefined>(undefined)
 
+// Generate or retrieve visitor session ID
+function getVisitorSessionId(): string {
+  const storageKey = 'visitor_session_id'
+  let sessionId = localStorage.getItem(storageKey)
+  
+  if (!sessionId) {
+    // Generate UUID v4
+    sessionId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0
+      const v = c === 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
+    localStorage.setItem(storageKey, sessionId)
+  }
+  
+  return sessionId
+}
+
 export function RegionProvider({ children }: { children: ReactNode }) {
   const [region, setRegionState] = useState<Region | null>(null)
   const [detectionResult, setDetectionResult] = useState<RegionDetectionResult | null>(null)
@@ -23,17 +42,54 @@ export function RegionProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true)
       
-      // Check for manually selected region in localStorage
-      const savedRegionCode = localStorage.getItem('selected_region')
+      // Check if user is logged in
+      const { data: { session } } = await supabase.auth.getSession()
       
-      if (savedRegionCode) {
-        // Fetch saved region details
-        const response = await fetch(`/api/region/${savedRegionCode}`)
+      if (session?.user) {
+        // For logged-in users, check their preferred region
+        const { data: userData } = await supabase
+          .from('users')
+          .select('preferred_region_id')
+          .eq('id', session.user.id)
+          .single() as { data: any }
+        
+        if (userData?.preferred_region_id) {
+          const { data: preferredRegion } = await supabase
+            .from('regions')
+            .select('*')
+            .eq('id', userData.preferred_region_id)
+            .single()
+          
+          if (preferredRegion) {
+            setRegionState(preferredRegion as Region)
+            setDetectionResult({
+              country_code: null as any,
+              region: preferredRegion as Region,
+              country_region: null as any,
+              shipping_zone: null as any,
+              source: 'user_profile',
+            })
+            return
+          }
+        }
+      } else {
+        // For visitors, check database for saved preference
+        const sessionId = getVisitorSessionId()
+        const response = await fetch(`/api/visitor/preferences?session_id=${sessionId}`)
+        
         if (response.ok) {
           const data = await response.json()
-          setRegionState(data.region)
-          setDetectionResult(data)
-          return
+          if (data.preference && data.region) {
+            setRegionState(data.region)
+            setDetectionResult({
+              country_code: data.preference.detected_country_code,
+              region: data.region,
+              country_region: null as any,
+              shipping_zone: null as any,
+              source: 'default',
+            })
+            return
+          }
         }
       }
 
@@ -43,6 +99,22 @@ export function RegionProvider({ children }: { children: ReactNode }) {
         const data: RegionDetectionResult = await response.json()
         setRegionState(data.region)
         setDetectionResult(data)
+        
+        // Save detected region to database for visitors
+        if (!session?.user && data.region) {
+          const sessionId = getVisitorSessionId()
+          await fetch('/api/visitor/preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: sessionId,
+              region_id: data.region.id,
+              ip_address: null,
+              browser_locale: navigator.language,
+              detected_country_code: data.country_code,
+            }),
+          })
+        }
       } else {
         throw new Error('Failed to detect region')
       }
@@ -75,8 +147,30 @@ export function RegionProvider({ children }: { children: ReactNode }) {
         setRegionState(data.region)
         setDetectionResult(data)
         
-        // Save to localStorage
-        localStorage.setItem('selected_region', regionCode)
+        // Check if user is logged in
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          // Save to user profile
+          await supabase.rpc('set_preferred_region', {
+            p_user_id: session.user.id,
+            p_region_id: data.region.id,
+          } as any)
+        } else {
+          // Save to visitor preferences
+          const sessionId = getVisitorSessionId()
+          await fetch('/api/visitor/preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: sessionId,
+              region_id: data.region.id,
+              ip_address: null,
+              browser_locale: navigator.language,
+              detected_country_code: detectionResult?.country_code || null,
+            }),
+          })
+        }
       }
     } catch (error) {
       console.error('Set region error:', error)
@@ -86,8 +180,14 @@ export function RegionProvider({ children }: { children: ReactNode }) {
   }
 
   const refreshRegion = async () => {
-    // Clear saved region and re-detect
-    localStorage.removeItem('selected_region')
+    // Clear saved preferences and re-detect
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.user) {
+      // Clear visitor session to force re-detection
+      localStorage.removeItem('visitor_session_id')
+    }
+    
     await detectRegion()
   }
 

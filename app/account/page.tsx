@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
+import { LoadingSpinner } from '@/components/common'
 import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/lib/supabase/database.types'
 
@@ -26,18 +28,26 @@ export default function AccountPage() {
       
       if (!session) {
         router.push('/login')
-      } else {
-        setIsAuthenticated(true)
-        setUserId(session.user.id)
-        
-        // Fetch user profile data
-        const { data: profile, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single() as { data: UserProfile | null; error: any }
+        return
+      }
 
-        if (profile && !error) {
+      // Check if user is anonymous
+      if (session.user.is_anonymous) {
+        router.push('/login?message=Please login to access your account')
+        return
+      }
+
+      setIsAuthenticated(true)
+      setUserId(session.user.id)
+      
+      // Fetch user profile data
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single() as { data: UserProfile | null; error: any }
+
+      if (profile && !error) {
           setUserData({
             firstName: profile.first_name || '',
             lastName: profile.last_name || '',
@@ -64,7 +74,6 @@ export default function AccountPage() {
             phone: newProfile.phone || '',
           })
         }
-      }
       setIsLoading(false)
     }
 
@@ -81,27 +90,7 @@ export default function AccountPage() {
   }, [router])
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative">
-            <h2 className="font-serif text-4xl font-medium tracking-[0.3em] text-luxury-gold md:text-5xl animate-pulse-subtle">
-              MYKONOS
-            </h2>
-            <div className="absolute -inset-4 bg-luxury-gold/5 blur-2xl rounded-full"></div>
-          </div>
-          <div className="relative h-14 w-14 md:h-16 md:w-16">
-            <div className="absolute inset-0 rounded-full border-[3px] border-luxury-gold/20"></div>
-            <div className="absolute inset-0 animate-spin-smooth rounded-full border-[3px] border-transparent border-t-luxury-gold border-r-luxury-gold/60"></div>
-            <div className="absolute inset-2 rounded-full bg-luxury-gold/5 animate-pulse-glow"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="h-2 w-2 rounded-full bg-luxury-gold animate-pulse-subtle"></div>
-            </div>
-          </div>
-          <span className="sr-only">Loading content, please wait</span>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   if (!isAuthenticated) {
@@ -112,7 +101,8 @@ export default function AccountPage() {
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
-          <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
+          <Breadcrumbs items={[{ label: 'Account', href: '/account' }]} />
+          <h1 className="mt-4 mb-4 font-serif text-4xl font-bold lg:text-5xl">
             My Account
           </h1>
           <p className="text-lg text-muted-foreground">
@@ -126,19 +116,28 @@ export default function AccountPage() {
           <div className="space-y-2">
             <h2 className="font-serif text-xl font-bold">Account</h2>
             <nav className="space-y-1">
-              <button className="block w-full rounded-md bg-luxury-gold px-4 py-2 text-left text-sm text-white">
+              <button 
+                onClick={() => router.push('/account')}
+                className="block w-full rounded-md bg-luxury-gold px-4 py-2 text-left text-sm text-white"
+              >
                 Profile
               </button>
-              <button className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
+              <button 
+                onClick={() => router.push('/account/orders')}
+                className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light"
+              >
                 Orders
               </button>
-              <button className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
-                Wishlist
-              </button>
-              <button className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
+              <button 
+                onClick={() => router.push('/account/addresses')}
+                className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light"
+              >
                 Addresses
               </button>
-              <button className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
+              <button 
+                onClick={() => router.push('/account/settings')}
+                className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light"
+              >
                 Settings
               </button>
             </nav>

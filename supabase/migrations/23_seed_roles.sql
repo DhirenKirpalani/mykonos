@@ -1,62 +1,125 @@
--- Seed roles with permissions
--- Define permissions for each role
+-- ============================================
+-- MYKONOS RBAC ROLE SEED
+-- ============================================
+-- Safe to run multiple times
+-- Will upsert roles based on unique "name"
+-- ============================================
 
--- Customer role (default)
+-- Ensure roles table has unique constraint on name
+-- (Run once if not already present)
+-- ALTER TABLE roles ADD CONSTRAINT roles_name_unique UNIQUE (name);
+
+-- ============================================
+-- CUSTOMER ROLE
+-- Public-facing access only
+-- ============================================
+
 INSERT INTO roles (name, display_name, description, permissions, is_active)
 VALUES (
   'customer',
   'Customer',
-  'Regular customer with access to shopping features',
-  '["view_products", "manage_own_cart", "place_orders", "view_own_orders", "manage_own_profile", "use_chat"]'::jsonb,
+  'Public user with access to shopping and account features',
+  '[
+    "view_products",
+    "manage_own_cart",
+    "place_orders",
+    "view_own_orders",
+    "manage_own_profile",
+    "manage_own_addresses",
+    "view_wishlist",
+    "manage_wishlist",
+    "use_chat"
+  ]'::jsonb,
   true
-);
+)
+ON CONFLICT (name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  description = EXCLUDED.description,
+  permissions = EXCLUDED.permissions,
+  is_active = EXCLUDED.is_active;
 
--- Support Agent role
+
+-- ============================================
+-- STAFF ROLE
+-- Operational CMS access
+-- ============================================
+
 INSERT INTO roles (name, display_name, description, permissions, is_active)
 VALUES (
-  'support_agent',
-  'Support Agent',
-  'Customer support representative with access to chat and order viewing',
-  '["view_products", "view_all_orders", "view_customer_info", "manage_chat", "send_agent_messages", "view_all_conversations", "update_order_notes"]'::jsonb,
+  'staff',
+  'Staff',
+  'Operational CMS user with product, order, promotion, and support management access',
+  '[
+    "view_all_products",
+    "create_products",
+    "edit_products",
+    "delete_products",
+    "manage_collections",
+    "manage_homepage_content",
+    "manage_fragrance_families",
+    "edit_inventory",
+    "view_all_orders",
+    "update_order_status",
+    "add_tracking_info",
+    "manage_shipping_operations",
+    "create_promo_codes",
+    "edit_promo_codes",
+    "delete_promo_codes",
+    "manage_sales_pricing",
+    "manage_regional_pricing",
+    "view_basic_sales_analytics",
+    "view_customer_profiles",
+    "manage_support_conversations",
+    "send_support_messages",
+    "add_internal_order_notes"
+  ]'::jsonb,
   true
-);
+)
+ON CONFLICT (name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  description = EXCLUDED.description,
+  permissions = EXCLUDED.permissions,
+  is_active = EXCLUDED.is_active;
 
--- Inventory Manager role
-INSERT INTO roles (name, display_name, description, permissions, is_active)
-VALUES (
-  'inventory_manager',
-  'Inventory Manager',
-  'Manages product inventory and order fulfillment',
-  '["view_products", "edit_product_inventory", "view_all_orders", "update_order_status", "add_tracking_info", "manage_shipping", "view_inventory_reports"]'::jsonb,
-  true
-);
 
--- Content Manager role
-INSERT INTO roles (name, display_name, description, permissions, is_active)
-VALUES (
-  'content_manager',
-  'Content Manager',
-  'Manages website content, products, and collections',
-  '["view_products", "create_products", "edit_products", "delete_products", "manage_collections", "manage_homepage_banners", "manage_featured_collections", "manage_featured_products", "manage_fragrance_families", "set_editorial_priority"]'::jsonb,
-  true
-);
+-- ============================================
+-- ADMIN ROLE
+-- Full system access + operational controls
+-- ============================================
 
--- Marketing Manager role
-INSERT INTO roles (name, display_name, description, permissions, is_active)
-VALUES (
-  'marketing_manager',
-  'Marketing Manager',
-  'Manages promotions, pricing, and marketing campaigns',
-  '["view_products", "create_promo_codes", "edit_promo_codes", "delete_promo_codes", "manage_sales_pricing", "view_promo_analytics", "manage_regional_pricing", "view_order_analytics"]'::jsonb,
-  true
-);
-
--- Admin role (super user)
 INSERT INTO roles (name, display_name, description, permissions, is_active)
 VALUES (
   'admin',
   'Administrator',
-  'Full system access with all permissions',
-  '["*"]'::jsonb,
+  'Full system access including role assignment, audit logs, and operational controls',
+  '[
+    "*",
+    "assign_roles",
+    "view_audit_logs",
+    "configure_system_settings",
+    "disable_checkout",
+    "disable_payments",
+    "disable_regions",
+    "disable_promo_codes",
+    "enable_maintenance_mode",
+    "override_locked_orders"
+  ]'::jsonb,
   true
-);
+)
+ON CONFLICT (name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  description = EXCLUDED.description,
+  permissions = EXCLUDED.permissions,
+  is_active = EXCLUDED.is_active;
+
+
+-- ============================================
+-- OPTIONAL: Set default role for new users
+-- ============================================
+
+-- If you store role inside users table:
+-- UPDATE users SET role = 'customer' WHERE role IS NULL;
+
+-- ============================================
+-- END OF FILE
+-- ============================================

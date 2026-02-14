@@ -3,13 +3,16 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User, Settings } from 'lucide-react'
+import { Search, ShoppingBag, User, Settings, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
 import { NotificationIcon } from '@/components/notification-icon'
 import { NotificationDialog, type Notification } from '@/components/notification-dialog'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useUserRole } from '@/hooks/useUserRole'
+import { useCartCount } from '@/hooks/useCartCount'
+import { useWishlistCount } from '@/hooks/useWishlistCount'
 
 export function HeaderDesktop() {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -18,6 +21,8 @@ export function HeaderDesktop() {
   const searchParams = useSearchParams()
   const { t } = useLanguage()
   const { role } = useUserRole()
+  const { count: cartCount } = useCartCount()
+  const { count: wishlistCount } = useWishlistCount()
 
   // Sample notifications - replace with actual data from your backend
   const [notifications, setNotifications] = useState<Notification[]>([
@@ -91,7 +96,7 @@ export function HeaderDesktop() {
   return (
     <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg hidden lg:block">
       <nav className="container mx-auto px-8">
-        <div className="flex h-18 items-center justify-center">
+        <div className="flex h-20 items-center justify-center">
           <div className="flex-1"></div>
           
           <Link href="/" className="static translate-x-0">
@@ -100,8 +105,8 @@ export function HeaderDesktop() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-4 flex-1 justify-end">
-            <LanguageSwitcher />
+          <div className="flex items-center gap-5 flex-1 justify-end">
+            <RegionCurrencySelector />
             {role !== 'customer' && (
               <Link
                 href="/cms"
@@ -136,22 +141,66 @@ export function HeaderDesktop() {
               isActive={notificationsOpen}
             />
             <Link 
+              href="/account/wishlist"
+              className={cn(
+                "relative flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                pathname === '/account/wishlist'
+                  ? "bg-white/10 text-luxury-gold"
+                  : "text-white hover:bg-white/10"
+              )}
+              aria-label={`Wishlist${wishlistCount > 0 ? ` (${wishlistCount} items)` : ''}`}
+            >
+              <Heart className="h-5 w-5" aria-hidden="true" />
+              {wishlistCount > 0 && (
+                <span
+                  className="
+                    absolute right-0 top-0
+                    flex h-4 w-4 items-center justify-center
+                    rounded-full
+                    bg-luxury-gold
+                    text-[9px]
+                    font-bold
+                    text-luxury-navy
+                    ring-2 ring-luxury-navy
+                  "
+                >
+                  {wishlistCount > 9 ? '9+' : wishlistCount}
+                </span>
+              )}
+            </Link>
+            <Link 
               href="/cart"
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                "relative flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
                 pathname === '/cart'
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
-              aria-label="Shopping cart"
+              aria-label={`Shopping cart${cartCount > 0 ? ` (${cartCount} items)` : ''}`}
             >
               <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+              {cartCount > 0 && (
+                <span
+                  className="
+                    absolute right-0 top-0
+                    flex h-4 w-4 items-center justify-center
+                    rounded-full
+                    bg-luxury-gold
+                    text-[9px]
+                    font-bold
+                    text-luxury-navy
+                    ring-2 ring-luxury-navy
+                  "
+                >
+                  {cartCount > 9 ? '9+' : cartCount}
+                </span>
+              )}
             </Link>
             <Link 
               href="/account"
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
-                pathname.startsWith('/account')
+                pathname.startsWith('/account') && !pathname.startsWith('/account/wishlist')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}

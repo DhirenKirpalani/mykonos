@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { ConditionalLayout } from '@/components/conditional-layout'
+import { CookieConsent } from '@/components/CookieConsent'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -115,6 +116,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <Providers>
           <ConditionalLayout>{children}</ConditionalLayout>
+          <CookieConsent />
         </Providers>
       </body>
     </html>
