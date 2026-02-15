@@ -74,6 +74,12 @@ export default function CMSLayout({
       show: role === 'admin' || role === 'support_agent'
     },
     { 
+      name: 'User Management', 
+      href: '/cms/users', 
+      icon: Users,
+      show: role === 'admin'
+    },
+    { 
       name: 'Analytics', 
       href: '/cms/analytics', 
       icon: BarChart3,
