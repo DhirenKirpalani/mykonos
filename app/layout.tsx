@@ -106,14 +106,14 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable} bg-luxury-navy`}>
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased bg-luxury-navy">
         <Providers>
           <ConditionalLayout>{children}</ConditionalLayout>
           <CookieConsent />

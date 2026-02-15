@@ -59,9 +59,6 @@ export default function SettingsPage() {
               <button onClick={() => router.push('/account/orders')} className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
                 Orders
               </button>
-              <button onClick={() => router.push('/account/wishlist')} className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
-                Wishlist
-              </button>
               <button onClick={() => router.push('/account/addresses')} className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
                 Addresses
               </button>

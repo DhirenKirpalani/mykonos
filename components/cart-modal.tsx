@@ -1,0 +1,307 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { X, Minus, Plus, ShoppingBag } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
+import Link from 'next/link'
+import { formatPrice } from '@/lib/utils'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+
+type CartItem = {
+  id: string
+  product_id: string
+  quantity: number
+  price_at_add: number
+  product: {
+    id: string
+    name: string
+    slug: string
+    image_urls: string[]
+    size: string
+    stock_quantity: number
+  }
+}
+
+type CartModalProps = {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function CartModal({ isOpen, onClose }: CartModalProps) {
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [discountCode, setDiscountCode] = useState('')
+  const [discountApplied, setDiscountApplied] = useState(false)
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCart()
+    }
+  }, [isOpen])
+
+  const fetchCart = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        setCartItems([])
+        setLoading(false)
+        return
+      }
+
+      setUserId(session.user.id)
+
+      const { data, error } = await supabase
+        .from('cart_items')
+        .select(`
+          *,
+          product:products(*)
+        `)
+        .eq('user_id', session.user.id)
+
+      if (error) throw error
+
+      setCartItems((data as any) || [])
+    } catch (error) {
+      console.error('Failed to fetch cart:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateQuantity = async (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return
+
+    try {
+      const { error } = await (supabase
+        .from('cart_items') as any)
+        .update({ quantity: newQuantity, updated_at: new Date().toISOString() })
+        .eq('id', itemId)
+
+      if (error) throw error
+
+      setCartItems(prev =>
+        prev.map(item =>
+          item.id === itemId ? { ...item, quantity: newQuantity } : item
+        )
+      )
+      
+      window.dispatchEvent(new Event('cart-updated'))
+    } catch (error) {
+      console.error('Failed to update quantity:', error)
+      toast.error('Failed to update quantity')
+    }
+  }
+
+  const removeItem = async (itemId: string) => {
+    try {
+      const { error } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('id', itemId)
+
+      if (error) throw error
+
+      setCartItems(prev => prev.filter(item => item.id !== itemId))
+      toast.success('Item removed')
+      
+      window.dispatchEvent(new Event('cart-updated'))
+    } catch (error) {
+      console.error('Failed to remove item:', error)
+      toast.error('Failed to remove item')
+    }
+  }
+
+  const applyDiscount = () => {
+    if (discountCode.toLowerCase() === 'welcome10') {
+      setDiscountApplied(true)
+      setDiscountAmount(subtotal * 0.1)
+      toast.success('Discount applied!')
+    } else {
+      toast.error('Invalid discount code')
+    }
+  }
+
+  const subtotal = cartItems.reduce((sum, item) => sum + ((item.price_at_add || 0) * item.quantity), 0)
+  const total = subtotal - discountAmount
+
+  if (!mounted) return null
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Overlay */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-md"
+            onClick={onClose}
+          />
+
+          {/* Drawer */}
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed right-0 top-0 z-[9999] h-full w-full max-w-md bg-white flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-black/5 px-8 py-7">
+              <h2 className="flex items-center gap-3 text-xl tracking-wide font-light text-black">
+                <ShoppingBag className="h-5 w-5 stroke-[1.5]" />
+                Cart
+              </h2>
+              <button
+                onClick={onClose}
+                className="text-black/70 hover:text-black transition-colors duration-300"
+                aria-label="Close cart"
+              >
+                <X className="h-5 w-5 stroke-[1.5]" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-8">
+              {loading ? (
+                <div className="flex h-full items-center justify-center text-sm tracking-wide text-black/60">
+                  Loading...
+                </div>
+              ) : cartItems.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm tracking-wide text-black/60">
+                  Your cart is empty
+                </div>
+              ) : (
+                <div className="divide-y divide-black/5">
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex gap-6 py-8">
+                      <div className="relative h-24 w-20 flex-shrink-0">
+                        <Image
+                          src={item.product.image_urls[0]}
+                          alt={item.product.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div>
+                          <h3 className="text-sm font-medium tracking-wide uppercase">
+                            {item.product.name}
+                          </h3>
+                          <p className="mt-1 text-xs tracking-wide text-black/60">
+                            {item.product.size}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          {/* Quantity */}
+                          <div className="flex items-center border border-black/10">
+                            <button
+                              onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                              className="px-3 py-2 text-black/70 hover:text-black transition-colors"
+                              aria-label="Decrease quantity"
+                              disabled={item.quantity <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="px-4 text-sm tracking-wide">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="px-3 py-2 text-black/70 hover:text-black transition-colors"
+                              aria-label="Increase quantity"
+                              disabled={item.quantity >= item.product.stock_quantity}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+
+                          {/* Price */}
+                          <p className="text-sm font-medium tracking-wide">
+                            {formatPrice(item.price_at_add * item.quantity)}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          className="mt-3 text-xs tracking-wide text-black/50 hover:text-black transition-colors text-left"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Discount Section */}
+            {cartItems.length > 0 && (
+              <div className="border-t border-black/5 px-8 py-6">
+                <button
+                  onClick={() => setDiscountApplied(!discountApplied)}
+                  className="flex w-full items-center justify-between text-left"
+                >
+                  <span className="text-sm tracking-wide font-light">Discount</span>
+                  <span className="text-lg font-light">{discountApplied ? '−' : '+'}</span>
+                </button>
+                {discountApplied && (
+                  <div className="mt-4 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Discount code"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value)}
+                      className="flex-1 border border-black/10 bg-white px-4 py-2.5 text-sm tracking-wide placeholder:text-black/40 focus:border-black/30 focus:outline-none focus:ring-0"
+                    />
+                    <button
+                      onClick={applyDiscount}
+                      className="border border-black px-6 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer */}
+            {cartItems.length > 0 && (
+              <div className="border-t border-black/5 px-8 py-8">
+                <div className="mb-6 flex items-center justify-between text-sm tracking-wide">
+                  <span className="font-light">Subtotal</span>
+                  <span className="font-medium">{formatPrice(total)}</span>
+                </div>
+
+                <Link
+                  href="/checkout"
+                  onClick={onClose}
+                  className="block w-full border border-black py-4 text-center text-xs tracking-[0.2em] font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white"
+                >
+                  Proceed to Checkout
+                </Link>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  )
+}
