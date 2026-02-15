@@ -9,6 +9,8 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
 import { NotificationIcon } from '@/components/notification-icon'
 import { NotificationDialog, type Notification } from '@/components/notification-dialog'
+import { WishlistModal } from '@/components/wishlist-modal'
+import { CartModal } from '@/components/cart-modal'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { useCartCount } from '@/hooks/useCartCount'
@@ -17,6 +19,8 @@ import { useWishlistCount } from '@/hooks/useWishlistCount'
 export function HeaderMobile() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [wishlistOpen, setWishlistOpen] = useState(false)
+  const [cartOpen, setCartOpen] = useState(false)
   const [catalogExpanded, setCatalogExpanded] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -90,7 +94,7 @@ export function HeaderMobile() {
   }
 
   return (
-    <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg lg:hidden">
+    <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg lg:hidden relative">
       <nav className="container mx-auto px-3 md:px-4">
         <div className="flex h-16 items-center justify-between md:h-18">
           <button
@@ -117,6 +121,8 @@ export function HeaderMobile() {
             {role !== 'customer' && (
               <Link
                 href="/cms"
+                target="_blank"
+                rel="noopener noreferrer"
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10",
                   pathname.startsWith('/cms')
@@ -137,7 +143,7 @@ export function HeaderMobile() {
               href="/account"
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10",
-                pathname.startsWith('/account') && !pathname.startsWith('/account/wishlist')
+                pathname.startsWith('/account')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
@@ -262,15 +268,12 @@ export function HeaderMobile() {
 
               {/* Wishlist and Cart */}
               <div className="pt-4 border-t border-white/10 mt-4 space-y-1">
-                <Link
-                  href="/account/wishlist"
-                  className={cn(
-                    "flex items-center justify-between rounded-lg px-4 py-4 text-base font-medium transition-all",
-                    pathname === '/account/wishlist'
-                      ? "bg-luxury-gold/20 text-luxury-gold"
-                      : "text-white hover:bg-luxury-gold/20"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
+                <button
+                  onClick={() => {
+                    setWishlistOpen(true)
+                    setMobileMenuOpen(false)
+                  }}
+                  className="flex w-full items-center justify-between rounded-lg px-4 py-4 text-base font-medium transition-all text-white hover:bg-luxury-gold/20"
                 >
                   <div className="flex items-center gap-3">
                     <Heart className="h-5 w-5" />
@@ -281,27 +284,24 @@ export function HeaderMobile() {
                       {wishlistCount}
                     </span>
                   )}
-                </Link>
-                <Link
-                  href="/cart"
-                  className={cn(
-                    "flex items-center justify-between rounded-lg px-4 py-4 text-base font-medium transition-all",
-                    pathname === '/cart'
-                      ? "bg-luxury-gold/20 text-luxury-gold"
-                      : "text-white hover:bg-luxury-gold/20"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
+                </button>
+                <button
+                  onClick={() => {
+                    setCartOpen(true)
+                    setMobileMenuOpen(false)
+                  }}
+                  className="flex w-full items-center justify-between rounded-lg px-4 py-4 text-base font-medium transition-all text-white hover:bg-luxury-gold/20"
                 >
                   <div className="flex items-center gap-3">
                     <ShoppingBag className="h-5 w-5" />
-                    <span>Shopping Cart</span>
+                    <span>Cart</span>
                   </div>
                   {cartCount > 0 && (
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-luxury-gold text-xs font-bold text-luxury-navy">
                       {cartCount}
                     </span>
                   )}
-                </Link>
+                </button>
               </div>
               
               <div className="pt-4 border-t border-white/10 mt-4 space-y-2">
@@ -325,6 +325,16 @@ export function HeaderMobile() {
         notifications={notifications}
         onMarkAsRead={handleMarkAsRead}
         onMarkAllAsRead={handleMarkAllAsRead}
+      />
+      
+      <WishlistModal
+        isOpen={wishlistOpen}
+        onClose={() => setWishlistOpen(false)}
+      />
+      
+      <CartModal
+        isOpen={cartOpen}
+        onClose={() => setCartOpen(false)}
       />
     </header>
   )

@@ -9,6 +9,9 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
 import { NotificationIcon } from '@/components/notification-icon'
 import { NotificationDialog, type Notification } from '@/components/notification-dialog'
+import { SearchModal } from '@/components/search-modal'
+import { CartModal } from '@/components/cart-modal'
+import { WishlistModal } from '@/components/wishlist-modal'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { useCartCount } from '@/hooks/useCartCount'
@@ -17,6 +20,8 @@ import { useWishlistCount } from '@/hooks/useWishlistCount'
 export function HeaderDesktop() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [cartOpen, setCartOpen] = useState(false)
+  const [wishlistOpen, setWishlistOpen] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t } = useLanguage()
@@ -97,7 +102,9 @@ export function HeaderDesktop() {
     <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg hidden lg:block">
       <nav className="container mx-auto px-8">
         <div className="flex h-20 items-center justify-center">
-          <div className="flex-1"></div>
+          <div className="flex items-center gap-5 flex-1">
+            <RegionCurrencySelector />
+          </div>
           
           <Link href="/" className="static translate-x-0">
             <span className="font-serif text-4xl font-medium tracking-[0.25em] text-luxury-gold transition-all duration-300 hover:opacity-90">
@@ -106,10 +113,11 @@ export function HeaderDesktop() {
           </Link>
 
           <div className="flex items-center gap-5 flex-1 justify-end">
-            <RegionCurrencySelector />
             {role !== 'customer' && (
               <Link
                 href="/cms"
+                target="_blank"
+                rel="noopener noreferrer"
                 className={cn(
                   "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
                   pathname.startsWith('/cms')
@@ -140,11 +148,11 @@ export function HeaderDesktop() {
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               isActive={notificationsOpen}
             />
-            <Link 
-              href="/account/wishlist"
+            <button
+              onClick={() => setWishlistOpen(true)}
               className={cn(
                 "relative flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
-                pathname === '/account/wishlist'
+                wishlistOpen
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
@@ -167,12 +175,12 @@ export function HeaderDesktop() {
                   {wishlistCount > 9 ? '9+' : wishlistCount}
                 </span>
               )}
-            </Link>
-            <Link 
-              href="/cart"
+            </button>
+            <button
+              onClick={() => setCartOpen(true)}
               className={cn(
                 "relative flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
-                pathname === '/cart'
+                cartOpen
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
@@ -195,12 +203,12 @@ export function HeaderDesktop() {
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
               )}
-            </Link>
+            </button>
             <Link 
               href="/account"
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
-                pathname.startsWith('/account') && !pathname.startsWith('/account/wishlist')
+                pathname.startsWith('/account')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
@@ -236,27 +244,9 @@ export function HeaderDesktop() {
         </div>
       </nav>
 
-      {searchOpen && (
-        <div 
-          id="desktop-search"
-          className="animate-fade-in border-t border-white/10 bg-luxury-navy-light px-4 py-6"
-          role="search"
-          aria-label="Search products"
-        >
-          <div className="container mx-auto">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-              <input
-                type="search"
-                placeholder="Search for fragrances..."
-                aria-label="Search for fragrances"
-                className="w-full rounded-lg border border-luxury-gold/30 bg-luxury-navy-dark py-4 pl-12 pr-4 text-sm text-white placeholder:text-gray-400 transition-all focus:border-luxury-gold focus:ring-2 focus:ring-luxury-gold/50"
-                autoFocus
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <CartModal isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+      <WishlistModal isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
 
       <NotificationDialog
         isOpen={notificationsOpen}

@@ -1,53 +1,59 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
-import { Flower2, Apple, Cake, Sparkles, Waves, Star } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Flower2, Apple, Cake, Sparkles, Waves, Star, Leaf, Sun, Wind } from 'lucide-react'
 
-const categories = [
-  {
-    name: 'Floral',
-    icon: Flower2,
-    href: '/products?category=Floral',
-    description: 'Elegant and romantic',
-    image: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=400&q=80',
-  },
-  {
-    name: 'Fruity',
-    icon: Apple,
-    href: '/products?category=Fruity',
-    description: 'Fresh and vibrant',
-    image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&q=80',
-  },
-  {
-    name: 'Gourmand',
-    icon: Cake,
-    href: '/products?category=Gourmand',
-    description: 'Sweet and indulgent',
-    image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80',
-  },
-  {
-    name: 'Powdery',
-    icon: Sparkles,
-    href: '/products?category=Powdery',
-    description: 'Soft and sophisticated',
-    image: 'https://images.unsplash.com/photo-1583241800698-e8f1c92a2c8e?w=400&q=80',
-  },
-  {
-    name: 'Aquatic Aromatic',
-    icon: Waves,
-    href: '/products?category=Aquatic',
-    description: 'Fresh and invigorating',
-    image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&q=80',
-  },
-  {
-    name: 'Oriental',
-    icon: Star,
-    href: '/products?category=Oriental',
-    description: 'Warm and exotic',
-    image: 'https://images.unsplash.com/photo-1602874801006-c2b5e8f3e06f?w=400&q=80',
-  },
-]
+type FragranceFamily = {
+  id: string
+  name: string
+  description: string
+  image_url: string
+  display_order: number
+}
+
+const iconMap: Record<string, any> = {
+  'Floral': Flower2,
+  'Fruity': Apple,
+  'Gourmand': Cake,
+  'Powdery': Sparkles,
+  'Aquatic Aromatic': Waves,
+  'Oriental': Star,
+  'Woody': Leaf,
+  'Citrus': Sun,
+  'Fresh': Wind,
+}
 
 export function CategorySection() {
+  const [categories, setCategories] = useState<FragranceFamily[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchFragranceFamilies()
+  }, [])
+
+  const fetchFragranceFamilies = async () => {
+    try {
+      const response = await fetch('/api/fragrance-families')
+      const data = await response.json()
+      setCategories(data.fragrance_families || [])
+    } catch (error) {
+      console.error('Failed to fetch fragrance families:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <section className="relative bg-[#EFE6D3] py-20 lg:py-32">
+        <div className="container relative mx-auto px-4 lg:px-8">
+          <div className="text-center">Loading...</div>
+        </div>
+      </section>
+    )
+  }
   return (
     <section className="relative bg-[#EFE6D3] py-20 lg:py-32">
       {/* Subtle pattern overlay */}
@@ -68,18 +74,19 @@ export function CategorySection() {
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {categories.map((category, index) => {
-            const Icon = category.icon
+            const Icon = iconMap[category.name] || Sparkles
+            const href = `/products?category=${encodeURIComponent(category.name)}`
             return (
               <Link
-                key={category.name}
-                href={category.href}
+                key={category.id}
+                href={href}
                 className="group relative overflow-hidden rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all duration-500 hover:scale-105 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {/* Background Image */}
                 <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl">
                   <Image
-                    src={category.image}
+                    src={category.image_url || 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&q=80'}
                     alt={category.name}
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-110"

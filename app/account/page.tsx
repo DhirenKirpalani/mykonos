@@ -105,9 +105,6 @@ export default function AccountPage() {
           <h1 className="mt-4 mb-4 font-serif text-4xl font-bold lg:text-5xl">
             My Account
           </h1>
-          <p className="text-lg text-muted-foreground">
-            Manage your account settings and orders
-          </p>
         </div>
       </div>
 
