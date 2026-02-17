@@ -67,6 +67,19 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  // Check if first media is a video
+  const isVideo = (url: string) => {
+    return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
+  }
+  
+  const firstMedia = product.image_urls[0]
+  const isFirstMediaVideo = isVideo(firstMedia)
+  
+  // If first media is video, try to find first image for thumbnail
+  const thumbnailUrl = isFirstMediaVideo && product.image_urls.length > 1
+    ? product.image_urls.find(url => !isVideo(url)) || firstMedia
+    : firstMedia
+
   return (
     <motion.div
       whileHover={{ y: -4 }}
@@ -108,19 +121,32 @@ export function ProductCard({ product }: ProductCardProps) {
       <Link href={`/products/${product.slug}`} className="block h-full" aria-label={`View ${product.name}`}>
         {/* Image Frame */}
         <div className="relative aspect-[3/4] bg-[#F1F4F8] overflow-hidden">
-          <Image
-            src={product.image_urls[0]}
-            alt={`${product.name} - ${product.category} fragrance`}
-            fill
-            className="
-              object-contain p-6 md:p-8
-              transition-transform duration-500 ease-out
-              group-hover:scale-[1.04]
-            "
-            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
-            quality={90}
-            loading="lazy"
-          />
+          {isVideo(thumbnailUrl) ? (
+            <video
+              src={thumbnailUrl}
+              className="
+                h-full w-full object-contain p-6 md:p-8
+                transition-transform duration-500 ease-out
+                group-hover:scale-[1.04]
+              "
+              muted
+              playsInline
+            />
+          ) : (
+            <Image
+              src={thumbnailUrl}
+              alt={`${product.name} - ${product.category} fragrance`}
+              fill
+              className="
+                object-contain p-6 md:p-8
+                transition-transform duration-500 ease-out
+                group-hover:scale-[1.04]
+              "
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
+              quality={90}
+              loading="lazy"
+            />
+          )}
         </div>
 
         {/* Text */}
