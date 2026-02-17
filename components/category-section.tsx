@@ -14,12 +14,18 @@ type FragranceFamily = {
 }
 
 const iconMap: Record<string, any> = {
+  'Aqua & Aromatic': Waves,
+  'Floral Fantasy': Flower2,
+  'Oriental': Star,
+  'Fresh Fruity': Apple,
+  'Powdery Elegance': Sparkles,
+  'Gourmand Galore': Cake,
+  // Legacy mappings for backward compatibility
   'Floral': Flower2,
   'Fruity': Apple,
   'Gourmand': Cake,
   'Powdery': Sparkles,
   'Aquatic Aromatic': Waves,
-  'Oriental': Star,
   'Woody': Leaf,
   'Citrus': Sun,
   'Fresh': Wind,

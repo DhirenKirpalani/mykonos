@@ -90,6 +90,11 @@ export function HeaderMobile() {
       return true
     }
     
+    // Special case for /products - should be active when on products page regardless of filters
+    if (href === '/products') {
+      return pathname === '/products'
+    }
+    
     return pathname.startsWith(href) && !searchParams.toString()
   }
 
