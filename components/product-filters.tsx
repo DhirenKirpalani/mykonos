@@ -74,11 +74,11 @@ export function ProductFilters() {
               <div className="space-y-2">
                 <button
                   onClick={() => {
-                    updateFilter('category', currentCategory === 'All Products' ? '' : 'All Products')
+                    updateFilter('category', '')
                     setIsOpen(false)
                   }}
                   className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all active:scale-98 ${
-                    currentCategory === 'All Products'
+                    !currentCategory
                       ? 'bg-[#C2A36B] text-white shadow-sm'
                       : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                   }`}
@@ -165,11 +165,9 @@ export function ProductFilters() {
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">Categories</h3>
           <div className="space-y-2">
             <button
-              onClick={() =>
-                updateFilter('category', currentCategory === 'All Products' ? '' : 'All Products')
-              }
+              onClick={() => updateFilter('category', '')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentCategory === 'All Products'
+                !currentCategory
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}

@@ -25,7 +25,7 @@ async function getProducts(searchParams: {
   let query = supabase.from('products').select('*', { count: 'exact' })
 
   if (searchParams.category) {
-    query = query.eq('category', searchParams.category)
+    query = query.eq('fragrance_family', searchParams.category)
   }
 
   if (searchParams.collection) {
