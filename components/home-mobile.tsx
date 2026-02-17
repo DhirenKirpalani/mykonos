@@ -2,6 +2,12 @@
 
 import dynamic from 'next/dynamic'
 import { HeroCarousel } from '@/components/hero-carousel'
+import { ImageCarousel } from '@/components/image-carousel'
+import { ImageCarousel2 } from '@/components/image-carousel-2'
+import { ImageCarousel3 } from '@/components/image-carousel-3'
+import { ImageCarousel4 } from '@/components/image-carousel-4'
+import { PromotionSection } from '@/components/promotion-section'
+import { FragranceFamiliesCarousel } from '@/components/fragrance-families-carousel'
 import { Database } from '@/lib/supabase/database.types'
 
 const ProductCarousel = dynamic(() => import('@/components/product-carousel').then(mod => ({ default: mod.ProductCarousel })), {
@@ -33,6 +39,16 @@ export function HomeMobile({ products, collections, newArrivals }: HomeMobilePro
   return (
     <div className="min-h-screen">
       <HeroCarousel />
+      
+      <ImageCarousel />
+      
+      <ImageCarousel2 />
+      
+      <ImageCarousel3 />
+      
+      <ImageCarousel4 />
+      
+      <PromotionSection />
 
       {newArrivals.length > 0 && (
         <ProductCarousel 
@@ -51,8 +67,8 @@ export function HomeMobile({ products, collections, newArrivals }: HomeMobilePro
           titleColor="text-[#C2A36B]/90"
         />
       )}
-
-      <CategorySection />
+      
+      <FragranceFamiliesCarousel />
 
       <section className="relative bg-[#F6F4EF] py-12">
         <div className="container mx-auto px-4">
