@@ -77,12 +77,12 @@ export async function POST(request: NextRequest) {
     
     const { error: updateError } = await (supabase
       .from('orders')
-      .update({
+      .update as any)({
         payment_status: paymentStatus,
         status: orderStatus,
         payment_intent_id: transaction_id,
         payment_method: payment_type,
-      }) as any)
+      })
       .eq('order_number', order_id)
 
     if (updateError) {
