@@ -9,12 +9,13 @@ import { formatPrice } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { CreditCard, MapPin, Package } from 'lucide-react'
+import Script from 'next/script'
 
 type CartItem = {
   id: string
   product_id: string
   quantity: number
-  price_at_time: number
+  price_at_add: number
   product: {
     name: string
     image_urls: string[]
@@ -34,6 +35,12 @@ type Address = {
   is_default: boolean
 }
 
+declare global {
+  interface Window {
+    snap: any
+  }
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
@@ -41,7 +48,8 @@ export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('credit_card')
+  const [snapScriptLoaded, setSnapScriptLoaded] = useState(false)
 
   useEffect(() => {
     fetchCheckoutData()
@@ -86,10 +94,16 @@ export default function CheckoutPage() {
       const typedAddresses = (addressData as Address[]) || []
       setAddresses(typedAddresses)
       
-      // Select default address
+      // Select default address, or first address if no default
       const defaultAddress = typedAddresses.find(a => a.is_default)
       if (defaultAddress) {
+        console.log('Setting default address:', defaultAddress.id)
         setSelectedAddressId(defaultAddress.id)
+      } else if (typedAddresses.length > 0) {
+        console.log('No default address, selecting first:', typedAddresses[0].id)
+        setSelectedAddressId(typedAddresses[0].id)
+      } else {
+        console.log('No addresses found')
       }
 
     } catch (error) {
@@ -101,6 +115,11 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
+    // Prevent duplicate submissions
+    if (isProcessing) {
+      return
+    }
+
     if (!selectedAddressId) {
       toast.error('Please select a shipping address')
       return
@@ -120,23 +139,42 @@ export default function CheckoutPage() {
         return
       }
 
-      const subtotal = cartItems.reduce((sum, item) => sum + item.price_at_time * item.quantity, 0)
+      const subtotal = cartItems.reduce((sum, item) => sum + item.price_at_add * item.quantity, 0)
       const shipping = subtotal > 150 ? 0 : 15
       const total = subtotal + shipping
 
-      // Create order
+      // Get selected address details
+      const selectedAddress = addresses.find(addr => addr.id === selectedAddressId)
+      if (!selectedAddress) throw new Error('Address not found')
+
+      // Generate unique order number
+      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+
+      // Create order with shipping address
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: session.user.id,
+          order_number: orderNumber,
           shipping_address_id: selectedAddressId,
+          shipping_address: {
+            full_name: selectedAddress.full_name,
+            address_line1: selectedAddress.address_line1,
+            address_line2: selectedAddress.address_line2,
+            city: selectedAddress.city,
+            state_province: selectedAddress.state_province,
+            postal_code: selectedAddress.postal_code,
+            country: selectedAddress.country,
+            phone: selectedAddress.phone,
+          },
           payment_method: selectedPaymentMethod,
-          subtotal_amount: subtotal,
-          shipping_amount: shipping,
+          subtotal: subtotal,
+          shipping_cost: shipping,
           tax_amount: 0,
           total_amount: total,
-          currency_code: 'USD',
+          currency_code: 'IDR',
           status: 'pending',
+          payment_status: 'pending',
         } as any)
         .select()
         .single()
@@ -148,7 +186,7 @@ export default function CheckoutPage() {
         order_id: (order as any).id,
         product_id: item.product_id,
         quantity: item.quantity,
-        price_at_time: item.price_at_time,
+        price_at_purchase: item.price_at_add,
       }))
 
       const { error: itemsError } = await supabase
@@ -157,26 +195,102 @@ export default function CheckoutPage() {
 
       if (itemsError) throw itemsError
 
-      // Clear cart
-      const { error: clearError } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('user_id', session.user.id)
+      // Get user email
+      const userEmail = session.user.email || ''
 
-      if (clearError) throw clearError
+      // Convert to IDR (assuming 1 USD = 15,000 IDR for example)
+      const totalInIDR = Math.round(total * 15000)
 
-      toast.success('Order placed successfully!')
-      router.push(`/account/orders`)
+      // Create Midtrans transaction token
+      console.log('Creating Midtrans token for order:', orderNumber)
+      
+      // Get access token for API authentication
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      if (!currentSession?.access_token) {
+        throw new Error('No access token available')
+      }
+      
+      const tokenResponse = await fetch('/api/midtrans/create-token', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentSession.access_token}`,
+        },
+        body: JSON.stringify({
+          orderId: orderNumber,
+          amount: totalInIDR,
+          customerDetails: {
+            firstName: selectedAddress.full_name.split(' ')[0],
+            lastName: selectedAddress.full_name.split(' ').slice(1).join(' '),
+            email: userEmail,
+            phone: selectedAddress.phone,
+          },
+          items: [
+            ...cartItems.map(item => ({
+              id: item.product_id,
+              price: Math.round(item.price_at_add * 15000),
+              quantity: item.quantity,
+              name: item.product.name,
+            })),
+            {
+              id: 'SHIPPING',
+              price: Math.round(shipping * 15000),
+              quantity: 1,
+              name: 'Shipping Cost',
+            }
+          ],
+        }),
+      })
+
+      console.log('Token response status:', tokenResponse.status)
+
+      if (!tokenResponse.ok) {
+        const errorData = await tokenResponse.json()
+        console.error('Token creation failed:', errorData)
+        throw new Error(errorData.error || 'Failed to create payment token')
+      }
+
+      const { token } = await tokenResponse.json()
+      console.log('Token received successfully')
+
+      // Open Midtrans Snap popup
+      window.snap.pay(token, {
+        onSuccess: async function(result: any) {
+          console.log('Payment success:', result)
+          
+          // Clear cart
+          await supabase
+            .from('cart_items')
+            .delete()
+            .eq('user_id', session.user.id)
+
+          toast.success('Payment successful!')
+          router.push(`/account/orders`)
+        },
+        onPending: function(result: any) {
+          console.log('Payment pending:', result)
+          toast.info('Payment is pending. Please complete your payment.')
+          router.push(`/account/orders`)
+        },
+        onError: function(result: any) {
+          console.log('Payment error:', result)
+          toast.error('Payment failed. Please try again.')
+        },
+        onClose: function() {
+          toast.info('Payment popup closed')
+          setIsProcessing(false)
+        }
+      })
 
     } catch (error) {
       console.error('Failed to place order:', error)
       toast.error('Failed to place order. Please try again.')
-    } finally {
       setIsProcessing(false)
     }
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price_at_time * item.quantity, 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price_at_add * item.quantity, 0)
   const shipping = subtotal > 150 ? 0 : 15
   const total = subtotal + shipping
 
@@ -185,7 +299,23 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <Script
+        src={process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true' 
+          ? 'https://app.midtrans.com/snap/snap.js' 
+          : 'https://app.sandbox.midtrans.com/snap/snap.js'}
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+        onLoad={() => {
+          console.log('Midtrans Snap script loaded')
+          setSnapScriptLoaded(true)
+        }}
+        onError={(e) => {
+          console.error('Failed to load Midtrans Snap script:', e)
+          toast.error('Failed to load payment system')
+        }}
+        strategy="afterInteractive"
+      />
+      <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
           <Breadcrumbs items={[
@@ -326,7 +456,7 @@ export default function CheckoutPage() {
                       <p className="font-medium">{item.product.name}</p>
                       <p className="text-muted-foreground">Qty: {item.quantity}</p>
                     </div>
-                    <p className="font-medium">{formatPrice(item.price_at_time * item.quantity)}</p>
+                    <p className="font-medium">{formatPrice(item.price_at_add * item.quantity)}</p>
                   </div>
                 ))}
               </div>
@@ -351,9 +481,9 @@ export default function CheckoutPage() {
               <Button
                 variant="luxury"
                 size="lg"
-                className="w-full mt-6"
+                className={`w-full mt-6 ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
                 onClick={handlePlaceOrder}
-                disabled={isProcessing || !selectedAddressId || !selectedPaymentMethod}
+                disabled={isProcessing || !selectedAddressId}
               >
                 {isProcessing ? 'Processing...' : 'Place Order'}
               </Button>
@@ -362,5 +492,6 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
