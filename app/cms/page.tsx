@@ -4,16 +4,48 @@ import { useUserRole } from '@/hooks/useUserRole'
 import { Package, ShoppingCart, Users, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
 
 export default function CMSPage() {
   const { role } = useUserRole()
+  const [stats, setStats] = useState([
+    { name: 'Total Products', value: '-', icon: Package, href: '/cms/products' },
+    { name: 'Pending Orders', value: '-', icon: ShoppingCart, href: '/cms/orders' },
+    { name: 'Total Customers', value: '-', icon: Users, href: '/cms/customers' },
+    { name: 'Revenue (MTD)', value: '-', icon: TrendingUp, href: '/cms/analytics' },
+  ])
 
-  const stats = [
-    { name: 'Total Products', value: '124', icon: Package, href: '/cms/products' },
-    { name: 'Pending Orders', value: '18', icon: ShoppingCart, href: '/cms/orders' },
-    { name: 'Total Customers', value: '2,543', icon: Users, href: '/cms/customers' },
-    { name: 'Revenue (MTD)', value: '$45,231', icon: TrendingUp, href: '/cms/analytics' },
-  ]
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  const fetchStats = async () => {
+    try {
+      // Fetch real statistics from database
+      const { count: productsCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+      
+      const { count: ordersCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+      
+      const { count: usersCount } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+      
+      setStats([
+        { name: 'Total Products', value: productsCount?.toString() || '0', icon: Package, href: '/cms/products' },
+        { name: 'Pending Orders', value: ordersCount?.toString() || '0', icon: ShoppingCart, href: '/cms/orders' },
+        { name: 'Total Customers', value: usersCount?.toString() || '0', icon: Users, href: '/cms/customers' },
+        { name: 'Revenue (MTD)', value: '-', icon: TrendingUp, href: '/cms/analytics' },
+      ])
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
+  }
 
   const quickActions = [
     { name: 'Add New Product', href: '/cms/products/new', color: 'bg-blue-600' },
@@ -71,28 +103,8 @@ export default function CMSPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
-          <div className="mt-4 space-y-4">
-            <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-              <div className="h-2 w-2 rounded-full bg-green-500"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">New order received</p>
-                <p className="text-xs text-gray-500">Order #12345 - 2 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-              <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Product updated</p>
-                <p className="text-xs text-gray-500">Mediterranean Breeze - 1 hour ago</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">New customer registered</p>
-                <p className="text-xs text-gray-500">john@example.com - 3 hours ago</p>
-              </div>
-            </div>
+          <div className="mt-4 flex items-center justify-center py-8 text-center">
+            <p className="text-sm text-gray-500">No recent activity to display</p>
           </div>
         </div>
 

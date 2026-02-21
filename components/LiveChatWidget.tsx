@@ -136,25 +136,30 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-luxury-gold shadow-lg transition-all hover:scale-110 hover:shadow-xl"
+        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-luxury-gold shadow-lg transition-all hover:scale-110 hover:shadow-xl sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
         aria-label="Open live chat"
       >
-        <MessageCircle className="h-6 w-6 text-luxury-navy" />
+        <MessageCircle className="h-5 w-5 text-luxury-navy sm:h-6 sm:w-6" />
       </button>
     )
   }
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 flex w-96 flex-col rounded-lg bg-white shadow-2xl transition-all ${
-        isMinimized ? 'h-14' : 'h-[600px]'
+      className={`fixed bottom-4 right-4 z-50 flex w-[calc(100vw-2rem)] max-w-md flex-col rounded-lg bg-white shadow-2xl transition-all sm:bottom-6 sm:right-6 sm:w-96 ${
+        isMinimized ? 'h-14' : 'h-[500px] sm:h-[600px]'
       }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between rounded-t-lg bg-luxury-navy px-4 py-3">
+      <div className="flex items-center justify-between rounded-t-lg bg-luxury-navy px-3 py-2.5 sm:px-4 sm:py-3">
         <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-luxury-gold" />
-          <h3 className="font-semibold text-white">Live Chat Support</h3>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-luxury-gold/20">
+            <MessageCircle className="h-4 w-4 text-luxury-gold sm:h-5 sm:w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-white sm:text-base">Mykonos Assistant</h3>
+            <p className="text-xs text-luxury-gold/80">Online • Ready to help</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -177,7 +182,7 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
       {!isMinimized && (
         <>
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-3 space-y-3 sm:p-4">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-muted-foreground">Loading chat...</div>
@@ -226,21 +231,21 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
           </div>
 
           {/* Input */}
-          <div className="border-t border-gray-200 p-4">
+          <div className="border-t border-gray-200 p-3 sm:p-4">
             <div className="flex gap-2">
-              <textarea
+              <input
+                type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
+                placeholder="Ask me anything..."
                 disabled={isSending || !conversationId}
-                rows={2}
-                className="flex-1 resize-none rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold disabled:opacity-50"
+                className="flex-1 resize-none rounded-full border border-gray-300 px-4 py-2.5 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold disabled:opacity-50"
               />
               <button
                 onClick={sendMessage}
                 disabled={!inputMessage.trim() || isSending || !conversationId}
-                className="flex h-10 w-10 items-center justify-center self-end rounded-md bg-luxury-gold text-luxury-navy transition-all hover:bg-luxury-gold-light disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-10 items-center justify-center self-center rounded-full bg-luxury-gold text-luxury-navy transition-all hover:bg-luxury-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
                 <Send className="h-4 w-4" />

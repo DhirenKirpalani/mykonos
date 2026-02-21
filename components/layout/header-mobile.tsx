@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User, Menu, X, Settings, ChevronDown, Heart } from 'lucide-react'
+import { Search, ShoppingBag, User, Menu, X, Settings, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
@@ -21,7 +21,6 @@ export function HeaderMobile() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [wishlistOpen, setWishlistOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
-  const [catalogExpanded, setCatalogExpanded] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t } = useLanguage()
@@ -29,32 +28,7 @@ export function HeaderMobile() {
   const { count: cartCount } = useCartCount()
   const { count: wishlistCount } = useWishlistCount()
 
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'Order Shipped',
-      message: 'Your order #12345 has been shipped and is on its way!',
-      type: 'order',
-      read: false,
-      timestamp: new Date(Date.now() - 3600000),
-    },
-    {
-      id: '2',
-      title: 'New Arrivals',
-      message: 'Check out our latest collection of Mediterranean fragrances.',
-      type: 'promotion',
-      read: false,
-      timestamp: new Date(Date.now() - 7200000),
-    },
-    {
-      id: '3',
-      title: 'Welcome to Mykonos',
-      message: 'Thank you for joining us! Enjoy 10% off your first order.',
-      type: 'general',
-      read: true,
-      timestamp: new Date(Date.now() - 86400000),
-    },
-  ])
+  const [notifications, setNotifications] = useState<Notification[]>([])
 
   const unreadCount = notifications.filter(n => !n.read).length
 
@@ -117,12 +91,17 @@ export function HeaderMobile() {
           </button>
           
           <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-            <span className="font-serif text-xl font-medium tracking-[0.2em] text-luxury-gold transition-all duration-300 hover:opacity-90 md:text-2xl md:tracking-[0.25em]">
+            <span className="font-serif text-lg font-medium tracking-[0.15em] text-luxury-gold transition-all duration-300 hover:opacity-90 sm:text-xl sm:tracking-[0.2em] md:text-2xl md:tracking-[0.25em]">
               MYKONOS
             </span>
           </Link>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+            <NotificationIcon 
+              count={unreadCount} 
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              isActive={notificationsOpen}
+            />
             {role !== 'customer' && (
               <Link
                 href="/cms"
@@ -139,11 +118,6 @@ export function HeaderMobile() {
                 <Settings className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
               </Link>
             )}
-            <NotificationIcon 
-              count={unreadCount} 
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
-              isActive={notificationsOpen}
-            />
             <Link 
               href="/account"
               className={cn(
@@ -193,71 +167,17 @@ export function HeaderMobile() {
                 {t.nav.home}
               </Link>
 
-              {/* Expandable Catalog */}
-              <div>
-                <button
-                  onClick={() => setCatalogExpanded(!catalogExpanded)}
-                  className="w-full flex items-center justify-between rounded-lg px-4 py-4 text-base font-medium text-white transition-all hover:bg-luxury-gold/20"
-                >
-                  <span>{t.nav.catalog}</span>
-                  <ChevronDown className={cn(
-                    "h-5 w-5 transition-transform",
-                    catalogExpanded && "rotate-180"
-                  )} />
-                </button>
-                {catalogExpanded && (
-                  <div className="ml-4 mt-1 space-y-1 border-l-2 border-luxury-gold/30 pl-4">
-                    <Link
-                      href="/products"
-                      className={cn(
-                        "block rounded-lg px-4 py-3 text-sm transition-all",
-                        pathname === '/products' && !searchParams.toString()
-                          ? "bg-luxury-gold/20 text-luxury-gold"
-                          : "text-white/80 hover:bg-luxury-gold/20 hover:text-white"
-                      )}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      All Products
-                    </Link>
-                    <Link
-                      href="/products?category=perfume"
-                      className={cn(
-                        "block rounded-lg px-4 py-3 text-sm transition-all",
-                        pathname === '/products' && searchParams.get('category') === 'perfume'
-                          ? "bg-luxury-gold/20 text-luxury-gold"
-                          : "text-white/80 hover:bg-luxury-gold/20 hover:text-white"
-                      )}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Perfumes
-                    </Link>
-                    <Link
-                      href="/products?category=cologne"
-                      className={cn(
-                        "block rounded-lg px-4 py-3 text-sm transition-all",
-                        pathname === '/products' && searchParams.get('category') === 'cologne'
-                          ? "bg-luxury-gold/20 text-luxury-gold"
-                          : "text-white/80 hover:bg-luxury-gold/20 hover:text-white"
-                      )}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Colognes
-                    </Link>
-                    <Link
-                      href="/products?sale=true"
-                      className={cn(
-                        "block rounded-lg px-4 py-3 text-sm transition-all",
-                        pathname === '/products' && searchParams.get('sale') === 'true'
-                          ? "bg-luxury-gold/20 text-luxury-gold"
-                          : "text-white/80 hover:bg-luxury-gold/20 hover:text-white"
-                      )}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Sale Items
-                    </Link>
-                  </div>
+              <Link
+                href="/products"
+                role="menuitem"
+                className={cn(
+                  "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98",
+                  pathname === '/products' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
                 )}
-              </div>
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.catalog}
+              </Link>
 
               <Link
                 href="/contact"

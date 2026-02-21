@@ -9,81 +9,63 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
-
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Check permission
-    const { data: user } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user || !['support_agent', 'inventory_manager', 'admin'].includes((user as any).role || '')) {
-      return NextResponse.json(
-        { error: 'Forbidden - Staff access required' },
-        { status: 403 }
-      )
-    }
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
     const { searchParams } = new URL(request.url)
-    const search = searchParams.get('search') // email or name
-    const tagId = searchParams.get('tag_id')
-    const hasNotes = searchParams.get('has_notes') === 'true'
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = (page - 1) * limit
+    const search = searchParams.get('search')
 
-    // Use customer_dashboard view
+    // Query users table directly
     let query = supabase
-      .from('customer_dashboard' as any)
-      .select('*', { count: 'exact' })
-      .order('registered_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+      .from('users')
+      .select('id, email, first_name, last_name, phone, country, created_at')
+      .order('created_at', { ascending: false })
 
-    // Apply filters
+    // Apply search filter
     if (search) {
       query = query.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`)
     }
 
-    if (hasNotes) {
-      query = query.gt('note_count', 0)
+    const { data: customers, error } = await query
+
+    if (error) {
+      console.error('Customers fetch error:', error)
+      throw error
     }
 
-    const { data: customers, error, count } = await query
+    // Fetch order counts and totals for each customer
+    if (customers && customers.length > 0) {
+      const customerIds = customers.map((c: any) => c.id)
+      
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('user_id, total_amount')
+        .in('user_id', customerIds)
 
-    if (error) throw error
+      // Calculate order counts and total spent per customer
+      const orderStats = new Map()
+      orders?.forEach((order: any) => {
+        const existing = orderStats.get(order.user_id) || { count: 0, total: 0 }
+        orderStats.set(order.user_id, {
+          count: existing.count + 1,
+          total: existing.total + (order.total_amount || 0)
+        })
+      })
 
-    // If filtering by tag, do a separate query
-    let filteredCustomers = customers
-    if (tagId && customers) {
-      const { data: taggedUsers } = await supabase
-        .from('customer_tag_assignments')
-        .select('user_id')
-        .eq('tag_id', tagId)
+      // Merge stats into customers
+      const customersWithStats = customers.map((customer: any) => {
+        const stats = orderStats.get(customer.id) || { count: 0, total: 0 }
+        return {
+          ...customer,
+          order_count: stats.count,
+          total_spent: stats.total
+        }
+      })
 
-      const taggedUserIds = new Set(taggedUsers?.map(t => (t as any).user_id) || [])
-      filteredCustomers = customers.filter(c => taggedUserIds.has((c as any).id))
+      return NextResponse.json(customersWithStats)
     }
 
-    return NextResponse.json({
-      customers: filteredCustomers || [],
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        total_pages: Math.ceil((count || 0) / limit),
-      },
-    })
+    return NextResponse.json(customers || [])
   } catch (error: any) {
     console.error('Customers fetch error:', error)
     return NextResponse.json(

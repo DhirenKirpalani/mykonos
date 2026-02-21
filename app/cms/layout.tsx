@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useUserRole } from '@/hooks/useUserRole'
 import { canManageProducts, canManagePromotions, canManageOrders, canAccessCMS } from '@/lib/utils/permissions'
+import { Toaster } from 'sonner'
 
 export default function CMSLayout({
   children,
@@ -101,6 +102,7 @@ export default function CMSLayout({
 
   return (
     <div className="fixed inset-0 bg-gray-50">
+      <Toaster position="top-center" richColors closeButton />
       {/* Mobile menu button */}
       <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between bg-luxury-navy px-4 lg:hidden">
         <Link href="/cms" className="font-serif text-xl font-medium tracking-wider text-luxury-gold">
@@ -135,7 +137,9 @@ export default function CMSLayout({
             </div>
             <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
               {navigation.map((item) => {
-                const isActive = pathname === item.href
+                // Highlight if exact match or if current path starts with the item's path (for child routes)
+                const isActive = pathname === item.href || 
+                  (item.href !== '/cms' && pathname.startsWith(item.href + '/'))
                 return (
                   <Link
                     key={item.name}

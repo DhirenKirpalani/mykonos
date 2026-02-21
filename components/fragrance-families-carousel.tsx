@@ -145,22 +145,22 @@ export function FragranceFamiliesCarousel() {
 
           <button
             onClick={() => paginate(-1)}
-            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all hover:bg-white hover:scale-110"
+            className="absolute left-1 sm:left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all hover:bg-white hover:scale-110"
             aria-label="Previous fragrance family"
           >
-            <ChevronLeft className="h-5 w-5 md:h-6 md:w-6 text-[#1C2E4A]" />
+            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-[#1C2E4A]" />
           </button>
 
           <button
             onClick={() => paginate(1)}
-            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all hover:bg-white hover:scale-110"
+            className="absolute right-1 sm:right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all hover:bg-white hover:scale-110"
             aria-label="Next fragrance family"
           >
-            <ChevronRight className="h-5 w-5 md:h-6 md:w-6 text-[#1C2E4A]" />
+            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-[#1C2E4A]" />
           </button>
 
           {!loading && fragranceFamilies.length > 0 && (
-            <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+            <div className="absolute bottom-2 sm:bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-1.5 sm:gap-2">
               {fragranceFamilies.map((family, index) => (
                 <button
                   key={family.id}
@@ -168,10 +168,10 @@ export function FragranceFamiliesCarousel() {
                     setDirection(index > currentIndex ? 1 : -1)
                     setCurrentIndex(index)
                   }}
-                  className={`h-2 md:h-2.5 rounded-full transition-all ${
+                  className={`h-1.5 sm:h-2 md:h-2.5 rounded-full transition-all ${
                     index === currentIndex
-                      ? 'w-8 md:w-10 bg-[#C2A36B]'
-                      : 'w-2 md:w-2.5 bg-white/60 hover:bg-white/80'
+                      ? 'w-6 sm:w-8 md:w-10 bg-[#C2A36B]'
+                      : 'w-1.5 sm:w-2 md:w-2.5 bg-white/60 hover:bg-white/80'
                   }`}
                   aria-label={`Go to fragrance family ${index + 1}`}
                 />

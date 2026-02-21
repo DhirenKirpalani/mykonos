@@ -12,14 +12,25 @@ export async function GET(
 ) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authorization header
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
     
-    if (!session) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      )
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
         { status: 401 }
       )
     }
@@ -40,23 +51,8 @@ export async function GET(
       )
     }
 
-    // Get product images
-    const { data: images } = await supabase
-      .from('product_images')
-      .select('*')
-      .eq('product_id', id)
-      .order('display_order')
-
-    // Get product collections
-    const { data: collections } = await supabase
-      .from('product_collections')
-      .select('*, collection:collections(*)')
-      .eq('product_id', id)
-
     return NextResponse.json({
       product,
-      images: images || [],
-      collections: collections || [],
     })
   } catch (error: any) {
     console.error('Product fetch error:', error)
@@ -76,26 +72,37 @@ export async function PATCH(
 ) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authorization header
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
     
-    if (!session) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      )
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
         { status: 401 }
       )
     }
 
     // Check if user has permission
-    const { data: user } = await supabase
+    const { data: userData } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
-    if (!user || !['content_manager', 'admin'].includes((user as any).role || '')) {
+    if (!userData || !['content_manager', 'admin'].includes((userData as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Content manager access required' },
         { status: 403 }
@@ -106,9 +113,8 @@ export async function PATCH(
     const body = await request.json()
 
     // Update product
-    const updateData: Database['public']['Tables']['products']['Update'] = {
+    const updateData: any = {
       ...body,
-      last_modified_by: session.user.id,
     }
 
     const query = supabase.from('products')
@@ -141,26 +147,37 @@ export async function DELETE(
 ) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authorization header
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
     
-    if (!session) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      )
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
         { status: 401 }
       )
     }
 
     // Check if user has permission
-    const { data: user } = await supabase
+    const { data: userData } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
-    if (!user || (user as any).role !== 'admin') {
+    if (!userData || (userData as any).role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
@@ -169,7 +186,7 @@ export async function DELETE(
 
     const { id } = params
 
-    // Delete product (cascades to images and collections)
+    // Delete product
     const { error } = await supabase
       .from('products')
       .delete()

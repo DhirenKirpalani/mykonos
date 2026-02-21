@@ -30,32 +30,7 @@ export function HeaderDesktop() {
   const { count: wishlistCount } = useWishlistCount()
 
   // Sample notifications - replace with actual data from your backend
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'Order Shipped',
-      message: 'Your order #12345 has been shipped and is on its way!',
-      type: 'order',
-      read: false,
-      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-    },
-    {
-      id: '2',
-      title: 'New Arrivals',
-      message: 'Check out our latest collection of Mediterranean fragrances.',
-      type: 'promotion',
-      read: false,
-      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
-    },
-    {
-      id: '3',
-      title: 'Welcome to Mykonos',
-      message: 'Thank you for joining us! Enjoy 10% off your first order.',
-      type: 'general',
-      read: true,
-      timestamp: new Date(Date.now() - 86400000), // 1 day ago
-    },
-  ])
+  const [notifications, setNotifications] = useState<Notification[]>([])
 
   const unreadCount = notifications.filter(n => !n.read).length
 

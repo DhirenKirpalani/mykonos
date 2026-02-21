@@ -112,6 +112,18 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+              }
+              window.addEventListener('load', function() {
+                window.scrollTo(0, 0);
+              });
+            `,
+          }}
+        />
       </head>
       <body className="font-sans antialiased bg-luxury-navy">
         <Providers>

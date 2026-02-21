@@ -70,32 +70,6 @@ export function HomeDesktop({ products, collections, newArrivals }: HomeDesktopP
       
       <FragranceFamiliesCarousel />
 
-      <section className="relative bg-[#F6F4EF] py-12 md:py-20 lg:py-32">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="mb-8 text-center md:mb-12 lg:mb-16">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-[#8A6A3F]/75 md:mb-3 md:text-xs md:tracking-[0.3em]">
-                Curated Excellence
-              </p>
-              <h2 className="mb-4 font-serif text-2xl font-bold text-[#1C2E4A] md:mb-6 md:text-3xl lg:text-5xl">
-                Our Collections
-              </h2>
-              <p className="mx-auto max-w-2xl text-sm text-[#5A4A3A]/90 md:text-base lg:text-lg">
-                Explore our curated collections, each designed to capture a unique
-                essence and emotion.
-              </p>
-            </div>
-          </ScrollReveal>
-          <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
-            {collections.map((collection, index) => (
-              <ScrollReveal key={collection.id} delay={index * 100}>
-                <CollectionCard collection={collection} />
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="relative bg-luxury-navy py-16 text-white md:py-24 lg:py-40">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.05)_1px,_transparent_0)] bg-[length:40px_40px]" />
         <div className="container relative mx-auto px-4 text-center md:px-6 lg:px-8">

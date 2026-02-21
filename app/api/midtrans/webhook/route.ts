@@ -95,16 +95,46 @@ export async function POST(request: NextRequest) {
 
     const { data: order } = await supabase
       .from('orders')
-      .select('id')
+      .select('id, user_id')
       .eq('order_number', order_id)
       .single()
 
     if (order) {
+      // Add order status history
       await supabase.from('order_status_history').insert({
         order_id: (order as any).id,
         status: orderStatus,
         notes: `Payment ${transaction_status} via ${payment_type}. Transaction ID: ${transaction_id}`,
       } as any)
+
+      // Create notification for user based on payment status
+      let notificationTitle = ''
+      let notificationMessage = ''
+      let notificationType: 'order' | 'payment' | 'promotion' | 'general' = 'order'
+
+      if (paymentStatus === 'completed') {
+        notificationTitle = 'Payment Successful! 🎉'
+        notificationMessage = `Your payment for order #${order_id} has been confirmed. Your order is now being processed.`
+        notificationType = 'payment'
+      } else if (paymentStatus === 'failed') {
+        notificationTitle = 'Payment Failed'
+        notificationMessage = `Unfortunately, your payment for order #${order_id} could not be processed. Please try again or contact support.`
+        notificationType = 'payment'
+      } else if (paymentStatus === 'pending' && transaction_status === 'pending') {
+        notificationTitle = 'Payment Pending'
+        notificationMessage = `Your payment for order #${order_id} is being processed. We'll notify you once it's confirmed.`
+        notificationType = 'payment'
+      }
+
+      if (notificationTitle) {
+        await supabase.from('notifications').insert({
+          user_id: (order as any).user_id,
+          title: notificationTitle,
+          message: notificationMessage,
+          type: notificationType,
+          read: false,
+        } as any)
+      }
     }
 
     return NextResponse.json({ success: true })

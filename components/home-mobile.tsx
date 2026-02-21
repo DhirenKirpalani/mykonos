@@ -70,32 +70,6 @@ export function HomeMobile({ products, collections, newArrivals }: HomeMobilePro
       
       <FragranceFamiliesCarousel />
 
-      <section className="relative bg-[#F6F4EF] py-12">
-        <div className="container mx-auto px-4">
-          <ScrollReveal>
-            <div className="mb-8 text-center">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-[#8A6A3F]/75">
-                Curated Excellence
-              </p>
-              <h2 className="mb-4 font-serif text-2xl font-bold text-[#1C2E4A]">
-                Our Collections
-              </h2>
-              <p className="mx-auto max-w-2xl text-sm text-[#5A4A3A]/90">
-                Explore our curated collections, each designed to capture a unique
-                essence and emotion.
-              </p>
-            </div>
-          </ScrollReveal>
-          <div className="grid gap-4 grid-cols-1">
-            {collections.map((collection, index) => (
-              <ScrollReveal key={collection.id} delay={index * 100}>
-                <CollectionCard collection={collection} />
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="relative bg-luxury-navy py-16 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.05)_1px,_transparent_0)] bg-[length:40px_40px]" />
         <div className="container relative mx-auto px-4 text-center">
