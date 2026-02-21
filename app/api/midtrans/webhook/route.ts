@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
+    console.log('Midtrans webhook received:', body)
+    
     const {
       order_id,
       transaction_status,
@@ -18,24 +20,31 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Skip signature verification for testing
-    // TODO: Enable this in production
-    // if (process.env.NODE_ENV === 'production') {
-    //   const serverKey = process.env.MIDTRANS_SERVER_KEY || ''
-    //   const hash = crypto
-    //     .createHash('sha512')
-    //     .update(`${order_id}${transaction_status}${gross_amount}${serverKey}`)
-    //     .digest('hex')
+    // TODO: Re-enable this in production with proper signature validation
+    /*
+    const serverKey = process.env.MIDTRANS_SERVER_KEY || ''
+    const hash = crypto
+      .createHash('sha512')
+      .update(`${order_id}${transaction_status}${gross_amount}${serverKey}`)
+      .digest('hex')
 
-    //   if (hash !== signature_key) {
-    //     return NextResponse.json(
-    //       { error: 'Invalid signature' },
-    //       { status: 403 }
-    //     )
-    //   }
-    // }
+    if (hash !== signature_key) {
+      return NextResponse.json(
+        { error: 'Invalid signature' },
+        { status: 403 }
+      )
+    }
+    */
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    
+    console.log('Supabase config:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      urlPrefix: supabaseUrl?.substring(0, 20)
+    })
+    
     const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
     let paymentStatus = 'pending'
@@ -64,15 +73,16 @@ export async function POST(request: NextRequest) {
       orderStatus = 'pending'
     }
 
+    console.log('Updating order:', order_id, 'to status:', orderStatus)
+    
     const { error: updateError } = await (supabase
       .from('orders')
-      .update as any)({
+      .update({
         payment_status: paymentStatus,
         status: orderStatus,
         payment_intent_id: transaction_id,
         payment_method: payment_type,
-        updated_at: new Date().toISOString(),
-      })
+      }) as any)
       .eq('order_number', order_id)
 
     if (updateError) {
