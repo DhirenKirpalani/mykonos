@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Search, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 interface Product {
   id: string
@@ -41,31 +43,77 @@ export default function ProductsPage() {
 
   const toggleVisibility = async (productId: string, currentVisibility: boolean) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        toast.error('Authentication required', {
+          description: 'Please log in to perform this action'
+        })
+        return
+      }
+
       const response = await fetch(`/api/products/admin/${productId}/visibility`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ is_visible: !currentVisibility }),
       })
+      
       if (response.ok) {
+        toast.success('Visibility updated', {
+          description: `Product is now ${!currentVisibility ? 'visible' : 'hidden'}`
+        })
         fetchProducts()
+      } else {
+        const errorData = await response.json()
+        toast.error('Failed to update visibility', {
+          description: errorData.error || 'Unknown error'
+        })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error toggling visibility:', error)
+      toast.error('An error occurred', {
+        description: error.message || 'Please try again'
+      })
     }
   }
 
-  const deleteProduct = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
-    
+  const deleteProduct = async (productId: string, productName: string) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        toast.error('Authentication required', {
+          description: 'Please log in to perform this action'
+        })
+        return
+      }
+
       const response = await fetch(`/api/products/admin/${productId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
       })
+      
       if (response.ok) {
+        toast.success('Product deleted', {
+          description: `"${productName}" has been removed`
+        })
         fetchProducts()
+      } else {
+        const errorData = await response.json()
+        toast.error('Failed to delete product', {
+          description: errorData.error || 'Unknown error'
+        })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting product:', error)
+      toast.error('An error occurred', {
+        description: error.message || 'Please try again'
+      })
     }
   }
 
@@ -186,7 +234,15 @@ export default function ProductsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteProduct(product.id)}
+                        onClick={() => {
+                          toast.error(`Delete "${product.name}"?`, {
+                            description: 'This action cannot be undone.',
+                            action: {
+                              label: 'Delete',
+                              onClick: () => deleteProduct(product.id, product.name),
+                            },
+                          })
+                        }}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="h-4 w-4" />

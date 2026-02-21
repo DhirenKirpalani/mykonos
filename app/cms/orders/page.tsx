@@ -27,14 +27,25 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchOrders()
-  }, [])
+  }, [statusFilter])
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders')
+      const url = statusFilter === 'all' 
+        ? '/api/orders/admin'
+        : `/api/orders/admin?status=${statusFilter}`
+      
+      console.log('Fetching orders from:', url)
+      const response = await fetch(url)
+      console.log('Response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('Orders received:', data)
         setOrders(data)
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to fetch orders:', errorData)
       }
     } catch (error) {
       console.error('Error fetching orders:', error)

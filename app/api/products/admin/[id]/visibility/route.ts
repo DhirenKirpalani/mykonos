@@ -12,14 +12,25 @@ export async function PATCH(
 ) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authorization header
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
     
-    if (!session) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      )
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
         { status: 401 }
       )
     }
@@ -35,11 +46,10 @@ export async function PATCH(
       )
     }
 
-    // Use database function to update visibility
-    const { error } = await supabase.rpc('update_product_visibility', {
-      p_product_id: id,
-      p_is_visible: is_visible,
-    } as any)
+    // Update product visibility directly
+    const query = supabase.from('products')
+    const { error } = await (query.update as any)({ is_visible })
+      .eq('id', id)
 
     if (error) throw error
 
