@@ -11,6 +11,7 @@ interface Message {
   sender_name: string | null
   message_text: string
   created_at: string
+  is_read: boolean
 }
 
 interface LiveChatWidgetProps {
@@ -27,7 +28,40 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [isAgentOnline, setIsAgentOnline] = useState(true)
+  const [userName, setUserName] = useState<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Reset state when widget is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setConversationId(null)
+      setMessages([])
+      setInputMessage('')
+    }
+  }, [isOpen])
+
+  // Check for online agents
+  useEffect(() => {
+    const checkAgentStatus = async () => {
+      try {
+        const response = await fetch('/api/chat/agent-status', {
+          credentials: 'include'
+        })
+        if (response.ok) {
+          const { isOnline } = await response.json()
+          setIsAgentOnline(isOnline)
+        }
+      } catch (error) {
+        console.error('Failed to check agent status:', error)
+      }
+    }
+
+    checkAgentStatus()
+    const interval = setInterval(checkAgentStatus, 30000) // Check every 30 seconds
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -41,22 +75,110 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
     }
   }, [isOpen])
 
+  // Fetch user's name
+  useEffect(() => {
+    const fetchUserName = async () => {
+      if (user && !user.is_anonymous) {
+        try {
+          const { supabase } = await import('@/lib/supabase/client')
+          const { data } = await supabase
+            .from('users')
+            .select('first_name, last_name, email')
+            .eq('id', user.id)
+            .single()
+          
+          if (data) {
+            const userData = data as { first_name: string; last_name: string; email: string }
+            const name = userData.first_name && userData.last_name 
+              ? `${userData.first_name} ${userData.last_name}`
+              : userData.email
+            setUserName(name)
+          }
+        } catch (error) {
+          console.error('Failed to fetch user name:', error)
+        }
+      }
+    }
+    
+    fetchUserName()
+  }, [user])
+
+  // Poll for new messages every 3 seconds
+  useEffect(() => {
+    if (!isOpen || !conversationId) return
+
+    const pollInterval = setInterval(async () => {
+      try {
+        setMessages(currentMessages => {
+          const lastMessageTime = currentMessages.length > 0 
+            ? currentMessages[currentMessages.length - 1].created_at 
+            : new Date(0).toISOString()
+
+          fetch(`/api/chat/conversations/${conversationId}`, {
+            credentials: 'include'
+          })
+            .then(response => response.json())
+            .then(({ messages: allMessages, conversation }) => {
+              // Check if conversation was closed
+              if (conversation && conversation.status === 'closed') {
+                toast.info('This conversation has been closed by our support team.')
+                setIsOpen(false)
+                setConversationId(null)
+                setMessages([])
+                return
+              }
+              
+              // Only update if there are new messages
+              const newMessages = allMessages.filter((msg: Message) => 
+                msg.created_at > lastMessageTime
+              )
+              
+              if (newMessages.length > 0) {
+                setMessages(prev => {
+                  const existingIds = new Set(prev.map(m => m.id))
+                  const uniqueNew = newMessages.filter((m: Message) => !existingIds.has(m.id))
+                  return uniqueNew.length > 0 ? [...prev, ...uniqueNew] : prev
+                })
+              }
+            })
+            .catch(error => {
+              console.error('Failed to poll messages:', error)
+            })
+
+          return currentMessages
+        })
+      } catch (error) {
+        console.error('Failed to poll messages:', error)
+      }
+    }, 3000)
+
+    return () => clearInterval(pollInterval)
+  }, [isOpen, conversationId])
+
   const loadOrCreateConversation = async () => {
     setIsLoading(true)
     try {
-      // Try to load existing open conversation
-      const response = await fetch('/api/chat/conversations?status=open')
-      const { conversations } = await response.json()
-
-      if (conversations && conversations.length > 0) {
-        // Use existing conversation
-        const conv = conversations[0]
-        setConversationId(conv.id)
-        await loadMessages(conv.id)
-      } else {
-        // Create new conversation
-        await createConversation()
+      // For authenticated users, try to load existing open conversation
+      if (user) {
+        const response = await fetch('/api/chat/conversations?status=open', {
+          credentials: 'include'
+        })
+        
+        if (response.ok) {
+          const { conversations } = await response.json()
+          
+          if (conversations && conversations.length > 0) {
+            // Use existing conversation
+            const conv = conversations[0]
+            setConversationId(conv.id)
+            await loadMessages(conv.id)
+            return
+          }
+        }
       }
+      
+      // Create new conversation (for both authenticated and guest users)
+      await createConversation()
     } catch (error) {
       console.error('Failed to load conversation:', error)
       toast.error('Failed to start chat')
@@ -67,15 +189,32 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
 
   const createConversation = async () => {
     try {
+      const payload: any = {
+        order_id: orderId || null,
+        subject: orderNumber ? `Order ${orderNumber}` : 'General Inquiry',
+        initial_message: 'Hello, I need help.',
+      }
+      
+      // Only add guest credentials if user is not authenticated
+      if (!user || user.is_anonymous) {
+        payload.guest_email = 'guest@mykonos.com'
+        payload.guest_name = 'Guest User'
+      }
+      
+      console.log('[LiveChat] Creating conversation with payload:', payload, 'user:', user?.id)
+      
       const response = await fetch('/api/chat/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id: orderId,
-          subject: orderNumber ? `Order ${orderNumber}` : 'Customer Support',
-          initial_message: 'Hello, I need help.',
-        }),
+        credentials: 'include',
+        body: JSON.stringify(payload),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('[LiveChat] Server error:', errorData)
+        throw new Error('Failed to create conversation')
+      }
 
       const { conversation_id } = await response.json()
       setConversationId(conversation_id)
@@ -88,7 +227,15 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
 
   const loadMessages = async (convId: string) => {
     try {
-      const response = await fetch(`/api/chat/conversations/${convId}`)
+      const response = await fetch(`/api/chat/conversations/${convId}`, {
+        credentials: 'include'
+      })
+      
+      if (!response.ok) {
+        console.error('Failed to load messages:', response.status)
+        return
+      }
+      
       const { messages: loadedMessages } = await response.json()
       setMessages(loadedMessages || [])
     } catch (error) {
@@ -107,10 +254,11 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
       const response = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           conversation_id: conversationId,
           message_text: messageText,
-          sender_name: user?.email || 'Customer',
+          sender_name: userName || user?.email || 'Guest User',
         }),
       })
 
@@ -158,7 +306,19 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white sm:text-base">Mykonos Assistant</h3>
-            <p className="text-xs text-luxury-gold/80">Online • Ready to help</p>
+            <p className="text-xs text-luxury-gold/80">
+              {isAgentOnline ? (
+                <>
+                  <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-1"></span>
+                  Online • Ready to help
+                </>
+              ) : (
+                <>
+                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mr-1"></span>
+                  Offline • We'll respond soon
+                </>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -213,16 +373,23 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
                   >
                     {message.sender_type !== 'customer' && (
                       <p className="text-xs font-semibold mb-1">
-                        {message.sender_name || 'Support Agent'}
+                        Mykonos Support
                       </p>
                     )}
                     <p className="text-sm whitespace-pre-wrap">{message.message_text}</p>
-                    <p className="text-xs mt-1 opacity-70">
-                      {new Date(message.created_at).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <p className="text-xs opacity-70">
+                        {new Date(message.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                      {message.sender_type === 'customer' && (
+                        <span className="text-xs font-bold" style={{ color: message.is_read ? '#3b82f6' : '#9ca3af' }}>
+                          {message.is_read ? '✓✓' : '✓'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))

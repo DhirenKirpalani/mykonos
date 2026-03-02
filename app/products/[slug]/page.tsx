@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { formatPrice } from '@/lib/utils'
 import { ProductCarousel } from '@/components/product-carousel'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { Breadcrumb, BreadcrumbItem } from '@/components/breadcrumb'
 import { ProductImageGallery } from '@/components/product-image-gallery'
+import { PriceDisplay } from '@/components/PriceDisplay'
 import { Database } from '@/lib/supabase/database.types'
 import { Star } from 'lucide-react'
 
@@ -112,22 +112,27 @@ export default async function ProductDetailPage({
             {/* Price */}
             <div className="rounded-lg bg-gray-50 p-4">
               <div className="flex items-baseline gap-3">
-                {hasDiscount ? (
+                <div className="text-3xl font-medium text-[#EE4D2D]">
+                  <PriceDisplay 
+                    price={product.price} 
+                    salePrice={product.sale_price}
+                    className=""
+                    showOriginal={false}
+                  />
+                </div>
+                {hasDiscount && (
                   <>
-                    <span className="text-3xl font-medium text-[#EE4D2D]">
-                      {formatPrice(product.sale_price!)}
-                    </span>
                     <span className="text-lg text-gray-400 line-through">
-                      {formatPrice(product.price)}
+                      <PriceDisplay 
+                        price={product.price} 
+                        className="text-lg text-gray-400"
+                        showOriginal={false}
+                      />
                     </span>
                     <span className="rounded bg-[#EE4D2D] px-2 py-0.5 text-xs font-medium text-white">
                       {Math.round(((product.price - product.sale_price!) / product.price) * 100)}% OFF
                     </span>
                   </>
-                ) : (
-                  <span className="text-3xl font-medium text-[#EE4D2D]">
-                    {formatPrice(product.price)}
-                  </span>
                 )}
               </div>
               {hasDiscount && (

@@ -57,7 +57,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { formatPrice } from '@/lib/utils'
+import { useRegion } from '@/contexts/RegionContext'
+import { formatPrice } from '@/lib/utils/region'
 import { Database } from '@/lib/supabase/database.types'
 
 type Product = Database['public']['Tables']['products']['Row']
@@ -67,6 +68,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { region } = useRegion()
+  
   // Check if first media is a video
   const isVideo = (url: string) => {
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
@@ -173,7 +176,7 @@ export function ProductCard({ product }: ProductCardProps) {
             transition-all duration-300
             group-hover:tracking-wider
           ">
-            {formatPrice(product.price)}
+            {region ? formatPrice(product.price, region) : '...'}
           </p>
         </div>
       </Link>

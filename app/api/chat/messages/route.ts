@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 export const dynamic = 'force-dynamic'
 
@@ -8,11 +8,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
-
-    const { data: { session } } = await supabase.auth.getSession()
+    const supabase = createClient()
     const body = await request.json()
     const { conversation_id, message_text, sender_name } = body
 
@@ -23,14 +19,17 @@ export async function POST(request: Request) {
       )
     }
 
+    // Try to get authenticated user
+    const { data: { user } } = await supabase.auth.getUser()
+
     // Verify conversation access
     let query = supabase
       .from('chat_conversations')
       .select('id, user_id, guest_email')
       .eq('id', conversation_id)
 
-    if (session) {
-      query = query.eq('user_id', session.user.id)
+    if (user) {
+      query = query.eq('user_id', user.id)
     }
 
     const { data: conversation, error: convError } = await query.single()
@@ -46,7 +45,7 @@ export async function POST(request: Request) {
     const { data: messageId, error } = await supabase.rpc('send_chat_message', {
       p_conversation_id: conversation_id,
       p_sender_type: 'customer',
-      p_sender_id: session?.user?.id || null,
+      p_sender_id: user?.id || null,
       p_sender_name: sender_name || 'Customer',
       p_message_text: message_text,
     } as any)

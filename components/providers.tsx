@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { RegionProvider } from '@/contexts/RegionContext'
 import { Toaster } from 'sonner'
+import {AuthProvider} from '@/contexts/AuthContext'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <RegionProvider>
         <LanguageProvider>
           <Toaster 
@@ -34,6 +36,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           {children}
         </LanguageProvider>
       </RegionProvider>
+      </AuthProvider>
     </QueryClientProvider>
   )
 }

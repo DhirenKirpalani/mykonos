@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   LayoutDashboard, 
   Package, 
@@ -16,7 +16,8 @@ import {
   Settings,
   User,
   Menu,
-  X
+  X,
+  MessageCircle
 } from 'lucide-react'
 import { useUserRole } from '@/hooks/useUserRole'
 import { canManageProducts, canManagePromotions, canManageOrders, canAccessCMS } from '@/lib/utils/permissions'
@@ -30,6 +31,40 @@ export default function CMSLayout({
   const pathname = usePathname()
   const { role } = useUserRole()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // Fetch unread message count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (role !== 'admin') return
+      
+      try {
+        const response = await fetch('/api/chat/unread-count', {
+          credentials: 'include'
+        })
+        if (response.ok) {
+          const { count } = await response.json()
+          setUnreadCount(count)
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error)
+      }
+    }
+
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 30000) // Update every 30 seconds
+
+    // Listen for messages being read
+    const handleMessagesRead = () => {
+      fetchUnreadCount()
+    }
+    window.addEventListener('chat-messages-read', handleMessagesRead)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('chat-messages-read', handleMessagesRead)
+    }
+  }, [role])
 
   const navigation = [
     { 
@@ -73,6 +108,12 @@ export default function CMSLayout({
       href: '/cms/customers', 
       icon: Users,
       show: role === 'admin' || role === 'support_agent'
+    },
+    { 
+      name: 'Chat', 
+      href: '/cms/chat', 
+      icon: MessageCircle,
+      show: role === 'admin'
     },
     { 
       name: 'User Management', 
@@ -154,6 +195,11 @@ export default function CMSLayout({
                   >
                     <item.icon className="h-5 w-5" />
                     {item.name}
+                    {item.name === 'Chat' && unreadCount > 0 && (
+                      <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                        {unreadCount}
+                      </span>
+                    )}
                   </Link>
                 )
               })}

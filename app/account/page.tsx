@@ -7,12 +7,13 @@ import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { LoadingSpinner } from '@/components/common'
 import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/lib/supabase/database.types'
+import { useAuth } from '@/contexts/AuthContext'
 
 type UserProfile = Database['public']['Tables']['users']['Row']
 
 export default function AccountPage() {
   const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const { user, isLoading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [userData, setUserData] = useState({
     firstName: '',
@@ -20,80 +21,64 @@ export default function AccountPage() {
     email: '',
     phone: '',
   })
-  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    const loadUserProfile = async () => {
+      if (authLoading) return
       
-      if (!session) {
+      if (!user) {
         router.push('/login')
         return
       }
 
-      // Check if user is anonymous
-      if (session.user.is_anonymous) {
+      if (user.is_anonymous) {
         router.push('/login?message=Please login to access your account')
         return
       }
-
-      setIsAuthenticated(true)
-      setUserId(session.user.id)
       
-      // Fetch user profile data
       const { data: profile, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single() as { data: UserProfile | null; error: any }
 
       if (profile && !error) {
-          setUserData({
-            firstName: profile.first_name || '',
-            lastName: profile.last_name || '',
-            email: profile.email || session.user.email || '',
-            phone: profile.phone || '',
-          })
-        } else if (error) {
-          // If profile doesn't exist, create it with auth metadata
-          const metadata = session.user.user_metadata
-          const newProfile = {
-            id: session.user.id,
-            first_name: metadata?.first_name || '',
-            last_name: metadata?.last_name || '',
-            email: session.user.email || '',
-            phone: metadata?.phone || '',
-          }
-
-          await (supabase.from('users') as any).insert(newProfile)
-          
-          setUserData({
-            firstName: newProfile.first_name,
-            lastName: newProfile.last_name,
-            email: newProfile.email,
-            phone: newProfile.phone || '',
-          })
+        setUserData({
+          firstName: profile.first_name || '',
+          lastName: profile.last_name || '',
+          email: profile.email || user.email || '',
+          phone: profile.phone || '',
+        })
+      } else if (error) {
+        const metadata = user.user_metadata
+        const newProfile = {
+          id: user.id,
+          first_name: metadata?.first_name || '',
+          last_name: metadata?.last_name || '',
+          email: user.email || '',
+          phone: metadata?.phone || '',
         }
+
+        await (supabase.from('users') as any).insert(newProfile)
+        
+        setUserData({
+          firstName: newProfile.first_name,
+          lastName: newProfile.last_name,
+          email: newProfile.email,
+          phone: newProfile.phone || '',
+        })
+      }
       setIsLoading(false)
     }
 
-    checkAuth()
+    loadUserProfile()
+  }, [user, authLoading, router])
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.push('/login')
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [router])
-
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return <LoadingSpinner />
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null
   }
 
@@ -199,7 +184,7 @@ export default function AccountPage() {
                     variant="luxury" 
                     size="lg"
                     onClick={async () => {
-                      if (!userId) return
+                      if (!user) return
 
                       const updateData = {
                         first_name: userData.firstName,
@@ -211,7 +196,7 @@ export default function AccountPage() {
 
                       const { error } = await (supabase.from('users') as any)
                         .update(updateData)
-                        .eq('id', userId)
+                        .eq('id', user.id)
 
                       if (error) {
                         alert('Error updating profile: ' + error.message)

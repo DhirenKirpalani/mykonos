@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, X } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { formatPrice } from '@/lib/utils'
+import { useRegion } from '@/contexts/RegionContext'
+import { formatPrice } from '@/lib/utils/region'
 
 type Product = {
   id: string
@@ -21,21 +22,17 @@ type SearchModalProps = {
   onClose: () => void
 }
 
-const trendingSearches = [
-  'Oud Noir',
-  'Rose Gold',
-  'Amber Collection',
-  'Citrus Fresh',
-  'Woody Spice',
-  'Floral Bouquet',
-]
-
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
+  const { region } = useRegion()
   const [searchQuery, setSearchQuery] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [topProducts, setTopProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const isVideo = (url: string) => {
+    return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -136,26 +133,9 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               <div className="h-px bg-luxury-navy/10 mb-8 lg:mb-12" />
 
               {/* Content Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            {/* Left Column - Trending */}
-            <div className="lg:col-span-3">
-              <h3 className="text-sm font-semibold text-luxury-navy uppercase tracking-widest mb-6">Trending</h3>
-              <ul className="space-y-4">
-                {trendingSearches.map((term, index) => (
-                  <li key={index}>
-                    <button
-                      onClick={() => setSearchQuery(term)}
-                      className="text-luxury-navy/70 hover:text-luxury-gold transition-colors text-sm tracking-wide"
-                    >
-                      {term}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Right Section - Products */}
-            <div className="lg:col-span-9">
+              <div className="grid grid-cols-1 gap-8 lg:gap-12">
+            {/* Products Section */}
+            <div>
               <h3 className="text-sm font-semibold text-luxury-navy uppercase tracking-widest mb-6">
                 {searchQuery.length > 2 ? 'Search Results' : 'Top Products'}
               </h3>
@@ -173,18 +153,29 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     >
                       <div className="bg-white/50 backdrop-blur-sm rounded-sm p-4 transition-all duration-300 hover:bg-white hover:shadow-lg border border-luxury-gold/10">
                         <div className="relative aspect-square mb-4 overflow-hidden bg-white/80">
-                          <Image
-                            src={product.image_urls[0]}
-                            alt={product.name}
-                            fill
-                            className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
+                          {isVideo(product.image_urls[0]) ? (
+                            <video
+                              src={product.image_urls[0]}
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              muted
+                              playsInline
+                              loop
+                              autoPlay
+                            />
+                          ) : (
+                            <Image
+                              src={product.image_urls[0]}
+                              alt={product.name}
+                              fill
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          )}
                         </div>
                         <h4 className="mb-2 font-medium text-sm text-luxury-navy line-clamp-2 uppercase tracking-wider">
                           {product.name}
                         </h4>
                         <p className="text-xs text-luxury-navy/60 mb-1">{product.size}</p>
-                        <p className="text-sm font-semibold text-luxury-gold">{formatPrice(product.price)}</p>
+                        <p className="text-sm font-semibold text-luxury-gold">{region ? formatPrice(product.price, region) : '...'}</p>
                       </div>
                     </Link>
                   ))}

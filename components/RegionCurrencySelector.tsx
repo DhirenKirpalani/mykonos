@@ -18,7 +18,7 @@ const countryFlags: Record<string, string> = {
 }
 
 export function RegionCurrencySelector() {
-  const { region, setRegion } = useRegion()
+  const { region, setRegion, isLoading: regionLoading } = useRegion()
   const [isOpen, setIsOpen] = useState(false)
   const [regions, setRegions] = useState<Region[]>([])
   const [loading, setLoading] = useState(false)
@@ -57,7 +57,14 @@ export function RegionCurrencySelector() {
     setIsOpen(false)
   }
 
-  if (!region) return null
+  if (!region || regionLoading) {
+    return (
+      <div className="flex items-center gap-2 text-white/50">
+        <Globe className="h-5 w-5 animate-pulse" />
+        <span className="text-sm">...</span>
+      </div>
+    )
+  }
 
   const currentFlag = countryFlags[region.code] || '🌍'
 
