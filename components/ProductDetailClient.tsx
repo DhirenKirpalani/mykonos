@@ -16,6 +16,7 @@ export function ProductDetailClient({ productId, productName }: ProductDetailCli
   const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false)
+  const [isBuyingNow, setIsBuyingNow] = useState(false)
 
   const handleAddToCart = async () => {
     setIsAddingToCart(true)
@@ -115,8 +116,79 @@ export function ProductDetailClient({ productId, productName }: ProductDetailCli
     }
   }
 
+  const handleBuyNow = async () => {
+    setIsBuyingNow(true)
+    
+    try {
+      // Get or create session (anonymous or authenticated)
+      let { data: { session } } = await supabase.auth.getSession()
+      
+      // If no session, create anonymous session for guest
+      if (!session) {
+        const { data, error } = await supabase.auth.signInAnonymously()
+        if (error) {
+          console.error('Failed to create anonymous session:', error)
+          toast.error('Unable to proceed. Please refresh the page.')
+          return
+        }
+        session = data.session
+        
+        // Store anonymous user_id in localStorage for persistence
+        if (session?.user?.is_anonymous) {
+          localStorage.setItem('anonymous_user_id', session.user.id)
+        }
+      } else if (session.user.is_anonymous) {
+        // Store anonymous user_id for future use
+        localStorage.setItem('anonymous_user_id', session.user.id)
+      }
+
+      if (!session?.access_token) {
+        toast.error('Unable to proceed. Please refresh the page.')
+        return
+      }
+
+      // Add to cart
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          product_id: productId,
+          quantity: 1,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Dispatch event to update cart badge
+        window.dispatchEvent(new Event('cart-updated'))
+        // Redirect to checkout immediately
+        router.push('/checkout')
+      } else {
+        console.error('Cart API error:', data)
+        toast.error(data.error || 'Failed to proceed to checkout')
+      }
+    } catch (error) {
+      console.error('Buy now error:', error)
+      toast.error('Failed to proceed to checkout')
+    } finally {
+      setIsBuyingNow(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
+      <Button 
+        className="w-full bg-[#EE4D2D] hover:bg-[#d43f1f] text-white font-medium py-3 text-base transition-all duration-300 border-0"
+        size="lg" 
+        onClick={handleBuyNow}
+        disabled={isBuyingNow}
+      >
+        {isBuyingNow ? 'Processing...' : 'Buy Now'}
+      </Button>
       <Button 
         variant="luxury" 
         size="lg" 

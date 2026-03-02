@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 export const dynamic = 'force-dynamic'
 
@@ -11,28 +11,23 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
-
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
+    const supabase = createClient()
     const { id } = params
+    
+    // Try to get authenticated user
+    const { data: { user } } = await supabase.auth.getUser()
 
-    // Get conversation
-    const { data: conversation, error: convError } = await supabase
+    // Get conversation - allow access for both authenticated users and guests
+    let query = supabase
       .from('chat_conversations')
       .select('*')
       .eq('id', id)
-      .eq('user_id', session.user.id)
-      .single()
+
+    if (user) {
+      query = query.eq('user_id', user.id)
+    }
+
+    const { data: conversation, error: convError } = await query.single()
 
     if (convError || !conversation) {
       return NextResponse.json(
@@ -50,10 +45,12 @@ export async function GET(
 
     if (messagesError) throw messagesError
 
-    // Mark agent messages as read
+    // Mark agent messages as read (for customer viewing)
+    // The function marks messages where sender_type != p_sender_type
+    // So we pass 'customer' to mark agent messages as read
     await supabase.rpc('mark_messages_as_read', {
       p_conversation_id: id,
-      p_sender_type: 'customer',
+      p_sender_type: 'customer', // This will mark agent messages as read
     } as any)
 
     return NextResponse.json({

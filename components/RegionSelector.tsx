@@ -7,7 +7,7 @@ import { Region } from '@/lib/types/region'
 import { supabase } from '@/lib/supabase/client'
 
 export function RegionSelector() {
-  const { region, setRegion, detectionResult } = useRegion()
+  const { region, setRegion, detectionResult, isLoading: regionLoading } = useRegion()
   const [isOpen, setIsOpen] = useState(false)
   const [regions, setRegions] = useState<Region[]>([])
   const [loading, setLoading] = useState(false)
@@ -38,7 +38,14 @@ export function RegionSelector() {
     setIsOpen(false)
   }
 
-  if (!region) return null
+  if (!region || regionLoading) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/50">
+        <Globe className="h-4 w-4 animate-pulse" />
+        <span>Loading...</span>
+      </div>
+    )
+  }
 
   return (
     <div className="relative">

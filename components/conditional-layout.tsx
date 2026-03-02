@@ -6,7 +6,7 @@ import { AnnouncementBar } from '@/components/layout/announcement-bar'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { ScrollToTop } from '@/components/scroll-to-top'
-import { AssistantWidget } from '@/components/assistant-widget'
+import { LiveChatWidget } from '@/components/LiveChatWidget'
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -25,7 +25,7 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1">{children}</main>
       <Footer />
       <ScrollToTop />
-      <AssistantWidget />
+      <LiveChatWidget />
     </div>
   )
 }

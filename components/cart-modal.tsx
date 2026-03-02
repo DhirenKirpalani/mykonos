@@ -6,7 +6,8 @@ import { X, Minus, Plus, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { formatPrice } from '@/lib/utils'
+import { useRegion } from '@/contexts/RegionContext'
+import { formatPrice } from '@/lib/utils/region'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -31,6 +32,7 @@ type CartModalProps = {
 }
 
 export function CartModal({ isOpen, onClose }: CartModalProps) {
+  const { region } = useRegion()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -38,6 +40,10 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
   const [discountApplied, setDiscountApplied] = useState(false)
   const [discountAmount, setDiscountAmount] = useState(0)
   const [mounted, setMounted] = useState(false)
+
+  const isVideo = (url: string) => {
+    return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -190,12 +196,22 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex gap-6 py-8">
                       <div className="relative h-24 w-20 flex-shrink-0">
-                        <Image
-                          src={item.product.image_urls[0]}
-                          alt={item.product.name}
-                          fill
-                          className="object-cover"
-                        />
+                        {isVideo(item.product.image_urls[0]) ? (
+                          <video
+                            src={item.product.image_urls[0]}
+                            className="h-full w-full object-cover"
+                            muted
+                            playsInline
+                            loop
+                          />
+                        ) : (
+                          <Image
+                            src={item.product.image_urls[0]}
+                            alt={item.product.name}
+                            fill
+                            className="object-cover"
+                          />
+                        )}
                       </div>
 
                       <div className="flex flex-1 flex-col justify-between">
@@ -234,7 +250,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
                           {/* Price */}
                           <p className="text-sm font-medium tracking-wide">
-                            {formatPrice(item.price_at_add * item.quantity)}
+                            {region ? formatPrice(item.price_at_add * item.quantity, region) : '...'}
                           </p>
                         </div>
 
@@ -286,7 +302,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
               <div className="border-t border-black/5 px-8 py-8">
                 <div className="mb-6 flex items-center justify-between text-sm tracking-wide">
                   <span className="font-light">Subtotal</span>
-                  <span className="font-medium">{formatPrice(total)}</span>
+                  <span className="font-medium">{region ? formatPrice(total, region) : '...'}</span>
                 </div>
 
                 <Link

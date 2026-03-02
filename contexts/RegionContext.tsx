@@ -1,9 +1,10 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { Region, RegionDetectionResult } from '@/lib/types/region'
 import { DEFAULT_REGION_CODE } from '@/lib/utils/region'
 import { supabase } from '@/lib/supabase/client'
+import { useAuth } from './AuthContext'
 
 interface RegionContextType {
   region: Region | null
@@ -34,23 +35,21 @@ function getVisitorSessionId(): string {
 }
 
 export function RegionProvider({ children }: { children: ReactNode }) {
+  const { user, isLoading: authLoading } = useAuth()
   const [region, setRegionState] = useState<Region | null>(null)
   const [detectionResult, setDetectionResult] = useState<RegionDetectionResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const detectRegion = async () => {
+  const detectRegion = useCallback(async () => {
     try {
       setIsLoading(true)
       
-      // Check if user is logged in
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session?.user) {
+      if (user) {
         // For logged-in users, check their preferred region
         const { data: userData } = await supabase
           .from('users')
           .select('preferred_region_id')
-          .eq('id', session.user.id)
+          .eq('id', user.id)
           .single() as { data: any }
         
         if (userData?.preferred_region_id) {
@@ -101,7 +100,7 @@ export function RegionProvider({ children }: { children: ReactNode }) {
         setDetectionResult(data)
         
         // Save detected region to database for visitors
-        if (!session?.user && data.region) {
+        if (!user && data.region) {
           const sessionId = getVisitorSessionId()
           await fetch('/api/visitor/preferences', {
             method: 'POST',
@@ -135,7 +134,7 @@ export function RegionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user])
 
   const setRegion = async (regionCode: string) => {
     try {
@@ -147,13 +146,10 @@ export function RegionProvider({ children }: { children: ReactNode }) {
         setRegionState(data.region)
         setDetectionResult(data)
         
-        // Check if user is logged in
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session?.user) {
+        if (user) {
           // Save to user profile
           await supabase.rpc('set_preferred_region', {
-            p_user_id: session.user.id,
+            p_user_id: user.id,
             p_region_id: data.region.id,
           } as any)
         } else {
@@ -179,21 +175,23 @@ export function RegionProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const refreshRegion = async () => {
+  const refreshRegion = useCallback(async () => {
     // Clear saved preferences and re-detect
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.user) {
+    if (!user) {
       // Clear visitor session to force re-detection
       localStorage.removeItem('visitor_session_id')
     }
     
     await detectRegion()
-  }
+  }, [user, detectRegion])
 
   useEffect(() => {
-    detectRegion()
-  }, [])
+    // Wait for auth to finish loading before detecting region
+    if (!authLoading) {
+      detectRegion()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user])
 
   return (
     <RegionContext.Provider

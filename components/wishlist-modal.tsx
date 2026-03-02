@@ -6,7 +6,8 @@ import { X, Heart, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { formatPrice } from '@/lib/utils'
+import { useRegion } from '@/contexts/RegionContext'
+import { formatPrice } from '@/lib/utils/region'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -30,10 +31,15 @@ type WishlistModalProps = {
 }
 
 export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
+  const { region } = useRegion()
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+
+  const isVideo = (url: string) => {
+    return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -177,12 +183,22 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                   {wishlistItems.map((item) => (
                     <div key={item.id} className="flex gap-6 py-8">
                       <div className="relative h-24 w-20 flex-shrink-0">
-                        <Image
-                          src={item.product.image_urls[0]}
-                          alt={item.product.name}
-                          fill
-                          className="object-cover"
-                        />
+                        {isVideo(item.product.image_urls[0]) ? (
+                          <video
+                            src={item.product.image_urls[0]}
+                            className="h-full w-full object-cover"
+                            muted
+                            playsInline
+                            loop
+                          />
+                        ) : (
+                          <Image
+                            src={item.product.image_urls[0]}
+                            alt={item.product.name}
+                            fill
+                            className="object-cover"
+                          />
+                        )}
                       </div>
 
                       <div className="flex flex-1 flex-col justify-between">
@@ -194,7 +210,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                             {item.product.size}
                           </p>
                           <p className="mt-2 text-sm font-medium tracking-wide">
-                            {formatPrice(item.product.price)}
+                            {region ? formatPrice(item.product.price, region) : '...'}
                           </p>
                         </div>
 

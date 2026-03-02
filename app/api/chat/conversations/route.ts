@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 export const dynamic = 'force-dynamic'
 
@@ -8,13 +8,10 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
-
-    const { data: { session } } = await supabase.auth.getSession()
+    const supabase = createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (!session) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -27,7 +24,7 @@ export async function GET(request: Request) {
     let query = supabase
       .from('chat_conversations')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
 
     if (status) {
@@ -72,17 +69,22 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
-
-    const { data: { session } } = await supabase.auth.getSession()
+    const supabase = createClient()
     const body = await request.json()
     const { order_id, subject, initial_message, guest_email, guest_name } = body
 
-    let userId = session?.user?.id || null
+    console.log('[Chat API] Request body:', JSON.stringify(body))
+
+    // Try to get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    console.log('[Chat API] User from session:', user?.id || 'none', 'authError:', authError?.message || 'none')
+
+    let userId = user?.id || null
     let guestEmail = guest_email || null
     let guestName = guest_name || null
+
+    console.log('[Chat API] userId:', userId, 'guestEmail:', guestEmail, 'guestName:', guestName)
 
     // Require either authenticated user or guest info
     if (!userId && (!guestEmail || !guestName)) {
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
       p_guest_email: guestEmail,
       p_guest_name: guestName,
       p_order_id: order_id || null,
-      p_subject: subject || 'Customer Support',
+      p_subject: subject || 'General Inquiry',
       p_initial_message: initial_message || null,
     } as any)
 
