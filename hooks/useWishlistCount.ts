@@ -24,14 +24,14 @@ export function useWishlistCount() {
       }
 
       // Fetch wishlist count from database
-      const { data, error } = await supabase
+      const { count: wishlistCount, error } = await supabase
         .from('wishlist_items')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', session.user.id)
 
       if (error) throw error
 
-      setCount(data?.length || 0)
+      setCount(wishlistCount || 0)
     } catch (error) {
       console.error('Failed to fetch wishlist count:', error)
       setCount(0)
