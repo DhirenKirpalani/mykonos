@@ -1,0 +1,32 @@
+{
+  "name": "mykonos-shipping-worker",
+  "version": "1.0.0",
+  "description": "Standalone worker service for processing shipping jobs with static IP",
+  "main": "dist/shipping-worker.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/shipping-worker.js",
+    "dev": "ts-node shipping-worker.ts",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "shipping",
+    "worker",
+    "queue",
+    "async"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
