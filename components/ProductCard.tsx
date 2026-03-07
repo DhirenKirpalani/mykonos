@@ -6,6 +6,8 @@ import { Product } from '@/lib/types/product'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { ProductVariantModal } from '@/components/ProductVariantModal'
+import { supabase } from '@/lib/supabase/client'
 
 interface ProductCardProps {
   product: Product
@@ -14,6 +16,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [isAdding, setIsAdding] = useState(false)
+  const [showVariantModal, setShowVariantModal] = useState(false)
   const isOutOfStock = product.stock_quantity <= 0
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -38,7 +41,63 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     }
   }
 
+  const handleVariantAddToCart = async (productId: string, quantity: number, selectedVariants?: Record<string, string>) => {
+    setIsAdding(true)
+    try {
+      // Get or create session (anonymous or authenticated)
+      let { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        const { data, error } = await supabase.auth.signInAnonymously()
+        if (error) {
+          console.error('Failed to create anonymous session:', error)
+          toast.error('Unable to add to cart. Please refresh the page.')
+          return
+        }
+        session = data.session
+        
+        if (session?.user?.is_anonymous) {
+          localStorage.setItem('anonymous_user_id', session.user.id)
+        }
+      }
+
+      if (!session?.access_token) {
+        toast.error('Unable to add to cart. Please refresh the page.')
+        return
+      }
+
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          product_id: productId,
+          quantity: quantity,
+          variants: selectedVariants,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success(`${product.name} added to cart!`)
+        window.dispatchEvent(new Event('cart-updated'))
+      } else {
+        console.error('Cart API error:', data)
+        toast.error(data.error || 'Failed to add to cart')
+      }
+    } catch (error) {
+      console.error('Add to cart error:', error)
+      toast.error('Failed to add to cart')
+    } finally {
+      setIsAdding(false)
+    }
+  }
+
   return (
+    <>
     <Link
       href={`/products/${product.slug}`}
       className={`group relative block overflow-hidden rounded-lg bg-white shadow-sm transition-all hover:shadow-lg ${
@@ -108,5 +167,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         </div>
       </div>
     </Link>
+    </>
   )
 }

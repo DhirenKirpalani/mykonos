@@ -6,19 +6,66 @@ import { Button } from '@/components/ui/button'
 import { ShoppingBag, Heart } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { ProductVariantModal } from '@/components/ProductVariantModal'
+import { ProductTotalPrice } from '@/components/ProductTotalPrice'
 
 interface ProductDetailClientProps {
   productId: string
   productName: string
+  minQuantity?: number
+  maxQuantity?: number
+  stockQuantity?: number
+  price?: number
+  priceIdr?: number
+  salePrice?: number | null
+  compareAtPrice?: number | null
+  productData?: {
+    id: string
+    name: string
+    image_urls: string[]
+    price: number
+    sale_price?: number | null
+    stock_quantity: number
+    variants?: any[]
+  }
 }
 
-export function ProductDetailClient({ productId, productName }: ProductDetailClientProps) {
+export function ProductDetailClient({ productId, productName, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, productData }: ProductDetailClientProps) {
   const router = useRouter()
+  const [quantity, setQuantity] = useState(minQuantity)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false)
   const [isBuyingNow, setIsBuyingNow] = useState(false)
+  const [showVariantModal, setShowVariantModal] = useState(false)
+  const [variantModalMode, setVariantModalMode] = useState<'add-to-cart' | 'buy-now'>('add-to-cart')
 
-  const handleAddToCart = async () => {
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity < minQuantity) {
+      setQuantity(minQuantity)
+      toast.error(`Minimum quantity is ${minQuantity}`)
+      return
+    }
+    if (maxQuantity && newQuantity > maxQuantity) {
+      setQuantity(maxQuantity)
+      toast.error(`Maximum quantity is ${maxQuantity}`)
+      return
+    }
+    if (newQuantity > stockQuantity) {
+      setQuantity(stockQuantity)
+      toast.error(`Only ${stockQuantity} items available`)
+      return
+    }
+    setQuantity(newQuantity)
+  }
+
+  const handleAddToCart = async (productIdOverride?: string, quantity: number = 1, selectedVariants?: Record<string, string>) => {
+    // Check if product has variants and no variants selected
+    if (!selectedVariants && productData?.variants && productData.variants.length > 0) {
+      setVariantModalMode('add-to-cart')
+      setShowVariantModal(true)
+      return
+    }
+
     setIsAddingToCart(true)
     
     try {
@@ -56,8 +103,9 @@ export function ProductDetailClient({ productId, productName }: ProductDetailCli
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          product_id: productId,
-          quantity: 1,
+          product_id: productIdOverride || productId,
+          quantity: quantity || 1,
+          variants: selectedVariants,
         }),
       })
 
@@ -116,7 +164,14 @@ export function ProductDetailClient({ productId, productName }: ProductDetailCli
     }
   }
 
-  const handleBuyNow = async () => {
+  const handleBuyNow = async (productIdOverride?: string, quantity: number = 1, selectedVariants?: Record<string, string>) => {
+    // Check if product has variants and no variants selected
+    if (!selectedVariants && productData?.variants && productData.variants.length > 0) {
+      setVariantModalMode('buy-now')
+      setShowVariantModal(true)
+      return
+    }
+
     setIsBuyingNow(true)
     
     try {
@@ -147,30 +202,17 @@ export function ProductDetailClient({ productId, productName }: ProductDetailCli
         return
       }
 
-      // Add to cart
-      const response = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          product_id: productId,
-          quantity: 1,
-        }),
-      })
+      // Store Buy Now item in sessionStorage (skip cart)
+      sessionStorage.setItem('buyNowItem', JSON.stringify({
+        product_id: productIdOverride || productId,
+        product_name: productName,
+        quantity: quantity,
+        variants: selectedVariants,
+        timestamp: Date.now()
+      }))
 
-      const data = await response.json()
-
-      if (response.ok) {
-        // Dispatch event to update cart badge
-        window.dispatchEvent(new Event('cart-updated'))
-        // Redirect to checkout immediately
-        router.push('/checkout')
-      } else {
-        console.error('Cart API error:', data)
-        toast.error(data.error || 'Failed to proceed to checkout')
-      }
+      // Redirect to checkout immediately without adding to cart
+      router.push('/checkout?buyNow=true')
     } catch (error) {
       console.error('Buy now error:', error)
       toast.error('Failed to proceed to checkout')
@@ -180,24 +222,74 @@ export function ProductDetailClient({ productId, productName }: ProductDetailCli
   }
 
   return (
-    <div className="space-y-3">
+    <>
+    <div className="space-y-4">
+      {/* Quantity Selector */}
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm font-medium text-gray-700">Quantity:</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleQuantityChange(quantity - 1)}
+            disabled={quantity <= minQuantity}
+            className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            −
+          </button>
+          <input
+            type="number"
+            value={quantity}
+            onChange={(e) => handleQuantityChange(parseInt(e.target.value) || minQuantity)}
+            min={minQuantity}
+            max={maxQuantity || stockQuantity}
+            className="w-16 rounded border border-gray-300 px-3 py-1.5 text-center text-sm focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+          />
+          <button
+            type="button"
+            onClick={() => handleQuantityChange(quantity + 1)}
+            disabled={(maxQuantity && quantity >= maxQuantity) || quantity >= stockQuantity}
+            className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            +
+          </button>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-sm text-gray-500">
+            {stockQuantity} available
+          </span>
+          {maxQuantity && (
+            <span className="text-xs text-gray-400">
+              Max {maxQuantity} per order
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Total Price Display */}
+      <ProductTotalPrice 
+        quantity={quantity}
+        price={price}
+        priceIdr={priceIdr}
+        salePrice={salePrice}
+        compareAtPrice={compareAtPrice}
+      />
+
       <Button 
         className="w-full bg-[#EE4D2D] hover:bg-[#d43f1f] text-white font-medium py-3 text-base transition-all duration-300 border-0"
         size="lg" 
-        onClick={handleBuyNow}
+        onClick={() => handleBuyNow(undefined, quantity)}
         disabled={isBuyingNow}
       >
         {isBuyingNow ? 'Processing...' : 'Buy Now'}
       </Button>
       <Button 
-        variant="luxury" 
+        className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 text-base transition-all duration-300"
         size="lg" 
-        className="w-full"
-        onClick={handleAddToCart}
+        onClick={() => handleAddToCart(undefined, quantity)}
         disabled={isAddingToCart}
       >
         <ShoppingBag className="mr-2 h-5 w-5" />
-        {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+        {isAddingToCart ? 'Adding to Cart...' : 'Add to Cart'}
       </Button>
       <Button 
         variant="outline" 
@@ -210,5 +302,18 @@ export function ProductDetailClient({ productId, productName }: ProductDetailCli
         {isAddingToWishlist ? 'Adding...' : 'Add to Wishlist'}
       </Button>
     </div>
+
+    {/* Variant Selection Modal */}
+    {productData && (
+      <ProductVariantModal
+        isOpen={showVariantModal}
+        onClose={() => setShowVariantModal(false)}
+        product={productData}
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+        mode={variantModalMode}
+      />
+    )}
+    </>
   )
 }

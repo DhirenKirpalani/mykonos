@@ -2,23 +2,31 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Breadcrumbs } from '@/components/common/Breadcrumbs'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/common'
-import { formatPrice } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { CreditCard, MapPin, Package } from 'lucide-react'
-import Script from 'next/script'
+import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown } from 'lucide-react'
+import { CheckoutModal } from '@/components/CheckoutModal'
+import { getEffectivePrice } from '@/lib/utils/pricing'
+import { useCurrency } from '@/hooks/useCurrency'
+import { formatPrice as formatCurrencyPrice } from '@/lib/utils/currency'
+import { useRegion } from '@/contexts/RegionContext'
+import { formatPrice as formatRegionPrice } from '@/lib/utils/region'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 type CartItem = {
   id: string
   product_id: string
   quantity: number
-  price_at_add: number
   product: {
     name: string
     image_urls: string[]
+    price: number
+    sale_price: number | null
   }
 }
 
@@ -35,324 +43,1241 @@ type Address = {
   is_default: boolean
 }
 
-declare global {
-  interface Window {
-    snap: any
-  }
-}
-
 export default function CheckoutPage() {
   const router = useRouter()
+  const { currency } = useCurrency()
+  const { region } = useRegion()
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [addresses, setAddresses] = useState<Address[]>([])
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('credit_card')
-  const [snapScriptLoaded, setSnapScriptLoaded] = useState(false)
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const [isGuest, setIsGuest] = useState(false)
+  const [isBuyNow, setIsBuyNow] = useState(false)
+  const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const [shippingCost, setShippingCost] = useState<number>(15)
+  const [isLoadingShipping, setIsLoadingShipping] = useState(false)
+  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([])
+  const [quickAddedItems, setQuickAddedItems] = useState<CartItem[]>([])
+  const [promoCode, setPromoCode] = useState('')
+  const [appliedPromo, setAppliedPromo] = useState<any>(null)
+  const [discount, setDiscount] = useState(0)
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false)
+  const [isRecommendedExpanded, setIsRecommendedExpanded] = useState(true)
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    phone: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state_province: '',
+    postal_code: '',
+    country: 'United States',
+  })
 
   useEffect(() => {
-    fetchCheckoutData()
+    // Load Midtrans Snap script
+    const snapScript = document.createElement('script')
+    snapScript.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
+    snapScript.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '')
+    snapScript.async = true
+    document.head.appendChild(snapScript)
+
+    // Check if this is a Buy Now flow
+    const urlParams = new URLSearchParams(window.location.search)
+    const buyNowParam = urlParams.get('buyNow')
+    setIsBuyNow(buyNowParam === 'true')
+    
+    initializeCheckout()
+
+    return () => {
+      // Cleanup script on unmount
+      if (snapScript.parentNode) {
+        snapScript.parentNode.removeChild(snapScript)
+      }
+    }
   }, [])
 
-  const fetchCheckoutData = async () => {
+  const initializeCheckout = async () => {
     try {
+      setIsLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       
-      if (!session) {
-        router.push('/login')
-        return
-      }
+      // Check if guest or logged-in user
+      const guestUser = !session || session.user.is_anonymous === true
+      setIsGuest(guestUser)
 
-      // Fetch cart items
-      const { data: cart, error: cartError } = await supabase
-        .from('cart_items')
-        .select(`
-          *,
-          product:products(name, image_urls)
-        `)
-        .eq('user_id', session.user.id)
-
-      if (cartError) throw cartError
-
-      if (!cart || cart.length === 0) {
-        router.push('/cart')
-        return
-      }
-
-      setCartItems(cart as any)
-
-      // Fetch addresses
-      const { data: addressData, error: addressError } = await supabase
-        .from('shipping_addresses')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('is_default', { ascending: false })
-
-      if (addressError) throw addressError
-
-      const typedAddresses = (addressData as Address[]) || []
-      setAddresses(typedAddresses)
+      // Check for Buy Now item in sessionStorage
+      const buyNowItem = sessionStorage.getItem('buyNowItem')
       
-      // Select default address, or first address if no default
-      const defaultAddress = typedAddresses.find(a => a.is_default)
-      if (defaultAddress) {
-        console.log('Setting default address:', defaultAddress.id)
-        setSelectedAddressId(defaultAddress.id)
-      } else if (typedAddresses.length > 0) {
-        console.log('No default address, selecting first:', typedAddresses[0].id)
-        setSelectedAddressId(typedAddresses[0].id)
+      if (buyNowItem) {
+        // Handle Buy Now flow - fetch product details
+        const buyNowData = JSON.parse(buyNowItem)
+        
+        const { data: product, error: productError } = await supabase
+          .from('products')
+          .select('id, name, image_urls, price, sale_price')
+          .eq('id', buyNowData.product_id)
+          .single()
+
+        if (productError || !product) {
+          toast.error('Product not found')
+          sessionStorage.removeItem('buyNowItem')
+          router.push('/checkout')
+          return
+        }
+
+        // Type assertion for product data
+        const typedProduct = product as any
+
+        // Create cart item structure for Buy Now
+        const buyNowCartItem = {
+          id: 'buy-now-temp',
+          product_id: typedProduct.id,
+          quantity: buyNowData.quantity,
+          product: {
+            name: typedProduct.name,
+            image_urls: typedProduct.image_urls,
+            price: typedProduct.price,
+            sale_price: typedProduct.sale_price
+          }
+        }
+
+        setCartItems([buyNowCartItem])
       } else {
-        console.log('No addresses found')
+        // Regular cart flow - fetch cart items
+        let cart: any[] = []
+        let cartError: any = null
+
+        if (session?.user) {
+          if (session.user.is_anonymous) {
+            const { data, error } = await supabase
+              .from('cart_items')
+              .select(`
+                *,
+                product:products(name, image_urls, price, sale_price)
+              `)
+              .eq('session_id', session.user.id)
+            cart = data || []
+            cartError = error
+          } else {
+            const { data, error } = await supabase
+              .from('cart_items')
+              .select(`
+                *,
+                product:products(name, image_urls, price, sale_price)
+              `)
+              .eq('user_id', session.user.id)
+            cart = data || []
+            cartError = error
+          }
+        }
+
+        if (cartError) throw cartError
+
+        if (!cart || cart.length === 0) {
+          toast.error('Your cart is empty')
+          router.push('/checkout')
+          return
+        }
+
+        setCartItems(cart as any)
       }
 
-    } catch (error) {
-      console.error('Failed to fetch checkout data:', error)
-      toast.error('Failed to load checkout data')
-    } finally {
+      // Fetch addresses only for logged-in users
+      if (session && !session.user.is_anonymous) {
+        const { data: addressData, error: addressError } = await supabase
+          .from('shipping_addresses')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('is_default', { ascending: false })
+
+        if (addressError) throw addressError
+
+        const addresses = (addressData as Address[]) || []
+        setSavedAddresses(addresses)
+        
+        // Select default address
+        const defaultAddress = addresses.find((a: Address) => a.is_default)
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id)
+        } else if (addresses.length > 0) {
+          setSelectedAddressId(addresses[0].id)
+        }
+      }
+
+      // Fetch recommended products for quick add
+      fetchRecommendedProducts()
+
+      setIsLoading(false)
+    } catch (error: any) {
+      console.error('Failed to initialize checkout:', error)
+      toast.error('Failed to load checkout')
       setIsLoading(false)
     }
   }
 
-  const handlePlaceOrder = async () => {
-    // Prevent duplicate submissions
-    if (isProcessing) {
+  const fetchRecommendedProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, slug, image_urls, price, sale_price, stock_quantity')
+        .gt('stock_quantity', 0)
+        .limit(3)
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        setRecommendedProducts(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch recommended products:', error)
+    }
+  }
+
+  const handleQuickAdd = async (productId: string) => {
+    try {
+      // Fetch product details
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('id, name, image_urls, price, sale_price')
+        .eq('id', productId)
+        .single()
+
+      if (productError || !product) {
+        toast.error('Product not found')
+        return
+      }
+
+      // Type assertion for product data
+      const typedProduct = product as {
+        id: string
+        name: string
+        image_urls: string[]
+        price: number
+        sale_price: number | null
+      }
+
+      // Check if already added to quick items
+      const existingIndex = quickAddedItems.findIndex(item => item.product_id === productId)
+      
+      if (existingIndex >= 0) {
+        // Increase quantity
+        const updatedItems = [...quickAddedItems]
+        updatedItems[existingIndex].quantity += 1
+        setQuickAddedItems(updatedItems)
+        toast.success('Quantity increased!')
+      } else {
+        // Add new item
+        const newItem: CartItem = {
+          id: `quick-${productId}`,
+          product_id: productId,
+          quantity: 1,
+          product: {
+            name: typedProduct.name,
+            image_urls: typedProduct.image_urls,
+            price: typedProduct.price,
+            sale_price: typedProduct.sale_price
+          }
+        }
+        setQuickAddedItems([...quickAddedItems, newItem])
+        toast.success('Product added to order!')
+      }
+    } catch (error) {
+      console.error('Quick add error:', error)
+      toast.error('Failed to add product')
+    }
+  }
+
+  const removeQuickItem = (productId: string) => {
+    setQuickAddedItems(quickAddedItems.filter(item => item.product_id !== productId))
+    toast.success('Item removed')
+  }
+
+  const updateQuickItemQuantity = (productId: string, newQuantity: number) => {
+    if (newQuantity < 1) {
+      removeQuickItem(productId)
+      return
+    }
+    
+    setQuickAddedItems(quickAddedItems.map(item => 
+      item.product_id === productId ? { ...item, quantity: newQuantity } : item
+    ))
+  }
+
+  const applyPromoCode = async () => {
+    if (!promoCode.trim()) {
+      toast.error('Please enter a promo code')
       return
     }
 
+    setIsApplyingPromo(true)
+    try {
+      const allItems = [...cartItems, ...quickAddedItems]
+      const itemsSubtotal = allItems.reduce((total, item) => {
+        const price = getEffectivePrice(item.product.price, item.product.sale_price)
+        return total + (price * item.quantity)
+      }, 0)
+
+      const { data, error } = await supabase
+        .rpc('validate_promo_code', {
+          p_code: promoCode.trim().toUpperCase(),
+          p_cart_total: itemsSubtotal
+        } as any)
+
+      if (error) throw error
+
+      const typedData = data as any
+
+      if (typedData && typedData.is_valid) {
+        setAppliedPromo(typedData)
+        setDiscount(typedData.discount_amount || 0)
+        toast.success('Promo code applied!')
+      } else {
+        toast.error(typedData?.error_message || 'Invalid promo code')
+      }
+    } catch (error: any) {
+      console.error('Failed to apply promo code:', error)
+      toast.error('Failed to apply promo code')
+    } finally {
+      setIsApplyingPromo(false)
+    }
+  }
+
+  const removePromoCode = () => {
+    setAppliedPromo(null)
+    setDiscount(0)
+    setPromoCode('')
+    toast.success('Promo code removed')
+  }
+
+  const handlePlaceOrder = async () => {
+    // For guests, show modal to collect email and shipping info
+    if (isGuest) {
+      setShowCheckoutModal(true)
+      return
+    }
+
+    // For logged-in users, check if address is selected
     if (!selectedAddressId) {
       toast.error('Please select a shipping address')
       return
     }
 
-    if (!selectedPaymentMethod) {
-      toast.error('Please select a payment method')
-      return
-    }
-
     setIsProcessing(true)
-
     try {
+      // Get current user session
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
-        router.push('/login')
+        toast.error('Please refresh the page')
+        setIsProcessing(false)
         return
       }
 
-      const subtotal = cartItems.reduce((sum, item) => sum + item.price_at_add * item.quantity, 0)
-      const shipping = subtotal > 150 ? 0 : 15
-      const total = subtotal + shipping
-
-      // Get selected address details
-      const selectedAddress = addresses.find(addr => addr.id === selectedAddressId)
-      if (!selectedAddress) throw new Error('Address not found')
-
-      // Generate unique order number
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-
-      // Create order with shipping address
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: session.user.id,
-          order_number: orderNumber,
-          shipping_address_id: selectedAddressId,
-          shipping_address: {
-            full_name: selectedAddress.full_name,
-            address_line1: selectedAddress.address_line1,
-            address_line2: selectedAddress.address_line2,
-            city: selectedAddress.city,
-            state_province: selectedAddress.state_province,
-            postal_code: selectedAddress.postal_code,
-            country: selectedAddress.country,
-            phone: selectedAddress.phone,
-          },
-          payment_method: selectedPaymentMethod,
-          subtotal: subtotal,
-          shipping_cost: shipping,
-          tax_amount: 0,
-          total_amount: total,
-          currency_code: 'IDR',
-          status: 'pending',
-          payment_status: 'pending',
-        } as any)
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      // Create order items
-      const orderItems = cartItems.map(item => ({
-        order_id: (order as any).id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price_at_purchase: item.price_at_add,
-      }))
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems as any)
-
-      if (itemsError) throw itemsError
-
-      // Get user email
-      const userEmail = session.user.email || ''
-
-      // Convert to IDR (assuming 1 USD = 15,000 IDR for example)
-      const totalInIDR = Math.round(total * 15000)
-
-      // Create Midtrans transaction token
-      console.log('Creating Midtrans token for order:', orderNumber)
+      // Check if this is a Buy Now flow with item still in sessionStorage
+      const buyNowItem = sessionStorage.getItem('buyNowItem')
       
-      // Get access token for API authentication
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
-      if (!currentSession?.access_token) {
-        throw new Error('No access token available')
-      }
+      let sessionData
       
-      const tokenResponse = await fetch('/api/midtrans/create-token', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentSession.access_token}`,
-        },
-        body: JSON.stringify({
-          orderId: orderNumber,
-          amount: totalInIDR,
-          customerDetails: {
-            firstName: selectedAddress.full_name.split(' ')[0],
-            lastName: selectedAddress.full_name.split(' ').slice(1).join(' '),
-            email: userEmail,
-            phone: selectedAddress.phone,
-          },
-          items: [
-            ...cartItems.map(item => ({
-              id: item.product_id,
-              price: Math.round(item.price_at_add * 15000),
-              quantity: item.quantity,
-              name: item.product.name,
-            })),
-            {
-              id: 'SHIPPING',
-              price: Math.round(shipping * 15000),
-              quantity: 1,
-              name: 'Shipping Cost',
+      // Only use manual session if buyNowItem exists AND we have temp cart items
+      // After login, buyNowItem is cleared and items are in cart, so use regular flow
+      if (buyNowItem && cartItems.length > 0 && cartItems[0].id === 'buy-now-temp') {
+        // For Buy Now: Create checkout session with manual cart snapshot
+        const buyNowData = JSON.parse(buyNowItem)
+        const product = cartItems[0]?.product
+        
+        if (!product) {
+          throw new Error('Product not found')
+        }
+        
+        const price = getEffectivePrice(product.price, product.sale_price)
+        const quantity = buyNowData.quantity || 1
+        const subtotal = price * quantity
+        
+        const sessionResponse = await fetch('/api/checkout/session/manual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: session.user.id,
+            cart_snapshot: [{
+              product_id: buyNowData.product_id,
+              quantity: quantity,
+              price: price
+            }],
+            pricing_snapshot: {
+              subtotal,
+              discount: 0,
+              shipping: subtotal >= 100 ? 0 : 15,
+              tax: subtotal * 0.1,
+              total: subtotal + (subtotal >= 100 ? 0 : 15) + (subtotal * 0.1),
+              currency_code: 'USD'
             }
-          ],
+          }),
+        })
+        
+        sessionData = await sessionResponse.json()
+        if (!sessionResponse.ok) {
+          throw new Error(sessionData.error || 'Failed to create checkout session')
+        }
+      } else {
+        // Regular cart flow: Create checkout session from cart
+        // This includes Buy Now items that have been transferred to cart after login
+        const sessionResponse = await fetch('/api/checkout/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: session.user.id,
+          }),
+        })
+
+        sessionData = await sessionResponse.json()
+        if (!sessionResponse.ok) {
+          throw new Error(sessionData.error || 'Failed to create checkout session')
+        }
+      }
+
+      // Update with shipping address
+      const updateResponse = await fetch('/api/checkout/session', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionData.session_id,
+          shipping_address_id: selectedAddressId,
+          current_step: 1,
         }),
       })
 
-      console.log('Token response status:', tokenResponse.status)
-
-      if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.json()
-        console.error('Token creation failed:', errorData)
-        throw new Error(errorData.error || 'Failed to create payment token')
+      if (!updateResponse.ok) {
+        const updateData = await updateResponse.json()
+        throw new Error(updateData.error || 'Failed to update shipping info')
       }
 
-      const { token } = await tokenResponse.json()
-      console.log('Token received successfully')
+      // Create Midtrans payment token
+      const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
+      if (!selectedAddress) {
+        throw new Error('Shipping address not found')
+      }
 
-      // Open Midtrans Snap popup
-      window.snap.pay(token, {
-        onSuccess: async function(result: any) {
-          console.log('Payment success:', result)
-          
-          // Clear cart
-          await supabase
-            .from('cart_items')
-            .delete()
-            .eq('user_id', session.user.id)
+      // Convert to IDR and round to whole numbers (IDR doesn't support cents)
+      const USD_TO_IDR = 15000 // Approximate exchange rate
+      const convertToIDR = (usdAmount: number) => Math.round(usdAmount * USD_TO_IDR)
 
-          toast.success('Payment successful!')
-          router.push(`/account/orders`)
+      // Build items array including shipping and tax
+      const itemsForMidtrans = [
+        ...cartItems.map(item => ({
+          id: item.product_id,
+          name: item.product.name,
+          price: convertToIDR(getEffectivePrice(item.product.price, item.product.sale_price)),
+          quantity: item.quantity,
+        })),
+        // Add shipping as a line item
+        {
+          id: 'shipping',
+          name: 'Shipping Fee',
+          price: convertToIDR(shipping),
+          quantity: 1,
         },
-        onPending: function(result: any) {
-          console.log('Payment pending:', result)
-          toast.info('Payment is pending. Please complete your payment.')
-          router.push(`/account/orders`)
-        },
-        onError: function(result: any) {
-          console.log('Payment error:', result)
-          toast.error('Payment failed. Please try again.')
-        },
-        onClose: function() {
-          toast.info('Payment popup closed')
-          setIsProcessing(false)
+        // Add tax as a line item
+        {
+          id: 'tax',
+          name: 'Tax (10%)',
+          price: convertToIDR(tax),
+          quantity: 1,
         }
+      ]
+
+      const midtransResponse = await fetch('/api/midtrans/create-token', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          orderId: sessionData.session_id,
+          amount: convertToIDR(total),
+          customerDetails: {
+            firstName: selectedAddress.full_name.split(' ')[0],
+            lastName: selectedAddress.full_name.split(' ').slice(1).join(' '),
+            email: session.user.email,
+            phone: selectedAddress.phone,
+          },
+          items: itemsForMidtrans,
+        }),
       })
 
-    } catch (error) {
-      console.error('Failed to place order:', error)
-      toast.error('Failed to place order. Please try again.')
+      const midtransData = await midtransResponse.json()
+
+      if (!midtransResponse.ok) {
+        throw new Error(midtransData.error || 'Failed to create payment token')
+      }
+
+      // Open Midtrans Snap modal
+      if (typeof window !== 'undefined' && (window as any).snap) {
+        (window as any).snap.pay(midtransData.token, {
+          onSuccess: (result: any) => {
+            // Payment successful - Midtrans will redirect to finish URL
+            // The processing page will handle order completion
+            toast.success('Payment successful! Processing your order...')
+          },
+          onPending: (result: any) => {
+            toast.info('Payment pending. Please complete your payment.')
+            setIsProcessing(false)
+          },
+          onError: (result: any) => {
+            toast.error('Payment failed. Please try again.')
+            setIsProcessing(false)
+          },
+          onClose: () => {
+            toast.info('Payment cancelled')
+            setIsProcessing(false)
+          }
+        })
+      } else {
+        throw new Error('Midtrans Snap not loaded. Please refresh the page.')
+      }
+    } catch (error: any) {
+      console.error('Place order error:', error)
+      toast.error(error.message || 'Failed to place order')
+    } finally {
       setIsProcessing(false)
     }
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price_at_add * item.quantity, 0)
-  const shipping = subtotal > 150 ? 0 : 15
-  const total = subtotal + shipping
+  const handleGuestCheckout = async (guestData: any) => {
+    setIsProcessing(true)
+    try {
+      // Convert to IDR and round to whole numbers (IDR doesn't support cents)
+      const USD_TO_IDR = 15000 // Approximate exchange rate
+      const convertToIDR = (usdAmount: number) => Math.round(usdAmount * USD_TO_IDR)
+
+      // Get current session (anonymous or authenticated)
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('No session found. Please refresh the page.')
+      }
+
+      // Prepare session data based on user type
+      const sessionPayload: any = {}
+      if (session.user.is_anonymous) {
+        sessionPayload.session_id = session.user.id
+      } else {
+        sessionPayload.user_id = session.user.id
+      }
+
+      // For Buy Now flow, include items from state (cart + quick-added items)
+      if (isBuyNow || quickAddedItems.length > 0) {
+        const itemsToCheckout = [...cartItems, ...quickAddedItems].map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: getEffectivePrice(item.product.price, item.product.sale_price)
+        }))
+        sessionPayload.items = itemsToCheckout
+      }
+
+      // Create checkout session
+      const sessionResponse = await fetch('/api/checkout/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sessionPayload),
+      })
+
+      const sessionData = await sessionResponse.json()
+      if (!sessionResponse.ok) {
+        throw new Error(sessionData.error || 'Failed to create checkout session')
+      }
+
+      // Update with guest shipping info
+      const updateResponse = await fetch('/api/checkout/session', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionData.session_id,
+          customer_email: guestData.email,
+          new_address: {
+            full_name: guestData.full_name,
+            phone: guestData.phone,
+            address_line1: guestData.address_line1,
+            address_line2: guestData.address_line2,
+            city: guestData.city,
+            state_province: guestData.state_province,
+            postal_code: guestData.postal_code,
+            country: guestData.country,
+          },
+          current_step: 1,
+        }),
+      })
+
+      if (!updateResponse.ok) {
+        const updateData = await updateResponse.json()
+        throw new Error(updateData.error || 'Failed to update shipping info')
+      }
+
+      // Prepare items for Midtrans - include shipping and tax as line items
+      const itemsForMidtrans = [
+        ...[...cartItems, ...quickAddedItems].map(item => ({
+          id: item.product_id,
+          name: item.product.name,
+          price: convertToIDR(getEffectivePrice(item.product.price, item.product.sale_price)),
+          quantity: item.quantity,
+        })),
+        // Add shipping as a line item
+        {
+          id: 'shipping',
+          name: 'Shipping Fee',
+          price: convertToIDR(shipping),
+          quantity: 1,
+        },
+        // Add tax as a line item
+        {
+          id: 'tax',
+          name: 'Tax (10%)',
+          price: convertToIDR(tax),
+          quantity: 1,
+        }
+      ]
+
+      // Create Midtrans payment token
+      const midtransResponse = await fetch('/api/midtrans/create-token', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: sessionData.session_id,
+          amount: convertToIDR(total),
+          customerDetails: {
+            firstName: guestData.full_name.split(' ')[0],
+            lastName: guestData.full_name.split(' ').slice(1).join(' ') || guestData.full_name,
+            email: guestData.email,
+            phone: guestData.phone,
+          },
+          items: itemsForMidtrans,
+        }),
+      })
+
+      const midtransData = await midtransResponse.json()
+
+      if (!midtransResponse.ok) {
+        throw new Error(midtransData.error || 'Failed to create payment token')
+      }
+
+      // Open Midtrans Snap modal
+      if (typeof window !== 'undefined' && (window as any).snap) {
+        (window as any).snap.pay(midtransData.token, {
+          onSuccess: async (result: any) => {
+            // Payment successful - complete the order
+            toast.success('Payment successful! Processing your order...')
+            
+            try {
+              const completeResponse = await fetch('/api/checkout/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  checkout_session_id: sessionData.session_id,
+                  payment_method_type: 'midtrans',
+                }),
+              })
+
+              const completeData = await completeResponse.json()
+
+              if (completeResponse.ok && completeData.order_id) {
+                sessionStorage.removeItem('buyNowItem')
+                router.push(`/checkout/confirmation?order=${completeData.order_number}`)
+              } else {
+                throw new Error(completeData.error || 'Failed to place order')
+              }
+            } catch (error: any) {
+              console.error('Order completion error:', error)
+              toast.error('Payment successful but order completion failed. Please contact support.')
+            }
+          },
+          onPending: (result: any) => {
+            toast.info('Payment pending. Please complete your payment.')
+            setIsProcessing(false)
+          },
+          onError: (result: any) => {
+            toast.error('Payment failed. Please try again.')
+            setIsProcessing(false)
+          },
+          onClose: () => {
+            toast.info('Payment cancelled')
+            setIsProcessing(false)
+          }
+        })
+      } else {
+        throw new Error('Midtrans Snap not loaded. Please refresh the page.')
+      }
+    } catch (error: any) {
+      console.error('Guest checkout error:', error)
+      toast.error(error.message || 'Failed to complete checkout')
+      throw error
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const updateQuantity = async (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return
+
+    try {
+      // For Buy Now items (temp), just update local state
+      if (itemId === 'buy-now-temp') {
+        setCartItems(prev => 
+          prev.map(item => 
+            item.id === itemId ? { ...item, quantity: newQuantity } : item
+          )
+        )
+        toast.success('Quantity updated')
+        return
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Please refresh the page')
+        return
+      }
+
+      // Build query based on user type
+      let query = supabase.from('cart_items').update({ quantity: newQuantity } as any)
+      
+      if (session.user.is_anonymous) {
+        query = query.eq('session_id', session.user.id)
+      } else {
+        query = query.eq('user_id', session.user.id)
+      }
+      
+      const { error } = await query.eq('id', itemId)
+
+      if (error) {
+        console.error('Update error:', error)
+        throw error
+      }
+
+      // Update local state
+      setCartItems(prev => 
+        prev.map(item => 
+          item.id === itemId ? { ...item, quantity: newQuantity } : item
+        )
+      )
+
+      toast.success('Quantity updated')
+    } catch (error: any) {
+      console.error('Failed to update quantity:', error)
+      toast.error(error.message || 'Failed to update quantity')
+    }
+  }
+
+  const removeItem = async (itemId: string) => {
+    try {
+      // For Buy Now items, clear sessionStorage and redirect
+      if (itemId === 'buy-now-temp') {
+        sessionStorage.removeItem('buyNowItem')
+        toast.success('Item removed')
+        router.push('/checkout')
+        return
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Please refresh the page')
+        return
+      }
+
+      // Build query based on user type
+      let query = supabase.from('cart_items').delete()
+      
+      if (session.user.is_anonymous) {
+        query = query.eq('session_id', session.user.id)
+      } else {
+        query = query.eq('user_id', session.user.id)
+      }
+      
+      const { error } = await query.eq('id', itemId)
+
+      if (error) {
+        console.error('Delete error:', error)
+        throw error
+      }
+
+      // Update local state
+      setCartItems(prev => prev.filter(item => item.id !== itemId))
+
+      toast.success('Item removed from cart')
+
+      // If cart is empty, redirect to checkout page
+      if (cartItems.length === 1) {
+        router.push('/checkout')
+      }
+    } catch (error: any) {
+      console.error('Failed to remove item:', error)
+      toast.error(error.message || 'Failed to remove item')
+    }
+  }
+
+  const handleEditAddress = () => {
+    const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
+    if (selectedAddress) {
+      setEditForm({
+        full_name: selectedAddress.full_name,
+        phone: selectedAddress.phone,
+        address_line1: selectedAddress.address_line1,
+        address_line2: selectedAddress.address_line2 || '',
+        city: selectedAddress.city,
+        state_province: selectedAddress.state_province,
+        postal_code: selectedAddress.postal_code,
+        country: selectedAddress.country,
+      })
+      setIsEditingAddress(true)
+    }
+  }
+
+  const handleSaveAddress = async () => {
+    try {
+      const { error } = await supabase
+        .from('shipping_addresses')
+        .update({
+          full_name: editForm.full_name,
+          phone: editForm.phone,
+          address_line1: editForm.address_line1,
+          address_line2: editForm.address_line2 || null,
+          city: editForm.city,
+          state_province: editForm.state_province,
+          postal_code: editForm.postal_code,
+          country: editForm.country,
+        } as any)
+        .eq('id', selectedAddressId)
+
+      if (error) throw error
+
+      // Update local state
+      setSavedAddresses(prev =>
+        prev.map(addr =>
+          addr.id === selectedAddressId
+            ? { ...addr, ...editForm }
+            : addr
+        )
+      )
+
+      setIsEditingAddress(false)
+      toast.success('Address updated successfully')
+    } catch (error: any) {
+      console.error('Failed to update address:', error)
+      toast.error('Failed to update address')
+    }
+  }
+
+  // Fetch shipping cost when address is selected
+  useEffect(() => {
+    if (selectedAddressId && savedAddresses.length > 0) {
+      fetchShippingCost()
+    }
+  }, [selectedAddressId])
+
+  const fetchShippingCost = async () => {
+    const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
+    if (!selectedAddress) return
+
+    setIsLoadingShipping(true)
+    try {
+      // Calculate total weight (assuming 500g per item as default)
+      const totalWeight = cartItems.reduce((sum, item) => sum + (item.quantity * 500), 0)
+
+      const response = await fetch('/api/shipping/kirimaja', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origin: 'Jakarta', // Default origin, should be from store settings
+          destination: selectedAddress.city,
+          weight: totalWeight,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.costs && data.costs.length > 0) {
+          // Use the first shipping option
+          setShippingCost(data.costs[0].cost)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch shipping cost:', error)
+      // Keep default shipping cost on error
+    } finally {
+      setIsLoadingShipping(false)
+    }
+  }
+
+  // Combine cart items and quick-added items for total calculation
+  const allItems = [...cartItems, ...quickAddedItems]
+  
+  const subtotal = allItems.reduce((total, item) => {
+    const price = getEffectivePrice(item.product.price, item.product.sale_price)
+    return total + (price * item.quantity)
+  }, 0)
+
+  const shipping = subtotal >= 100 ? 0 : shippingCost
+  const tax = subtotal * 0.1
+  const total = subtotal + shipping + tax - discount
 
   if (isLoading) {
-    return <LoadingSpinner />
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
   return (
-    <>
-      <Script
-        src={process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true' 
-          ? 'https://app.midtrans.com/snap/snap.js' 
-          : 'https://app.sandbox.midtrans.com/snap/snap.js'}
-        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
-        onLoad={() => {
-          console.log('Midtrans Snap script loaded')
-          setSnapScriptLoaded(true)
-        }}
-        onError={(e) => {
-          console.error('Failed to load Midtrans Snap script:', e)
-          toast.error('Failed to load payment system')
-        }}
-        strategy="afterInteractive"
-      />
-      <div className="min-h-screen bg-white">
-      <div className="border-b border-border/40 bg-luxury-gray-light py-12">
-        <div className="container mx-auto px-4 lg:px-8">
-          <Breadcrumbs items={[
-            { label: 'Cart', href: '/cart' },
-            { label: 'Checkout', href: '/checkout' }
-          ]} />
-          <h1 className="mt-4 mb-4 font-serif text-4xl font-bold lg:text-5xl">Checkout</h1>
-          <p className="text-lg text-muted-foreground">Complete your purchase</p>
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-6 lg:py-8">
+      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <div className="mb-4">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
+            <Link
+              href="/"
+              className="flex items-center gap-1 text-gray-500 transition-colors hover:text-gray-900"
+              aria-label="Home"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </Link>
+            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <span className="font-medium text-gray-900" aria-current="page">
+              Checkout
+            </span>
+          </nav>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-12 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Shipping Address */}
-            <div className="rounded-lg border border-border/40 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <MapPin className="h-5 w-5 text-luxury-gold" />
-                <h2 className="font-serif text-2xl font-bold">Shipping Address</h2>
-              </div>
-              
-              {addresses.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No shipping addresses found</p>
-                  <Button variant="outline" onClick={() => router.push('/account/addresses')}>
-                    Add Address
-                  </Button>
+        {/* Header */}
+        <div className="mb-6 lg:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            {t.checkout.title} ({allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items})
+          </h1>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-4 lg:gap-8">
+          {/* Cart Items List */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Free Shipping Progress Bar */}
+            {subtotal < 100 && (
+              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="h-5 w-5 text-luxury-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                  </svg>
+                  <p className="text-sm font-medium text-gray-700">
+                    {100 - subtotal > 0 
+                      ? t.checkout.freeShipping.replace('{amount}', region ? formatRegionPrice(100 - subtotal, region) : formatCurrencyPrice(100 - subtotal, currency))
+                      : t.checkout.qualifyFreeShipping}
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {addresses.map((address) => (
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-luxury-gold h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min((subtotal / 100) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Cart Items */}
+            {allItems.map((item) => {
+              const price = getEffectivePrice(item.product.price, item.product.sale_price)
+              const hasDiscount = item.product.sale_price && item.product.sale_price < item.product.price
+              
+              return (
+                <div key={item.id} className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
+                  <div className="flex gap-3 sm:gap-4">
+                    {/* Product Image */}
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                      <img
+                        src={item.product.image_urls[0]}
+                        alt={item.product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Product Details & Controls */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      {/* Product Name and Remove Button */}
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-medium text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
+                          {item.product.name}
+                        </h3>
+                        {item.id.startsWith('quick-') && (
+                          <button
+                            onClick={() => removeQuickItem(item.product_id)}
+                            className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+                            aria-label="Remove item"
+                          >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-base sm:text-lg font-bold text-gray-900">
+                          {region ? formatRegionPrice(price, region) : formatCurrencyPrice(price, currency)}
+                        </span>
+                        {hasDiscount && (
+                          <span className="text-xs sm:text-sm text-gray-400 line-through">
+                            {region ? formatRegionPrice(item.product.price, region) : formatCurrencyPrice(item.product.price, currency)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Quantity Controls and Total */}
+                      <div className="flex items-center justify-between gap-3 mt-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 border border-gray-300 rounded-lg">
+                          <button
+                            onClick={() => item.id.startsWith('quick-') 
+                              ? updateQuickItemQuantity(item.product_id, item.quantity - 1)
+                              : updateQuantity(item.id, item.quantity - 1)
+                            }
+                            disabled={item.quantity <= 1}
+                            className="p-1.5 sm:p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            aria-label="Decrease quantity"
+                          >
+                            <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                            </svg>
+                          </button>
+                          <span className="w-8 sm:w-10 text-center text-sm sm:text-base font-medium">{item.quantity}</span>
+                          <button
+                            onClick={() => item.id.startsWith('quick-') 
+                              ? updateQuickItemQuantity(item.product_id, item.quantity + 1)
+                              : updateQuantity(item.id, item.quantity + 1)
+                            }
+                            className="p-1.5 sm:p-2 hover:bg-gray-100 transition-colors"
+                            aria-label="Increase quantity"
+                          >
+                            <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <p className="text-sm sm:text-base font-bold text-gray-900">
+                          {region ? formatRegionPrice(price * item.quantity, region) : formatCurrencyPrice(price * item.quantity, currency)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Recommended Products Quick Add */}
+            {recommendedProducts.length > 0 && (
+              <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
+                <button
+                  onClick={() => setIsRecommendedExpanded(!isRecommendedExpanded)}
+                  className="w-full flex items-center justify-between text-base sm:text-lg font-semibold text-gray-900 mb-4 hover:text-luxury-navy transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="h-5 w-5" />
+                    {t.checkout.addToOrder}
+                  </div>
+                  <ChevronDown
+                    className={`h-5 w-5 transition-transform duration-200 ${isRecommendedExpanded ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {isRecommendedExpanded && (
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                  {recommendedProducts.map((product) => {
+                    const effectivePrice = product.sale_price && product.sale_price < product.price
+                      ? product.sale_price
+                      : product.price
+                    const isAdded = quickAddedItems.some(item => item.product_id === product.id)
+                    
+                    return (
+                      <div key={product.id} className="flex gap-3 p-3 sm:p-4 rounded-lg border border-gray-200 hover:border-luxury-navy/50 transition-all bg-white">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 rounded-md bg-gray-100 overflow-hidden">
+                          {product.image_urls && product.image_urls[0] && (
+                            <img
+                              src={product.image_urls[0]}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                          <h4 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 leading-tight mb-2">
+                            {product.name}
+                          </h4>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm sm:text-base font-bold text-luxury-navy">
+                              {region ? formatRegionPrice(effectivePrice, region) : formatCurrencyPrice(effectivePrice, currency)}
+                            </p>
+                            <button
+                              onClick={() => handleQuickAdd(product.id)}
+                              disabled={isAdded}
+                              className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
+                                isAdded
+                                  ? 'bg-green-100 text-green-700 border border-green-300 cursor-default'
+                                  : 'text-luxury-navy border border-luxury-navy hover:bg-luxury-navy hover:text-white'
+                              }`}
+                            >
+                              {isAdded ? t.checkout.added : t.checkout.add}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Shipping Address Section - For logged in users */}
+            {!isGuest && (
+              <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-6 w-6 text-luxury-navy" />
+                    <h2 className="text-xl font-bold text-gray-900">{t.checkout.shippingAddress}</h2>
+                  </div>
+                  {!isEditingAddress && selectedAddressId && (
+                    <button
+                      onClick={handleEditAddress}
+                      className="text-sm text-luxury-navy hover:underline font-medium"
+                    >
+                      {t.checkout.editAddress}
+                    </button>
+                  )}
+                </div>
+
+                {savedAddresses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 mb-4">{t.checkout.noAddress}</p>
+                    <Button
+                      onClick={() => window.location.href = '/account?tab=addresses'}
+                      className="bg-luxury-navy hover:bg-luxury-navy-light"
+                    >
+                      {t.checkout.addShippingAddress}
+                    </Button>
+                  </div>
+                ) : isEditingAddress ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="edit-full_name">{t.checkout.fullName} *</Label>
+                        <Input
+                          id="edit-full_name"
+                          value={editForm.full_name}
+                          onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-phone">{t.checkout.phone} *</Label>
+                        <Input
+                          id="edit-phone"
+                          type="tel"
+                          value={editForm.phone}
+                          onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-address_line1">{t.checkout.addressLine1} *</Label>
+                      <Input
+                        id="edit-address_line1"
+                        value={editForm.address_line1}
+                        onChange={(e) => setEditForm({...editForm, address_line1: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-address_line2">{t.checkout.addressLine2}</Label>
+                      <Input
+                        id="edit-address_line2"
+                        value={editForm.address_line2}
+                        onChange={(e) => setEditForm({...editForm, address_line2: e.target.value})}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="edit-city">{t.checkout.city} *</Label>
+                        <Input
+                          id="edit-city"
+                          value={editForm.city}
+                          onChange={(e) => setEditForm({...editForm, city: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-state">{t.checkout.stateProvince} *</Label>
+                        <Input
+                          id="edit-state"
+                          value={editForm.state_province}
+                          onChange={(e) => setEditForm({...editForm, state_province: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="edit-postal">{t.checkout.postalCode} *</Label>
+                        <Input
+                          id="edit-postal"
+                          value={editForm.postal_code}
+                          onChange={(e) => setEditForm({...editForm, postal_code: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-country">{t.checkout.country} *</Label>
+                        <Input
+                          id="edit-country"
+                          value={editForm.country}
+                          onChange={(e) => setEditForm({...editForm, country: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsEditingAddress(false)}
+                        className="flex-1"
+                      >
+                        {t.checkout.cancel}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleSaveAddress}
+                        className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
+                      >
+                        {t.checkout.saveChanges}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {savedAddresses.map((address) => (
                     <label
                       key={address.id}
-                      className={`block rounded-lg border-2 p-4 cursor-pointer transition-colors ${
+                      className={`block p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                         selectedAddressId === address.id
-                          ? 'border-luxury-gold bg-luxury-gold/5'
-                          : 'border-border/40 hover:border-luxury-gold/50'
+                          ? 'border-luxury-navy bg-luxury-navy/5'
+                          : 'border-gray-200 hover:border-luxury-navy/50'
                       }`}
                     >
                       <input
@@ -360,138 +1285,202 @@ export default function CheckoutPage() {
                         name="address"
                         value={address.id}
                         checked={selectedAddressId === address.id}
-                        onChange={(e) => setSelectedAddressId(e.target.value)}
+                        onChange={() => setSelectedAddressId(address.id)}
                         className="sr-only"
                       />
-                      <div className="flex items-start justify-between">
+                      <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-semibold">{address.full_name}</p>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="font-medium text-gray-900">{address.full_name}</p>
+                          <p className="text-sm text-gray-600 mt-1">
                             {address.address_line1}
                             {address.address_line2 && `, ${address.address_line2}`}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-gray-600">
                             {address.city}, {address.state_province} {address.postal_code}
                           </p>
-                          <p className="text-sm text-muted-foreground">{address.country}</p>
-                          <p className="text-sm text-muted-foreground">{address.phone}</p>
+                          <p className="text-sm text-gray-600">{address.phone}</p>
                         </div>
                         {address.is_default && (
-                          <span className="px-2 py-1 bg-luxury-gold text-white text-xs rounded-full">
-                            Default
+                          <span className="px-2 py-1 bg-luxury-navy text-white text-xs rounded-full">
+                            {t.checkout.default}
                           </span>
                         )}
                       </div>
                     </label>
                   ))}
-                </div>
-              )}
-            </div>
-
-            {/* Payment Method */}
-            <div className="rounded-lg border border-border/40 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <CreditCard className="h-5 w-5 text-luxury-gold" />
-                <h2 className="font-serif text-2xl font-bold">Payment Method</h2>
-              </div>
-              
-              <div className="space-y-3">
-                <label className={`block rounded-lg border-2 p-4 cursor-pointer transition-colors ${
-                  selectedPaymentMethod === 'credit_card'
-                    ? 'border-luxury-gold bg-luxury-gold/5'
-                    : 'border-border/40 hover:border-luxury-gold/50'
-                }`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="credit_card"
-                    checked={selectedPaymentMethod === 'credit_card'}
-                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5" />
-                    <span className="font-medium">Credit / Debit Card</span>
                   </div>
-                </label>
-
-                <label className={`block rounded-lg border-2 p-4 cursor-pointer transition-colors ${
-                  selectedPaymentMethod === 'bank_transfer'
-                    ? 'border-luxury-gold bg-luxury-gold/5'
-                    : 'border-border/40 hover:border-luxury-gold/50'
-                }`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="bank_transfer"
-                    checked={selectedPaymentMethod === 'bank_transfer'}
-                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center gap-3">
-                    <Package className="h-5 w-5" />
-                    <span className="font-medium">Bank Transfer</span>
-                  </div>
-                </label>
+                )}
               </div>
-            </div>
+            )}
+
           </div>
 
-          {/* Order Summary */}
+          {/* Order Summary Sidebar */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 rounded-lg border border-border/40 p-6">
-              <h2 className="mb-4 font-serif text-2xl font-bold">Order Summary</h2>
-              
-              <div className="space-y-3 mb-4">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="flex gap-3 text-sm">
-                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-luxury-gray-light">
-                      <img
-                        src={item.product.image_urls[0]}
-                        alt={item.product.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 lg:sticky lg:top-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{t.checkout.orderSummary}</h2>
+
+              {/* Promo Code Section */}
+              <div className="mb-4 pb-4 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">{t.checkout.promoCode}</h3>
+                {appliedPromo ? (
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex-1">
-                      <p className="font-medium">{item.product.name}</p>
-                      <p className="text-muted-foreground">Qty: {item.quantity}</p>
+                      <p className="text-sm font-medium text-green-900">{appliedPromo.code}</p>
+                      <p className="text-xs text-green-700">-{region ? formatRegionPrice(discount, region) : formatCurrencyPrice(discount, currency)} {t.checkout.discountApplied}</p>
                     </div>
-                    <p className="font-medium">{formatPrice(item.price_at_add * item.quantity)}</p>
+                    <button
+                      onClick={removePromoCode}
+                      className="text-green-700 hover:text-green-900 text-sm font-medium"
+                    >
+                      {t.checkout.remove}
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder={t.checkout.enterCode}
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      className="flex-1 text-sm"
+                    />
+                    <Button
+                      onClick={applyPromoCode}
+                      disabled={isApplyingPromo || !promoCode.trim()}
+                      variant="outline"
+                      size="sm"
+                      className="px-4"
+                    >
+                      {isApplyingPromo ? t.checkout.applying : t.checkout.apply}
+                    </Button>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-3 border-t border-border/40 pt-4">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatPrice(subtotal)}</span>
+              {/* Price Breakdown */}
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>{t.checkout.subtotal}</span>
+                  <span className="font-medium text-gray-900">{region ? formatRegionPrice(subtotal, region) : formatCurrencyPrice(subtotal, currency)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span>
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>{t.checkout.discount}</span>
+                    <span className="font-medium">-{region ? formatRegionPrice(discount, region) : formatCurrencyPrice(discount, currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>{t.checkout.shipping}</span>
+                  <span className={`font-medium ${shipping === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                    {isLoadingShipping ? (
+                      <span className="text-xs">{t.checkout.calculating}</span>
+                    ) : shipping === 0 ? (
+                      t.checkout.free
+                    ) : (
+                      region ? formatRegionPrice(shipping, region) : formatCurrencyPrice(shipping, currency)
+                    )}
+                  </span>
                 </div>
-                <div className="border-t border-border/40 pt-3">
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span>{formatPrice(total)}</span>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>{t.checkout.tax}</span>
+                  <span className="font-medium text-gray-900">{region ? formatRegionPrice(tax, region) : formatCurrencyPrice(tax, currency)}</span>
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="pt-4 mb-6 border-t-2 border-gray-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-gray-900">{t.checkout.total}</span>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-luxury-navy">{region ? formatRegionPrice(total, region) : formatCurrencyPrice(total, currency)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <Button
-                variant="luxury"
-                size="lg"
-                className={`w-full mt-6 ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
-                onClick={handlePlaceOrder}
-                disabled={isProcessing || !selectedAddressId}
-              >
-                {isProcessing ? 'Processing...' : 'Place Order'}
-              </Button>
+              {/* Checkout Button - For both logged-in and guest users */}
+              {!isGuest ? (
+                <>
+                  <Button
+                    onClick={handlePlaceOrder}
+                    disabled={isProcessing || !selectedAddressId}
+                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-semibold py-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                    size="lg"
+                  >
+                    {isProcessing ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        {t.checkout.processing}
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <Lock className="h-5 w-5" />
+                        {t.checkout.placeOrder} · {region ? formatRegionPrice(total, region) : formatCurrencyPrice(total, currency)}
+                      </span>
+                    )}
+                  </Button>
+
+                  {!selectedAddressId && savedAddresses.length === 0 && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-700 text-center font-medium">
+                        {t.checkout.pleaseAddAddress}
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => setShowCheckoutModal(true)}
+                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-semibold py-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                    size="lg"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <Lock className="h-5 w-5" />
+                      {t.checkout.continueToCheckout}
+                    </span>
+                  </Button>
+
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-gray-600">
+                      {t.checkout.haveAccount}{' '}
+                      <a href="/login" className="text-luxury-navy hover:underline font-semibold">
+                        {t.checkout.signIn}
+                      </a>
+                      {' '}{t.checkout.fasterCheckout}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Trust Badges */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    <span>{t.checkout.secureCheckout}</span>
+                  </div>
+                  <div className="w-px h-4 bg-gray-300"></div>
+                  <div className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    <span>{t.checkout.safePayment}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Guest Checkout Modal */}
+      <CheckoutModal
+        isOpen={showCheckoutModal}
+        onClose={() => setShowCheckoutModal(false)}
+        onSubmit={handleGuestCheckout}
+      />
     </div>
-    </>
   )
 }

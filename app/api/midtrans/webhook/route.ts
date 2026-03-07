@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       urlPrefix: supabaseUrl?.substring(0, 20)
     })
     
-    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     let paymentStatus = 'pending'
     let orderStatus = 'pending'

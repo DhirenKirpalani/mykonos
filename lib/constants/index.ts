@@ -44,6 +44,7 @@ export const PASSWORD_STRENGTH_COLORS = {
 
 export const COUNTRIES = [
   { code: 'US', name: 'United States' },
+  { code: 'ID', name: 'Indonesia' },
   { code: 'GB', name: 'United Kingdom' },
   { code: 'CA', name: 'Canada' },
   { code: 'AU', name: 'Australia' },
@@ -78,6 +79,10 @@ export const COUNTRIES = [
   { code: 'CN', name: 'China' },
   { code: 'SG', name: 'Singapore' },
   { code: 'HK', name: 'Hong Kong' },
+  { code: 'MY', name: 'Malaysia' },
+  { code: 'TH', name: 'Thailand' },
+  { code: 'VN', name: 'Vietnam' },
+  { code: 'PH', name: 'Philippines' },
   { code: 'AE', name: 'United Arab Emirates' },
   { code: 'SA', name: 'Saudi Arabia' },
   { code: 'IL', name: 'Israel' },

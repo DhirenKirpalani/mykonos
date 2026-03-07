@@ -106,6 +106,8 @@ export function ProductFilters() {
                           key={family}
                           onClick={() => {
                             updateFilter('category', family)
+                            setFragranceDropdownOpen(false)
+                            setIsOpen(false)
                           }}
                           className={`block w-full rounded-lg px-4 py-2 text-left text-sm transition-all ${
                             currentCategory === family
@@ -195,6 +197,7 @@ export function ProductFilters() {
                       key={family}
                       onClick={() => {
                         updateFilter('category', family)
+                        setFragranceDropdownOpen(false)
                       }}
                       className={`block w-full rounded-lg px-4 py-2 text-left text-sm transition-all ${
                         currentCategory === family

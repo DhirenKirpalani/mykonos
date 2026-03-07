@@ -22,12 +22,13 @@ A high-end luxury e-commerce website featuring Mediterranean-inspired design, re
 #### Customer-Facing Pages
 - ✅ Homepage with hero section and featured collections
 - ✅ Product listing with filtering and sorting
-- ✅ Product detail pages with image galleries
+- ✅ Product detail pages with image galleries and reviews
 - ✅ Collections pages
-- ✅ Shopping cart
+- ✅ Shopping cart with persistent state
+- ✅ **Checkout flow** (6-step process with session management)
 - ✅ About page
 - ✅ Contact page
-- ✅ Account page
+- ✅ Account page with order history and saved addresses
 - ✅ Login & Registration pages
 - ✅ FAQs page
 - ✅ Privacy Policy page
@@ -36,14 +37,18 @@ A high-end luxury e-commerce website featuring Mediterranean-inspired design, re
 - ✅ Returns & Exchanges page
 
 #### Admin CMS Dashboard
-- ✅ Dashboard overview with analytics
-- ✅ Product management (create, edit, list)
-- ✅ Order management
-- ✅ Customer management
+- ✅ Dashboard overview with analytics and sales metrics
+- ✅ Product management (create, edit, list, inventory tracking)
+- ✅ Order management with fulfillment workflow
+- ✅ **Shipping jobs monitoring** (async job queue dashboard)
+- ✅ Customer management with purchase history
 - ✅ Collections management
 - ✅ Banner management
-- ✅ Promo codes management
-- ✅ Analytics & reporting
+- ✅ Promo codes management with usage tracking
+- ✅ User management with role assignment
+- ✅ **Live chat support** interface
+- ✅ Analytics & reporting with revenue tracking
+- ✅ Settings and configuration management
 
 ### Key Features
 
@@ -66,14 +71,27 @@ A high-end luxury e-commerce website featuring Mediterranean-inspired design, re
 - **Collections Gallery**: Curated collections with elegant presentation
 - **Product Filtering**: Advanced filtering and sorting capabilities
 - **Image Galleries**: High-quality product photography with zoom
+- **Product Reviews & Ratings**: Customer reviews with star ratings and helpful votes
+- **Wishlist**: Save favorite products for later purchase
+- **Inventory Management**: Real-time stock tracking and low stock alerts
 
 #### User Experience
 - **Authentication System**: Complete sign-up, sign-in, and sign-out flows with Supabase Auth
-- **Role-Based Access Control**: Customer, admin, and super admin roles with permission management
+- **Role-Based Access Control**: Customer, admin, super admin, and inventory manager roles
 - **Notification System**: Real-time notifications with badge counter and dialog
-- **Shopping Cart**: Full cart management with persistent state
-- **Account Management**: User profile and order history
-- **Newsletter Signup**: Email subscription integration
+- **Shopping Cart**: Full cart management with persistent state and promo code support
+- **Checkout Flow**: 6-step linear checkout process:
+  - Customer information
+  - Shipping address (saved addresses support)
+  - Shipping method selection
+  - Payment method selection
+  - Order review
+  - Confirmation with order tracking
+- **Payment Integration**: Multi-payment gateway support (Midtrans, Stripe-ready)
+- **Account Management**: User profile, order history, saved addresses, and settings
+- **Order Tracking**: Real-time shipment tracking with status updates
+- **Newsletter Signup**: Email subscription with preference management
+- **Live Chat Support**: Real-time customer support chat system
 - **Accessibility Mode**: Comprehensive accessibility settings including:
   - Reduced motion support
   - High contrast mode
@@ -101,6 +119,8 @@ A high-end luxury e-commerce website featuring Mediterranean-inspired design, re
 - **API Routes**: RESTful API endpoints for region detection and data management
 - **Form Validation**: Zod schemas for type-safe form validation
 - **Toast Notifications**: Sonner for elegant toast notifications
+- **Async Job Queue**: Enterprise-grade shipping job processing system
+- **Worker Service**: Standalone Node.js worker for courier API integration
 
 ## Getting Started
 
@@ -144,18 +164,24 @@ Open [http://localhost:3000](http://localhost:3000) to view the site.
 mykonos/
 ├── app/                    # Next.js app directory
 │   ├── about/             # About page
-│   ├── account/           # User account page
+│   ├── account/           # User account with orders, addresses, settings
 │   ├── api/               # API routes for backend functionality
+│   │   └── admin/         # Admin-only API endpoints
+│   │       └── shipping/  # Shipping job management APIs
 │   ├── auth/              # Authentication callback handlers
-│   ├── cart/              # Shopping cart
+│   ├── checkout/          # 6-step checkout flow
 │   ├── cms/               # Admin CMS dashboard
 │   │   ├── analytics/     # Analytics & reporting
 │   │   ├── banners/       # Banner management
+│   │   ├── chat/          # Live chat support interface
 │   │   ├── collections/   # Collections management
 │   │   ├── customers/     # Customer management
-│   │   ├── orders/        # Order management
+│   │   ├── orders/        # Order management & fulfillment
 │   │   ├── products/      # Product management
-│   │   └── promo-codes/   # Promo code management
+│   │   ├── promo-codes/   # Promo code management
+│   │   ├── settings/      # System settings
+│   │   ├── shipping-jobs/ # Async shipping job dashboard
+│   │   └── users/         # User & role management
 │   ├── collections/       # Collections pages
 │   ├── contact/           # Contact page
 │   ├── faqs/              # FAQs page
@@ -194,7 +220,8 @@ mykonos/
 │   │   ├── product.ts
 │   │   ├── promo.ts
 │   │   ├── region.ts
-│   │   └── roles.ts
+│   │   ├── roles.ts
+│   │   └── shipping.ts   # Shipping job types
 │   ├── utils/            # Utility functions
 │   │   ├── cart.ts
 │   │   ├── permissions.ts
@@ -206,21 +233,45 @@ mykonos/
 │   └── validation.ts     # Zod validation schemas
 ├── messages/             # Internationalization messages
 ├── supabase/             # Database schema and migrations
-│   └── schema.sql        # SQL schema with sample data
+│   └── migrations/       # SQL migrations (60+ files)
+├── worker/               # Standalone shipping worker service
+│   ├── shipping-worker.ts # Worker implementation
+│   ├── package.json      # Worker dependencies
+│   ├── Dockerfile        # Docker configuration
+│   ├── docker-compose.yml # Docker Compose setup
+│   └── README.md         # Worker documentation
+├── docs/                 # Comprehensive documentation
+│   ├── ASYNC_SHIPPING_SYSTEM.md
+│   ├── CHECKOUT_PAYMENT_IMPLEMENTATION.md
+│   ├── IMPLEMENTATION_SUMMARY.md
+│   └── [14 more implementation guides]
 └── public/               # Static assets
 ```
 
 ## Database Schema
 
 The Supabase schema includes:
-- **products**: Product catalog with images, pricing, categories
+- **products**: Product catalog with images, pricing, categories, and inventory
 - **collections**: Product collections
 - **users**: User profiles with role-based access control
-- **cart_items**: User shopping carts
-- **orders**: Order history
+- **cart_items**: User shopping carts with promo code support
+- **orders**: Order history with payment and shipping tracking
 - **order_items**: Order line items
-- **promo_codes**: Promotional discount codes
+- **order_status_history**: Order status change tracking
+- **promo_codes**: Promotional discount codes with usage limits
 - **regions**: Geographic regions for localization
+- **shipping_addresses**: User saved shipping addresses
+- **shipping_methods**: Available shipping options by region
+- **payment_methods**: Supported payment gateways by region
+- **checkout_sessions**: Checkout progress persistence (24-hour expiration)
+- **shipping_jobs**: Async job queue for courier API integration
+- **shipment_tracking_events**: Real-time shipment tracking
+- **product_reviews**: Customer product reviews and ratings
+- **wishlist_items**: User saved products
+- **newsletter_subscriptions**: Email subscription management
+- **chat_messages**: Live chat support system
+- **notifications**: User notification system
+- **courier_api_providers**: Courier service configurations
 
 Sample data is included in the schema for testing.
 
@@ -228,6 +279,7 @@ Sample data is included in the schema for testing.
 - **customer**: Standard user with shopping capabilities
 - **admin**: Store administrator with CMS access
 - **super_admin**: Full system access with all permissions
+- **inventory_manager**: Warehouse staff with fulfillment access
 
 ## Customization
 
@@ -293,46 +345,57 @@ npm start
 
 ## Recent Updates
 
-### Authentication & Authorization
-- ✅ Complete authentication system with Supabase Auth
-- ✅ Role-based access control (RBAC) with customer, admin, and super admin roles
-- ✅ Protected routes and permission-based UI rendering
-- ✅ User profile management
+### E-Commerce Core Features
+- ✅ **Complete Checkout Flow**: 6-step linear checkout with session persistence
+- ✅ **Payment Integration**: Midtrans payment gateway with multi-method support
+- ✅ **Order Management**: Full order lifecycle from cart to delivery
+- ✅ **Shipping Selection**: Region-based shipping methods with cost calculation
+- ✅ **Promo Codes**: Discount codes with validation and usage tracking
 
-### Admin CMS Dashboard
-- ✅ Comprehensive admin dashboard with analytics
-- ✅ Product management interface
-- ✅ Order and customer management
-- ✅ Banner and promotional content management
-- ✅ Promo code creation and management
+### Async Shipping System (Enterprise-Grade)
+- ✅ **Shipping Job Queue**: PostgreSQL-based async job processing
+- ✅ **Worker Service**: Standalone Node.js worker for courier API calls
+- ✅ **Idempotency Protection**: Prevents duplicate shipment creation
+- ✅ **Retry Logic**: Exponential backoff for failed jobs (up to 5 retries)
+- ✅ **Concurrent Processing**: Safe multi-worker support with row-level locking
+- ✅ **Admin Dashboard**: Real-time job monitoring and manual retry capability
+- ✅ **Static IP Support**: Designed for courier API IP whitelisting requirements
 
-### Enhanced User Experience
-- ✅ Advanced accessibility mode with customizable settings
-- ✅ Region detection and localization
-- ✅ Multi-currency pricing support
-- ✅ Internationalization with next-intl
-- ✅ Legal pages (Privacy, Terms, Shipping, Returns)
-- ✅ FAQs page
+### Customer Engagement
+- ✅ **Product Reviews & Ratings**: Customer feedback with star ratings
+- ✅ **Wishlist**: Save products for later purchase
+- ✅ **Newsletter**: Email subscription management
+- ✅ **Live Chat**: Real-time customer support system
+- ✅ **Notifications**: In-app notification system with badge counter
+- ✅ **Order Tracking**: Real-time shipment tracking with status updates
 
-### Technical Improvements
-- ✅ Context-based state management (Auth, Accessibility, Region, Language)
-- ✅ Custom hooks for reusable logic
-- ✅ Comprehensive TypeScript type definitions
-- ✅ Form validation with Zod schemas
-- ✅ Toast notifications with Sonner
+### Admin CMS Enhancements
+- ✅ **Shipping Jobs Dashboard**: Monitor async shipping job queue
+- ✅ **Order Fulfillment**: One-click order fulfillment workflow
+- ✅ **User Management**: Role assignment and permission control
+- ✅ **Inventory Tracking**: Stock management with low stock alerts
+- ✅ **Sales Analytics**: Revenue tracking and reporting
+- ✅ **Live Chat Interface**: Admin chat support dashboard
+
+### Technical Infrastructure
+- ✅ **Worker Service**: Standalone shipping worker with Docker support
+- ✅ **Session Management**: Checkout session persistence
+- ✅ **Email Templates**: Transactional email system
+- ✅ **Courier Integration**: Multi-courier API configuration
+- ✅ **Tax Configuration**: Region-based tax display settings
 
 ## Future Enhancements
 
-- [ ] Complete checkout flow with payment integration (Stripe/PayPal)
-- [ ] Enhanced search with autocomplete and filters
-- [ ] Wishlist functionality
-- [ ] Product reviews and ratings system
+- [ ] Enhanced search with autocomplete and AI-powered recommendations
 - [ ] Gift wrapping and personalization options
-- [ ] Email notifications for orders and promotions
-- [ ] Advanced analytics dashboard with charts
-- [ ] Social media integration
-- [ ] Inventory management system
 - [ ] Automated email marketing campaigns
+- [ ] Advanced analytics dashboard with interactive charts
+- [ ] Social media integration and sharing
+- [ ] Loyalty program and rewards system
+- [ ] Multi-warehouse inventory management
+- [ ] Advanced reporting and business intelligence
+- [ ] Mobile app (React Native)
+- [ ] Subscription box service
 
 ## Performance
 

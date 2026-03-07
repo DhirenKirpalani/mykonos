@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/common'
 import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/lib/supabase/database.types'
 import { useAuth } from '@/contexts/AuthContext'
+import { ShippingAddresses } from '@/components/account/ShippingAddresses'
 
 type UserProfile = Database['public']['Tables']['users']['Row']
 
@@ -111,12 +112,6 @@ export default function AccountPage() {
                 Orders
               </button>
               <button 
-                onClick={() => router.push('/account/addresses')}
-                className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light"
-              >
-                Addresses
-              </button>
-              <button 
                 onClick={() => router.push('/account/settings')}
                 className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light"
               >
@@ -125,9 +120,9 @@ export default function AccountPage() {
             </nav>
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 space-y-8">
             <div className="rounded-lg border border-border/40 p-8">
-              <h2 className="mb-6 font-serif text-2xl font-bold">Profile</h2>
+              <h2 className="mb-6 font-serif text-2xl font-bold">Profile Information</h2>
               <div className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
@@ -219,6 +214,11 @@ export default function AccountPage() {
                   </Button>
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-border/40 p-8">
+              <h2 className="mb-6 font-serif text-2xl font-bold">Shipping Addresses</h2>
+              <ShippingAddresses userId={user.id} />
             </div>
           </div>
         </div>

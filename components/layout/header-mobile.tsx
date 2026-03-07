@@ -102,22 +102,20 @@ export function HeaderMobile() {
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               isActive={notificationsOpen}
             />
-            {role !== 'customer' && (
-              <Link
-                href="/cms"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10",
-                  pathname.startsWith('/cms')
-                    ? "bg-white/10 text-luxury-gold"
-                    : "hover:bg-white/10"
-                )}
-                aria-label="Admin Panel"
-              >
-                <Settings className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
-              </Link>
-            )}
+            <button
+              onClick={() => {
+                setCartOpen(true)
+              }}
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10 hover:bg-white/10"
+              aria-label="Shopping Cart"
+            >
+              <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-luxury-gold text-[10px] font-bold text-luxury-navy">
+                  {cartCount}
+                </span>
+              )}
+            </button>
             <Link 
               href="/account"
               className={cn(
@@ -191,7 +189,19 @@ export function HeaderMobile() {
                 {t.nav.contact}
               </Link>
 
-              {/* Wishlist and Cart */}
+              <Link
+                href="/track-order"
+                role="menuitem"
+                className={cn(
+                  "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98",
+                  pathname === '/track-order' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Track Order
+              </Link>
+
+              {/* Wishlist and Admin */}
               <div className="pt-4 border-t border-white/10 mt-4 space-y-1">
                 <button
                   onClick={() => {
@@ -210,23 +220,23 @@ export function HeaderMobile() {
                     </span>
                   )}
                 </button>
-                <button
-                  onClick={() => {
-                    setCartOpen(true)
-                    setMobileMenuOpen(false)
-                  }}
-                  className="flex w-full items-center justify-between rounded-lg px-4 py-4 text-base font-medium transition-all text-white hover:bg-luxury-gold/20"
-                >
-                  <div className="flex items-center gap-3">
-                    <ShoppingBag className="h-5 w-5" />
-                    <span>Cart</span>
-                  </div>
-                  {cartCount > 0 && (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-luxury-gold text-xs font-bold text-luxury-navy">
-                      {cartCount}
-                    </span>
-                  )}
-                </button>
+                {role !== 'customer' && (
+                  <Link
+                    href="/cms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20",
+                      pathname.startsWith('/cms')
+                        ? "bg-luxury-gold/20 text-luxury-gold"
+                        : "text-white"
+                    )}
+                  >
+                    <Settings className="h-5 w-5" />
+                    <span>Admin Panel</span>
+                  </Link>
+                )}
               </div>
               
               <div className="pt-4 border-t border-white/10 mt-4 space-y-2">

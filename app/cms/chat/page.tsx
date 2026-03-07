@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { MessageCircle, Send, Search, User, Clock } from 'lucide-react'
+import { MessageCircle, Send, Search, User, Clock, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUserRole } from '@/hooks/useUserRole'
@@ -51,6 +51,7 @@ export default function ChatManagementPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const lastMessageTimeRef = useRef<string>(new Date(0).toISOString())
+  const [showConversationList, setShowConversationList] = useState(true)
 
   useEffect(() => {
     if (!roleLoading && role !== 'admin') {
@@ -280,12 +281,19 @@ export default function ChatManagementPage() {
       setMessages(data || [])
 
       // Mark messages as read in background
-      await (supabase
+      const { error: updateError } = await (supabase
         .from('chat_messages') as any)
         .update({ is_read: true })
         .eq('conversation_id', conversationId)
         .eq('sender_type', 'customer')
         .eq('is_read', false)
+      
+      if (updateError) {
+        console.error('Failed to mark messages as read:', updateError)
+      }
+      
+      // Small delay to ensure DB update propagates
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       // Refetch the conversation's unread count to ensure accuracy
       const { count: newUnreadCount } = await supabase
@@ -301,6 +309,7 @@ export default function ChatManagementPage() {
       ))
       
       // Trigger a custom event to update the sidebar badge
+      console.log('Firing chat-messages-read event')
       window.dispatchEvent(new CustomEvent('chat-messages-read'))
     } catch (error) {
       console.error('Failed to fetch messages:', error)
@@ -378,19 +387,27 @@ export default function ChatManagementPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-gray-50">
+    <div className="flex h-[calc(100vh-4rem)] bg-gray-50 relative">
       {/* Conversations List */}
-      <div className="w-80 border-r border-gray-200 bg-white">
-        <div className="border-b border-gray-200 p-4">
-          <h1 className="mb-4 text-xl font-semibold text-gray-900">Support Chat</h1>
+      <div className={`${showConversationList ? 'block' : 'hidden'} md:block w-full md:w-80 border-r border-gray-200 bg-white absolute md:relative inset-0 z-10 md:z-0`}>
+        <div className="border-b border-gray-200 p-3 md:p-4">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h1 className="text-lg md:text-xl font-semibold text-gray-900">Support Chat</h1>
+            <button
+              onClick={() => setShowConversationList(false)}
+              className="md:hidden rounded p-1 hover:bg-gray-100"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search conversations..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
+              className="w-full rounded-lg border border-gray-300 py-1.5 md:py-2 pl-9 md:pl-10 pr-3 md:pr-4 text-xs md:text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
             />
           </div>
         </div>
@@ -415,17 +432,22 @@ export default function ChatManagementPage() {
                 <button
                   key={conv.id}
                   onClick={() => {
-                    setSelectedConversation(conv)
+                    // Immediately reset unread count for this conversation
+                    setConversations(prev => prev.map(c => 
+                      c.id === conv.id ? { ...c, unread_count: 0 } : c
+                    ))
+                    setSelectedConversation({ ...conv, unread_count: 0 })
                     setSelectedConversationId(conv.id)
+                    setShowConversationList(false) // Hide list on mobile when conversation selected
                   }}
-                  className={`w-full border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 ${
+                  className={`w-full border-b border-gray-100 p-3 md:p-4 text-left transition-colors hover:bg-gray-50 ${
                     selectedConversation?.id === conv.id ? 'bg-luxury-gold/10' : ''
                   }`}
                 >
                   <div className="mb-1 flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span className="font-medium text-gray-900">
+                      <User className="h-3 w-3 md:h-4 md:w-4 text-gray-400 flex-shrink-0" />
+                      <span className="font-medium text-gray-900 text-sm md:text-base truncate">
                         {displayName}
                       </span>
                     </div>
@@ -435,8 +457,8 @@ export default function ChatManagementPage() {
                       </span>
                     )}
                   </div>
-                <div className="mb-1 text-sm text-gray-600">{conv.subject}</div>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
+                <div className="mb-1 text-xs md:text-sm text-gray-600 truncate">{conv.subject}</div>
+                <div className="flex items-center gap-1 md:gap-2 text-xs text-gray-400">
                   <Clock className="h-3 w-3" />
                   {new Date(conv.updated_at).toLocaleString()}
                 </div>
@@ -448,14 +470,20 @@ export default function ChatManagementPage() {
       </div>
 
       {/* Messages Panel */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col w-full">
         {selectedConversation ? (
           <>
             {/* Header */}
-            <div className="border-b border-gray-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold text-gray-900">
+            <div className="border-b border-gray-200 bg-white p-3 md:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => setShowConversationList(true)}
+                  className="md:hidden rounded p-1 hover:bg-gray-100 flex-shrink-0"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-semibold text-gray-900 text-sm md:text-base truncate">
                     {((selectedConversation.user as any)?.first_name && (selectedConversation.user as any)?.last_name 
                         ? `${(selectedConversation.user as any).first_name} ${(selectedConversation.user as any).last_name}`
                         : null) ||
@@ -464,7 +492,7 @@ export default function ChatManagementPage() {
                       selectedConversation.guest_email ||
                       'Guest User'}
                   </h2>
-                  <p className="text-sm text-gray-500">{selectedConversation.subject}</p>
+                  <p className="text-xs md:text-sm text-gray-500 truncate">{selectedConversation.subject}</p>
                 </div>
               </div>
             </div>
@@ -473,19 +501,54 @@ export default function ChatManagementPage() {
             <div 
               ref={messagesContainerRef}
               onScroll={checkIfAtBottom}
-              className="flex-1 overflow-y-auto bg-gray-50 p-4" 
-              style={{ maxHeight: 'calc(100vh - 300px)' }}
+              className="flex-1 overflow-y-auto bg-gray-50 p-3 md:p-4" 
+              style={{ maxHeight: 'calc(100vh - 250px)' }}
             >
-              <div className="flex flex-col space-y-4">
-                {messages.map((message) => (
+              <div className="flex flex-col">
+                {(() => {
+                  const formatMessageDate = (dateString: string) => {
+                    const date = new Date(dateString)
+                    const today = new Date()
+                    const yesterday = new Date(today)
+                    yesterday.setDate(yesterday.getDate() - 1)
+
+                    if (date.toDateString() === today.toDateString()) {
+                      return 'Today'
+                    } else if (date.toDateString() === yesterday.toDateString()) {
+                      return 'Yesterday'
+                    } else {
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  }
+
+                  const groupMessagesByDate = (messages: Message[]) => {
+                    const groups: { [key: string]: Message[] } = {}
+                    messages.forEach(msg => {
+                      const dateKey = new Date(msg.created_at).toDateString()
+                      if (!groups[dateKey]) {
+                        groups[dateKey] = []
+                      }
+                      groups[dateKey].push(msg)
+                    })
+                    return groups
+                  }
+
+                  return Object.entries(groupMessagesByDate(messages)).map(([dateKey, dateMessages]) => (
+                    <div key={dateKey} className="mb-4">
+                      <div className="flex justify-center my-3 md:my-4">
+                        <span className="rounded-full bg-gray-300 px-2 md:px-3 py-0.5 md:py-1 text-xs text-gray-700 font-medium">
+                          {formatMessageDate(dateMessages[0].created_at)}
+                        </span>
+                      </div>
+                      {dateMessages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${
+                    className={`flex mb-2 md:mb-3 ${
                       message.sender_type === 'agent' ? 'justify-end' : 'justify-start'
                     }`}
                   >
                     <div
-                      className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                      className={`max-w-[85%] md:max-w-[70%] rounded-lg px-3 md:px-4 py-2 text-sm md:text-base ${
                         message.sender_type === 'agent'
                           ? 'bg-luxury-gold text-luxury-navy'
                           : message.sender_type === 'customer'
@@ -521,13 +584,16 @@ export default function ChatManagementPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                      ))}
+                    </div>
+                  ))
+                })()}
                 <div ref={messagesEndRef} />
               </div>
             </div>
 
             {/* Input */}
-            <div className="border-t border-gray-200 bg-white p-4">
+            <div className="border-t border-gray-200 bg-white p-3 md:p-4">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -541,12 +607,12 @@ export default function ChatManagementPage() {
                   }}
                   placeholder="Type your message..."
                   disabled={sending}
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold disabled:bg-gray-100 disabled:opacity-50"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 md:px-4 py-2 text-sm md:text-base focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold disabled:bg-gray-100 disabled:opacity-50"
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageInput.trim() || sending}
-                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-luxury-gold text-luxury-navy transition-all hover:bg-luxury-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-lg bg-luxury-gold text-luxury-navy transition-all hover:bg-luxury-gold/90 disabled:cursor-not-allowed disabled:opacity-50 flex-shrink-0"
                   aria-label="Send message"
                 >
                   <Send className="h-4 w-4" />

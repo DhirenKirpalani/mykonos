@@ -30,6 +30,7 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
   const [isSending, setIsSending] = useState(false)
   const [isAgentOnline, setIsAgentOnline] = useState(true)
   const [userName, setUserName] = useState<string>('')
+  const [unreadCount, setUnreadCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Reset state when widget is closed
@@ -38,8 +39,46 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
       setConversationId(null)
       setMessages([])
       setInputMessage('')
+    } else {
+      // Reset unread count when chat is opened
+      setUnreadCount(0)
     }
   }, [isOpen])
+
+  // Poll for unread messages count when chat is closed
+  useEffect(() => {
+    if (isOpen || !user || user.is_anonymous) return
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch('/api/chat/conversations?status=open', {
+          credentials: 'include'
+        })
+        if (response.ok) {
+          const { conversations } = await response.json()
+          if (conversations && conversations.length > 0) {
+            const conv = conversations[0]
+            const msgResponse = await fetch(`/api/chat/conversations/${conv.id}`, {
+              credentials: 'include'
+            })
+            if (msgResponse.ok) {
+              const { messages: allMessages } = await msgResponse.json()
+              const unread = allMessages.filter((m: Message) => 
+                m.sender_type !== 'customer' && !m.is_read
+              ).length
+              setUnreadCount(unread)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error)
+      }
+    }
+
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 5000)
+    return () => clearInterval(interval)
+  }, [isOpen, user])
 
   // Check for online agents
   useEffect(() => {
@@ -280,6 +319,33 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
     }
   }
 
+  const formatMessageDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today'
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday'
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    }
+  }
+
+  const groupMessagesByDate = (messages: Message[]) => {
+    const groups: { [key: string]: Message[] } = {}
+    messages.forEach(msg => {
+      const dateKey = new Date(msg.created_at).toDateString()
+      if (!groups[dateKey]) {
+        groups[dateKey] = []
+      }
+      groups[dateKey].push(msg)
+    })
+    return groups
+  }
+
   if (!isOpen) {
     return (
       <button
@@ -288,6 +354,11 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
         aria-label="Open live chat"
       >
         <MessageCircle className="h-5 w-5 text-luxury-navy sm:h-6 sm:w-6" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
       </button>
     )
   }
@@ -355,42 +426,51 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
                 </div>
               </div>
             ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender_type === 'customer' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                      message.sender_type === 'customer'
-                        ? 'bg-luxury-gold text-luxury-navy'
-                        : message.sender_type === 'agent'
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'bg-blue-50 text-blue-900'
-                    }`}
-                  >
-                    {message.sender_type !== 'customer' && (
-                      <p className="text-xs font-semibold mb-1">
-                        Mykonos Support
-                      </p>
-                    )}
-                    <p className="text-sm whitespace-pre-wrap">{message.message_text}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <p className="text-xs opacity-70">
-                        {new Date(message.created_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                      {message.sender_type === 'customer' && (
-                        <span className="text-xs font-bold" style={{ color: message.is_read ? '#3b82f6' : '#9ca3af' }}>
-                          {message.is_read ? '✓✓' : '✓'}
-                        </span>
-                      )}
-                    </div>
+              Object.entries(groupMessagesByDate(messages)).map(([dateKey, dateMessages]) => (
+                <div key={dateKey}>
+                  <div className="flex justify-center my-3">
+                    <span className="rounded-full bg-gray-200 px-3 py-1 text-xs text-gray-600">
+                      {formatMessageDate(dateMessages[0].created_at)}
+                    </span>
                   </div>
+                  {dateMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex mb-3 ${
+                        message.sender_type === 'customer' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                          message.sender_type === 'customer'
+                            ? 'bg-luxury-gold text-luxury-navy'
+                            : message.sender_type === 'agent'
+                            ? 'bg-gray-100 text-gray-900'
+                            : 'bg-blue-50 text-blue-900'
+                        }`}
+                      >
+                        {message.sender_type !== 'customer' && (
+                          <p className="text-xs font-semibold mb-1">
+                            Mykonos Support
+                          </p>
+                        )}
+                        <p className="text-sm whitespace-pre-wrap">{message.message_text}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <p className="text-xs opacity-70">
+                            {new Date(message.created_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                          {message.sender_type === 'customer' && (
+                            <span className="text-xs font-bold" style={{ color: message.is_read ? '#10b981' : '#1e3a8a' }}>
+                              {message.is_read ? '✓✓' : '✓'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))
             )}

@@ -8,30 +8,31 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     
-    // Get authorization header
+    // Get authorization header (optional for guest checkout)
     const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'Unauthorized - No authorization header' },
-        { status: 401 }
-      )
-    }
     
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
+    // Create Supabase client with auth header if provided
+    const supabase = authHeader 
+      ? createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: {
+              Authorization: authHeader
+            }
+          }
+        })
+      : createClient(supabaseUrl, supabaseAnonKey)
+    
+    // Verify user if auth header is provided (authenticated checkout)
+    // For guest checkout, skip user verification
+    if (authHeader) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: 'Unauthorized - Invalid token' },
+          { status: 401 }
+        )
       }
-    })
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
     }
 
     const body = await request.json()
@@ -46,6 +47,8 @@ export async function POST(request: NextRequest) {
 
     const snap = getMidtransSnapClient()
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    
     const parameter = {
       transaction_details: {
         order_id: orderId,
@@ -66,6 +69,9 @@ export async function POST(request: NextRequest) {
         quantity: item.quantity,
         name: item.name,
       })) || [],
+      callbacks: {
+        finish: `${baseUrl}/api/midtrans/callback?order_id=${orderId}`,
+      },
     }
 
     const transaction = await snap.createTransaction(parameter)

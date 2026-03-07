@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const faqs = [
   {
@@ -63,6 +64,7 @@ const faqs = [
 ]
 
 export default function FAQsPage() {
+  const { t } = useLanguage()
   const [openItems, setOpenItems] = useState<string[]>([])
 
   const toggleItem = (id: string) => {
@@ -76,10 +78,10 @@ export default function FAQsPage() {
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
           <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
-            Find your answers here
+            {t.faqs.title}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Common questions about our products and services
+            {t.faqs.subtitle}
           </p>
         </div>
       </div>
@@ -125,10 +127,10 @@ export default function FAQsPage() {
 
           <div className="mt-12 rounded-lg bg-luxury-navy p-8 text-center text-white">
             <h3 className="mb-4 font-serif text-2xl font-bold">
-              Couldn't find your answer?
+              {t.faqs.couldntFind}
             </h3>
             <p className="mb-6 text-gray-300">
-              We're here to help. If you couldn't find the information you were looking for, please reach out to us directly. Our team is eager to assist you.
+              {t.faqs.helpText}
             </p>
             <a
               href="https://wa.me/6285780218514"
@@ -136,7 +138,7 @@ export default function FAQsPage() {
               rel="noopener noreferrer"
               className="inline-block rounded-md bg-luxury-gold px-8 py-3 font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light"
             >
-              Contact Us
+              {t.faqs.contactUs}
             </a>
           </div>
         </div>

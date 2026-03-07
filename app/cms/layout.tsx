@@ -1,18 +1,18 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
+import { LoadingSpinner } from '@/components/common'
 import { 
   LayoutDashboard, 
   Package, 
-  FolderOpen, 
   Image as ImageIcon, 
   Tag, 
   ShoppingCart, 
   Users, 
-  BarChart3,
   Settings,
   User,
   Menu,
@@ -29,9 +29,40 @@ export default function CMSLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const { role } = useUserRole()
+  const router = useRouter()
+  const { role, isLoading: roleLoading } = useUserRole()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        router.push('/login?redirect=/cms')
+        return
+      }
+      
+      setIsAuthenticated(true)
+      setIsCheckingAuth(false)
+    }
+
+    checkAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        router.push('/login?redirect=/cms')
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [router])
 
   // Fetch unread message count
   useEffect(() => {
@@ -52,10 +83,11 @@ export default function CMSLayout({
     }
 
     fetchUnreadCount()
-    const interval = setInterval(fetchUnreadCount, 30000) // Update every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 3000) // Update every 3 seconds
 
     // Listen for messages being read
     const handleMessagesRead = () => {
+      console.log('chat-messages-read event received, fetching unread count')
       fetchUnreadCount()
     }
     window.addEventListener('chat-messages-read', handleMessagesRead)
@@ -77,19 +109,18 @@ export default function CMSLayout({
       name: 'Products', 
       href: '/cms/products', 
       icon: Package,
-      show: canManageProducts(role)
+      show: canManageProducts(role),
+      children: [
+        { name: 'All Products', href: '/cms/products' },
+        { name: 'Add Product', href: '/cms/products/new' },
+        { name: 'Bulk Upload', href: '/cms/products/bulk-upload' },
+      ]
     },
     { 
-      name: 'Collections', 
-      href: '/cms/collections', 
-      icon: FolderOpen,
-      show: canAccessCMS(role)
-    },
-    { 
-      name: 'Banners', 
-      href: '/cms/banners', 
-      icon: ImageIcon,
-      show: canAccessCMS(role)
+      name: 'Announcement Bar', 
+      href: '/cms/announcement-bar', 
+      icon: MessageCircle,
+      show: role === 'admin'
     },
     { 
       name: 'Promo Codes', 
@@ -122,12 +153,6 @@ export default function CMSLayout({
       show: role === 'admin'
     },
     { 
-      name: 'Analytics', 
-      href: '/cms/analytics', 
-      icon: BarChart3,
-      show: role === 'admin' || role === 'marketing_manager'
-    },
-    { 
       name: 'Profile', 
       href: '/cms/profile', 
       icon: User,
@@ -140,6 +165,20 @@ export default function CMSLayout({
       show: role === 'admin'
     },
   ].filter(item => item.show)
+
+  // Show loading while checking authentication
+  if (isCheckingAuth || roleLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <LoadingSpinner />
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated
+  if (!isAuthenticated) {
+    return null
+  }
 
   return (
     <div className="fixed inset-0 bg-gray-50">
@@ -195,7 +234,7 @@ export default function CMSLayout({
                   >
                     <item.icon className="h-5 w-5" />
                     {item.name}
-                    {item.name === 'Chat' && unreadCount > 0 && (
+                    {item.name === 'Chat' && unreadCount > 0 && !pathname.startsWith('/cms/chat') && (
                       <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
                         {unreadCount}
                       </span>

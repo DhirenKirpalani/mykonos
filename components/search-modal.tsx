@@ -143,42 +143,44 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               {loading ? (
                 <div className="text-center py-16 text-luxury-navy/60">Searching...</div>
               ) : displayProducts.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 lg:gap-8">
-                  {displayProducts.map((product) => (
-                    <Link
-                      key={product.id}
-                      href={`/products/${product.slug}`}
-                      onClick={onClose}
-                      className="group block"
-                    >
-                      <div className="bg-white/50 backdrop-blur-sm rounded-sm p-4 transition-all duration-300 hover:bg-white hover:shadow-lg border border-luxury-gold/10">
-                        <div className="relative aspect-square mb-4 overflow-hidden bg-white/80">
-                          {isVideo(product.image_urls[0]) ? (
-                            <video
-                              src={product.image_urls[0]}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              muted
-                              playsInline
-                              loop
-                              autoPlay
-                            />
-                          ) : (
-                            <Image
-                              src={product.image_urls[0]}
-                              alt={product.name}
-                              fill
-                              className="object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
-                          )}
+                <div className="overflow-x-auto -mx-6 px-6 lg:-mx-8 lg:px-8">
+                  <div className="flex gap-4 pb-4 min-w-max">
+                    {displayProducts.map((product) => (
+                      <Link
+                        key={product.id}
+                        href={`/products/${product.slug}`}
+                        onClick={onClose}
+                        className="group block flex-shrink-0 w-[160px] sm:w-[180px] lg:w-[200px]"
+                      >
+                        <div className="bg-white/50 backdrop-blur-sm rounded-sm p-3 sm:p-4 transition-all duration-300 hover:bg-white hover:shadow-lg border border-luxury-gold/10 h-full">
+                          <div className="relative aspect-square mb-3 overflow-hidden bg-white/80 rounded">
+                            {isVideo(product.image_urls[0]) ? (
+                              <video
+                                src={product.image_urls[0]}
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                muted
+                                playsInline
+                                loop
+                                autoPlay
+                              />
+                            ) : (
+                              <Image
+                                src={product.image_urls[0]}
+                                alt={product.name}
+                                fill
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                              />
+                            )}
+                          </div>
+                          <h4 className="mb-2 font-medium text-xs sm:text-sm text-luxury-navy line-clamp-2 uppercase tracking-wider">
+                            {product.name}
+                          </h4>
+                          <p className="text-[10px] sm:text-xs text-luxury-navy/60 mb-1">{product.size}</p>
+                          <p className="text-xs sm:text-sm font-semibold text-luxury-gold">{region ? formatPrice(product.price, region) : '...'}</p>
                         </div>
-                        <h4 className="mb-2 font-medium text-sm text-luxury-navy line-clamp-2 uppercase tracking-wider">
-                          {product.name}
-                        </h4>
-                        <p className="text-xs text-luxury-navy/60 mb-1">{product.size}</p>
-                        <p className="text-sm font-semibold text-luxury-gold">{region ? formatPrice(product.price, region) : '...'}</p>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               ) : searchQuery.length > 2 ? (
                 <div className="text-center py-16 text-luxury-navy/60">No products found</div>
