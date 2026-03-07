@@ -26,6 +26,11 @@ export const metadata: Metadata = {
   },
   description: 'Discover exquisite luxury fragrances and perfumes. Experience the art of fine perfumery with our exclusive collections of niche and haute perfumery.',
   keywords: ['luxury perfume', 'fragrance', 'haute perfumery', 'niche fragrance', 'luxury scents', 'designer perfume', 'exclusive fragrances', 'premium perfumes'],
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+  },
   authors: [{ name: 'Mykonos' }],
   creator: 'Mykonos',
   publisher: 'Mykonos',

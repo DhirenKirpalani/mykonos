@@ -48,7 +48,7 @@ export function HeaderDesktop() {
     { name: t.nav.home, href: '/' },
     { name: t.nav.catalog, href: '/products' },
     { name: t.nav.contact, href: '/contact' },
-    { name: t.nav.sale, href: '/products?sale=true' },
+    { name: 'Track Order', href: '/track-order' },
   ]
 
   useEffect(() => {

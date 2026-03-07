@@ -1,19 +1,49 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-
-const messages = [
-  'Discover our redeemable sampler sets. *T&Cs Apply.',
-  'Free shipping on orders over $100',
-  'Complimentary gift wrapping available',
-  'New arrivals now in stock',
-]
+import { supabase } from '@/lib/supabase/client'
 
 export function AnnouncementBar() {
+  const [messages, setMessages] = useState<string[]>([])
   const [index, setIndex] = useState(0)
   const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    fetchMessages()
+  }, [])
+
+  const fetchMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('announcement_messages')
+        .select('message')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+
+      if (data && data.length > 0) {
+        setMessages(data.map(m => m.message))
+      } else {
+        // Fallback messages if database is empty
+        setMessages([
+          'Discover our redeemable sampler sets. *T&Cs Apply.',
+          'Free shipping on orders over $100',
+          'Complimentary gift wrapping available',
+          'New arrivals now in stock',
+        ])
+      }
+    } catch (error) {
+      console.error('Error fetching announcement messages:', error)
+      // Use fallback messages on error
+      setMessages([
+        'Discover our redeemable sampler sets. *T&Cs Apply.',
+        'Free shipping on orders over $100',
+      ])
+    }
+  }
+
+  useEffect(() => {
+    if (messages.length === 0) return
+    
     const textEl = textRef.current
     if (!textEl) return
 
@@ -62,7 +92,7 @@ export function AnnouncementBar() {
         }
       }, 2000)
     }
-  }, [index])
+  }, [index, messages.length])
 
   return (
     <div className="sticky top-0 z-[60] relative overflow-hidden bg-black text-white">

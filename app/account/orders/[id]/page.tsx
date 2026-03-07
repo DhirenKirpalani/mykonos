@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/database.types'
 import { formatPrice } from '@/lib/utils'
 
@@ -31,10 +31,6 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
 export default function OrderDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -45,7 +41,13 @@ export default function OrderDetailsPage() {
   const fetchOrderDetails = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      if (!session || !session.user) {
+        router.push('/login')
+        return
+      }
+      
+      // Check if user is anonymous
+      if (session.user.is_anonymous) {
         router.push('/login')
         return
       }

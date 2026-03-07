@@ -12,11 +12,17 @@ interface ProductImageGalleryProps {
 export function ProductImageGallery({ images, productName }: ProductImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
 
-  const isVideo = (url: string) => {
+  const isVideo = (url: string | undefined) => {
+    if (!url) return false
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
   }
 
   const selectedMedia = images[selectedIndex]
+  
+  // Return null if no images or invalid index
+  if (!images || images.length === 0 || !selectedMedia) {
+    return null
+  }
 
   return (
     <div className="flex flex-col items-center space-y-4">

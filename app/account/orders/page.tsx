@@ -27,11 +27,15 @@ export default function OrdersPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        router.push('/login')
-      } else {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        // Check if user is logged in (not anonymous)
+        if (!session || session.user.is_anonymous) {
+          router.push('/login')
+          return
+        }
+        
         setIsAuthenticated(true)
         
         // Fetch user orders
@@ -41,11 +45,17 @@ export default function OrdersPage() {
           .eq('user_id', session.user.id)
           .order('created_at', { ascending: false })
 
-        if (data && !error) {
+        if (error) {
+          console.error('Error fetching orders:', error)
+        } else if (data) {
           setOrders(data as Order[])
         }
+      } catch (error) {
+        console.error('Authentication error:', error)
+        router.push('/login')
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     checkAuth()
@@ -89,9 +99,6 @@ export default function OrdersPage() {
               </button>
               <button onClick={() => router.push('/account/orders')} className="block w-full rounded-md bg-luxury-gold px-4 py-2 text-left text-sm text-white">
                 Orders
-              </button>
-              <button onClick={() => router.push('/account/addresses')} className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
-                Addresses
               </button>
               <button onClick={() => router.push('/account/settings')} className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
                 Settings

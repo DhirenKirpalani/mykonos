@@ -2,44 +2,80 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase/client'
+
+interface HeroMedia {
+  media_type: 'video' | 'image'
+  media_url: string
+}
 
 export function HeroCarousel() {
+  const [heroMedia, setHeroMedia] = useState<HeroMedia | null>(null)
+
+  useEffect(() => {
+    fetchHeroMedia()
+  }, [])
+
+  const fetchHeroMedia = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('hero_media')
+        .select('media_type, media_url')
+        .eq('is_active', true)
+        .single()
+
+      if (data) {
+        setHeroMedia(data)
+      }
+    } catch (error) {
+      console.error('Error fetching hero media:', error)
+    }
+  }
+
+  const defaultVideoUrl = "/assets/Blue and White Simple Elegant Minimalist Parfume Launching Soon Video.mp4"
+  const mediaUrl = heroMedia?.media_url || defaultVideoUrl
+  const isVideo = heroMedia?.media_type === 'video' || !heroMedia
+
   return (
     <div
       className="relative h-[35vh] sm:h-[40vh] md:h-[60vh] lg:h-[75vh] overflow-hidden bg-black"
       role="region"
       aria-label="Hero banner"
     >
-      {/* Video Background */}
+      {/* Media Background */}
       <div className="absolute inset-0">
+        {isVideo ? (
+          <>
+            {/* Desktop Video */}
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="hidden md:block h-full w-full object-cover object-center"
+            >
+              <source src={mediaUrl} type="video/mp4" />
+            </video>
 
-        {/* Desktop Video */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="hidden md:block h-full w-full object-cover object-center"
-        >
-          <source
-            src="/assets/Blue and White Simple Elegant Minimalist Parfume Launching Soon Video.mp4"
-            type="video/mp4"
+            {/* Mobile Video */}
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="block md:hidden h-full w-full object-cover object-[center_30%]"
+            >
+              <source src={mediaUrl} type="video/mp4" />
+            </video>
+          </>
+        ) : (
+          <img
+            src={mediaUrl}
+            alt="Hero"
+            className="h-full w-full object-cover object-center"
           />
-        </video>
-
-        {/* Mobile Video (same video but better crop positioning) */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="block md:hidden h-full w-full object-cover object-[center_30%]"
-        >
-          <source
-            src="/assets/Blue and White Simple Elegant Minimalist Parfume Launching Soon Video.mp4"
-            type="video/mp4"
-          />
-        </video>
+        )}
 
         {/* Dark overlay for luxury look */}
         <div className="absolute inset-0 bg-black/30" />

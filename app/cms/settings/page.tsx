@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Power, ShieldAlert, Globe, Tag, Wrench, Save, AlertTriangle, ShoppingCart } from 'lucide-react'
+import { Power, ShieldAlert, Globe, Tag, Wrench, Save, AlertTriangle, ShoppingCart, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { ReasonDialog } from '@/components/ui/reason-dialog'
 import { supabase } from '@/lib/supabase/client'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface SystemSetting {
   setting_key: string
@@ -15,6 +16,17 @@ interface SystemSetting {
   }
   description: string
   updated_at: string
+}
+
+interface AuditLogEntry {
+  id: string
+  setting_key: string
+  old_value: any
+  new_value: any
+  changed_by: string
+  reason: string
+  created_at: string
+  user_email?: string
 }
 
 export default function SystemSettingsPage() {
@@ -33,6 +45,9 @@ export default function SystemSettingsPage() {
     description: '',
     onConfirm: () => {}
   })
+  const [auditLogOpen, setAuditLogOpen] = useState(false)
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
+  const [loadingAudit, setLoadingAudit] = useState(false)
 
   useEffect(() => {
     fetchSettings()
@@ -141,6 +156,38 @@ export default function SystemSettingsPage() {
         }, reason)
       }
     })
+  }
+
+  const fetchAuditLog = async () => {
+    setLoadingAudit(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        toast.error('Session expired')
+        return
+      }
+
+      const response = await fetch('/api/admin/system-settings/audit', {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setAuditLogs(data.logs || [])
+        setAuditLogOpen(true)
+      } else {
+        toast.error('Failed to load audit log')
+      }
+    } catch (error) {
+      console.error('Error fetching audit log:', error)
+      toast.error('Failed to load audit log')
+    } finally {
+      setLoadingAudit(false)
+    }
   }
 
   if (loading) {
@@ -276,8 +323,12 @@ export default function SystemSettingsPage() {
               View all changes made to system settings
             </p>
           </div>
-          <button className="rounded-lg bg-luxury-navy px-4 py-2 text-sm font-medium text-white hover:bg-luxury-navy/90">
-            View Audit Log
+          <button 
+            onClick={fetchAuditLog}
+            disabled={loadingAudit}
+            className="rounded-lg bg-luxury-navy px-4 py-2 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-50"
+          >
+            {loadingAudit ? 'Loading...' : 'View Audit Log'}
           </button>
         </div>
       </div>
@@ -304,6 +355,61 @@ export default function SystemSettingsPage() {
         onConfirm={dialogState.onConfirm}
         onCancel={() => setDialogState(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Audit Log Modal */}
+      <Dialog open={auditLogOpen} onOpenChange={setAuditLogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>System Settings Audit Log</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            {auditLogs.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No audit log entries found</p>
+            ) : (
+              <div className="space-y-4">
+                {auditLogs.map((log) => (
+                  <div key={log.id} className="rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">
+                          {log.setting_key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Changed by: {log.user_email || 'Unknown'}
+                        </p>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {new Date(log.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                      <div>
+                        <p className="text-gray-600 font-medium">Old Value:</p>
+                        <pre className="mt-1 bg-gray-50 p-2 rounded text-xs overflow-x-auto">
+                          {JSON.stringify(log.old_value, null, 2)}
+                        </pre>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium">New Value:</p>
+                        <pre className="mt-1 bg-gray-50 p-2 rounded text-xs overflow-x-auto">
+                          {JSON.stringify(log.new_value, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                    {log.reason && (
+                      <div className="mt-3 rounded bg-blue-50 p-3 border border-blue-200">
+                        <p className="text-sm text-blue-900">
+                          <strong>Reason:</strong> {log.reason}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
