@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
     let detectedCountry: string | null = null
     let source: 'user_profile' | 'shipping_address' | 'ip_geolocation' | 'default' = 'default'
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
     // Return default region on error
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
     const { data: defaultRegion } = await supabase
       .from('regions')

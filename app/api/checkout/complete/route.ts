@@ -9,7 +9,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
     const { checkout_session_id, payment_method_type } = body
 
@@ -42,9 +42,10 @@ export async function POST(request: Request) {
       )
     }
 
+    const updateData: any = { payment_method_type: payment_method_type || null }
     await supabase
       .from('checkout_sessions')
-      .update({ payment_method_type } as any)
+      .update(updateData)
       .eq('id', checkout_session_id)
 
     const paymentIntentId = `pi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`

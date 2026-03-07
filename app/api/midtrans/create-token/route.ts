@@ -13,14 +13,14 @@ export async function POST(request: NextRequest) {
     
     // Create Supabase client with auth header if provided
     const supabase = authHeader 
-      ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      ? createClient(supabaseUrl, supabaseAnonKey, {
           global: {
             headers: {
               Authorization: authHeader
             }
           }
         })
-      : createClient<Database>(supabaseUrl, supabaseAnonKey)
+      : createClient(supabaseUrl, supabaseAnonKey)
     
     // Verify user if auth header is provided (authenticated checkout)
     // For guest checkout, skip user verification

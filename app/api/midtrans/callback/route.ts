@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Check payment status
     if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
       // Payment successful - complete the order
-      const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
       
       const paymentIntentId = `pi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       

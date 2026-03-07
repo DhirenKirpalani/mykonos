@@ -21,11 +21,11 @@ export async function DELETE(request: Request) {
     }
 
     // Create client with service role key for admin operations
-    const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
     
     // Get authenticated user from anon key client
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false
       }

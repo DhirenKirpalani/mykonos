@@ -13,7 +13,7 @@ type Product = Database['public']['Tables']['products']['Row']
 
 const ITEMS_PER_PAGE = 12
 
-export default function ProductsPage() {
+function ProductsContent() {
   const { t } = useLanguage()
   const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
@@ -126,5 +126,26 @@ export default function ProductsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white">
+        <div className="border-b border-border/40 bg-luxury-gray-light py-8 md:py-10 lg:py-12">
+          <div className="container mx-auto px-4 md:px-6 lg:px-8">
+            <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+          </div>
+        </div>
+        <div className="container mx-auto px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
+          <div className="flex min-h-[400px] items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-luxury-navy"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   )
 }

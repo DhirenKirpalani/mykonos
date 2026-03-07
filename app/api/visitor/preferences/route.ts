@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     
     // Use service role key to bypass RLS for visitor_preferences
-    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const body = await request.json()
     const { session_id, region_id, ip_address, browser_locale, detected_country_code } = body
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Get visitor preference
     const { data: preference, error } = await supabase

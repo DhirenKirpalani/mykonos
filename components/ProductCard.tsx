@@ -18,19 +18,12 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [showVariantModal, setShowVariantModal] = useState(false)
   const isOutOfStock = product.stock_quantity <= 0
-  const hasVariants = product.variants && product.variants.length > 0
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
     
     if (isOutOfStock) {
       toast.error('Product is out of stock')
-      return
-    }
-
-    // Check if product has variants
-    if (hasVariants) {
-      setShowVariantModal(true)
       return
     }
 
@@ -174,25 +167,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         </div>
       </div>
     </Link>
-    
-    {/* Variant Selection Modal */}
-    {hasVariants && (
-      <ProductVariantModal
-        isOpen={showVariantModal}
-        onClose={() => setShowVariantModal(false)}
-        product={{
-          id: product.id,
-          name: product.name,
-          image_urls: product.image_urls,
-          price: product.price,
-          sale_price: product.sale_price,
-          stock_quantity: product.stock_quantity,
-          variants: product.variants,
-        }}
-        onAddToCart={handleVariantAddToCart}
-        mode="add-to-cart"
-      />
-    )}
     </>
   )
 }
