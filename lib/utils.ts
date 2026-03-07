@@ -6,9 +6,16 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPrice(price: number, currency: string = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
+  // Detect if we should use IDR based on browser locale or explicit currency
+  const locale = typeof window !== 'undefined' ? navigator.language : 'en-US'
+  const isIndonesia = locale.startsWith('id') || currency === 'IDR'
+  
+  const actualCurrency = isIndonesia ? 'IDR' : currency
+  const actualLocale = isIndonesia ? 'id-ID' : 'en-US'
+  
+  return new Intl.NumberFormat(actualLocale, {
     style: 'currency',
-    currency,
+    currency: actualCurrency,
   }).format(price)
 }
 
