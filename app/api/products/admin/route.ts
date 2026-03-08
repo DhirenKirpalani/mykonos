@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 
@@ -80,9 +81,9 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     // Validate required currency fields
-    if (!body.price || !body.price_idr || !body.price_eur) {
+    if (!body.price_usd || !body.price_idr) {
       return NextResponse.json(
-        { error: 'All three currency prices (USD, IDR, EUR) are required' },
+        { error: 'Both USD and IDR prices are required' },
         { status: 400 }
       )
     }
@@ -92,9 +93,8 @@ export async function POST(request: Request) {
       name: body.name,
       slug: body.slug,
       description: body.description || '',
-      price: body.price,
+      price_usd: body.price_usd,
       price_idr: body.price_idr,
-      price_eur: body.price_eur,
       stock_quantity: body.stock_quantity || 0,
       collection: body.collection || '',
       in_stock: body.in_stock !== undefined ? body.in_stock : true,
@@ -123,6 +123,16 @@ export async function POST(request: Request) {
     if (error) {
       console.error('Product creation error:', error)
       throw error
+    }
+
+    // Revalidate product pages to reflect new product immediately
+    try {
+      revalidatePath('/products')
+      revalidatePath(`/products/${product.slug}`)
+      revalidateTag('products')
+    } catch (revalidateError) {
+      console.error('Cache revalidation error:', revalidateError)
+      // Don't fail the request if revalidation fails
     }
 
     return NextResponse.json({

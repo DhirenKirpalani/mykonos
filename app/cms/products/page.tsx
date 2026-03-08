@@ -11,7 +11,8 @@ interface Product {
   id: string
   name: string
   slug: string
-  price: number
+  price_usd: number
+  price_idr: number
   stock_quantity: number
   is_visible: boolean
   created_at: string
@@ -164,7 +165,8 @@ export default function ProductsPage() {
             <thead>
               <tr className="border-b border-gray-200 text-left text-sm font-medium text-gray-500">
                 <th className="pb-3">Product</th>
-                <th className="pb-3">Price</th>
+                <th className="pb-3">Price (USD)</th>
+                <th className="pb-3">Price (IDR)</th>
                 <th className="pb-3">Stock</th>
                 <th className="pb-3">Status</th>
                 <th className="pb-3">Actions</th>
@@ -188,7 +190,8 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 text-gray-900">${product.price.toFixed(2)}</td>
+                  <td className="py-4 text-gray-900">${((product.price_usd || 0)).toFixed(2)}</td>
+                  <td className="py-4 text-gray-900">Rp{((product.price_idr || 0)).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                   <td className="py-4">
                     <span
                       className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${

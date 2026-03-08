@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Heart, ShoppingBag } from 'lucide-react'
+import { X, Heart, ShoppingBag, Minus, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 type WishlistItem = {
   id: string
   product_id: string
+  quantity: number
   product: {
     id: string
     name: string
@@ -36,6 +37,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
 
   const isVideo = (url: string) => {
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
@@ -51,6 +53,13 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
       fetchWishlist()
     }
   }, [isOpen])
+
+  // Refetch wishlist when region changes
+  useEffect(() => {
+    if (isOpen && region) {
+      fetchWishlist()
+    }
+  }, [region])
 
   const fetchWishlist = async () => {
     try {
@@ -68,15 +77,23 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
         .from('wishlist_items')
         .select(`
           *,
-          product:products(*)
+          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price)
         `)
         .eq('user_id', session.user.id)
 
       if (error) throw error
 
-      setWishlistItems((data as any) || [])
+      const items = (data as any) || []
+      setWishlistItems(items)
+      
+      // Initialize quantities from database
+      const initialQuantities: Record<string, number> = {}
+      items.forEach((item: WishlistItem) => {
+        initialQuantities[item.id] = item.quantity || 1
+      })
+      setQuantities(initialQuantities)
     } catch (error) {
-      console.error('Failed to fetch wishlist:', error)
+      // Silent error handling
     } finally {
       setLoading(false)
     }
@@ -92,8 +109,14 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
       if (error) throw error
 
       setWishlistItems(prev => prev.filter(item => item.id !== itemId))
+      setQuantities(prev => {
+        const newQuantities = { ...prev }
+        delete newQuantities[itemId]
+        return newQuantities
+      })
       toast.success('Removed from wishlist')
       
+      // Dispatch event to update wishlist counter
       window.dispatchEvent(new Event('wishlist-updated'))
     } catch (error) {
       console.error('Failed to remove item:', error)
@@ -101,28 +124,95 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
     }
   }
 
-  const addToCart = async (productId: string, price: number) => {
+  const updateQuantity = async (itemId: string, productId: string, newQuantity: number, maxStock: number) => {
+    if (newQuantity < 1) return
+    if (newQuantity > maxStock) {
+      toast.error(`Only ${maxStock} items available`)
+      return
+    }
+    
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
       
+      // Update quantity in database
+      const { error } = await supabase.rpc('update_wishlist_quantity', {
+        p_user_id: session.user.id,
+        p_product_id: productId,
+        p_quantity: newQuantity,
+      } as any)
+      
+      if (error) {
+        toast.error('Failed to update quantity')
+        return
+      }
+      
+      // Update local state
+      setQuantities(prev => ({ ...prev, [itemId]: newQuantity }))
+      setWishlistItems(prev => 
+        prev.map(item => 
+          item.id === itemId ? { ...item, quantity: newQuantity } : item
+        )
+      )
+    } catch (error) {
+      console.error('Failed to update quantity:', error)
+      toast.error('Failed to update quantity')
+    }
+  }
+
+  const addToCart = async (itemId: string, productId: string, price: number) => {
+    try {
+      // Get or create session (anonymous or authenticated)
+      let { data: { session } } = await supabase.auth.getSession()
+      
+      // If no session, create anonymous session for guest
       if (!session) {
-        toast.error('Please login to add to cart')
+        const { data, error } = await supabase.auth.signInAnonymously()
+        if (error) {
+          console.error('Failed to create anonymous session:', error)
+          toast.error('Unable to add to cart. Please refresh the page.')
+          return
+        }
+        session = data.session
+        
+        // Store anonymous user_id in localStorage for persistence
+        if (session?.user?.is_anonymous) {
+          localStorage.setItem('anonymous_user_id', session.user.id)
+        }
+      } else if (session.user.is_anonymous) {
+        // Store anonymous user_id for future use
+        localStorage.setItem('anonymous_user_id', session.user.id)
+      }
+
+      if (!session?.access_token) {
+        toast.error('Unable to add to cart. Please refresh the page.')
         return
       }
 
-      const { error } = await (supabase
-        .from('cart_items') as any)
-        .insert({
-          user_id: session.user.id,
+      const quantity = quantities[itemId] || 1
+
+      // Use the cart API endpoint which handles all edge cases
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
           product_id: productId,
-          quantity: 1,
-          price_at_add: price
-        })
+          quantity: quantity,
+        }),
+      })
 
-      if (error) throw error
+      const data = await response.json()
 
-      toast.success('Added to cart')
-      window.dispatchEvent(new Event('cart-updated'))
+      if (response.ok) {
+        toast.success(`Added ${quantity} item(s) to cart`)
+        window.dispatchEvent(new Event('cart-updated'))
+      } else {
+        console.error('Cart API error:', data)
+        toast.error(data.error || 'Failed to add to cart')
+      }
     } catch (error) {
       console.error('Failed to add to cart:', error)
       toast.error('Failed to add to cart')
@@ -210,13 +300,47 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                             {item.product.size}
                           </p>
                           <p className="mt-2 text-sm font-medium tracking-wide">
-                            {region ? formatPrice(item.product.price, region) : '...'}
+                            {region ? formatPrice(
+                              (region.code === 'ID' && (item.product as any).price_idr 
+                                ? (item.product as any).price_idr 
+                                : (item.product as any).price_usd || 0) * (quantities[item.id] || 1), 
+                              region
+                            ) : '...'}
                           </p>
                         </div>
 
                         <div className="space-y-3">
+                          {/* Quantity Selector */}
+                          <div className="flex items-center border border-black/10">
+                            <button
+                              onClick={() => updateQuantity(item.id, item.product_id, (quantities[item.id] || 1) - 1, item.product.stock_quantity)}
+                              className="px-3 py-2 text-black/70 hover:text-black transition-colors"
+                              aria-label="Decrease quantity"
+                              disabled={(quantities[item.id] || 1) <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="px-4 text-sm tracking-wide">
+                              {quantities[item.id] || 1}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.product_id, (quantities[item.id] || 1) + 1, item.product.stock_quantity)}
+                              className="px-3 py-2 text-black/70 hover:text-black transition-colors"
+                              aria-label="Increase quantity"
+                              disabled={(quantities[item.id] || 1) >= item.product.stock_quantity}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+
                           <button
-                            onClick={() => addToCart(item.product.id, item.product.price)}
+                            onClick={() => addToCart(
+                              item.id,
+                              item.product.id, 
+                              region?.code === 'ID' && (item.product as any).price_idr 
+                                ? (item.product as any).price_idr 
+                                : (item.product as any).price_usd || 0
+                            )}
                             className="flex items-center justify-center gap-2 border border-black px-4 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white w-full"
                             disabled={item.product.stock_quantity === 0}
                           >

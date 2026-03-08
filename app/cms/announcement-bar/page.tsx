@@ -80,15 +80,20 @@ export default function AnnouncementBarPage() {
 
       const maxOrder = messages.length > 0 ? Math.max(...messages.map(m => m.display_order)) : 0
 
-      const { error } = await supabase
-        .from('announcement_messages')
-        .insert({
+      const response = await fetch('/api/admin/announcement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
           message: newMessage.trim(),
           display_order: maxOrder + 1,
           is_active: true
         })
+      })
 
-      if (error) throw error
+      if (!response.ok) throw new Error('Failed to add message')
 
       toast.success('Message added successfully')
       setNewMessage('')
@@ -107,12 +112,22 @@ export default function AnnouncementBarPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('announcement_messages')
-        .update({ message: editingMessage.trim() })
-        .eq('id', id)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Authentication required')
+        return
+      }
 
-      if (error) throw error
+      const response = await fetch(`/api/admin/announcement/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ message: editingMessage.trim() })
+      })
+
+      if (!response.ok) throw new Error('Failed to update message')
 
       toast.success('Message updated successfully')
       setEditingId(null)
@@ -128,12 +143,20 @@ export default function AnnouncementBarPage() {
     if (!confirm('Are you sure you want to delete this message?')) return
 
     try {
-      const { error } = await supabase
-        .from('announcement_messages')
-        .delete()
-        .eq('id', id)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Authentication required')
+        return
+      }
 
-      if (error) throw error
+      const response = await fetch(`/api/admin/announcement/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      if (!response.ok) throw new Error('Failed to delete message')
 
       toast.success('Message deleted successfully')
       fetchData()
@@ -145,12 +168,22 @@ export default function AnnouncementBarPage() {
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('announcement_messages')
-        .update({ is_active: !currentStatus })
-        .eq('id', id)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Authentication required')
+        return
+      }
 
-      if (error) throw error
+      const response = await fetch(`/api/admin/announcement/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ is_active: !currentStatus })
+      })
+
+      if (!response.ok) throw new Error('Failed to toggle message')
 
       toast.success(`Message ${!currentStatus ? 'activated' : 'deactivated'}`)
       fetchData()
@@ -197,24 +230,20 @@ export default function AnnouncementBarPage() {
         .from('media')
         .getPublicUrl(filePath)
 
-      // Deactivate current hero media
-      if (heroMedia) {
-        await supabase
-          .from('hero_media')
-          .update({ is_active: false })
-          .eq('id', heroMedia.id)
-      }
-
-      // Insert new hero media
-      const { error: insertError } = await supabase
-        .from('hero_media')
-        .insert({
+      // Update hero media via API (handles deactivation and insertion)
+      const response = await fetch('/api/admin/hero-media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
           media_type: isVideo ? 'video' : 'image',
-          media_url: publicUrl,
-          is_active: true
+          media_url: publicUrl
         })
+      })
 
-      if (insertError) throw insertError
+      if (!response.ok) throw new Error('Failed to update hero media')
 
       toast.success('Hero media uploaded successfully')
       fetchData()

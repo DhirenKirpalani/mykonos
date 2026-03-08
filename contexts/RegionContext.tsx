@@ -44,35 +44,26 @@ export function RegionProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true)
       
-      if (user) {
-        // For logged-in users, check their preferred region
-        const { data: userData } = await supabase
-          .from('users')
-          .select('preferred_region_id')
-          .eq('id', user.id)
-          .single() as { data: any }
-        
-        if (userData?.preferred_region_id) {
-          const { data: preferredRegion } = await supabase
-            .from('regions')
-            .select('*')
-            .eq('id', userData.preferred_region_id)
-            .single()
-          
-          if (preferredRegion) {
-            setRegionState(preferredRegion as Region)
-            setDetectionResult({
-              country_code: null as any,
-              region: preferredRegion as Region,
-              country_region: null as any,
-              shipping_zone: null as any,
-              source: 'user_profile',
-            })
-            return
+      // First check localStorage for cached region (for immediate load)
+      const cachedRegionCode = localStorage.getItem('selected_region_code')
+      if (cachedRegionCode) {
+        try {
+          const response = await fetch(`/api/region/${cachedRegionCode}`)
+          if (response.ok) {
+            const data: RegionDetectionResult = await response.json()
+            setRegionState(data.region)
+            setDetectionResult(data)
+            setIsLoading(false)
+            return // Return early to prevent auto-detection from overriding saved preference
           }
+        } catch (error) {
+          console.error('Failed to load cached region:', error)
+          // If cached region fails to load, continue to auto-detection
         }
-      } else {
-        // For visitors, check database for saved preference
+      }
+      
+      // Check if visitor has saved preference
+      if (!user) {
         const sessionId = getVisitorSessionId()
         const response = await fetch(`/api/visitor/preferences?session_id=${sessionId}`)
         
@@ -87,6 +78,8 @@ export function RegionProvider({ children }: { children: ReactNode }) {
               shipping_zone: null as any,
               source: 'default',
             })
+            localStorage.setItem('selected_region_code', data.region.code)
+            setIsLoading(false)
             return
           }
         }
@@ -98,6 +91,7 @@ export function RegionProvider({ children }: { children: ReactNode }) {
         const data: RegionDetectionResult = await response.json()
         setRegionState(data.region)
         setDetectionResult(data)
+        localStorage.setItem('selected_region_code', data.region.code)
         
         // Save detected region to database for visitors
         if (!user && data.region) {
@@ -145,6 +139,9 @@ export function RegionProvider({ children }: { children: ReactNode }) {
         const data: RegionDetectionResult = await response.json()
         setRegionState(data.region)
         setDetectionResult(data)
+        
+        // Store in localStorage for persistence across page refreshes
+        localStorage.setItem('selected_region_code', data.region.code)
         
         if (user) {
           // Save to user profile

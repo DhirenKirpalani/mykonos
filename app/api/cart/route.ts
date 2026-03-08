@@ -120,7 +120,10 @@ export async function POST(request: Request) {
       )
     }
 
-    const priceAtAdd = getEffectivePrice(typedProduct.price, typedProduct.sale_price)
+    // Determine which price to use based on region (stored in product)
+    // For now, we'll use price_idr if available, otherwise price_usd
+    const basePrice = (typedProduct as any).price_idr || typedProduct.price
+    const priceAtAdd = getEffectivePrice(basePrice, typedProduct.sale_price)
 
     // Check if item already in cart
     const { data: existing } = await supabase

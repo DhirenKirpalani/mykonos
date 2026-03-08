@@ -24,8 +24,10 @@ type CartItem = {
   quantity: number
   product: {
     name: string
+    slug: string
     image_urls: string[]
-    price: number
+    price_usd: number
+    price_idr: number
     sale_price: number | null
   }
 }
@@ -92,11 +94,61 @@ export default function CheckoutPage() {
     
     initializeCheckout()
 
+    // Listen for cart updates only in cart flow (not buy now flow)
+    const handleCartUpdate = async () => {
+      console.log('🔔 [CHECKOUT] Received cart-updated event')
+      // Only refetch if we're in cart flow, not buy now flow
+      const urlParams = new URLSearchParams(window.location.search)
+      const isBuyNowFlow = urlParams.get('buyNow') === 'true'
+      
+      console.log('🔍 [CHECKOUT] Is buy now flow?', isBuyNowFlow)
+      
+      if (!isBuyNowFlow) {
+        console.log('🔄 [CHECKOUT] Refetching cart items...')
+        // Small delay to ensure database has been updated
+        await new Promise(resolve => setTimeout(resolve, 100))
+        // Refetch cart items when cart is updated
+        await initializeCheckout()
+        console.log('✅ [CHECKOUT] Cart items refetched')
+      } else {
+        console.log('⚠️ [CHECKOUT] Skipping refetch (buy now flow)')
+      }
+    }
+    window.addEventListener('cart-updated', handleCartUpdate)
+    console.log('👂 [CHECKOUT] Event listener registered for cart-updated')
+
+    // Listen for page visibility changes to refetch cart when navigating back
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ [CHECKOUT] Page became visible, refetching cart...')
+        const urlParams = new URLSearchParams(window.location.search)
+        const isBuyNowFlow = urlParams.get('buyNow') === 'true'
+        if (!isBuyNowFlow) {
+          initializeCheckout()
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Listen for focus events (when user returns to the tab/window)
+    const handleFocus = () => {
+      console.log('🎯 [CHECKOUT] Window focused, refetching cart...')
+      const urlParams = new URLSearchParams(window.location.search)
+      const isBuyNowFlow = urlParams.get('buyNow') === 'true'
+      if (!isBuyNowFlow) {
+        initializeCheckout()
+      }
+    }
+    window.addEventListener('focus', handleFocus)
+
     return () => {
       // Cleanup script on unmount
       if (snapScript.parentNode) {
         snapScript.parentNode.removeChild(snapScript)
       }
+      window.removeEventListener('cart-updated', handleCartUpdate)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
     }
   }, [])
 
@@ -105,20 +157,39 @@ export default function CheckoutPage() {
       setIsLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       
+      console.log('🔍 [CHECKOUT INIT] Session info:', {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        isAnonymous: session?.user?.is_anonymous
+      })
+      
       // Check if guest or logged-in user
       const guestUser = !session || session.user.is_anonymous === true
       setIsGuest(guestUser)
 
       // Check for Buy Now item in sessionStorage
       const buyNowItem = sessionStorage.getItem('buyNowItem')
+      console.log('🔍 [CHECKOUT INIT] Buy now item in storage:', buyNowItem ? 'YES' : 'NO')
       
-      if (buyNowItem) {
+      // Check URL params to determine flow
+      const urlParams = new URLSearchParams(window.location.search)
+      const isBuyNowFlow = urlParams.get('buyNow') === 'true'
+      console.log('🔍 [CHECKOUT INIT] Is buy now flow from URL?', isBuyNowFlow)
+      
+      // Clear buyNowItem if not in buy now flow to prevent interference
+      if (buyNowItem && !isBuyNowFlow) {
+        console.log('⚠️ [CHECKOUT INIT] Clearing stale buyNowItem from sessionStorage')
+        sessionStorage.removeItem('buyNowItem')
+      }
+      
+      if (buyNowItem && isBuyNowFlow) {
         // Handle Buy Now flow - fetch product details
+        console.log('🛍️ [CHECKOUT INIT] Using BUY NOW flow')
         const buyNowData = JSON.parse(buyNowItem)
         
         const { data: product, error: productError } = await supabase
           .from('products')
-          .select('id, name, image_urls, price, sale_price')
+          .select('id, name, slug, image_urls, price_usd, price_idr, sale_price')
           .eq('id', buyNowData.product_id)
           .single()
 
@@ -139,8 +210,10 @@ export default function CheckoutPage() {
           quantity: buyNowData.quantity,
           product: {
             name: typedProduct.name,
+            slug: typedProduct.slug,
             image_urls: typedProduct.image_urls,
-            price: typedProduct.price,
+            price_usd: typedProduct.price_usd,
+            price_idr: typedProduct.price_idr,
             sale_price: typedProduct.sale_price
           }
         }
@@ -148,42 +221,51 @@ export default function CheckoutPage() {
         setCartItems([buyNowCartItem])
       } else {
         // Regular cart flow - fetch cart items
+        console.log('🛒 [CHECKOUT INIT] Using CART flow')
         let cart: any[] = []
         let cartError: any = null
 
         if (session?.user) {
-          if (session.user.is_anonymous) {
-            const { data, error } = await supabase
-              .from('cart_items')
-              .select(`
-                *,
-                product:products(name, image_urls, price, sale_price)
-              `)
-              .eq('session_id', session.user.id)
-            cart = data || []
-            cartError = error
-          } else {
-            const { data, error } = await supabase
-              .from('cart_items')
-              .select(`
-                *,
-                product:products(name, image_urls, price, sale_price)
-              `)
-              .eq('user_id', session.user.id)
-            cart = data || []
-            cartError = error
-          }
+          // Use user_id for both anonymous and authenticated users (matches cart drawer)
+          console.log('🔍 [CHECKOUT INIT] Querying cart with user_id:', session.user.id, '(anonymous:', session.user.is_anonymous, ')')
+          console.log('🔍 [CHECKOUT INIT] About to execute cart query...')
+          const { data, error } = await supabase
+            .from('cart_items')
+            .select(`
+              *,
+              product:products(name, slug, image_urls, price_usd, price_idr, sale_price)
+            `)
+            .eq('user_id', session.user.id)
+          console.log('🔍 [CHECKOUT INIT] Cart query completed, processing results...')
+          cart = data || []
+          cartError = error
+          console.log('🔍 [CHECKOUT INIT] Cart result:', { 
+            itemCount: cart.length, 
+            error: cartError,
+            rawData: data,
+            items: cart.map((item: any) => ({ 
+              id: item.id, 
+              product_id: item.product_id, 
+              quantity: item.quantity,
+              product_name: item.product?.name 
+            }))
+          })
+        } else {
+          console.log('⚠️ [CHECKOUT INIT] No session.user found')
         }
 
-        if (cartError) throw cartError
+        if (cartError) {
+          console.error('❌ [CHECKOUT INIT] Cart query error:', cartError)
+          throw cartError
+        }
 
         if (!cart || cart.length === 0) {
-          toast.error('Your cart is empty')
-          router.push('/checkout')
-          return
+          console.log('⚠️ [CHECKOUT INIT] Cart is empty, showing empty state')
+          setCartItems([])
+        } else {
+          console.log('✅ [CHECKOUT INIT] Setting cart items:', cart.length)
+          setCartItems(cart as any)
         }
-
-        setCartItems(cart as any)
       }
 
       // Fetch addresses only for logged-in users
@@ -223,7 +305,7 @@ export default function CheckoutPage() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, slug, image_urls, price, sale_price, stock_quantity')
+        .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity')
         .gt('stock_quantity', 0)
         .limit(3)
         .order('created_at', { ascending: false })
@@ -241,7 +323,7 @@ export default function CheckoutPage() {
       // Fetch product details
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('id, name, image_urls, price, sale_price')
+        .select('id, name, slug, image_urls, price_usd, price_idr, sale_price')
         .eq('id', productId)
         .single()
 
@@ -254,8 +336,10 @@ export default function CheckoutPage() {
       const typedProduct = product as {
         id: string
         name: string
+        slug: string
         image_urls: string[]
-        price: number
+        price_usd: number
+        price_idr: number
         sale_price: number | null
       }
 
@@ -267,7 +351,6 @@ export default function CheckoutPage() {
         const updatedItems = [...quickAddedItems]
         updatedItems[existingIndex].quantity += 1
         setQuickAddedItems(updatedItems)
-        toast.success('Quantity increased!')
       } else {
         // Add new item
         const newItem: CartItem = {
@@ -276,13 +359,14 @@ export default function CheckoutPage() {
           quantity: 1,
           product: {
             name: typedProduct.name,
+            slug: typedProduct.slug,
             image_urls: typedProduct.image_urls,
-            price: typedProduct.price,
+            price_usd: typedProduct.price_usd,
+            price_idr: typedProduct.price_idr,
             sale_price: typedProduct.sale_price
           }
         }
         setQuickAddedItems([...quickAddedItems, newItem])
-        toast.success('Product added to order!')
       }
     } catch (error) {
       console.error('Quick add error:', error)
@@ -292,7 +376,6 @@ export default function CheckoutPage() {
 
   const removeQuickItem = (productId: string) => {
     setQuickAddedItems(quickAddedItems.filter(item => item.product_id !== productId))
-    toast.success('Item removed')
   }
 
   const updateQuickItemQuantity = (productId: string, newQuantity: number) => {
@@ -316,7 +399,10 @@ export default function CheckoutPage() {
     try {
       const allItems = [...cartItems, ...quickAddedItems]
       const itemsSubtotal = allItems.reduce((total, item) => {
-        const price = getEffectivePrice(item.product.price, item.product.sale_price)
+        const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
+          ? (item.product as any).price_idr 
+          : (item.product as any).price_usd || 0
+        const price = getEffectivePrice(basePrice, item.product.sale_price)
         return total + (price * item.quantity)
       }, 0)
 
@@ -391,7 +477,10 @@ export default function CheckoutPage() {
           throw new Error('Product not found')
         }
         
-        const price = getEffectivePrice(product.price, product.sale_price)
+        const basePrice = region?.code === 'ID' && (product as any).price_idr 
+          ? (product as any).price_idr 
+          : (product as any).price_usd || 0
+        const price = getEffectivePrice(basePrice, product.sale_price)
         const quantity = buyNowData.quantity || 1
         const subtotal = price * quantity
         
@@ -428,6 +517,8 @@ export default function CheckoutPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: session.user.id,
+            currency_code: region?.currency_code,
+            region_code: region?.code,
           }),
         })
 
@@ -443,6 +534,7 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionData.session_id,
+          customer_email: session.user.email,
           shipping_address_id: selectedAddressId,
           current_step: 1,
         }),
@@ -459,18 +551,31 @@ export default function CheckoutPage() {
         throw new Error('Shipping address not found')
       }
 
-      // Convert to IDR and round to whole numbers (IDR doesn't support cents)
+      // Convert to IDR only if region is not Indonesia (prices already in IDR for ID region)
       const USD_TO_IDR = 15000 // Approximate exchange rate
-      const convertToIDR = (usdAmount: number) => Math.round(usdAmount * USD_TO_IDR)
+      const isIDRegion = region?.code === 'ID'
+      const convertToIDR = (amount: number) => {
+        // If already in IDR region, just round to whole number
+        if (isIDRegion) {
+          return Math.round(amount)
+        }
+        // Otherwise convert USD to IDR
+        return Math.round(amount * USD_TO_IDR)
+      }
 
       // Build items array including shipping and tax
       const itemsForMidtrans = [
-        ...cartItems.map(item => ({
-          id: item.product_id,
-          name: item.product.name,
-          price: convertToIDR(getEffectivePrice(item.product.price, item.product.sale_price)),
-          quantity: item.quantity,
-        })),
+        ...cartItems.map(item => {
+          const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
+            ? (item.product as any).price_idr 
+            : (item.product as any).price_usd || 0
+          return {
+            id: item.product_id,
+            name: item.product.name,
+            price: convertToIDR(getEffectivePrice(basePrice, item.product.sale_price)),
+            quantity: item.quantity,
+          }
+        }),
         // Add shipping as a line item
         {
           id: 'shipping',
@@ -547,9 +652,17 @@ export default function CheckoutPage() {
   const handleGuestCheckout = async (guestData: any) => {
     setIsProcessing(true)
     try {
-      // Convert to IDR and round to whole numbers (IDR doesn't support cents)
+      // Convert to IDR only if region is not Indonesia (prices already in IDR for ID region)
       const USD_TO_IDR = 15000 // Approximate exchange rate
-      const convertToIDR = (usdAmount: number) => Math.round(usdAmount * USD_TO_IDR)
+      const isIDRegion = region?.code === 'ID'
+      const convertToIDR = (amount: number) => {
+        // If already in IDR region, just round to whole number
+        if (isIDRegion) {
+          return Math.round(amount)
+        }
+        // Otherwise convert USD to IDR
+        return Math.round(amount * USD_TO_IDR)
+      }
 
       // Get current session (anonymous or authenticated)
       const { data: { session } } = await supabase.auth.getSession()
@@ -568,11 +681,16 @@ export default function CheckoutPage() {
 
       // For Buy Now flow, include items from state (cart + quick-added items)
       if (isBuyNow || quickAddedItems.length > 0) {
-        const itemsToCheckout = [...cartItems, ...quickAddedItems].map(item => ({
-          product_id: item.product_id,
-          quantity: item.quantity,
-          price: getEffectivePrice(item.product.price, item.product.sale_price)
-        }))
+        const itemsToCheckout = [...cartItems, ...quickAddedItems].map(item => {
+          const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
+            ? (item.product as any).price_idr 
+            : (item.product as any).price_usd || 0
+          return {
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: getEffectivePrice(basePrice, item.product.sale_price)
+          }
+        })
         sessionPayload.items = itemsToCheckout
       }
 
@@ -580,7 +698,11 @@ export default function CheckoutPage() {
       const sessionResponse = await fetch('/api/checkout/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sessionPayload),
+        body: JSON.stringify({
+          ...sessionPayload,
+          currency_code: region?.currency_code,
+          region_code: region?.code,
+        }),
       })
 
       const sessionData = await sessionResponse.json()
@@ -616,12 +738,17 @@ export default function CheckoutPage() {
 
       // Prepare items for Midtrans - include shipping and tax as line items
       const itemsForMidtrans = [
-        ...[...cartItems, ...quickAddedItems].map(item => ({
-          id: item.product_id,
-          name: item.product.name,
-          price: convertToIDR(getEffectivePrice(item.product.price, item.product.sale_price)),
-          quantity: item.quantity,
-        })),
+        ...[...cartItems, ...quickAddedItems].map(item => {
+          const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
+            ? (item.product as any).price_idr 
+            : (item.product as any).price_usd || 0
+          return {
+            id: item.product_id,
+            name: item.product.name,
+            price: convertToIDR(getEffectivePrice(basePrice, item.product.sale_price)),
+            quantity: item.quantity,
+          }
+        }),
         // Add shipping as a line item
         {
           id: 'shipping',
@@ -729,7 +856,6 @@ export default function CheckoutPage() {
             item.id === itemId ? { ...item, quantity: newQuantity } : item
           )
         )
-        toast.success('Quantity updated')
         return
       }
 
@@ -761,8 +887,6 @@ export default function CheckoutPage() {
           item.id === itemId ? { ...item, quantity: newQuantity } : item
         )
       )
-
-      toast.success('Quantity updated')
     } catch (error: any) {
       console.error('Failed to update quantity:', error)
       toast.error(error.message || 'Failed to update quantity')
@@ -774,7 +898,6 @@ export default function CheckoutPage() {
       // For Buy Now items, clear sessionStorage and redirect
       if (itemId === 'buy-now-temp') {
         sessionStorage.removeItem('buyNowItem')
-        toast.success('Item removed')
         router.push('/checkout')
         return
       }
@@ -803,8 +926,6 @@ export default function CheckoutPage() {
 
       // Update local state
       setCartItems(prev => prev.filter(item => item.id !== itemId))
-
-      toast.success('Item removed from cart')
 
       // If cart is empty, redirect to checkout page
       if (cartItems.length === 1) {
@@ -909,11 +1030,19 @@ export default function CheckoutPage() {
     }
   }
 
+  // Helper function to get base price from product based on region
+  const getBasePrice = (product: any) => {
+    return region?.code === 'ID' && product.price_idr 
+      ? product.price_idr 
+      : product.price_usd || 0
+  }
+
   // Combine cart items and quick-added items for total calculation
   const allItems = [...cartItems, ...quickAddedItems]
   
   const subtotal = allItems.reduce((total, item) => {
-    const price = getEffectivePrice(item.product.price, item.product.sale_price)
+    const basePrice = getBasePrice(item.product)
+    const price = getEffectivePrice(basePrice, item.product.sale_price)
     return total + (price * item.quantity)
   }, 0)
 
@@ -934,7 +1063,7 @@ export default function CheckoutPage() {
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <div className="mb-4">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm flex-wrap">
             <Link
               href="/"
               className="flex items-center gap-1 text-gray-500 transition-colors hover:text-gray-900"
@@ -944,6 +1073,20 @@ export default function CheckoutPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
             </Link>
+            {cartItems.length > 0 && cartItems.map((item, index) => (
+              <div key={item.id} className="flex items-center gap-2">
+                <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <Link
+                  href={`/products/${item.product.slug}`}
+                  className="text-gray-500 transition-colors hover:text-gray-900 truncate max-w-[150px]"
+                  title={item.product.name}
+                >
+                  {item.product.name}
+                </Link>
+              </div>
+            ))}
             <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -987,8 +1130,9 @@ export default function CheckoutPage() {
 
             {/* Cart Items */}
             {allItems.map((item) => {
-              const price = getEffectivePrice(item.product.price, item.product.sale_price)
-              const hasDiscount = item.product.sale_price && item.product.sale_price < item.product.price
+              const basePrice = getBasePrice(item.product)
+              const price = getEffectivePrice(basePrice, item.product.sale_price)
+              const hasDiscount = item.product.sale_price && item.product.sale_price < basePrice
               
               return (
                 <div key={item.id} className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
@@ -1019,18 +1163,6 @@ export default function CheckoutPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
-                        )}
-                      </div>
-                      
-                      {/* Price */}
-                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-base sm:text-lg font-bold text-gray-900">
-                          {region ? formatRegionPrice(price, region) : formatCurrencyPrice(price, currency)}
-                        </span>
-                        {hasDiscount && (
-                          <span className="text-xs sm:text-sm text-gray-400 line-through">
-                            {region ? formatRegionPrice(item.product.price, region) : formatCurrencyPrice(item.product.price, currency)}
-                          </span>
                         )}
                       </div>
 
@@ -1093,9 +1225,12 @@ export default function CheckoutPage() {
                 {isRecommendedExpanded && (
                   <div className="grid grid-cols-1 gap-3 sm:gap-4">
                   {recommendedProducts.map((product) => {
-                    const effectivePrice = product.sale_price && product.sale_price < product.price
+                    const basePrice = region?.code === 'ID' && (product as any).price_idr 
+                      ? (product as any).price_idr 
+                      : (product as any).price_usd || 0
+                    const effectivePrice = product.sale_price && product.sale_price < basePrice
                       ? product.sale_price
-                      : product.price
+                      : basePrice
                     const isAdded = quickAddedItems.some(item => item.product_id === product.id)
                     
                     return (

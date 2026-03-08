@@ -58,7 +58,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useRegion } from '@/contexts/RegionContext'
-import { formatPrice } from '@/lib/utils/region'
+import { formatPrice } from '@/lib/utils'
 import { Database } from '@/lib/supabase/database.types'
 
 type Product = Database['public']['Tables']['products']['Row']
@@ -69,6 +69,14 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { region } = useRegion()
+  
+  // Get price based on region
+  const getPrice = () => {
+    if (region?.code === 'ID' && (product as any).price_idr) {
+      return (product as any).price_idr
+    }
+    return (product as any).price_usd || 0
+  }
   
   // Check if first media is a video
   const isVideo = (url: string | undefined) => {
@@ -185,7 +193,7 @@ export function ProductCard({ product }: ProductCardProps) {
             transition-all duration-300
             group-hover:tracking-wider
           ">
-            {region ? formatPrice(product.price, region) : '...'}
+            {region ? formatPrice(getPrice(), region.currency_code) : '...'}
           </p>
         </div>
       </Link>

@@ -64,7 +64,7 @@ export async function GET(request: Request) {
 
     // Priority 4: Default
     if (!detectedCountry) {
-      detectedCountry = 'US'
+      detectedCountry = 'ID'
       source = 'default'
     }
 
@@ -132,7 +132,7 @@ export async function GET(request: Request) {
       .single()
 
     return NextResponse.json({
-      country_code: 'US',
+      country_code: 'ID',
       region: defaultRegion,
       country_region: null,
       shipping_zone: null,

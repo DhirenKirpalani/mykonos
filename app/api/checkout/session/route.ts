@@ -11,13 +11,28 @@ export async function POST(request: Request) {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
-    const { user_id, session_id, items } = body
+    const { user_id, session_id, items, currency_code, region_code } = body
 
     if (!user_id && !session_id) {
       return NextResponse.json(
         { error: 'User ID or session ID required' },
         { status: 400 }
       )
+    }
+
+    // Get region currency if not provided
+    let finalCurrencyCode = currency_code
+    if (!finalCurrencyCode && region_code) {
+      const { data: region } = await supabase
+        .from('regions')
+        .select('currency_code')
+        .eq('code', region_code)
+        .single()
+      
+      finalCurrencyCode = region?.currency_code || 'IDR'
+    }
+    if (!finalCurrencyCode) {
+      finalCurrencyCode = 'IDR' // Default to IDR for Indonesia
     }
 
     let cartSnapshot: Array<{ product_id: string; quantity: number; price: number | null }> = []
@@ -79,7 +94,7 @@ export async function POST(request: Request) {
       shipping: 0,
       tax: subtotal * 0.1,
       total: subtotal + (subtotal * 0.1),
-      currency_code: 'USD'
+      currency_code: finalCurrencyCode
     }
 
     const { data: checkoutSession, error: sessionError } = await supabase

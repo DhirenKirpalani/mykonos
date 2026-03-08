@@ -93,11 +93,6 @@ export default async function ProductDetailPage({
               </h1>
             </div>
 
-            {/* Price - Dynamic based on region */}
-            <div className="rounded-lg bg-gray-50 p-4">
-              <ProductPriceDisplay product={product} />
-            </div>
-
             {/* Vouchers */}
             {hasDiscount && (
               <div>
@@ -139,12 +134,14 @@ export default async function ProductDetailPage({
             {/* Quantity & Add to Cart */}
             <div className="border-t border-gray-200 pt-4">
               <ProductDetailClient 
+                product={product}
                 productId={product.id} 
                 productName={product.name}
+                productSlug={product.slug}
                 minQuantity={(product as any).min_purchase_quantity || 1}
                 maxQuantity={(product as any).max_purchase_quantity || undefined}
                 stockQuantity={product.stock_quantity || 0}
-                price={product.price}
+                price={(product as any).price_usd}
                 priceIdr={(product as any).price_idr}
                 salePrice={product.sale_price}
                 compareAtPrice={(product as any).compare_at_price}

@@ -22,18 +22,19 @@ export function useWishlistCount() {
         setIsLoading(false)
         return
       }
-
-      // Fetch wishlist count from database
-      const { count: wishlistCount, error } = await supabase
+      // Fetch wishlist count from database - sum quantities like cart
+      const { data, error } = await supabase
         .from('wishlist_items')
-        .select('*', { count: 'exact', head: true })
+        .select('quantity')
         .eq('user_id', session.user.id)
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
 
-      setCount(wishlistCount || 0)
+      const totalItems = (data || []).reduce((sum, item: any) => sum + (item.quantity || 1), 0)
+      setCount(totalItems)
     } catch (error) {
-      console.error('Failed to fetch wishlist count:', error)
       setCount(0)
     } finally {
       setIsLoading(false)
@@ -44,7 +45,9 @@ export function useWishlistCount() {
     fetchWishlistCount()
 
     // Listen for wishlist updates via custom events
-    const handleWishlistUpdate = () => fetchWishlistCount()
+    const handleWishlistUpdate = () => {
+      fetchWishlistCount()
+    }
     window.addEventListener('wishlist-updated', handleWishlistUpdate)
 
     // Listen for auth state changes

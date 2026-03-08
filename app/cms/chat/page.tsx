@@ -236,7 +236,7 @@ export default function ChatManagementPage() {
           if (conv.user_id) {
             const { data: user } = await supabase
               .from('users')
-              .select('email, first_name, last_name')
+              .select('email,first_name,last_name')
               .eq('id', conv.user_id)
               .single()
             userData = user
@@ -251,6 +251,17 @@ export default function ChatManagementPage() {
       )
 
       setConversations(conversationsWithUnread as Conversation[])
+      
+      // Log conversations with unread messages
+      const unreadConvs = conversationsWithUnread.filter((c: any) => c.unread_count > 0)
+      if (unreadConvs.length > 0) {
+        console.log(`[Chat] Found ${unreadConvs.length} conversations with unread messages:`)
+        unreadConvs.forEach((c: any) => {
+          console.log(`  - ${c.subject} (ID: ${c.id.slice(0, 8)}...): ${c.unread_count} unread`)
+        })
+        const totalUnread = unreadConvs.reduce((sum: number, c: any) => sum + c.unread_count, 0)
+        console.log(`[Chat] Total unread messages across all conversations: ${totalUnread}`)
+      }
     } catch (error) {
       console.error('Failed to fetch conversations:', error)
       if (!silent) toast.error('Failed to load conversations')
@@ -278,18 +289,33 @@ export default function ChatManagementPage() {
 
       if (error) throw error
 
+      // Log message read status
+      const customerMessages = (data || []).filter((m: any) => m.sender_type === 'customer')
+      const unreadCustomerMessages = customerMessages.filter((m: any) => !m.is_read)
+      console.log(`[Chat] Conversation ${conversationId.slice(0, 8)}... has ${customerMessages.length} customer messages, ${unreadCustomerMessages.length} unread`)
+      if (unreadCustomerMessages.length > 0) {
+        console.log('[Chat] Unread message IDs:', unreadCustomerMessages.map((m: any) => m.id.slice(0, 8)).join(', '))
+      }
+
       setMessages(data || [])
 
       // Mark messages as read in background
-      const { error: updateError } = await (supabase
+      console.log(`[Chat] Attempting to mark unread customer messages as read in conversation ${conversationId.slice(0, 8)}...`)
+      const { data: updatedMessages, error: updateError } = await (supabase
         .from('chat_messages') as any)
         .update({ is_read: true })
         .eq('conversation_id', conversationId)
         .eq('sender_type', 'customer')
         .eq('is_read', false)
+        .select()
       
       if (updateError) {
-        console.error('Failed to mark messages as read:', updateError)
+        console.error('[Chat] Failed to mark messages as read:', updateError)
+      } else {
+        console.log(`[Chat] Successfully marked ${updatedMessages?.length || 0} messages as read`)
+        if (updatedMessages && updatedMessages.length > 0) {
+          console.log('[Chat] Updated message IDs:', updatedMessages.map((m: any) => m.id.slice(0, 8)).join(', '))
+        }
       }
       
       // Small delay to ensure DB update propagates

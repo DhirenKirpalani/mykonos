@@ -56,6 +56,13 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     }
   }, [isOpen])
 
+  // Refetch cart when region changes
+  useEffect(() => {
+    if (isOpen && region) {
+      fetchCart()
+    }
+  }, [region])
+
   const fetchCart = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -72,7 +79,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
         .from('cart_items')
         .select(`
           *,
-          product:products(*)
+          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price)
         `)
         .eq('user_id', session.user.id)
 
@@ -90,6 +97,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     if (newQuantity < 1) return
 
     try {
+      console.log('🛒 [CART DRAWER] Updating quantity:', { itemId, newQuantity })
       const { error } = await (supabase
         .from('cart_items') as any)
         .update({ quantity: newQuantity, updated_at: new Date().toISOString() })
@@ -97,15 +105,18 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
       if (error) throw error
 
+      console.log('✅ [CART DRAWER] Database updated successfully')
       setCartItems(prev =>
         prev.map(item =>
           item.id === itemId ? { ...item, quantity: newQuantity } : item
         )
       )
       
+      console.log('📢 [CART DRAWER] Dispatching cart-updated event...')
       window.dispatchEvent(new Event('cart-updated'))
+      console.log('✅ [CART DRAWER] Event dispatched')
     } catch (error) {
-      console.error('Failed to update quantity:', error)
+      console.error('❌ [CART DRAWER] Failed to update quantity:', error)
       toast.error('Failed to update quantity')
     }
   }
@@ -120,7 +131,6 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
       if (error) throw error
 
       setCartItems(prev => prev.filter(item => item.id !== itemId))
-      toast.success('Item removed')
       
       window.dispatchEvent(new Event('cart-updated'))
     } catch (error) {
@@ -139,7 +149,12 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     }
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + ((item.price_at_add || 0) * item.quantity), 0)
+  const subtotal = cartItems.reduce((sum, item) => {
+    const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
+      ? (item.product as any).price_idr 
+      : (item.product as any).price_usd || 0
+    return sum + (basePrice * item.quantity)
+  }, 0)
   const total = subtotal - discountAmount
 
   if (!mounted) return null
@@ -250,7 +265,12 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
                           {/* Price */}
                           <p className="text-sm font-medium tracking-wide">
-                            {region ? formatPrice(item.price_at_add * item.quantity, region) : '...'}
+                            {region ? formatPrice(
+                              (region.code === 'ID' && (item.product as any).price_idr 
+                                ? (item.product as any).price_idr 
+                                : (item.product as any).price_usd || 0) * item.quantity, 
+                              region
+                            ) : '...'}
                           </p>
                         </div>
 

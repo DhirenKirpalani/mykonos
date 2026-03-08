@@ -1,17 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ShoppingBag, Heart } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { ProductVariantModal } from '@/components/ProductVariantModal'
-import { ProductTotalPrice } from '@/components/ProductTotalPrice'
+import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
 
 interface ProductDetailClientProps {
+  product?: any
   productId: string
   productName: string
+  productSlug?: string
   minQuantity?: number
   maxQuantity?: number
   stockQuantity?: number
@@ -30,7 +32,7 @@ interface ProductDetailClientProps {
   }
 }
 
-export function ProductDetailClient({ productId, productName, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, productData }: ProductDetailClientProps) {
+export function ProductDetailClient({ productId, productName, productSlug, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, productData, product }: ProductDetailClientProps) {
   const router = useRouter()
   const [quantity, setQuantity] = useState(minQuantity)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
@@ -38,6 +40,21 @@ export function ProductDetailClient({ productId, productName, minQuantity = 1, m
   const [isBuyingNow, setIsBuyingNow] = useState(false)
   const [showVariantModal, setShowVariantModal] = useState(false)
   const [variantModalMode, setVariantModalMode] = useState<'add-to-cart' | 'buy-now'>('add-to-cart')
+
+  // Restore quantity from sessionStorage if user navigates back from checkout
+  useEffect(() => {
+    const buyNowItem = sessionStorage.getItem('buyNowItem')
+    if (buyNowItem) {
+      try {
+        const buyNowData = JSON.parse(buyNowItem)
+        if (buyNowData.product_id === productId && buyNowData.quantity) {
+          setQuantity(buyNowData.quantity)
+        }
+      } catch (error) {
+        console.error('Failed to restore quantity:', error)
+      }
+    }
+  }, [productId])
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < minQuantity) {
@@ -112,7 +129,6 @@ export function ProductDetailClient({ productId, productName, minQuantity = 1, m
       const data = await response.json()
 
       if (response.ok) {
-        toast.success(`${productName} added to cart!`)
         // Dispatch event to update cart badge
         window.dispatchEvent(new Event('cart-updated'))
       } else {
@@ -133,16 +149,17 @@ export function ProductDetailClient({ productId, productName, minQuantity = 1, m
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
-      if (!session) {
+      if (!session || session.user.is_anonymous) {
         toast.error('Please login to add items to wishlist')
         router.push('/login')
         return
       }
 
-      // Call the database function to add to wishlist
+      // Call the database function to add to wishlist with quantity
       const { error } = await supabase.rpc('add_to_wishlist', {
         p_user_id: session.user.id,
         p_product_id: productId,
+        p_quantity: quantity,
       } as any)
 
       if (error) {
@@ -157,7 +174,6 @@ export function ProductDetailClient({ productId, productName, minQuantity = 1, m
         window.dispatchEvent(new Event('wishlist-updated'))
       }
     } catch (error) {
-      console.error('Add to wishlist error:', error)
       toast.error('Failed to add to wishlist')
     } finally {
       setIsAddingToWishlist(false)
@@ -206,6 +222,7 @@ export function ProductDetailClient({ productId, productName, minQuantity = 1, m
       sessionStorage.setItem('buyNowItem', JSON.stringify({
         product_id: productIdOverride || productId,
         product_name: productName,
+        product_slug: productSlug,
         quantity: quantity,
         variants: selectedVariants,
         timestamp: Date.now()
@@ -265,14 +282,21 @@ export function ProductDetailClient({ productId, productName, minQuantity = 1, m
         </div>
       </div>
 
-      {/* Total Price Display */}
-      <ProductTotalPrice 
-        quantity={quantity}
-        price={price}
-        priceIdr={priceIdr}
-        salePrice={salePrice}
-        compareAtPrice={compareAtPrice}
-      />
+      {/* Price Display with Quantity */}
+      {product && (
+        <div className="rounded-lg bg-gray-50 p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">
+              {quantity} {quantity > 1 ? 'items' : 'item'}
+            </span>
+            <span className="text-sm text-gray-500">Total</span>
+          </div>
+          <ProductPriceDisplay 
+            product={product}
+            quantity={quantity}
+          />
+        </div>
+      )}
 
       <Button 
         className="w-full bg-[#EE4D2D] hover:bg-[#d43f1f] text-white font-medium py-3 text-base transition-all duration-300 border-0"
