@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, EyeOff, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -138,12 +138,20 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Products</h1>
           <p className="mt-2 text-gray-600">Manage your product catalog</p>
         </div>
-        <Link href="/cms/products/new">
-          <Button className="bg-luxury-gold text-luxury-navy hover:bg-luxury-gold/90">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/cms/products/bulk-upload">
+            <Button variant="outline" className="border-luxury-gold text-luxury-gold hover:bg-luxury-gold/10">
+              <Upload className="mr-2 h-4 w-4" />
+              Bulk Upload
+            </Button>
+          </Link>
+          <Link href="/cms/products/new">
+            <Button className="bg-luxury-gold text-luxury-navy hover:bg-luxury-gold/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">

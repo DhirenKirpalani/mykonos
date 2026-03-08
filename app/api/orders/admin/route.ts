@@ -41,21 +41,45 @@ export async function GET(request: Request) {
       throw error
     }
 
-    // Fetch user data separately and merge
+    // Fetch user data from auth.users and merge
     if (orders && orders.length > 0) {
-      const userIds = Array.from(new Set((orders as any[]).map((order: any) => order.user_id)))
-      const { data: users } = await supabase
-        .from('users')
-        .select('id, email, first_name, last_name')
-        .in('id', userIds)
-
-      // Create a map of users by id
-      const usersMap = new Map((users as any[] || []).map((user: any) => [user.id, user]))
+      const userIds = Array.from(new Set(
+        (orders as any[])
+          .map((order: any) => order.user_id)
+          .filter(Boolean) // Filter out null user_ids (guest orders)
+      ))
+      
+      let usersMap = new Map()
+      
+      if (userIds.length > 0) {
+        const { data: users } = await supabase.auth.admin.listUsers()
+        
+        // Create a map of users by id, extracting metadata
+        usersMap = new Map(
+          (users.users || [])
+            .filter((user: any) => userIds.includes(user.id))
+            .map((user: any) => [
+              user.id,
+              {
+                id: user.id,
+                email: user.email,
+                first_name: user.user_metadata?.first_name || '',
+                last_name: user.user_metadata?.last_name || ''
+              }
+            ])
+        )
+      }
 
       // Merge user data into orders
       const ordersWithUsers = (orders as any[]).map((order: any) => ({
         ...order,
-        user: usersMap.get(order.user_id) || null
+        user: order.user_id ? usersMap.get(order.user_id) || null : null,
+        customer_name: order.user_id 
+          ? `${usersMap.get(order.user_id)?.first_name || ''} ${usersMap.get(order.user_id)?.last_name || ''}`.trim() || 'User'
+          : 'Guest',
+        customer_email: order.user_id 
+          ? usersMap.get(order.user_id)?.email || order.customer_email
+          : order.customer_email
       }))
 
       return NextResponse.json(ordersWithUsers)

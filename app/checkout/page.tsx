@@ -439,36 +439,49 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
+    console.log('🚀 [ORDER] handlePlaceOrder called')
+    
     // For guests, show modal to collect email and shipping info
     if (isGuest) {
+      console.log('👤 [ORDER] Guest user detected, showing checkout modal')
       setShowCheckoutModal(true)
       return
     }
 
     // For logged-in users, check if address is selected
     if (!selectedAddressId) {
+      console.error('❌ [ORDER] No shipping address selected')
       toast.error('Please select a shipping address')
       return
     }
 
+    console.log('✅ [ORDER] Starting order placement for authenticated user')
+    console.log('📦 [ORDER] Cart items:', cartItems.length)
+    console.log('📍 [ORDER] Selected address ID:', selectedAddressId)
+    
     setIsProcessing(true)
     try {
       // Get current user session
+      console.log('🔐 [ORDER] Getting user session...')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
+        console.error('❌ [ORDER] No session found')
         toast.error('Please refresh the page')
         setIsProcessing(false)
         return
       }
+      console.log('✅ [ORDER] Session found, user ID:', session.user.id)
 
       // Check if this is a Buy Now flow with item still in sessionStorage
       const buyNowItem = sessionStorage.getItem('buyNowItem')
+      console.log('🛒 [ORDER] Buy Now item in storage:', buyNowItem ? 'Yes' : 'No')
       
       let sessionData
       
       // Only use manual session if buyNowItem exists AND we have temp cart items
       // After login, buyNowItem is cleared and items are in cart, so use regular flow
       if (buyNowItem && cartItems.length > 0 && cartItems[0].id === 'buy-now-temp') {
+        console.log('🎯 [ORDER] Using Buy Now flow with manual cart snapshot')
         // For Buy Now: Create checkout session with manual cart snapshot
         const buyNowData = JSON.parse(buyNowItem)
         const product = cartItems[0]?.product
@@ -484,6 +497,7 @@ export default function CheckoutPage() {
         const quantity = buyNowData.quantity || 1
         const subtotal = price * quantity
         
+        console.log('📝 [ORDER] Creating manual checkout session...')
         const sessionResponse = await fetch('/api/checkout/session/manual', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -500,18 +514,23 @@ export default function CheckoutPage() {
               shipping: subtotal >= 100 ? 0 : 15,
               tax: subtotal * 0.1,
               total: subtotal + (subtotal >= 100 ? 0 : 15) + (subtotal * 0.1),
-              currency_code: 'USD'
+              currency_code: region?.currency_code || 'USD'
             }
           }),
         })
         
         sessionData = await sessionResponse.json()
+        console.log('📋 [ORDER] Manual session response:', sessionData)
         if (!sessionResponse.ok) {
+          console.error('❌ [ORDER] Failed to create manual checkout session:', sessionData.error)
           throw new Error(sessionData.error || 'Failed to create checkout session')
         }
+        console.log('✅ [ORDER] Manual checkout session created:', sessionData.session_id)
       } else {
         // Regular cart flow: Create checkout session from cart
         // This includes Buy Now items that have been transferred to cart after login
+        console.log('🛍️ [ORDER] Using regular cart flow')
+        console.log('📝 [ORDER] Creating checkout session from cart...')
         const sessionResponse = await fetch('/api/checkout/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -523,12 +542,16 @@ export default function CheckoutPage() {
         })
 
         sessionData = await sessionResponse.json()
+        console.log('📋 [ORDER] Session response:', sessionData)
         if (!sessionResponse.ok) {
+          console.error('❌ [ORDER] Failed to create checkout session:', sessionData.error)
           throw new Error(sessionData.error || 'Failed to create checkout session')
         }
+        console.log('✅ [ORDER] Checkout session created:', sessionData.session_id)
       }
 
       // Update with shipping address
+      console.log('📦 [ORDER] Updating session with shipping address...')
       const updateResponse = await fetch('/api/checkout/session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -542,8 +565,10 @@ export default function CheckoutPage() {
 
       if (!updateResponse.ok) {
         const updateData = await updateResponse.json()
+        console.error('❌ [ORDER] Failed to update shipping info:', updateData.error)
         throw new Error(updateData.error || 'Failed to update shipping info')
       }
+      console.log('✅ [ORDER] Session updated with shipping address')
 
       // Create Midtrans payment token
       const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
@@ -592,6 +617,8 @@ export default function CheckoutPage() {
         }
       ]
 
+      console.log('💳 [ORDER] Creating Midtrans payment token...')
+      console.log('💰 [ORDER] Total amount (IDR):', convertToIDR(total))
       const midtransResponse = await fetch('/api/midtrans/create-token', {
         method: 'POST',
         headers: { 
@@ -612,28 +639,37 @@ export default function CheckoutPage() {
       })
 
       const midtransData = await midtransResponse.json()
+      console.log('🎫 [ORDER] Midtrans response:', midtransData)
 
       if (!midtransResponse.ok) {
+        console.error('❌ [ORDER] Failed to create payment token:', midtransData.error)
         throw new Error(midtransData.error || 'Failed to create payment token')
       }
+      console.log('✅ [ORDER] Payment token created successfully')
 
       // Open Midtrans Snap modal
+      console.log('🪟 [ORDER] Opening Midtrans payment modal...')
       if (typeof window !== 'undefined' && (window as any).snap) {
         (window as any).snap.pay(midtransData.token, {
           onSuccess: (result: any) => {
             // Payment successful - Midtrans will redirect to finish URL
             // The processing page will handle order completion
+            console.log('✅ [PAYMENT] Payment successful!', result)
+            console.log('🔄 [PAYMENT] Midtrans will redirect to callback URL')
             toast.success('Payment successful! Processing your order...')
           },
           onPending: (result: any) => {
+            console.log('⏳ [PAYMENT] Payment pending', result)
             toast.info('Payment pending. Please complete your payment.')
             setIsProcessing(false)
           },
           onError: (result: any) => {
+            console.error('❌ [PAYMENT] Payment error', result)
             toast.error('Payment failed. Please try again.')
             setIsProcessing(false)
           },
           onClose: () => {
+            console.log('🚪 [PAYMENT] Payment modal closed by user')
             toast.info('Payment cancelled')
             setIsProcessing(false)
           }
@@ -834,10 +870,12 @@ export default function CheckoutPage() {
           }
         })
       } else {
+        console.error('❌ [ORDER] Midtrans Snap not loaded')
         throw new Error('Midtrans Snap not loaded. Please refresh the page.')
       }
     } catch (error: any) {
-      console.error('Guest checkout error:', error)
+      console.error('❌ [ORDER] Order placement failed:', error)
+      console.error('❌ [ORDER] Error details:', error.message)
       toast.error(error.message || 'Failed to complete checkout')
       throw error
     } finally {

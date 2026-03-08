@@ -28,6 +28,12 @@ export function FulfillOrderButton({
     !['cancelled', 'refunded', 'shipped', 'delivered'].includes(orderStatus)
 
   const handleFulfill = async () => {
+    console.log('[FulfillOrderButton] Button clicked')
+    console.log('[FulfillOrderButton] Can fulfill:', canFulfill)
+    console.log('[FulfillOrderButton] Order ID:', orderId)
+    console.log('[FulfillOrderButton] Order status:', orderStatus)
+    console.log('[FulfillOrderButton] Payment status:', paymentStatus)
+    
     if (!canFulfill) {
       toast.error('Order cannot be fulfilled in current state')
       return
@@ -38,10 +44,12 @@ export function FulfillOrderButton({
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
+        console.error('[FulfillOrderButton] No session found')
         toast.error('Not authenticated')
         return
       }
 
+      console.log('[FulfillOrderButton] Calling fulfill API...')
       const response = await fetch('/api/admin/shipping/fulfill', {
         method: 'POST',
         headers: {
@@ -53,12 +61,16 @@ export function FulfillOrderButton({
         }),
       })
 
+      console.log('[FulfillOrderButton] Response status:', response.status)
+
       if (!response.ok) {
         const error = await response.json()
+        console.error('[FulfillOrderButton] API error:', error)
         throw new Error(error.error || 'Failed to create shipping job')
       }
 
       const result = await response.json()
+      console.log('[FulfillOrderButton] Success:', result)
 
       toast.success(
         <div>
@@ -73,7 +85,7 @@ export function FulfillOrderButton({
         onSuccess()
       }
     } catch (error) {
-      console.error('Failed to fulfill order:', error)
+      console.error('[FulfillOrderButton] Failed to fulfill order:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to create shipping job')
     } finally {
       setIsFulfilling(false)
