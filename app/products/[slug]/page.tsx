@@ -54,7 +54,7 @@ export default async function ProductDetailPage({
 
   const fragranceFamily = product.fragrance_family || 'Uncategorized'
   const relatedProducts = await getRelatedProducts(fragranceFamily, product.id)
-  const hasDiscount = product.sale_price && product.sale_price < product.price
+  const hasDiscount = product.sale_price && product.sale_price < product.price_idr
 
   // Build breadcrumb items following website route
   const breadcrumbItems: BreadcrumbItem[] = [

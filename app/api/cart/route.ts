@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     const typedItems = items as unknown as CartItemWithProduct[]
     const subtotal = (typedItems || []).reduce((total: number, item) => {
       const price = getEffectivePrice(
-        item.product.price,
+        item.product.price_idr,
         item.product.sale_price
       )
       return total + (price * item.quantity)
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
 
     // Determine which price to use based on region (stored in product)
     // For now, we'll use price_idr if available, otherwise price_usd
-    const basePrice = (typedProduct as any).price_idr || typedProduct.price
+    const basePrice = typedProduct.price_idr || typedProduct.price_usd
     const priceAtAdd = getEffectivePrice(basePrice, typedProduct.sale_price)
 
     // Check if item already in cart
