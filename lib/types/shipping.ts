@@ -80,6 +80,7 @@ export interface AcquireJobResult {
   retry_count: number;
   courier_provider_id: string | null;
   shipping_method_id: string | null;
+  courier_request_id: string | null;
 }
 
 export interface CompleteJobRequest {
@@ -166,6 +167,7 @@ export interface JobProcessingResult {
   label_url?: string;
   courier_name?: string;
   estimated_delivery_at?: string;
+  courier_request_id?: string;
   error?: string;
   error_details?: Record<string, any>;
 }

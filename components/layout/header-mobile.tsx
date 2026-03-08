@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { Search, ShoppingBag, User, Menu, X, Settings, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'

@@ -19,6 +19,11 @@ export async function GET() {
       .eq('role', 'admin')
       .limit(1)
 
+    // If table doesn't exist (PGRST205), return offline status without error
+    if (error?.code === 'PGRST205') {
+      return NextResponse.json({ isOnline: false })
+    }
+
     if (error) throw error
 
     // For now, return online if there are any admins in the system

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 export const dynamic = 'force-dynamic'
@@ -112,10 +113,33 @@ export async function PATCH(
     const { id } = params
     const body = await request.json()
 
-    // Update product
-    const updateData: any = {
-      ...body,
-    }
+    // Update product - only include valid fields and remove undefined/null values
+    const updateData: any = {}
+    
+    // Map of allowed fields to update
+    const allowedFields = [
+      'name', 'slug', 'sku', 'description', 'brand',
+      'price_usd', 'price_idr', 'cost_price', 'compare_at_price',
+      'stock_quantity', 'low_stock_threshold', 'allow_backorder', 'in_stock',
+      'volume_ml', 'weight_grams', 'shipping_weight_grams',
+      'package_length_cm', 'package_width_cm', 'package_height_cm',
+      'shelf_life_months', 'formulation', 'gender', 'edition_type',
+      'fragrance_family', 'country_of_origin', 'top_notes', 'middle_notes', 'base_notes',
+      'bpom_number', 'halal_certified', 'manufacturing_date', 'expiration_date',
+      'ships_from', 'status', 'is_featured', 'is_visible',
+      'min_purchase_quantity', 'max_purchase_quantity',
+      'is_pre_order', 'pre_order_duration_days', 'scheduled_publish_date',
+      'meta_title', 'meta_description', 'meta_keywords', 'tags',
+      'image_urls', 'image_alt_texts', 'bulk_discounts', 'variants',
+      'collection', 'size', 'category'
+    ]
+    
+    // Only include allowed fields that are present in the body
+    allowedFields.forEach(field => {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field]
+      }
+    })
 
     const query = supabase.from('products')
     const { data: product, error } = await (query.update as any)(updateData)
@@ -124,6 +148,16 @@ export async function PATCH(
       .single()
 
     if (error) throw error
+
+    // Revalidate product pages to reflect changes immediately
+    try {
+      revalidatePath('/products')
+      revalidatePath(`/products/${product.slug}`)
+      revalidateTag('products')
+    } catch (revalidateError) {
+      console.error('Cache revalidation error:', revalidateError)
+      // Don't fail the request if revalidation fails
+    }
 
     return NextResponse.json({
       message: 'Product updated successfully',

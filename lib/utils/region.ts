@@ -11,24 +11,48 @@ export function formatPrice(
     decimals?: number
   } = {}
 ): string {
-  const { showCurrency = true, decimals = 2 } = options
+  const { showCurrency = true, decimals } = options
 
-  const formatted = amount.toFixed(decimals)
+  // Determine locale and decimal places based on currency
+  let locale = 'en-US'
+  let decimalPlaces = decimals ?? 2
   
-  if (!showCurrency) {
-    return formatted
+  switch (region.currency_code) {
+    case 'IDR':
+      locale = 'id-ID'
+      decimalPlaces = decimals ?? 2 // Indonesian Rupiah with 2 decimals
+      break
+    case 'USD':
+      locale = 'en-US'
+      decimalPlaces = decimals ?? 2
+      break
+    case 'EUR':
+      locale = 'de-DE'
+      decimalPlaces = decimals ?? 2
+      break
+    case 'GBP':
+      locale = 'en-GB'
+      decimalPlaces = decimals ?? 2
+      break
+    default:
+      locale = 'en-US'
+      decimalPlaces = decimals ?? 2
   }
 
-  // Format based on currency
-  switch (region.currency_code) {
-    case 'USD':
-    case 'GBP':
-      return `${region.currency_symbol}${formatted}`
-    case 'EUR':
-      return `${formatted}${region.currency_symbol}`
-    default:
-      return `${region.currency_symbol}${formatted}`
+  if (!showCurrency) {
+    return new Intl.NumberFormat(locale, {
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
+    }).format(amount)
   }
+
+  // Use Intl.NumberFormat for proper currency formatting
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: region.currency_code,
+    minimumFractionDigits: decimalPlaces,
+    maximumFractionDigits: decimalPlaces,
+  }).format(amount)
 }
 
 /**
@@ -105,7 +129,7 @@ export function getShippingCost(
 /**
  * Default region code
  */
-export const DEFAULT_REGION_CODE = 'US'
+export const DEFAULT_REGION_CODE = 'ID'
 
 /**
  * Get region from country code
@@ -121,6 +145,7 @@ export function getRegionCodeFromCountry(countryCode: string): string {
   const menaCountries = ['AE', 'SA', 'IL', 'TR']
   const latamCountries = ['BR', 'MX', 'AR', 'CL', 'CO']
 
+  if (countryCode === 'ID') return 'ID'
   if (countryCode === 'US' || countryCode === 'CA') return 'US'
   if (countryCode === 'GB') return 'UK'
   if (euCountries.includes(countryCode)) return 'EU'

@@ -12,6 +12,8 @@ interface Order {
   status: string
   total_amount: number
   created_at: string
+  customer_name?: string
+  customer_email?: string
   user?: {
     first_name: string
     last_name: string
@@ -160,9 +162,9 @@ export default function OrdersPage() {
                   </td>
                   <td className="py-4">
                     <div className="text-gray-900">
-                      {order.user?.first_name} {order.user?.last_name}
+                      {order.customer_name || `${order.user?.first_name || ''} ${order.user?.last_name || ''}`.trim() || 'N/A'}
                     </div>
-                    <div className="text-gray-500">{order.user?.email}</div>
+                    <div className="text-gray-500">{order.customer_email || order.user?.email || 'N/A'}</div>
                   </td>
                   <td className="py-4 text-gray-600">
                     {new Date(order.created_at).toLocaleDateString()}
@@ -178,7 +180,7 @@ export default function OrdersPage() {
                   </td>
                   <td className="py-4">
                     <div className="flex items-center gap-2">
-                      <Link href={`/cms/orders/${order.id}`}>
+                      <Link href={`/cms/orders/${order.order_number}`}>
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>

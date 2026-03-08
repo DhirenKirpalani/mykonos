@@ -176,7 +176,12 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                             {product.name}
                           </h4>
                           <p className="text-[10px] sm:text-xs text-luxury-navy/60 mb-1">{product.size}</p>
-                          <p className="text-xs sm:text-sm font-semibold text-luxury-gold">{region ? formatPrice(product.price, region) : '...'}</p>
+                          <p className="text-xs sm:text-sm font-semibold text-luxury-gold">{region ? formatPrice(
+                            region.code === 'ID' && (product as any).price_idr 
+                              ? (product as any).price_idr 
+                              : (product as any).price_usd || 0, 
+                            region
+                          ) : '...'}</p>
                         </div>
                       </Link>
                     ))}

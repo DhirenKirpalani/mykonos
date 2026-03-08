@@ -9,15 +9,34 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 
 export async function POST(request: Request) {
   try {
+    console.log('🔵 [API] POST /api/checkout/session - Creating checkout session')
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
-    const { user_id, session_id, items } = body
+    const { user_id, session_id, items, currency_code, region_code } = body
+    
+    console.log('📥 [API] Request body:', { user_id, session_id, items_count: items?.length, currency_code, region_code })
 
     if (!user_id && !session_id) {
+      console.error('❌ [API] Missing user_id and session_id')
       return NextResponse.json(
         { error: 'User ID or session ID required' },
         { status: 400 }
       )
+    }
+
+    // Get region currency if not provided
+    let finalCurrencyCode = currency_code
+    if (!finalCurrencyCode && region_code) {
+      const { data: region } = await supabase
+        .from('regions')
+        .select('currency_code')
+        .eq('code', region_code)
+        .single()
+      
+      finalCurrencyCode = region?.currency_code || 'IDR'
+    }
+    if (!finalCurrencyCode) {
+      finalCurrencyCode = 'IDR' // Default to IDR for Indonesia
     }
 
     let cartSnapshot: Array<{ product_id: string; quantity: number; price: number | null }> = []
@@ -25,13 +44,16 @@ export async function POST(request: Request) {
 
     // If items are provided directly (Buy Now flow), use them
     if (items && Array.isArray(items) && items.length > 0) {
+      console.log('🎯 [API] Using provided items (Buy Now flow):', items.length)
       cartSnapshot = items.map((item: any) => ({
         product_id: item.product_id,
         quantity: item.quantity,
         price: item.price
       }))
       subtotal = items.reduce((sum: number, item: any) => sum + ((item.price || 0) * item.quantity), 0)
+      console.log('💰 [API] Calculated subtotal:', subtotal)
     } else {
+      console.log('🛒 [API] Fetching items from cart_items table')
       // Otherwise, fetch from cart_items table
       let cartQuery = supabase
         .from('cart_items')
@@ -46,17 +68,19 @@ export async function POST(request: Request) {
       const { data: cartItems, error: cartError } = await cartQuery
 
       if (cartError) {
-        console.error('Cart fetch error:', cartError)
+        console.error('❌ [API] Cart fetch error:', cartError)
         throw cartError
       }
 
       if (!cartItems || cartItems.length === 0) {
-        console.log('No cart items found for user_id:', user_id, 'session_id:', session_id)
+        console.error('❌ [API] No cart items found for user_id:', user_id, 'session_id:', session_id)
         return NextResponse.json(
           { error: 'Cart is empty' },
           { status: 400 }
         )
       }
+      
+      console.log('✅ [API] Found cart items:', cartItems.length)
 
       const typedCartItems = cartItems as Array<{
         product_id: string
@@ -71,6 +95,7 @@ export async function POST(request: Request) {
       }))
 
       subtotal = typedCartItems.reduce((sum, item) => sum + ((item.price_at_add || 0) * item.quantity), 0)
+      console.log('💰 [API] Calculated subtotal from cart:', subtotal)
     }
 
     const pricingSnapshot = {
@@ -79,9 +104,11 @@ export async function POST(request: Request) {
       shipping: 0,
       tax: subtotal * 0.1,
       total: subtotal + (subtotal * 0.1),
-      currency_code: 'USD'
+      currency_code: finalCurrencyCode
     }
 
+    console.log('📝 [API] Creating checkout session in database...')
+    console.log('📋 [API] Pricing snapshot:', pricingSnapshot)
     const { data: checkoutSession, error: sessionError } = await supabase
       .from('checkout_sessions')
       .insert({
@@ -95,10 +122,15 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    if (sessionError) throw sessionError
+    if (sessionError) {
+      console.error('❌ [API] Failed to create checkout session:', sessionError)
+      throw sessionError
+    }
+    console.log('✅ [API] Checkout session created:', (checkoutSession as any)?.id)
 
     const typedSession = checkoutSession as any
 
+    console.log('🔒 [API] Reserving inventory...')
     const { error: reserveError } = await supabase.rpc('reserve_inventory_for_checkout', {
       p_checkout_session_id: typedSession.id,
       p_user_id: user_id || null,
@@ -106,16 +138,20 @@ export async function POST(request: Request) {
     } as any)
 
     if (reserveError) {
+      console.error('❌ [API] Failed to reserve inventory:', reserveError)
       await supabase.from('checkout_sessions').delete().eq('id', typedSession.id)
       throw reserveError
     }
+    console.log('✅ [API] Inventory reserved successfully')
 
+    console.log('✅ [API] Checkout session created successfully')
     return NextResponse.json({
       session_id: typedSession.id,
       expires_at: typedSession.expires_at
     })
   } catch (error: any) {
-    console.error('Create checkout session error:', error)
+    console.error('❌ [API] Create checkout session error:', error)
+    console.error('❌ [API] Error details:', error.message)
     return NextResponse.json(
       { error: error.message || 'Failed to create checkout session' },
       { status: 500 }
@@ -125,6 +161,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    console.log('🔵 [API] PATCH /api/checkout/session - Updating checkout session')
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
     const { 
@@ -136,8 +173,11 @@ export async function PATCH(request: Request) {
       payment_method_type,
       new_address 
     } = body
+    
+    console.log('📥 [API] Update request:', { session_id, current_step, customer_email, shipping_address_id })
 
     if (!session_id) {
+      console.error('❌ [API] Missing session_id')
       return NextResponse.json(
         { error: 'Session ID required' },
         { status: 400 }
@@ -202,12 +242,17 @@ export async function PATCH(request: Request) {
     if (payment_method_type) updateData.payment_method_type = payment_method_type
     updateData.updated_at = new Date().toISOString()
 
+    console.log('📝 [API] Updating checkout session with data:', updateData)
     const { error: updateError } = await supabase
       .from('checkout_sessions')
       .update(updateData as any)
       .eq('id', session_id)
 
-    if (updateError) throw updateError
+    if (updateError) {
+      console.error('❌ [API] Failed to update session:', updateError)
+      throw updateError
+    }
+    console.log('✅ [API] Checkout session updated successfully')
 
     if (shipping_method_id) {
       const { data: method } = await supabase
@@ -240,9 +285,11 @@ export async function PATCH(request: Request) {
       }
     }
 
+    console.log('✅ [API] Session update complete')
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('Update checkout session error:', error)
+    console.error('❌ [API] Update checkout session error:', error)
+    console.error('❌ [API] Error details:', error.message)
     return NextResponse.json(
       { error: error.message || 'Failed to update checkout session' },
       { status: 500 }

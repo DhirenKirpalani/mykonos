@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase/client'
 import { useRegion } from '@/contexts/RegionContext'
 import { COUNTRIES, validatePhone, validateAddress, validatePostalCode, getCountryByRegion, formatPhoneNumber } from '@/lib/utils/address'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ForgotPasswordModal } from '@/components/ForgotPasswordModal'
 
 interface CheckoutModalProps {
   isOpen: boolean
@@ -39,6 +40,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   
   const [email, setEmail] = useState('')
   const [shippingForm, setShippingForm] = useState({
@@ -85,8 +87,8 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
     }
   }
 
-  const checkEmailExists = async () => {
-    if (!email || !validateEmail(email)) return
+  const checkEmailExists = async (): Promise<{ exists: boolean; hasAddress: boolean }> => {
+    if (!email || !validateEmail(email)) return { exists: false, hasAddress: false }
 
     setCheckingEmail(true)
     try {
@@ -124,18 +126,23 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
               postal_code: typedAddress.postal_code,
               country: typedAddress.country,
             })
+            
+            toast.success('Email found! Using your saved address.', {
+              duration: 3000,
+            })
+            return { exists: true, hasAddress: true }
           }
         }
         
-        toast.success('Email found! Using your saved address.', {
-          duration: 3000,
-        })
+        return { exists: true, hasAddress: false }
       } else {
         setIsRegistered(false)
+        return { exists: false, hasAddress: false }
       }
     } catch (error) {
       console.error('Email check error:', error)
       setIsRegistered(false)
+      return { exists: false, hasAddress: false }
     } finally {
       setCheckingEmail(false)
     }
@@ -149,13 +156,16 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
     }
     
     // Check email before proceeding
-    await checkEmailExists()
+    const { exists, hasAddress } = await checkEmailExists()
     
-    // If registered, show password prompt
-    if (isRegistered) {
+    // If registered and has saved address, go directly to address step for guest checkout
+    // If registered but no saved address, show password prompt
+    // If not registered, show address form
+    if (exists && hasAddress) {
+      setStep('address')
+    } else if (exists) {
       setStep('password')
     } else {
-      // Show address form for unregistered users
       setStep('address')
     }
   }
@@ -178,43 +188,9 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
       }
 
       if (data.user) {
-        // Transfer Buy Now item to cart if exists
-        const buyNowItem = sessionStorage.getItem('buyNowItem')
-        if (buyNowItem) {
-          try {
-            const buyNowData = JSON.parse(buyNowItem)
-            
-            // Check if item already exists in cart
-            const { data: existingItem } = await supabase
-              .from('cart_items')
-              .select('id, quantity')
-              .eq('user_id', data.user.id)
-              .eq('product_id', buyNowData.product_id)
-              .single()
-
-            if (existingItem) {
-              // Update quantity if item exists
-              await supabase
-                .from('cart_items')
-                .update({ quantity: (existingItem as any).quantity + buyNowData.quantity } as any)
-                .eq('id', (existingItem as any).id)
-            } else {
-              // Insert new item if doesn't exist
-              await supabase.from('cart_items').insert({
-                user_id: data.user.id,
-                product_id: buyNowData.product_id,
-                quantity: buyNowData.quantity,
-              } as any)
-            }
-            
-            sessionStorage.removeItem('buyNowItem')
-          } catch (error) {
-            console.error('Failed to transfer Buy Now item to cart:', error)
-          }
-        }
-        
         toast.success('Logged in successfully!')
         // Close modal and reload page to show logged-in state
+        // Note: Buy Now items remain in sessionStorage and will be processed during checkout
         onClose()
         window.location.reload()
       }
@@ -417,9 +393,13 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 <p className="text-sm text-red-600 mt-1">{passwordError}</p>
               )}
               <p className="text-xs text-gray-500 mt-2">
-                <a href="/forgot-password" className="text-luxury-navy hover:underline">
+                <button 
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-luxury-navy hover:underline"
+                >
                   Forgot password?
-                </a>
+                </button>
               </p>
             </div>
 
@@ -650,6 +630,13 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
           </form>
         )}
       </DialogContent>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal 
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        defaultEmail={email}
+      />
     </Dialog>
   )
 }

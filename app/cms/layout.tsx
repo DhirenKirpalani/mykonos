@@ -75,6 +75,7 @@ export default function CMSLayout({
         })
         if (response.ok) {
           const { count } = await response.json()
+          console.log(`[CMS Layout] Unread count fetched: ${count}`)
           setUnreadCount(count)
         }
       } catch (error) {
@@ -87,7 +88,7 @@ export default function CMSLayout({
 
     // Listen for messages being read
     const handleMessagesRead = () => {
-      console.log('chat-messages-read event received, fetching unread count')
+      console.log('[CMS Layout] chat-messages-read event received, fetching unread count')
       fetchUnreadCount()
     }
     window.addEventListener('chat-messages-read', handleMessagesRead)
@@ -234,7 +235,7 @@ export default function CMSLayout({
                   >
                     <item.icon className="h-5 w-5" />
                     {item.name}
-                    {item.name === 'Chat' && unreadCount > 0 && !pathname.startsWith('/cms/chat') && (
+                    {item.name === 'Chat' && unreadCount > 0 && (
                       <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
                         {unreadCount}
                       </span>

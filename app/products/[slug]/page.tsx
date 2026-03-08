@@ -54,7 +54,7 @@ export default async function ProductDetailPage({
 
   const fragranceFamily = product.fragrance_family || 'Uncategorized'
   const relatedProducts = await getRelatedProducts(fragranceFamily, product.id)
-  const hasDiscount = product.sale_price && product.sale_price < product.price
+  const hasDiscount = product.sale_price && product.sale_price < product.price_idr
 
   // Build breadcrumb items following website route
   const breadcrumbItems: BreadcrumbItem[] = [
@@ -91,11 +91,6 @@ export default async function ProductDetailPage({
               <h1 className="mb-3 text-2xl font-medium text-gray-900">
                 {product.name}
               </h1>
-            </div>
-
-            {/* Price - Dynamic based on region */}
-            <div className="rounded-lg bg-gray-50 p-4">
-              <ProductPriceDisplay product={product} />
             </div>
 
             {/* Vouchers */}
@@ -139,12 +134,14 @@ export default async function ProductDetailPage({
             {/* Quantity & Add to Cart */}
             <div className="border-t border-gray-200 pt-4">
               <ProductDetailClient 
+                product={product}
                 productId={product.id} 
                 productName={product.name}
+                productSlug={product.slug}
                 minQuantity={(product as any).min_purchase_quantity || 1}
                 maxQuantity={(product as any).max_purchase_quantity || undefined}
                 stockQuantity={product.stock_quantity || 0}
-                price={product.price}
+                price={(product as any).price_usd}
                 priceIdr={(product as any).price_idr}
                 salePrice={product.sale_price}
                 compareAtPrice={(product as any).compare_at_price}

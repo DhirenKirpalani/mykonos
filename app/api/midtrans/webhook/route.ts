@@ -7,7 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    console.log('Midtrans webhook received:', body)
+    console.log('=== MIDTRANS WEBHOOK RECEIVED ===')
+    console.log('Full Midtrans payload:', JSON.stringify(body, null, 2))
     
     const {
       order_id,
@@ -17,7 +18,25 @@ export async function POST(request: NextRequest) {
       gross_amount,
       transaction_id,
       payment_type,
+      bank,
+      card_type,
+      masked_card,
+      acquirer,
+      channel_response_code,
+      channel_response_message,
     } = body
+    
+    console.log('Extracted payment details:', {
+      order_id,
+      transaction_id,
+      payment_type,
+      transaction_status,
+      fraud_status,
+      bank,
+      card_type,
+      masked_card,
+      acquirer,
+    })
 
     // Skip signature verification for testing
     // TODO: Re-enable this in production with proper signature validation
@@ -75,14 +94,28 @@ export async function POST(request: NextRequest) {
 
     console.log('Updating order:', order_id, 'to status:', orderStatus)
     
+    // Extract last 4 digits from masked card if available
+    const cardLast4 = masked_card ? masked_card.slice(-4) : null
+    
+    const updateData: any = {
+      payment_status: paymentStatus,
+      status: orderStatus,
+      payment_intent_id: transaction_id,
+      payment_method: payment_type,
+      midtrans_order_id: order_id,
+      midtrans_transaction_id: transaction_id,
+      payment_method_type: payment_type,
+      payment_channel: bank || acquirer,
+      card_type: card_type,
+      card_last4: cardLast4,
+      payment_metadata: body, // Store full Midtrans response
+    }
+    
+    console.log('Order update data:', JSON.stringify(updateData, null, 2))
+    
     const { error: updateError } = await (supabase
       .from('orders')
-      .update as any)({
-        payment_status: paymentStatus,
-        status: orderStatus,
-        payment_intent_id: transaction_id,
-        payment_method: payment_type,
-      })
+      .update as any)(updateData)
       .eq('order_number', order_id)
 
     if (updateError) {
@@ -92,12 +125,16 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+    
+    console.log('Order updated successfully')
 
     const { data: order } = await supabase
       .from('orders')
-      .select('id, user_id')
+      .select('id, user_id, payment_method_type, payment_channel, card_type, card_last4')
       .eq('order_number', order_id)
       .single()
+    
+    console.log('Updated order data:', order)
 
     if (order) {
       // Add order status history
@@ -137,9 +174,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('=== MIDTRANS WEBHOOK PROCESSED SUCCESSFULLY ===')
+    console.log('Summary:', {
+      order_id,
+      transaction_id,
+      payment_type,
+      status: orderStatus,
+      payment_status: paymentStatus,
+    })
+
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('Midtrans webhook error:', error)
+    console.error('=== MIDTRANS WEBHOOK ERROR ===')
+    console.error('Error details:', error)
     return NextResponse.json(
       { error: error.message || 'Webhook processing failed' },
       { status: 500 }

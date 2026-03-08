@@ -73,6 +73,15 @@ class ShippingWorker {
   }
 
   private async processJobAsync(job: AcquireJobResult): Promise<void> {
+    // Start heartbeat interval to prevent lock expiration
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        await this.sendHeartbeat(job.job_id);
+      } catch (error) {
+        console.error(`[Worker ${this.config.worker_id}] Heartbeat failed for job ${job.job_id}:`, error);
+      }
+    }, 60000); // Send heartbeat every 60 seconds
+
     try {
       const result = await this.callCourierApi(job);
 
@@ -87,29 +96,89 @@ class ShippingWorker {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await this.failJob(job.job_id, errorMessage, { error: String(error) });
       console.error(`[Worker ${this.config.worker_id}] ✗ Job ${job.job_id} threw exception:`, error);
+    } finally {
+      // Stop heartbeat
+      clearInterval(heartbeatInterval);
     }
   }
 
   private async acquireJob(): Promise<AcquireJobResult | null> {
     try {
-      const { data, error } = await this.supabase.rpc('acquire_next_shipping_job', {
+      // Use direct SQL query instead of RPC to bypass PostgREST cache issues
+      const { data, error } = await this.supabase
+        .from('shipping_jobs')
+        .select('*')
+        .or('status.eq.pending,and(status.eq.processing,lock_expires_at.lt.now())')
+        .or('next_retry_at.is.null,next_retry_at.lte.now()')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows found - this is normal when queue is empty
+          return null;
+        }
+        console.error(`[Worker ${this.config.worker_id}] Error acquiring job:`, error);
+        return null;
+      }
+
+      if (!data) {
+        return null;
+      }
+
+      // Manually acquire the lock
+      const lockExpiresAt = new Date(Date.now() + this.config.lock_duration_seconds * 1000).toISOString();
+      
+      const { error: updateError } = await this.supabase
+        .from('shipping_jobs')
+        .update({
+          status: 'processing',
+          locked_at: new Date().toISOString(),
+          locked_by: this.config.worker_id,
+          lock_expires_at: lockExpiresAt,
+          started_at: data.started_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', data.id)
+        .eq('status', data.status); // Optimistic locking
+
+      if (updateError) {
+        console.error(`[Worker ${this.config.worker_id}] Error locking job:`, updateError);
+        return null;
+      }
+
+      return {
+        job_id: data.id,
+        order_id: data.order_id,
+        order_number: data.order_number,
+        job_payload: data.job_payload,
+        retry_count: data.retry_count,
+        courier_provider_id: data.courier_provider_id,
+        shipping_method_id: data.shipping_method_id,
+        courier_request_id: data.courier_request_id,
+      } as AcquireJobResult;
+    } catch (error) {
+      console.error(`[Worker ${this.config.worker_id}] Exception acquiring job:`, error);
+      return null;
+    }
+  }
+
+  private async sendHeartbeat(jobId: string): Promise<void> {
+    try {
+      const { data, error } = await this.supabase.rpc('update_job_heartbeat', {
+        p_job_id: jobId,
         p_worker_id: this.config.worker_id,
         p_lock_duration_seconds: this.config.lock_duration_seconds,
       });
 
       if (error) {
-        console.error(`[Worker ${this.config.worker_id}] Error acquiring job:`, error);
-        return null;
+        console.error(`[Worker ${this.config.worker_id}] Heartbeat error:`, error);
+      } else if (data) {
+        console.log(`[Worker ${this.config.worker_id}] Heartbeat sent for job ${jobId}`);
       }
-
-      if (!data || data.length === 0) {
-        return null;
-      }
-
-      return data[0] as AcquireJobResult;
     } catch (error) {
-      console.error(`[Worker ${this.config.worker_id}] Exception acquiring job:`, error);
-      return null;
+      console.error(`[Worker ${this.config.worker_id}] Heartbeat exception:`, error);
     }
   }
 
@@ -119,7 +188,19 @@ class ShippingWorker {
     const payload = job.job_payload;
 
     try {
-      const result = await this.mockCourierApiCall(payload);
+      // Generate or use existing courier request ID for idempotency
+      const courierRequestId = job.courier_request_id || `req_${job.job_id}_${Date.now()}`;
+      
+      // If courier_request_id exists, this might be a retry - check if shipment already exists
+      if (job.courier_request_id) {
+        console.log(`[Worker ${this.config.worker_id}] Retry detected, using existing request ID: ${courierRequestId}`);
+      }
+
+      // Add timeout to prevent hanging
+      const result = await Promise.race([
+        this.mockCourierApiCall(payload, courierRequestId),
+        this.timeout(10000, 'Courier API timeout after 10 seconds')
+      ]);
       
       return {
         success: true,
@@ -127,6 +208,7 @@ class ShippingWorker {
         label_url: result.label_url,
         courier_name: result.courier_name,
         estimated_delivery_at: result.estimated_delivery_at,
+        courier_request_id: courierRequestId,
       };
     } catch (error) {
       return {
@@ -140,8 +222,15 @@ class ShippingWorker {
     }
   }
 
-  private async mockCourierApiCall(payload: ShippingJobPayload): Promise<CourierResponse> {
+  private timeout(ms: number, message: string): Promise<never> {
+    return new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    });
+  }
+
+  private async mockCourierApiCall(payload: ShippingJobPayload, courierRequestId: string): Promise<CourierResponse> {
     console.log(`[Worker ${this.config.worker_id}] [MOCK] Creating shipment for order ${payload.order_number}`);
+    console.log(`[Worker ${this.config.worker_id}] [MOCK] Courier request ID: ${courierRequestId}`);
     
     await this.sleep(2000);
 
@@ -165,6 +254,7 @@ class ShippingWorker {
       raw_response: {
         mock: true,
         order_number: payload.order_number,
+        courier_request_id: courierRequestId,
         created_at: new Date().toISOString(),
       },
     };
@@ -172,6 +262,14 @@ class ShippingWorker {
 
   private async completeJob(jobId: string, result: JobProcessingResult): Promise<void> {
     try {
+      // First update courier_request_id if we have it
+      if (result.courier_request_id) {
+        await this.supabase
+          .from('shipping_jobs')
+          .update({ courier_request_id: result.courier_request_id })
+          .eq('id', jobId);
+      }
+
       const { error } = await this.supabase.rpc('complete_shipping_job', {
         p_job_id: jobId,
         p_tracking_number: result.tracking_number!,
@@ -183,6 +281,8 @@ class ShippingWorker {
           label_url: result.label_url,
           courier_name: result.courier_name,
           estimated_delivery_at: result.estimated_delivery_at,
+          courier_request_id: result.courier_request_id,
+          timestamp: new Date().toISOString(),
         },
       });
 

@@ -138,7 +138,8 @@ export interface Database {
           name: string
           slug: string
           description: string
-          price: number
+          price_usd: number
+          price_idr: number
           sale_price: number | null
           size: string
           category: string
@@ -160,7 +161,8 @@ export interface Database {
           name: string
           slug: string
           description: string
-          price: number
+          price_usd: number
+          price_idr: number
           sale_price?: number | null
           size: string
           category: string
@@ -182,7 +184,8 @@ export interface Database {
           name?: string
           slug?: string
           description?: string
-          price?: number
+          price_usd?: number
+          price_idr?: number
           sale_price?: number | null
           size?: string
           category?: string

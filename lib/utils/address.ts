@@ -97,11 +97,24 @@ export function validatePhone(phone: string, countryCode: string): { valid: bool
     return { valid: false, message: 'Invalid country code' }
   }
 
-  const cleanPhone = phone.replace(/\s/g, '')
-  if (!country.phoneFormat.test(cleanPhone)) {
+  // Simplified validation - just check if phone starts with country code
+  const cleanPhone = phone.replace(/[\s()-]/g, '')
+  
+  // Get expected country code prefix
+  let expectedPrefix = ''
+  if (countryCode === 'ID') {
+    expectedPrefix = '+62'
+  } else if (countryCode === 'US') {
+    expectedPrefix = '+1'
+  } else if (countryCode === 'GB') {
+    expectedPrefix = '+44'
+  }
+  
+  // Check if phone starts with country code
+  if (!cleanPhone.startsWith(expectedPrefix)) {
     return { 
       valid: false, 
-      message: `Invalid phone format. Example: ${country.phoneExample}` 
+      message: `Phone number must start with ${expectedPrefix}` 
     }
   }
 

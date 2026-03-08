@@ -13,6 +13,7 @@ type Order = {
   order_number: string
   status: string
   total_amount: number
+  currency_code: string
   created_at: string
   shipping_address: {
     full_name: string
@@ -144,7 +145,7 @@ function OrderConfirmationContent() {
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-600 mb-1">Order Total</p>
-              <p className="text-xl font-bold text-luxury-navy">{formatPrice(order.total_amount)}</p>
+              <p className="text-xl font-bold text-luxury-navy">{formatPrice(order.total_amount, order.currency_code as any)}</p>
             </div>
           </div>
 

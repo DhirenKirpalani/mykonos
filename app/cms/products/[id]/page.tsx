@@ -29,7 +29,7 @@ export default function EditProductPage() {
     sku: '',
     description: '',
     brand: '',
-    price: '',
+    price_usd: '',
     price_idr: '',
     cost_price: '',
     compare_at_price: '',
@@ -114,7 +114,7 @@ export default function EditProductPage() {
           sku: product.sku || '',
           description: product.description || '',
           brand: product.brand || '',
-          price: product.price?.toString() || '',
+          price_usd: product.price_usd?.toString() || '',
           price_idr: product.price_idr?.toString() || '',
           cost_price: product.cost_price?.toString() || '',
           compare_at_price: product.compare_at_price?.toString() || '',
@@ -330,7 +330,7 @@ export default function EditProductPage() {
         },
         body: JSON.stringify({
           ...formData,
-          price: parseFloat(formData.price),
+          price_usd: parseFloat(formData.price_usd),
           price_idr: parseFloat(formData.price_idr),
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
@@ -510,8 +510,8 @@ export default function EditProductPage() {
                 </label>
                 <input
                   type="number"
-                  name="price"
-                  value={formData.price}
+                  name="price_usd"
+                  value={formData.price_usd}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
