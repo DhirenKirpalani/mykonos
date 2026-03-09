@@ -168,7 +168,7 @@ export function getCountryByRegion(region: string): string {
     'EU': 'GB', // Default EU to UK for now
   }
 
-  return regionToCountry[region] || 'US'
+  return regionToCountry[region] || 'ID'
 }
 
 export function formatPhoneNumber(phone: string, countryCode: string): string {

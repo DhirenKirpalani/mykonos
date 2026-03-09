@@ -49,12 +49,12 @@ export async function detectUserCurrency(): Promise<Currency> {
       return 'EUR' // Eurozone countries
     }
     
-    // Default to USD
-    return 'USD'
+    // Default to IDR (Indonesia)
+    return 'IDR'
   } catch (error) {
     console.error('Failed to detect currency:', error)
-    // Default to USD if detection fails
-    return 'USD'
+    // Default to IDR if detection fails
+    return 'IDR'
   }
 }
 

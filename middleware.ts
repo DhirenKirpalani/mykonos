@@ -62,11 +62,41 @@ export async function middleware(request: NextRequest) {
   )
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // Skip maintenance check for CMS routes, API routes, and static files
+  // Check CMS access authorization
+  if (request.nextUrl.pathname.startsWith('/cms')) {
+    if (!user) {
+      // Not authenticated - redirect to login
+      return NextResponse.redirect(new URL('/login?redirect=/cms', request.url))
+    }
+
+    // Check user role and permissions
+    try {
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = userData?.role || 'customer'
+
+      // Only admin and staff can access CMS
+      if (userRole !== 'admin' && userRole !== 'staff') {
+        // User doesn't have permission - redirect to home with error
+        return NextResponse.redirect(new URL('/?error=unauthorized', request.url))
+      }
+    } catch (error) {
+      console.error('Error checking CMS access:', error)
+      return NextResponse.redirect(new URL('/?error=unauthorized', request.url))
+    }
+
+    return response
+  }
+
+  // Skip maintenance check for API routes and static files
   if (
-    request.nextUrl.pathname.startsWith('/cms') ||
     request.nextUrl.pathname.startsWith('/api') ||
     request.nextUrl.pathname.startsWith('/_next') ||
     request.nextUrl.pathname.startsWith('/static') ||
