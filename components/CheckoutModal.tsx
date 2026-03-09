@@ -68,7 +68,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
     }
   }, [isOpen, region])
 
-  const currentCountryCode = Object.values(COUNTRIES).find(c => c.name === shippingForm.country)?.code || 'US'
+  const currentCountryCode = Object.values(COUNTRIES).find(c => c.name === shippingForm.country)?.code || 'ID'
   const currentCountry = COUNTRIES[currentCountryCode]
 
   const validateEmail = (email: string) => {

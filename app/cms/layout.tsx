@@ -36,7 +36,7 @@ export default function CMSLayout({
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  // Check authentication
+  // Check authentication and authorization
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -63,6 +63,13 @@ export default function CMSLayout({
       subscription.unsubscribe()
     }
   }, [router])
+
+  // Check role-based access after role is loaded
+  useEffect(() => {
+    if (!roleLoading && isAuthenticated && !canAccessCMS(role)) {
+      router.push('/?error=unauthorized')
+    }
+  }, [role, roleLoading, isAuthenticated, router])
 
   // Fetch unread message count
   useEffect(() => {
@@ -139,7 +146,7 @@ export default function CMSLayout({
       name: 'Customers', 
       href: '/cms/customers', 
       icon: Users,
-      show: role === 'admin' || role === 'support_agent'
+      show: role === 'admin' || role === 'staff'
     },
     { 
       name: 'Chat', 
