@@ -23,15 +23,25 @@ export default function RegisterPage() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Prevent duplicate submissions
+    if (isSubmitting || loading) {
+      console.log('Form submission already in progress, ignoring duplicate')
+      return
+    }
+    
     setError('')
+    setIsSubmitting(true)
 
     // Validate email format
     if (!validateEmail(formData.email)) {
       setError('Please enter a valid email address')
+      setIsSubmitting(false)
       return
     }
 
@@ -44,6 +54,7 @@ export default function RegisterPage() {
 
     if (existingUser) {
       setError('An account with this email already exists')
+      setIsSubmitting(false)
       return
     }
 
@@ -51,22 +62,38 @@ export default function RegisterPage() {
     const passwordValidation = validatePassword(formData.password)
     if (!passwordValidation.isValid) {
       setError('Password does not meet security requirements. Please check the password strength indicator.')
+      setIsSubmitting(false)
       return
     }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
+      setIsSubmitting(false)
       return
     }
 
     if (!termsAccepted) {
       setError('You must accept the Terms of Service and Privacy Policy to continue')
+      setIsSubmitting(false)
       return
     }
 
     setLoading(true)
 
     try {
+      // Detect user's country before registration
+      let detectedCountry = 'ID' // Default to Indonesia
+      try {
+        const regionResponse = await fetch('/api/region/detect')
+        if (regionResponse.ok) {
+          const regionData = await regionResponse.json()
+          detectedCountry = regionData.country_code || 'ID'
+          console.log('Detected country for new user:', detectedCountry)
+        }
+      } catch (regionError) {
+        console.error('Failed to detect region, using default:', regionError)
+      }
+
       // Get anonymous user ID before registration (if exists)
       const { data: { session: anonSession } } = await supabase.auth.getSession()
       const anonymousUserId = anonSession?.user?.is_anonymous ? anonSession.user.id : null
@@ -80,11 +107,21 @@ export default function RegisterPage() {
             first_name: formData.firstName,
             last_name: formData.lastName,
             phone: formData.phone,
+            country: detectedCountry,
           },
         },
       })
 
-      if (error) throw error
+      if (error) {
+        // Handle rate limit errors specifically
+        if (error.message?.includes('rate limit') || error.message?.includes('email_send_rate_limit')) {
+          setError('Too many signup attempts. Please wait a few minutes and try again.')
+          setIsSubmitting(false)
+          setLoading(false)
+          return
+        }
+        throw error
+      }
 
       // Merge anonymous cart to new registered user
       if (anonymousUserId && data.user) {
@@ -150,6 +187,7 @@ export default function RegisterPage() {
       setError(error.message || 'Failed to create account')
     } finally {
       setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -299,10 +337,10 @@ export default function RegisterPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || isSubmitting}
                 className="w-full rounded-md bg-luxury-gold px-6 py-3 font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {loading || isSubmitting ? 'Creating Account...' : 'Create Account'}
               </button>
             </form>
 

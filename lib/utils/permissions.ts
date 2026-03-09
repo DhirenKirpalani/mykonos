@@ -51,13 +51,7 @@ export function isAdmin(role: UserRole): boolean {
  * Check if user can access CMS
  */
 export function canAccessCMS(role: UserRole): boolean {
-  return hasAnyPermission(role, [
-    PERMISSIONS.MANAGE_HOMEPAGE_BANNERS,
-    PERMISSIONS.MANAGE_FEATURED_COLLECTIONS,
-    PERMISSIONS.MANAGE_FEATURED_PRODUCTS,
-    PERMISSIONS.CREATE_PRODUCTS,
-    PERMISSIONS.CREATE_PROMO_CODES,
-  ])
+  return role === 'admin' || role === 'staff'
 }
 
 /**
@@ -123,25 +117,10 @@ export function getRoleInfo(role: UserRole): {
       color: 'gray',
       description: 'Regular customer account',
     },
-    support_agent: {
-      name: 'Support Agent',
+    staff: {
+      name: 'Staff',
       color: 'blue',
-      description: 'Customer support representative',
-    },
-    inventory_manager: {
-      name: 'Inventory Manager',
-      color: 'purple',
-      description: 'Manages inventory and fulfillment',
-    },
-    content_manager: {
-      name: 'Content Manager',
-      color: 'green',
-      description: 'Manages website content',
-    },
-    marketing_manager: {
-      name: 'Marketing Manager',
-      color: 'orange',
-      description: 'Manages promotions and marketing',
+      description: 'Staff member with CMS access',
     },
     admin: {
       name: 'Administrator',

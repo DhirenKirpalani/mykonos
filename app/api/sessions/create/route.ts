@@ -17,8 +17,8 @@ export async function POST(request: Request) {
     const body = await request.json()
     
     const {
-      region_code = 'US',
-      currency_code = 'USD',
+      region_code = 'ID',
+      currency_code = 'IDR',
       language_code = 'en',
       device_type,
       browser,

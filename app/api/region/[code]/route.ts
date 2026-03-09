@@ -48,7 +48,7 @@ export async function GET(
       .single()
 
     return NextResponse.json({
-      country_code: (countryRegion as any)?.country_code || 'US',
+      country_code: (countryRegion as any)?.country_code || 'ID',
       region,
       country_region: countryRegion,
       shipping_zone: shippingZone,
