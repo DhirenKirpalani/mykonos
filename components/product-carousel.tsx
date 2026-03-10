@@ -64,7 +64,7 @@ export function ProductCarousel({
     : 'bg-[#C2A36B]/50'
 
   return (
-    <section className={`relative ${backgroundColor} py-8 md:py-12 lg:py-16 xl:py-20`}>
+    <section className={`relative ${backgroundColor} py-6 md:py-8 lg:py-10`}>
       <div className="mx-auto max-w-7xl px-3 md:px-6 lg:px-8">
         {/* Title with scroll reveal */}
         <motion.div
@@ -72,16 +72,16 @@ export function ProductCarousel({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-30%" }}
           transition={{ duration: 0.55, ease: [0.25, 0.1, 0.25, 1] }}
-          className="mb-8 text-center md:mb-12 lg:mb-16"
+          className="mb-6 text-center md:mb-8"
         >
           <h2
             className={`
               font-serif
-              text-2xl
+              text-xl
               font-bold
               ${titleColor}
-              md:text-3xl
-              lg:text-5xl
+              md:text-2xl
+              lg:text-3xl
             `}
           >
             {title}
@@ -92,7 +92,7 @@ export function ProductCarousel({
             whileInView={{ opacity: 1, scaleX: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
-            className={`mx-auto mt-4 h-px w-12 ${dividerColor} md:mt-6 md:w-16`}
+            className={`mx-auto mt-3 h-px w-12 ${dividerColor} md:mt-4 md:w-14`}
           />
         </motion.div>
 

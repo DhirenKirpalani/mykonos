@@ -23,6 +23,8 @@ interface ProductVariantModalProps {
     sale_price?: number | null
     variants?: ProductVariant[]
     stock_quantity: number
+    min_purchase_quantity?: number | null
+    max_purchase_quantity?: number | null
   }
   onAddToCart: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
   onBuyNow?: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
@@ -37,8 +39,11 @@ export function ProductVariantModal({
   onBuyNow,
   mode,
 }: ProductVariantModalProps) {
+  const minQty = product.min_purchase_quantity || 1
+  const maxQty = product.max_purchase_quantity || product.stock_quantity
+  
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState(minQty)
   const [isProcessing, setIsProcessing] = useState(false)
 
   if (!isOpen) return null
@@ -61,9 +66,26 @@ export function ProductVariantModal({
 
   const handleQuantityChange = (delta: number) => {
     const newQuantity = quantity + delta
-    if (newQuantity >= 1 && newQuantity <= product.stock_quantity) {
-      setQuantity(newQuantity)
+    
+    // Validate minimum quantity
+    if (newQuantity < minQty) {
+      toast.error(`Minimum quantity is ${minQty}`)
+      return
     }
+    
+    // Validate maximum quantity
+    if (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && newQuantity > product.max_purchase_quantity) {
+      toast.error(`Maximum quantity is ${product.max_purchase_quantity}`)
+      return
+    }
+    
+    // Validate stock quantity
+    if (newQuantity > product.stock_quantity) {
+      toast.error(`Only ${product.stock_quantity} items available`)
+      return
+    }
+    
+    setQuantity(newQuantity)
   }
 
   const handleSubmit = async () => {
@@ -72,6 +94,19 @@ export function ProductVariantModal({
       return
     }
 
+    // Validate minimum quantity
+    if (quantity < minQty) {
+      toast.error(`Minimum quantity is ${minQty}`)
+      return
+    }
+
+    // Validate maximum quantity
+    if (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && quantity > product.max_purchase_quantity) {
+      toast.error(`Maximum quantity is ${product.max_purchase_quantity}`)
+      return
+    }
+
+    // Validate stock quantity
     if (quantity > product.stock_quantity) {
       toast.error(`Only ${product.stock_quantity} items available`)
       return
@@ -186,7 +221,7 @@ export function ProductVariantModal({
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => handleQuantityChange(-1)}
-                    disabled={quantity <= 1}
+                    disabled={quantity <= minQty}
                     className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Minus className="h-4 w-4" />
@@ -196,7 +231,10 @@ export function ProductVariantModal({
                   </span>
                   <button
                     onClick={() => handleQuantityChange(1)}
-                    disabled={quantity >= product.stock_quantity}
+                    disabled={
+                      quantity >= product.stock_quantity ||
+                      (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && quantity >= product.max_purchase_quantity)
+                    }
                     className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Plus className="h-4 w-4" />
@@ -210,7 +248,7 @@ export function ProductVariantModal({
                   <Button
                     onClick={handleSubmit}
                     disabled={isProcessing || !allVariantsSelected || product.stock_quantity === 0}
-                    className="w-full bg-[#EE4D2D] hover:bg-[#d43f1f] text-white font-medium py-6 text-base"
+                    className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-6 text-base"
                     size="lg"
                   >
                     {isProcessing ? (

@@ -23,6 +23,8 @@ type CartItem = {
     image_urls: string[]
     size: string
     stock_quantity: number
+    min_purchase_quantity: number | null
+    max_purchase_quantity: number | null
   }
 }
 
@@ -79,7 +81,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
         .from('cart_items')
         .select(`
           *,
-          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price)
+          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price, min_purchase_quantity, max_purchase_quantity)
         `)
         .eq('user_id', session.user.id)
 
@@ -94,7 +96,29 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
   }
 
   const updateQuantity = async (itemId: string, newQuantity: number) => {
-    if (newQuantity < 1) return
+    const item = cartItems.find(i => i.id === itemId)
+    if (!item) return
+
+    const minQty = item.product.min_purchase_quantity || 1
+    const maxQty = item.product.max_purchase_quantity || item.product.stock_quantity
+
+    // Validate minimum quantity
+    if (newQuantity < minQty) {
+      toast.error(`Minimum quantity is ${minQty}`)
+      return
+    }
+
+    // Validate maximum quantity
+    if (maxQty && newQuantity > maxQty) {
+      toast.error(`Maximum quantity is ${maxQty}`)
+      return
+    }
+
+    // Validate stock quantity
+    if (newQuantity > item.product.stock_quantity) {
+      toast.error(`Only ${item.product.stock_quantity} items available`)
+      return
+    }
 
     try {
       console.log('🛒 [CART DRAWER] Updating quantity:', { itemId, newQuantity })
@@ -243,10 +267,10 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                           {/* Quantity */}
                           <div className="flex items-center border border-black/10">
                             <button
-                              onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                              className="px-3 py-2 text-black/70 hover:text-black transition-colors"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              className="px-3 py-2 text-black/70 hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="Decrease quantity"
-                              disabled={item.quantity <= 1}
+                              disabled={item.quantity <= (item.product.min_purchase_quantity || 1)}
                             >
                               <Minus className="h-3 w-3" />
                             </button>
@@ -255,9 +279,12 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                             </span>
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="px-3 py-2 text-black/70 hover:text-black transition-colors"
+                              className="px-3 py-2 text-black/70 hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="Increase quantity"
-                              disabled={item.quantity >= item.product.stock_quantity}
+                              disabled={
+                                item.quantity >= item.product.stock_quantity ||
+                                (item.product.max_purchase_quantity !== null && item.quantity >= item.product.max_purchase_quantity)
+                              }
                             >
                               <Plus className="h-3 w-3" />
                             </button>

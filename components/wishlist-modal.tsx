@@ -23,6 +23,8 @@ type WishlistItem = {
     image_urls: string[]
     size: string
     stock_quantity: number
+    min_purchase_quantity?: number | null
+    max_purchase_quantity?: number | null
   }
 }
 
@@ -77,7 +79,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
         .from('wishlist_items')
         .select(`
           *,
-          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price)
+          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price, min_purchase_quantity, max_purchase_quantity)
         `)
         .eq('user_id', session.user.id)
 
@@ -124,8 +126,24 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
     }
   }
 
-  const updateQuantity = async (itemId: string, productId: string, newQuantity: number, maxStock: number) => {
-    if (newQuantity < 1) return
+  const updateQuantity = async (itemId: string, productId: string, newQuantity: number, item: WishlistItem) => {
+    const minQty = item.product.min_purchase_quantity || 1
+    const maxQty = item.product.max_purchase_quantity
+    const maxStock = item.product.stock_quantity
+    
+    // Validate minimum quantity
+    if (newQuantity < minQty) {
+      toast.error(`Minimum quantity is ${minQty}`)
+      return
+    }
+    
+    // Validate maximum quantity
+    if (maxQty !== null && maxQty !== undefined && newQuantity > maxQty) {
+      toast.error(`Maximum quantity is ${maxQty}`)
+      return
+    }
+    
+    // Validate stock quantity
     if (newQuantity > maxStock) {
       toast.error(`Only ${maxStock} items available`)
       return
@@ -310,29 +328,6 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                         </div>
 
                         <div className="space-y-3">
-                          {/* Quantity Selector */}
-                          <div className="flex items-center border border-black/10">
-                            <button
-                              onClick={() => updateQuantity(item.id, item.product_id, (quantities[item.id] || 1) - 1, item.product.stock_quantity)}
-                              className="px-3 py-2 text-black/70 hover:text-black transition-colors"
-                              aria-label="Decrease quantity"
-                              disabled={(quantities[item.id] || 1) <= 1}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="px-4 text-sm tracking-wide">
-                              {quantities[item.id] || 1}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(item.id, item.product_id, (quantities[item.id] || 1) + 1, item.product.stock_quantity)}
-                              className="px-3 py-2 text-black/70 hover:text-black transition-colors"
-                              aria-label="Increase quantity"
-                              disabled={(quantities[item.id] || 1) >= item.product.stock_quantity}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-
                           <button
                             onClick={() => addToCart(
                               item.id,
