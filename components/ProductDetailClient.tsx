@@ -28,6 +28,8 @@ interface ProductDetailClientProps {
     price: number
     sale_price?: number | null
     stock_quantity: number
+    min_purchase_quantity?: number | null
+    max_purchase_quantity?: number | null
     variants?: any[]
   }
 }
@@ -181,6 +183,22 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   }
 
   const handleBuyNow = async (productIdOverride?: string, quantity: number = 1, selectedVariants?: Record<string, string>) => {
+    // Validate quantity against min/max limits
+    if (quantity < minQuantity) {
+      toast.error(`Minimum quantity is ${minQuantity}`)
+      return
+    }
+    
+    if (maxQuantity && quantity > maxQuantity) {
+      toast.error(`Maximum quantity is ${maxQuantity}`)
+      return
+    }
+    
+    if (quantity > stockQuantity) {
+      toast.error(`Only ${stockQuantity} items available`)
+      return
+    }
+
     // Check if product has variants and no variants selected
     if (!selectedVariants && productData?.variants && productData.variants.length > 0) {
       setVariantModalMode('buy-now')
@@ -299,7 +317,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
       )}
 
       <Button 
-        className="w-full bg-[#EE4D2D] hover:bg-[#d43f1f] text-white font-medium py-3 text-base transition-all duration-300 border-0"
+        className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-3 text-base transition-all duration-300 border-0"
         size="lg" 
         onClick={() => handleBuyNow(undefined, quantity)}
         disabled={isBuyingNow}

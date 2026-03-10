@@ -42,8 +42,28 @@ export async function PATCH(
       )
     }
 
-    // Check inventory
+    // Validate quantity against product constraints
     const product = (cartItem as any).product
+    const minQty = product.min_purchase_quantity || 1
+    const maxQty = product.max_purchase_quantity
+
+    // Check minimum quantity
+    if (quantity < minQty) {
+      return NextResponse.json(
+        { error: `Minimum quantity is ${minQty}` },
+        { status: 400 }
+      )
+    }
+
+    // Check maximum quantity
+    if (maxQty && quantity > maxQty) {
+      return NextResponse.json(
+        { error: `Maximum quantity is ${maxQty}` },
+        { status: 400 }
+      )
+    }
+
+    // Check inventory
     if (product.stock_quantity < quantity) {
       return NextResponse.json(
         { error: `Only ${product.stock_quantity} items available` },

@@ -29,6 +29,9 @@ type CartItem = {
     price_usd: number
     price_idr: number
     sale_price: number | null
+    stock_quantity?: number
+    min_purchase_quantity?: number | null
+    max_purchase_quantity?: number | null
   }
 }
 
@@ -189,7 +192,7 @@ export default function CheckoutPage() {
         
         const { data: product, error: productError } = await supabase
           .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, sale_price')
+          .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity')
           .eq('id', buyNowData.product_id)
           .single()
 
@@ -233,7 +236,7 @@ export default function CheckoutPage() {
             .from('cart_items')
             .select(`
               *,
-              product:products(name, slug, image_urls, price_usd, price_idr, sale_price)
+              product:products(name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity)
             `)
             .eq('user_id', session.user.id)
           console.log('🔍 [CHECKOUT INIT] Cart query completed, processing results...')
@@ -305,7 +308,7 @@ export default function CheckoutPage() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity')
+        .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity')
         .gt('stock_quantity', 0)
         .limit(3)
         .order('created_at', { ascending: false })
@@ -323,7 +326,7 @@ export default function CheckoutPage() {
       // Fetch product details
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('id, name, slug, image_urls, price_usd, price_idr, sale_price')
+        .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity')
         .eq('id', productId)
         .single()
 
@@ -884,7 +887,29 @@ export default function CheckoutPage() {
   }
 
   const updateQuantity = async (itemId: string, newQuantity: number) => {
-    if (newQuantity < 1) return
+    const item = cartItems.find(i => i.id === itemId)
+    if (!item) return
+
+    const minQty = item.product.min_purchase_quantity || 1
+    const maxQty = item.product.max_purchase_quantity || item.product.stock_quantity || 999999
+
+    // Validate minimum quantity
+    if (newQuantity < minQty) {
+      toast.error(`Minimum quantity is ${minQty}`)
+      return
+    }
+
+    // Validate maximum quantity
+    if (item.product.max_purchase_quantity !== null && item.product.max_purchase_quantity !== undefined && newQuantity > item.product.max_purchase_quantity) {
+      toast.error(`Maximum quantity is ${item.product.max_purchase_quantity}`)
+      return
+    }
+
+    // Validate stock quantity
+    if (item.product.stock_quantity && newQuantity > item.product.stock_quantity) {
+      toast.error(`Only ${item.product.stock_quantity} items available`)
+      return
+    }
 
     try {
       // For Buy Now items (temp), just update local state
@@ -1204,37 +1229,11 @@ export default function CheckoutPage() {
                         )}
                       </div>
 
-                      {/* Quantity Controls and Total */}
+                      {/* Quantity and Total */}
                       <div className="flex items-center justify-between gap-3 mt-2">
-                        <div className="flex items-center gap-1.5 sm:gap-2 border border-gray-300 rounded-lg">
-                          <button
-                            onClick={() => item.id.startsWith('quick-') 
-                              ? updateQuickItemQuantity(item.product_id, item.quantity - 1)
-                              : updateQuantity(item.id, item.quantity - 1)
-                            }
-                            disabled={item.quantity <= 1}
-                            className="p-1.5 sm:p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            aria-label="Decrease quantity"
-                          >
-                            <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                            </svg>
-                          </button>
-                          <span className="w-8 sm:w-10 text-center text-sm sm:text-base font-medium">{item.quantity}</span>
-                          <button
-                            onClick={() => item.id.startsWith('quick-') 
-                              ? updateQuickItemQuantity(item.product_id, item.quantity + 1)
-                              : updateQuantity(item.id, item.quantity + 1)
-                            }
-                            className="p-1.5 sm:p-2 hover:bg-gray-100 transition-colors"
-                            aria-label="Increase quantity"
-                          >
-                            <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                          </button>
-                        </div>
-
+                        <span className="text-sm sm:text-base text-gray-600">
+                          Qty: {item.quantity}
+                        </span>
                         <p className="text-sm sm:text-base font-bold text-gray-900">
                           {region ? formatRegionPrice(price * item.quantity, region) : formatCurrencyPrice(price * item.quantity, currency)}
                         </p>
@@ -1245,71 +1244,6 @@ export default function CheckoutPage() {
               )
             })}
 
-            {/* Recommended Products Quick Add */}
-            {recommendedProducts.length > 0 && (
-              <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
-                <button
-                  onClick={() => setIsRecommendedExpanded(!isRecommendedExpanded)}
-                  className="w-full flex items-center justify-between text-base sm:text-lg font-semibold text-gray-900 mb-4 hover:text-luxury-navy transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5" />
-                    {t.checkout.addToOrder}
-                  </div>
-                  <ChevronDown
-                    className={`h-5 w-5 transition-transform duration-200 ${isRecommendedExpanded ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {isRecommendedExpanded && (
-                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                  {recommendedProducts.map((product) => {
-                    const basePrice = region?.code === 'ID' && (product as any).price_idr 
-                      ? (product as any).price_idr 
-                      : (product as any).price_usd || 0
-                    const effectivePrice = product.sale_price && product.sale_price < basePrice
-                      ? product.sale_price
-                      : basePrice
-                    const isAdded = quickAddedItems.some(item => item.product_id === product.id)
-                    
-                    return (
-                      <div key={product.id} className="flex gap-3 p-3 sm:p-4 rounded-lg border border-gray-200 hover:border-luxury-navy/50 transition-all bg-white">
-                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 rounded-md bg-gray-100 overflow-hidden">
-                          {product.image_urls && product.image_urls[0] && (
-                            <img
-                              src={product.image_urls[0]}
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0 flex flex-col justify-between">
-                          <h4 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 leading-tight mb-2">
-                            {product.name}
-                          </h4>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm sm:text-base font-bold text-luxury-navy">
-                              {region ? formatRegionPrice(effectivePrice, region) : formatCurrencyPrice(effectivePrice, currency)}
-                            </p>
-                            <button
-                              onClick={() => handleQuickAdd(product.id)}
-                              disabled={isAdded}
-                              className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
-                                isAdded
-                                  ? 'bg-green-100 text-green-700 border border-green-300 cursor-default'
-                                  : 'text-luxury-navy border border-luxury-navy hover:bg-luxury-navy hover:text-white'
-                              }`}
-                            >
-                              {isAdded ? t.checkout.added : t.checkout.add}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Shipping Address Section - For logged in users */}
             {!isGuest && (

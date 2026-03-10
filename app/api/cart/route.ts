@@ -110,7 +110,22 @@ export async function POST(request: Request) {
       )
     }
 
-    const typedProduct = product as Product
+    const typedProduct = product as Product & {
+      min_purchase_quantity?: number | null
+      max_purchase_quantity?: number | null
+    }
+
+    // Validate quantity constraints
+    const minQty = typedProduct.min_purchase_quantity || 1
+    const maxQty = typedProduct.max_purchase_quantity
+
+    // Check minimum quantity
+    if (quantity < minQty) {
+      return NextResponse.json(
+        { error: `Minimum quantity is ${minQty}` },
+        { status: 400 }
+      )
+    }
 
     // Check inventory
     if ((typedProduct.stock_quantity ?? 0) < quantity) {
@@ -137,6 +152,14 @@ export async function POST(request: Request) {
       const typedExisting = existing as CartItem
       // Update quantity
       const newQuantity = typedExisting.quantity + quantity
+
+      // Check maximum quantity for combined total
+      if (maxQty && newQuantity > maxQty) {
+        return NextResponse.json(
+          { error: `Maximum quantity is ${maxQty}` },
+          { status: 400 }
+        )
+      }
 
       if (newQuantity > (typedProduct.stock_quantity ?? 0)) {
         return NextResponse.json(
