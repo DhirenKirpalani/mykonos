@@ -16,6 +16,8 @@ type CartItem = {
   product_id: string
   quantity: number
   price_at_add: number
+  variant_name: string | null
+  variant_sku: string | null
   product: {
     id: string
     name: string
@@ -25,6 +27,7 @@ type CartItem = {
     stock_quantity: number
     min_purchase_quantity: number | null
     max_purchase_quantity: number | null
+    variants?: any[]
   }
 }
 
@@ -81,7 +84,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
         .from('cart_items')
         .select(`
           *,
-          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price, min_purchase_quantity, max_purchase_quantity)
+          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price, min_purchase_quantity, max_purchase_quantity, variants)
         `)
         .eq('user_id', session.user.id)
 
@@ -258,9 +261,15 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                           <h3 className="text-sm font-medium tracking-wide uppercase">
                             {item.product.name}
                           </h3>
-                          <p className="mt-1 text-xs tracking-wide text-black/60">
-                            {item.product.size}
-                          </p>
+                          {item.variant_name ? (
+                            <p className="mt-1 text-xs tracking-wide text-black/60">
+                              {item.variant_name}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs tracking-wide text-black/60">
+                              {item.product.size}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between">
@@ -292,12 +301,22 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
                           {/* Price */}
                           <p className="text-sm font-medium tracking-wide">
-                            {region ? formatPrice(
-                              (region.code === 'ID' && (item.product as any).price_idr 
-                                ? (item.product as any).price_idr 
-                                : (item.product as any).price_usd || 0) * item.quantity, 
-                              region
-                            ) : '...'}
+                            {region ? (() => {
+                              let price = 0
+                              // If variant is selected, find variant price
+                              if (item.variant_sku && item.product.variants) {
+                                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                                if (variant) {
+                                  price = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                                }
+                              } else {
+                                // Use product price
+                                price = region.code === 'ID' && (item.product as any).price_idr 
+                                  ? (item.product as any).price_idr 
+                                  : (item.product as any).price_usd || 0
+                              }
+                              return formatPrice(price * item.quantity, region)
+                            })() : '...'}
                           </p>
                         </div>
 

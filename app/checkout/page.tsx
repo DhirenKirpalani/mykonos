@@ -211,13 +211,16 @@ export default function CheckoutPage() {
           id: 'buy-now-temp',
           product_id: typedProduct.id,
           quantity: buyNowData.quantity,
+          variant_name: buyNowData.variant_name || null,
+          variant_sku: buyNowData.variant_sku || null,
           product: {
             name: typedProduct.name,
             slug: typedProduct.slug,
             image_urls: typedProduct.image_urls,
             price_usd: typedProduct.price_usd,
             price_idr: typedProduct.price_idr,
-            sale_price: typedProduct.sale_price
+            sale_price: typedProduct.sale_price,
+            variants: typedProduct.variants
           }
         }
 
@@ -236,7 +239,7 @@ export default function CheckoutPage() {
             .from('cart_items')
             .select(`
               *,
-              product:products(name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity)
+              product:products(name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants)
             `)
             .eq('user_id', session.user.id)
           console.log('🔍 [CHECKOUT INIT] Cart query completed, processing results...')
@@ -778,12 +781,13 @@ export default function CheckoutPage() {
       // Prepare items for Midtrans - include shipping and tax as line items
       const itemsForMidtrans = [
         ...[...cartItems, ...quickAddedItems].map(item => {
-          const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
-            ? (item.product as any).price_idr 
-            : (item.product as any).price_usd || 0
+          const basePrice = getBasePrice(item.product, (item as any).variant_sku)
+          const itemName = (item as any).variant_name 
+            ? `${item.product.name} - ${(item as any).variant_name}`
+            : item.product.name
           return {
             id: item.product_id,
-            name: item.product.name,
+            name: itemName,
             price: convertToIDR(getEffectivePrice(basePrice, item.product.sale_price)),
             quantity: item.quantity,
           }
@@ -1094,7 +1098,15 @@ export default function CheckoutPage() {
   }
 
   // Helper function to get base price from product based on region
-  const getBasePrice = (product: any) => {
+  const getBasePrice = (product: any, variantSku?: string | null) => {
+    // If variant is specified, find variant price
+    if (variantSku && product.variants) {
+      const variant = product.variants.find((v: any) => v.sku === variantSku)
+      if (variant) {
+        return region?.code === 'ID' ? variant.price_idr : variant.price_usd
+      }
+    }
+    // Otherwise use product price
     return region?.code === 'ID' && product.price_idr 
       ? product.price_idr 
       : product.price_usd || 0
@@ -1104,7 +1116,7 @@ export default function CheckoutPage() {
   const allItems = [...cartItems, ...quickAddedItems]
   
   const subtotal = allItems.reduce((total, item) => {
-    const basePrice = getBasePrice(item.product)
+    const basePrice = getBasePrice(item.product, (item as any).variant_sku)
     const price = getEffectivePrice(basePrice, item.product.sale_price)
     return total + (price * item.quantity)
   }, 0)
@@ -1193,7 +1205,7 @@ export default function CheckoutPage() {
 
             {/* Cart Items */}
             {allItems.map((item) => {
-              const basePrice = getBasePrice(item.product)
+              const basePrice = getBasePrice(item.product, (item as any).variant_sku)
               const price = getEffectivePrice(basePrice, item.product.sale_price)
               const hasDiscount = item.product.sale_price && item.product.sale_price < basePrice
               
@@ -1213,9 +1225,16 @@ export default function CheckoutPage() {
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       {/* Product Name and Remove Button */}
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-medium text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
-                          {item.product.name}
-                        </h3>
+                        <div>
+                          <h3 className="font-medium text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
+                            {item.product.name}
+                          </h3>
+                          {(item as any).variant_name && (
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                              {(item as any).variant_name}
+                            </p>
+                          )}
+                        </div>
                         {item.id.startsWith('quick-') && (
                           <button
                             onClick={() => removeQuickItem(item.product_id)}
