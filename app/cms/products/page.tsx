@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Edit, Trash2, Eye, EyeOff, Upload } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, EyeOff, Upload, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { StockEditModal } from '@/components/StockEditModal'
 
 interface Product {
   id: string
@@ -23,6 +24,8 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [stockModalOpen, setStockModalOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   useEffect(() => {
     fetchProducts()
@@ -123,6 +126,15 @@ export default function ProductsPage() {
     product.slug.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const handleStockClick = (product: Product) => {
+    setSelectedProduct(product)
+    setStockModalOpen(true)
+  }
+
+  const handleStockUpdate = () => {
+    fetchProducts()
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -201,17 +213,20 @@ export default function ProductsPage() {
                   <td className="py-4 text-gray-900">${((product.price_usd || 0)).toFixed(2)}</td>
                   <td className="py-4 text-gray-900">Rp{((product.price_idr || 0)).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                   <td className="py-4">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                    <button
+                      onClick={() => handleStockClick(product)}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-all hover:ring-2 hover:ring-offset-1 ${
                         product.stock_quantity > 10
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-green-100 text-green-800 hover:ring-green-300'
                           : product.stock_quantity > 0
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-yellow-100 text-yellow-800 hover:ring-yellow-300'
+                          : 'bg-red-100 text-red-800 hover:ring-red-300'
                       }`}
+                      title="Click to edit stock"
                     >
+                      <Package className="h-3 w-3" />
                       {product.stock_quantity} units
-                    </span>
+                    </button>
                   </td>
                   <td className="py-4">
                     <span
@@ -271,6 +286,15 @@ export default function ProductsPage() {
           )}
         </div>
       </div>
+
+      {selectedProduct && (
+        <StockEditModal
+          isOpen={stockModalOpen}
+          onClose={() => setStockModalOpen(false)}
+          product={selectedProduct}
+          onUpdate={handleStockUpdate}
+        />
+      )}
     </div>
   )
 }

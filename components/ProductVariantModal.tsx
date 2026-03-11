@@ -4,12 +4,16 @@ import { useState } from 'react'
 import { X, Plus, Minus, ShoppingCart, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useRegion } from '@/contexts/RegionContext'
+import { formatPrice } from '@/lib/utils'
 
 interface ProductVariant {
-  id: string
   name: string
-  options: string[]
-  stock?: number
+  sku: string
+  price_usd: number
+  price_idr: number
+  stock_quantity: number
+  image_url?: string
 }
 
 interface ProductVariantModalProps {
@@ -28,7 +32,8 @@ interface ProductVariantModalProps {
   }
   onAddToCart: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
   onBuyNow?: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
-  mode: 'add-to-cart' | 'buy-now'
+  onAddToWishlist?: (selectedVariants?: Record<string, string>) => Promise<void>
+  mode: 'add-to-cart' | 'buy-now' | 'wishlist'
 }
 
 export function ProductVariantModal({
@@ -37,31 +42,34 @@ export function ProductVariantModal({
   product,
   onAddToCart,
   onBuyNow,
+  onAddToWishlist,
   mode,
 }: ProductVariantModalProps) {
+  const { region } = useRegion()
   const minQty = product.min_purchase_quantity || 1
   const maxQty = product.max_purchase_quantity || product.stock_quantity
   
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [quantity, setQuantity] = useState(minQty)
   const [isProcessing, setIsProcessing] = useState(false)
+  
+  const currencyCode = region?.currency_code || 'USD'
+  const isIDR = region?.code === 'ID'
 
   if (!isOpen) return null
 
   const hasVariants = product.variants && product.variants.length > 0
-  const allVariantsSelected = hasVariants
-    ? product.variants!.every((variant) => selectedVariants[variant.name])
-    : true
 
   const effectivePrice = product.sale_price && product.sale_price < product.price
     ? product.sale_price
     : product.price
 
-  const handleVariantSelect = (variantName: string, option: string) => {
-    setSelectedVariants((prev) => ({
-      ...prev,
-      [variantName]: option,
-    }))
+  const handleVariantSelect = (variant: ProductVariant) => {
+    setSelectedVariant(variant)
+    // Reset quantity if it exceeds the variant's stock
+    if (quantity > variant.stock_quantity) {
+      setQuantity(Math.min(minQty, variant.stock_quantity))
+    }
   }
 
   const handleQuantityChange = (delta: number) => {
@@ -80,8 +88,9 @@ export function ProductVariantModal({
     }
     
     // Validate stock quantity
-    if (newQuantity > product.stock_quantity) {
-      toast.error(`Only ${product.stock_quantity} items available`)
+    const availableStock = selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity
+    if (newQuantity > availableStock) {
+      toast.error(`Only ${availableStock} items available`)
       return
     }
     
@@ -89,8 +98,8 @@ export function ProductVariantModal({
   }
 
   const handleSubmit = async () => {
-    if (hasVariants && !allVariantsSelected) {
-      toast.error('Please select all variant options')
+    if (hasVariants && !selectedVariant) {
+      toast.error('Please select a variant')
       return
     }
 
@@ -107,17 +116,25 @@ export function ProductVariantModal({
     }
 
     // Validate stock quantity
-    if (quantity > product.stock_quantity) {
-      toast.error(`Only ${product.stock_quantity} items available`)
+    const availableStock = selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity
+    if (quantity > availableStock) {
+      toast.error(`Only ${availableStock} items available`)
       return
     }
 
     setIsProcessing(true)
     try {
-      if (mode === 'buy-now' && onBuyNow) {
-        await onBuyNow(product.id, quantity, hasVariants ? selectedVariants : undefined)
+      const variantData = selectedVariant ? {
+        variant_name: selectedVariant.name,
+        variant_sku: selectedVariant.sku
+      } : undefined
+      
+      if (mode === 'wishlist' && onAddToWishlist) {
+        await onAddToWishlist(variantData as any)
+      } else if (mode === 'buy-now' && onBuyNow) {
+        await onBuyNow(product.id, quantity, variantData as any)
       } else {
-        await onAddToCart(product.id, quantity, hasVariants ? selectedVariants : undefined)
+        await onAddToCart(product.id, quantity, variantData as any)
       }
       onClose()
     } catch (error) {
@@ -165,51 +182,66 @@ export function ProductVariantModal({
               {/* Price */}
               <div className="flex items-baseline gap-2 mb-4">
                 <span className="text-3xl font-bold text-luxury-navy">
-                  ${effectivePrice.toFixed(2)}
+                  {selectedVariant 
+                    ? formatPrice(isIDR ? selectedVariant.price_idr : selectedVariant.price_usd, currencyCode)
+                    : formatPrice(effectivePrice, currencyCode)
+                  }
                 </span>
-                {product.sale_price && product.sale_price < product.price && (
+                {!selectedVariant && product.sale_price && product.sale_price < product.price && (
                   <span className="text-lg text-gray-400 line-through">
-                    ${product.price.toFixed(2)}
+                    {formatPrice(product.price, currencyCode)}
                   </span>
                 )}
               </div>
 
               {/* Stock Status */}
-              <div className="mb-6">
-                {product.stock_quantity > 0 ? (
-                  <p className="text-sm text-green-600 font-medium">
-                    {product.stock_quantity} in stock
-                  </p>
-                ) : (
-                  <p className="text-sm text-red-600 font-medium">Out of stock</p>
-                )}
-              </div>
+              {!hasVariants && (
+                <div className="mb-6">
+                  {product.stock_quantity > 0 ? (
+                    <p className="text-sm text-green-600 font-medium">
+                      {product.stock_quantity} in stock
+                    </p>
+                  ) : (
+                    <p className="text-sm text-red-600 font-medium">Out of stock</p>
+                  )}
+                </div>
+              )}
 
               {/* Variant Selection */}
               {hasVariants && (
                 <div className="space-y-4 mb-6">
-                  {product.variants!.map((variant) => (
-                    <div key={variant.id}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {variant.name}
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {variant.options.map((option) => (
-                          <button
-                            key={option}
-                            onClick={() => handleVariantSelect(variant.name, option)}
-                            className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                              selectedVariants[variant.name] === option
-                                ? 'border-luxury-navy bg-luxury-navy text-white'
-                                : 'border-gray-300 bg-white text-gray-700 hover:border-luxury-navy/50'
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Variant
+                  </label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {product.variants!.map((variant, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleVariantSelect(variant)}
+                        className={`px-4 py-3 rounded-lg border-2 transition-all text-left ${
+                          selectedVariant?.sku === variant.sku
+                            ? 'border-luxury-navy bg-luxury-navy text-white'
+                            : 'border-gray-300 bg-white text-gray-700 hover:border-luxury-navy/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">{variant.name}</div>
+                            <div className={`text-sm ${
+                              selectedVariant?.sku === variant.sku ? 'text-white/80' : 'text-gray-500'
+                            }`}>
+                              {variant.stock_quantity > 0 ? `${variant.stock_quantity} in stock` : 'Out of stock'}
+                            </div>
+                          </div>
+                          <div className={`font-semibold ${
+                            selectedVariant?.sku === variant.sku ? 'text-white' : 'text-luxury-navy'
+                          }`}>
+                            {formatPrice(isIDR ? variant.price_idr : variant.price_usd, currencyCode)}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -232,7 +264,7 @@ export function ProductVariantModal({
                   <button
                     onClick={() => handleQuantityChange(1)}
                     disabled={
-                      quantity >= product.stock_quantity ||
+                      quantity >= (selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity) ||
                       (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && quantity >= product.max_purchase_quantity)
                     }
                     className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -244,10 +276,29 @@ export function ProductVariantModal({
 
               {/* Action Buttons */}
               <div className="space-y-3 mt-auto">
-                {mode === 'buy-now' ? (
+                {mode === 'wishlist' ? (
                   <Button
                     onClick={handleSubmit}
-                    disabled={isProcessing || !allVariantsSelected || product.stock_quantity === 0}
+                    disabled={isProcessing || (hasVariants && !selectedVariant) || (selectedVariant ? selectedVariant.stock_quantity === 0 : product.stock_quantity === 0)}
+                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-6 text-base"
+                    size="lg"
+                  >
+                    {isProcessing ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        Adding...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <ShoppingCart className="h-5 w-5" />
+                        Add to Wishlist
+                      </span>
+                    )}
+                  </Button>
+                ) : mode === 'buy-now' ? (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isProcessing || (hasVariants && !selectedVariant) || (selectedVariant ? selectedVariant.stock_quantity === 0 : product.stock_quantity === 0)}
                     className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-6 text-base"
                     size="lg"
                   >
@@ -266,7 +317,7 @@ export function ProductVariantModal({
                 ) : (
                   <Button
                     onClick={handleSubmit}
-                    disabled={isProcessing || !allVariantsSelected || product.stock_quantity === 0}
+                    disabled={isProcessing || (hasVariants && !selectedVariant) || (selectedVariant ? selectedVariant.stock_quantity === 0 : product.stock_quantity === 0)}
                     className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-6 text-base"
                     size="lg"
                   >

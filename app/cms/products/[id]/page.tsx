@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { VariantStockModal } from '@/components/VariantStockModal'
 
 export default function EditProductPage() {
   const router = useRouter()
@@ -80,6 +81,7 @@ export default function EditProductPage() {
     stock_quantity: string
     image_url: string
   }>>([])
+  const [variantStockModalOpen, setVariantStockModalOpen] = useState(false)
 
   useEffect(() => {
     fetchProduct()
@@ -1238,15 +1240,29 @@ export default function EditProductPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Product Variants</h3>
-              <Button
-                type="button"
-                onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', stock_quantity: '', image_url: '' }])}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Variant
-              </Button>
+              <div className="flex gap-2">
+                {variants.length > 0 && (
+                  <Button
+                    type="button"
+                    onClick={() => setVariantStockModalOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    className="border-luxury-navy text-luxury-navy hover:bg-luxury-navy hover:text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Manage Variant Stock
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', stock_quantity: '', image_url: '' }])}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Variant
+                </Button>
+              </div>
             </div>
             {variants.map((variant, index) => (
               <div key={index} className="rounded-lg border border-gray-200 p-4 space-y-4">
@@ -1529,6 +1545,27 @@ export default function EditProductPage() {
           </div>
         </div>
       </form>
+
+      {/* Variant Stock Modal */}
+      {variants.length > 0 && (
+        <VariantStockModal
+          isOpen={variantStockModalOpen}
+          onClose={() => setVariantStockModalOpen(false)}
+          product={{
+            id: productId,
+            name: formData.name,
+            variants: variants.map(v => ({
+              name: v.name,
+              sku: v.sku,
+              price_usd: parseFloat(v.price_usd) || 0,
+              price_idr: parseFloat(v.price_idr) || 0,
+              stock_quantity: parseInt(v.stock_quantity) || 0,
+              image_url: v.image_url
+            }))
+          }}
+          onUpdate={fetchProduct}
+        />
+      )}
     </div>
   )
 }

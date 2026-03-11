@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { product_id, quantity = 1 } = body
+    const { product_id, quantity = 1, variant_name, variant_sku } = body
 
     if (!product_id) {
       return NextResponse.json(
@@ -140,13 +140,21 @@ export async function POST(request: Request) {
     const basePrice = typedProduct.price_idr || typedProduct.price_usd
     const priceAtAdd = getEffectivePrice(basePrice, typedProduct.sale_price)
 
-    // Check if item already in cart
-    const { data: existing } = await supabase
+    // Check if item already in cart (same product AND same variant)
+    let query = supabase
       .from('cart_items')
       .select('*')
       .eq('product_id', product_id)
       .eq('user_id', user.id)
-      .single()
+    
+    // If variant is specified, match on variant too
+    if (variant_sku) {
+      query = query.eq('variant_sku', variant_sku)
+    } else {
+      query = query.is('variant_sku', null)
+    }
+    
+    const { data: existing } = await query.single()
 
     if (existing) {
       const typedExisting = existing as CartItem
@@ -189,6 +197,8 @@ export async function POST(request: Request) {
         quantity,
         price_at_add: priceAtAdd,
         user_id: user.id,
+        variant_name: variant_name || null,
+        variant_sku: variant_sku || null,
       }
 
       const query3 = supabase.from('cart_items')

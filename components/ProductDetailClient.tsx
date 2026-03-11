@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { ShoppingBag, Heart } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { ProductVariantModal } from '@/components/ProductVariantModal'
 import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
+import { ProductVariantModal } from '@/components/ProductVariantModal'
 
 interface ProductDetailClientProps {
   product?: any
@@ -41,7 +41,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false)
   const [isBuyingNow, setIsBuyingNow] = useState(false)
   const [showVariantModal, setShowVariantModal] = useState(false)
-  const [variantModalMode, setVariantModalMode] = useState<'add-to-cart' | 'buy-now'>('add-to-cart')
+  const [variantModalMode, setVariantModalMode] = useState<'add-to-cart' | 'buy-now' | 'wishlist'>('add-to-cart')
 
   // Restore quantity from sessionStorage if user navigates back from checkout
   useEffect(() => {
@@ -124,7 +124,8 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         body: JSON.stringify({
           product_id: productIdOverride || productId,
           quantity: quantity || 1,
-          variants: selectedVariants,
+          variant_name: selectedVariants?.variant_name,
+          variant_sku: selectedVariants?.variant_sku,
         }),
       })
 
@@ -145,7 +146,14 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
     }
   }
 
-  const handleAddToWishlist = async () => {
+  const handleAddToWishlist = async (selectedVariants?: Record<string, string>) => {
+    // Check if product has variants and no variants selected
+    if (!selectedVariants && productData?.variants && productData.variants.length > 0) {
+      setVariantModalMode('wishlist')
+      setShowVariantModal(true)
+      return
+    }
+
     setIsAddingToWishlist(true)
     
     try {
@@ -242,7 +250,8 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         product_name: productName,
         product_slug: productSlug,
         quantity: quantity,
-        variants: selectedVariants,
+        variant_name: selectedVariants?.variant_name,
+        variant_sku: selectedVariants?.variant_sku,
         timestamp: Date.now()
       }))
 
@@ -312,6 +321,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           <ProductPriceDisplay 
             product={product}
             quantity={quantity}
+            showRange={true}
           />
         </div>
       )}
@@ -337,7 +347,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         variant="outline" 
         size="lg" 
         className="w-full"
-        onClick={handleAddToWishlist}
+        onClick={() => handleAddToWishlist()}
         disabled={isAddingToWishlist}
       >
         <Heart className="mr-2 h-5 w-5" />
@@ -353,6 +363,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         product={productData}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
+        onAddToWishlist={handleAddToWishlist}
         mode={variantModalMode}
       />
     )}

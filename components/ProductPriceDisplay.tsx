@@ -6,10 +6,21 @@ import { formatPrice } from '@/lib/utils'
 interface ProductPriceDisplayProps {
   product: any
   quantity?: number
+  showRange?: boolean
 }
 
-export function ProductPriceDisplay({ product, quantity = 1 }: ProductPriceDisplayProps) {
+export function ProductPriceDisplay({ product, quantity = 1, showRange = false }: ProductPriceDisplayProps) {
   const { region } = useRegion()
+  
+  // Check if product has variants with different prices
+  const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
+  const variantPrices = hasVariants ? product.variants.map((v: any) => 
+    region?.code === 'ID' ? (v.price_idr || 0) : (v.price_usd || 0)
+  ).filter((p: number) => p > 0) : []
+  
+  const minVariantPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0
+  const maxVariantPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0
+  const hasPriceRange = showRange && hasVariants && minVariantPrice > 0 && maxVariantPrice > minVariantPrice
   
   // Determine which price to use based on region
   const getPrice = () => {
@@ -36,7 +47,13 @@ export function ProductPriceDisplay({ product, quantity = 1 }: ProductPriceDispl
   return (
     <div className="flex items-baseline gap-3">
       <div className="text-3xl font-medium text-[#EE4D2D]">
-        {formatPrice(totalPrice, currencyCode)}
+        {hasPriceRange ? (
+          <>
+            {formatPrice(minVariantPrice * quantity, currencyCode)} - {formatPrice(maxVariantPrice * quantity, currencyCode)}
+          </>
+        ) : (
+          formatPrice(totalPrice, currencyCode)
+        )}
       </div>
       {hasDiscount && (
         <>
