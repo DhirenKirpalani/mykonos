@@ -240,6 +240,8 @@ export interface Database {
           quantity: number
           session_id: string | null
           price_at_add: number | null
+          variant_name: string | null
+          variant_sku: string | null
           created_at: string
           updated_at: string
         }
@@ -250,6 +252,8 @@ export interface Database {
           quantity?: number
           session_id?: string | null
           price_at_add?: number | null
+          variant_name?: string | null
+          variant_sku?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -260,6 +264,8 @@ export interface Database {
           quantity?: number
           session_id?: string | null
           price_at_add?: number | null
+          variant_name?: string | null
+          variant_sku?: string | null
           created_at?: string
           updated_at?: string
         }
