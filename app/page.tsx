@@ -1,69 +1,76 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ResponsiveLayout } from '@/components/responsive-layout'
 import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/lib/supabase/database.types'
 
-export const dynamic = 'force-dynamic'
-
 type Product = Database['public']['Tables']['products']['Row']
 type Collection = Database['public']['Tables']['collections']['Row']
 
-async function getProducts() {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(8) as { data: Product[] | null; error: any }
+export default function HomePage() {
+  const router = useRouter()
+  const [shouldRender, setShouldRender] = useState(false)
+  const [products, setProducts] = useState<Product[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [newArrivals, setNewArrivals] = useState<Product[]>([])
+  
+  useEffect(() => {
+    // Check if user has visited before
+    const hasVisited = localStorage.getItem('visited')
+    
+    if (!hasVisited) {
+      // First visit - set flag and redirect
+      localStorage.setItem('visited', 'true')
+      router.replace('/products')
+    } else {
+      // User has visited before - show homepage
+      setShouldRender(true)
+      fetchData()
+    }
+  }, [router])
 
-  if (error || !data) {
-    console.error('Error fetching products:', error)
-    return []
+  const fetchData = async () => {
+    try {
+      // Fetch products
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_visible', true)
+        .limit(8)
+
+      // Fetch collections
+      const { data: collectionsData } = await supabase
+        .from('collections')
+        .select('*')
+        .limit(6)
+
+      // Fetch new arrivals
+      const { data: newArrivalsData } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_visible', true)
+        .eq('is_new', true)
+        .limit(8)
+
+      setProducts(productsData || [])
+      setCollections(collectionsData || [])
+      setNewArrivals(newArrivalsData || [])
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    }
   }
-
-  return data
-}
-
-async function getCollections() {
-  const { data, error } = await supabase
-    .from('collections')
-    .select('*')
-    .order('display_order', { ascending: true }) as { data: Collection[] | null; error: any }
-
-  if (error || !data) {
-    console.error('Error fetching collections:', error)
-    return []
+  
+  if (!shouldRender) {
+    return null
   }
-
-  return data
-}
-
-async function getNewArrivals() {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('is_new', true)
-    .order('created_at', { ascending: false })
-    .limit(6) as { data: Product[] | null; error: any }
-
-  if (error || !data) {
-    console.error('Error fetching new arrivals:', error)
-    return []
-  }
-
-  return data
-}
-
-export default async function HomePage() {
-  const [products, collections, newArrivals] = await Promise.all([
-    getProducts(),
-    getCollections(),
-    getNewArrivals(),
-  ])
 
   return (
     <ResponsiveLayout 
-      products={products} 
-      collections={collections} 
-      newArrivals={newArrivals} 
+      products={products}
+      collections={collections}
+      newArrivals={newArrivals}
     />
   )
 }

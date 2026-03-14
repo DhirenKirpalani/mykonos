@@ -154,6 +154,11 @@ export interface Database {
           archived_at: string | null
           archived_by: string | null
           last_modified_by: string | null
+          pilih_lokal: boolean
+          rating: number
+          products_sold: number
+          is_popular: boolean
+          is_best_selling: boolean
           created_at: string
         }
         Insert: {
@@ -177,6 +182,11 @@ export interface Database {
           archived_at?: string | null
           archived_by?: string | null
           last_modified_by?: string | null
+          pilih_lokal?: boolean
+          rating?: number
+          products_sold?: number
+          is_popular?: boolean
+          is_best_selling?: boolean
           created_at?: string
         }
         Update: {
@@ -200,6 +210,11 @@ export interface Database {
           archived_at?: string | null
           archived_by?: string | null
           last_modified_by?: string | null
+          pilih_lokal?: boolean
+          rating?: number
+          products_sold?: number
+          is_popular?: boolean
+          is_best_selling?: boolean
           created_at?: string
         }
       }
