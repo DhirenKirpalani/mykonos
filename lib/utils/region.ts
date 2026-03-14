@@ -15,28 +15,28 @@ export function formatPrice(
 
   // Determine locale and decimal places based on currency
   let locale = 'en-US'
-  let decimalPlaces = decimals ?? 2
+  let decimalPlaces = decimals ?? 0
   
   switch (region.currency_code) {
     case 'IDR':
       locale = 'id-ID'
-      decimalPlaces = decimals ?? 2 // Indonesian Rupiah with 2 decimals
+      decimalPlaces = decimals ?? 0 // Indonesian Rupiah without decimals
       break
     case 'USD':
       locale = 'en-US'
-      decimalPlaces = decimals ?? 2
+      decimalPlaces = decimals ?? 0
       break
     case 'EUR':
       locale = 'de-DE'
-      decimalPlaces = decimals ?? 2
+      decimalPlaces = decimals ?? 0
       break
     case 'GBP':
       locale = 'en-GB'
-      decimalPlaces = decimals ?? 2
+      decimalPlaces = decimals ?? 0
       break
     default:
       locale = 'en-US'
-      decimalPlaces = decimals ?? 2
+      decimalPlaces = decimals ?? 0
   }
 
   if (!showCurrency) {

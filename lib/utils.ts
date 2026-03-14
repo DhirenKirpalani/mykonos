@@ -23,10 +23,10 @@ export function formatPrice(price: number | undefined | null, currency: string =
   
   // Format with proper thousand separators
   if (isIndonesia) {
-    // Custom formatting for IDR: Rp. 100,000.00
+    // Custom formatting for IDR: Rp. 100,000
     const formatted = new Intl.NumberFormat('id-ID', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(price)
     return `Rp. ${formatted}`
   }
@@ -34,8 +34,8 @@ export function formatPrice(price: number | undefined | null, currency: string =
   return new Intl.NumberFormat(actualLocale, {
     style: 'currency',
     currency: actualCurrency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(price)
 }
 

@@ -47,7 +47,9 @@ export const translations = {
       new: "NEW",
       sale: "SALE",
       addToCart: "Add to Cart",
-      quickAdd: "Quick Add"
+      quickAdd: "Quick Add",
+      pilihLokal: "Pilih Lokal",
+      sold: "sold"
     },
     checkout: {
       title: "Shopping Cart",
@@ -274,11 +276,13 @@ export const translations = {
         saturday: "10:00 - 16:00"
       }
     },
-    products: {
+    produk: {
       new: "BARU",
       sale: "DISKON",
       addToCart: "Tambah ke Keranjang",
-      quickAdd: "Tambah Cepat"
+      quickAdd: "Tambah Cepat",
+      pilihLokal: "Pilih Lokal",
+      sold: "terjual"
     },
     checkout: {
       title: "Keranjang Belanja",
