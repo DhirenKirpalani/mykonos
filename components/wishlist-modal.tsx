@@ -15,6 +15,8 @@ type WishlistItem = {
   id: string
   product_id: string
   quantity: number
+  variant_name?: string | null
+  variant_sku?: string | null
   product: {
     id: string
     name: string
@@ -25,6 +27,13 @@ type WishlistItem = {
     stock_quantity: number
     min_purchase_quantity?: number | null
     max_purchase_quantity?: number | null
+    variants?: Array<{
+      sku: string
+      name: string
+      price_usd: number
+      price_idr: number
+      stock_quantity: number
+    }>
   }
 }
 
@@ -40,6 +49,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [userId, setUserId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [addingToCart, setAddingToCart] = useState<string | null>(null)
 
   const isVideo = (url: string) => {
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
@@ -79,7 +89,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
         .from('wishlist_items')
         .select(`
           *,
-          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price, min_purchase_quantity, max_purchase_quantity)
+          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price, min_purchase_quantity, max_purchase_quantity, variants)
         `)
         .eq('user_id', session.user.id)
 
@@ -116,8 +126,6 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
         delete newQuantities[itemId]
         return newQuantities
       })
-      toast.success('Removed from wishlist')
-      
       // Dispatch event to update wishlist counter
       window.dispatchEvent(new Event('wishlist-updated'))
     } catch (error) {
@@ -179,6 +187,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   }
 
   const addToCart = async (itemId: string, productId: string, price: number) => {
+    setAddingToCart(itemId)
     try {
       // Get or create session (anonymous or authenticated)
       let { data: { session } } = await supabase.auth.getSession()
@@ -210,6 +219,9 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
       const quantity = quantities[itemId] || 1
 
       // Use the cart API endpoint which handles all edge cases
+      // Get variant info from wishlist item
+      const wishlistItem = wishlistItems.find(i => i.id === itemId)
+      
       const response = await fetch('/api/cart', {
         method: 'POST',
         headers: { 
@@ -219,13 +231,14 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
         body: JSON.stringify({
           product_id: productId,
           quantity: quantity,
+          variant_name: wishlistItem?.variant_name || null,
+          variant_sku: wishlistItem?.variant_sku || null,
         }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        toast.success(`Added ${quantity} item(s) to cart`)
         window.dispatchEvent(new Event('cart-updated'))
       } else {
         console.error('Cart API error:', data)
@@ -234,6 +247,8 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
     } catch (error) {
       console.error('Failed to add to cart:', error)
       toast.error('Failed to add to cart')
+    } finally {
+      setAddingToCart(null)
     }
   }
 
@@ -304,6 +319,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                             src={item.product.image_urls[0]}
                             alt={item.product.name}
                             fill
+                            sizes="80px"
                             className="object-cover"
                           />
                         )}
@@ -312,18 +328,29 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
                           <h3 className="text-sm font-medium tracking-wide uppercase">
-                            {item.product.name}
+                            {(item as any).variant_name || item.product.name}
                           </h3>
-                          <p className="mt-1 text-xs tracking-wide text-black/60">
-                            {item.product.size}
-                          </p>
+                          {!(item as any).variant_name && item.product.size && (
+                            <p className="mt-1 text-xs tracking-wide text-black/60">
+                              {item.product.size}
+                            </p>
+                          )}
                           <p className="mt-2 text-sm font-medium tracking-wide">
-                            {region ? formatPrice(
-                              (region.code === 'ID' && (item.product as any).price_idr 
+                            {region ? (() => {
+                              // Get variant-specific price if variant exists
+                              let basePrice = region.code === 'ID' && (item.product as any).price_idr 
                                 ? (item.product as any).price_idr 
-                                : (item.product as any).price_usd || 0) * (quantities[item.id] || 1), 
-                              region
-                            ) : '...'}
+                                : (item.product as any).price_usd || 0
+                              
+                              if ((item as any).variant_sku && item.product.variants) {
+                                const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
+                                if (variant) {
+                                  basePrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                                }
+                              }
+                              
+                              return formatPrice(basePrice * (quantities[item.id] || 1), region)
+                            })() : '...'}
                           </p>
                         </div>
 
@@ -336,11 +363,11 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                                 ? (item.product as any).price_idr 
                                 : (item.product as any).price_usd || 0
                             )}
-                            className="flex items-center justify-center gap-2 border border-black px-4 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white w-full"
-                            disabled={item.product.stock_quantity === 0}
+                            className="flex items-center justify-center gap-2 border border-black px-4 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white w-full disabled:opacity-40 disabled:bg-gray-100 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed disabled:pointer-events-none"
+                            disabled={item.product.stock_quantity === 0 || addingToCart === item.id}
                           >
                             <ShoppingBag className="h-3.5 w-3.5" />
-                            {item.product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                            {item.product.stock_quantity === 0 ? 'Out of Stock' : addingToCart === item.id ? 'Adding...' : 'Add to Cart'}
                           </button>
                           
                           <button

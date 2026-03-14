@@ -170,35 +170,45 @@ export default function CheckoutPage() {
       const guestUser = !session || session.user.is_anonymous === true
       setIsGuest(guestUser)
 
-      // Check for Buy Now item in sessionStorage
-      const buyNowItem = sessionStorage.getItem('buyNowItem')
-      console.log('🔍 [CHECKOUT INIT] Buy now item in storage:', buyNowItem ? 'YES' : 'NO')
+      // Check for Buy Now items in sessionStorage
+      const buyNowItemsStr = sessionStorage.getItem('buyNowItems')
+      console.log('🔍 [CHECKOUT INIT] Buy now items in storage:', buyNowItemsStr ? 'YES' : 'NO')
       
       // Check URL params to determine flow
       const urlParams = new URLSearchParams(window.location.search)
       const isBuyNowFlow = urlParams.get('buyNow') === 'true'
       console.log('🔍 [CHECKOUT INIT] Is buy now flow from URL?', isBuyNowFlow)
       
-      // Clear buyNowItem if not in buy now flow to prevent interference
-      if (buyNowItem && !isBuyNowFlow) {
-        console.log('⚠️ [CHECKOUT INIT] Clearing stale buyNowItem from sessionStorage')
-        sessionStorage.removeItem('buyNowItem')
+      // Clear buyNowItems if not in buy now flow to prevent interference
+      if (buyNowItemsStr && !isBuyNowFlow) {
+        console.log('⚠️ [CHECKOUT INIT] Clearing stale buyNowItems from sessionStorage')
+        sessionStorage.removeItem('buyNowItems')
       }
       
-      if (buyNowItem && isBuyNowFlow) {
+      if (buyNowItemsStr && isBuyNowFlow) {
         // Handle Buy Now flow - fetch product details
         console.log('🛍️ [CHECKOUT INIT] Using BUY NOW flow')
-        const buyNowData = JSON.parse(buyNowItem)
+        const buyNowItems = JSON.parse(buyNowItemsStr)
+        
+        if (!Array.isArray(buyNowItems) || buyNowItems.length === 0) {
+          toast.error('Invalid buy now data')
+          sessionStorage.removeItem('buyNowItems')
+          router.push('/checkout')
+          return
+        }
+        
+        // Get unique product ID (all items should be from same product)
+        const productId = buyNowItems[0].product_id
         
         const { data: product, error: productError } = await supabase
           .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity')
-          .eq('id', buyNowData.product_id)
+          .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
+          .eq('id', productId)
           .single()
 
         if (productError || !product) {
           toast.error('Product not found')
-          sessionStorage.removeItem('buyNowItem')
+          sessionStorage.removeItem('buyNowItems')
           router.push('/checkout')
           return
         }
@@ -206,13 +216,13 @@ export default function CheckoutPage() {
         // Type assertion for product data
         const typedProduct = product as any
 
-        // Create cart item structure for Buy Now
-        const buyNowCartItem = {
-          id: 'buy-now-temp',
+        // Create cart items structure for Buy Now (one item per variant)
+        const buyNowCartItems = buyNowItems.map((item, index) => ({
+          id: `buy-now-temp-${index}`,
           product_id: typedProduct.id,
-          quantity: buyNowData.quantity,
-          variant_name: buyNowData.variant_name || null,
-          variant_sku: buyNowData.variant_sku || null,
+          quantity: item.quantity,
+          variant_name: item.variant_name || null,
+          variant_sku: item.variant_sku || null,
           product: {
             name: typedProduct.name,
             slug: typedProduct.slug,
@@ -222,9 +232,9 @@ export default function CheckoutPage() {
             sale_price: typedProduct.sale_price,
             variants: typedProduct.variants
           }
-        }
+        }))
 
-        setCartItems([buyNowCartItem])
+        setCartItems(buyNowCartItems)
       } else {
         // Regular cart flow - fetch cart items
         console.log('🛒 [CHECKOUT INIT] Using CART flow')
@@ -478,30 +488,53 @@ export default function CheckoutPage() {
       }
       console.log('✅ [ORDER] Session found, user ID:', session.user.id)
 
-      // Check if this is a Buy Now flow with item still in sessionStorage
-      const buyNowItem = sessionStorage.getItem('buyNowItem')
-      console.log('🛒 [ORDER] Buy Now item in storage:', buyNowItem ? 'Yes' : 'No')
+      // Check if this is a Buy Now flow with items still in sessionStorage
+      const buyNowItemsStr = sessionStorage.getItem('buyNowItems')
+      console.log('🛒 [ORDER] Buy Now items in storage:', buyNowItemsStr ? 'Yes' : 'No')
       
       let sessionData
       
-      // Only use manual session if buyNowItem exists AND we have temp cart items
-      // After login, buyNowItem is cleared and items are in cart, so use regular flow
-      if (buyNowItem && cartItems.length > 0 && cartItems[0].id === 'buy-now-temp') {
+      // Only use manual session if buyNowItems exists AND we have temp cart items
+      // After login, buyNowItems is cleared and items are in cart, so use regular flow
+      if (buyNowItemsStr && cartItems.length > 0 && cartItems[0].id?.startsWith('buy-now-temp')) {
         console.log('🎯 [ORDER] Using Buy Now flow with manual cart snapshot')
         // For Buy Now: Create checkout session with manual cart snapshot
-        const buyNowData = JSON.parse(buyNowItem)
-        const product = cartItems[0]?.product
+        const buyNowItems = JSON.parse(buyNowItemsStr)
         
-        if (!product) {
-          throw new Error('Product not found')
-        }
-        
-        const basePrice = region?.code === 'ID' && (product as any).price_idr 
-          ? (product as any).price_idr 
-          : (product as any).price_usd || 0
-        const price = getEffectivePrice(basePrice, product.sale_price)
-        const quantity = buyNowData.quantity || 1
-        const subtotal = price * quantity
+        // Build cart snapshot from all buy now items
+        let subtotal = 0
+        const cartSnapshot = cartItems.map((item, index) => {
+          const product = item.product
+          if (!product) {
+            throw new Error('Product not found')
+          }
+          
+          // Get variant-specific price if variant exists
+          let basePrice = region?.code === 'ID' && (product as any).price_idr 
+            ? (product as any).price_idr 
+            : (product as any).price_usd || 0
+          
+          // If this item has a variant, find the variant price
+          const itemWithVariant = item as any
+          if (itemWithVariant.variant_sku && (product as any).variants) {
+            const variant = (product as any).variants.find((v: any) => v.sku === itemWithVariant.variant_sku)
+            if (variant) {
+              basePrice = region?.code === 'ID' ? variant.price_idr : variant.price_usd
+            }
+          }
+          
+          const price = getEffectivePrice(basePrice, product.sale_price)
+          const quantity = item.quantity || 1
+          subtotal += price * quantity
+          
+          return {
+            product_id: item.product_id,
+            quantity: quantity,
+            price: price,
+            variant_name: itemWithVariant.variant_name,
+            variant_sku: itemWithVariant.variant_sku
+          }
+        })
         
         console.log('📝 [ORDER] Creating manual checkout session...')
         const sessionResponse = await fetch('/api/checkout/session/manual', {
@@ -509,11 +542,7 @@ export default function CheckoutPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: session.user.id,
-            cart_snapshot: [{
-              product_id: buyNowData.product_id,
-              quantity: quantity,
-              price: price
-            }],
+            cart_snapshot: cartSnapshot,
             pricing_snapshot: {
               subtotal,
               discount: 0,
@@ -597,12 +626,26 @@ export default function CheckoutPage() {
       // Build items array including shipping and tax
       const itemsForMidtrans = [
         ...cartItems.map(item => {
-          const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
+          // Get variant-specific price if variant exists
+          const itemWithVariant = item as any
+          let basePrice = region?.code === 'ID' && (item.product as any).price_idr 
             ? (item.product as any).price_idr 
             : (item.product as any).price_usd || 0
+          
+          // If this item has a variant, find the variant price
+          if (itemWithVariant.variant_sku && (item.product as any).variants) {
+            const variant = (item.product as any).variants.find((v: any) => v.sku === itemWithVariant.variant_sku)
+            if (variant) {
+              basePrice = region?.code === 'ID' ? variant.price_idr : variant.price_usd
+            }
+          }
+          
+          // Use only variant name if available, otherwise product name
+          const itemName = itemWithVariant.variant_name || item.product.name
+          
           return {
             id: item.product_id,
-            name: item.product.name,
+            name: itemName,
             price: convertToIDR(getEffectivePrice(basePrice, item.product.sale_price)),
             quantity: item.quantity,
           }
@@ -782,9 +825,8 @@ export default function CheckoutPage() {
       const itemsForMidtrans = [
         ...[...cartItems, ...quickAddedItems].map(item => {
           const basePrice = getBasePrice(item.product, (item as any).variant_sku)
-          const itemName = (item as any).variant_name 
-            ? `${item.product.name} - ${(item as any).variant_name}`
-            : item.product.name
+          // Use only variant name if available, otherwise product name
+          const itemName = (item as any).variant_name || item.product.name
           return {
             id: item.product_id,
             name: itemName,
@@ -853,7 +895,7 @@ export default function CheckoutPage() {
               const completeData = await completeResponse.json()
 
               if (completeResponse.ok && completeData.order_id) {
-                sessionStorage.removeItem('buyNowItem')
+                sessionStorage.removeItem('buyNowItems')
                 router.push(`/checkout/confirmation?order=${completeData.order_number}`)
               } else {
                 throw new Error(completeData.error || 'Failed to place order')
@@ -917,7 +959,7 @@ export default function CheckoutPage() {
 
     try {
       // For Buy Now items (temp), just update local state
-      if (itemId === 'buy-now-temp') {
+      if (itemId?.startsWith('buy-now-temp')) {
         setCartItems(prev => 
           prev.map(item => 
             item.id === itemId ? { ...item, quantity: newQuantity } : item
@@ -963,8 +1005,8 @@ export default function CheckoutPage() {
   const removeItem = async (itemId: string) => {
     try {
       // For Buy Now items, clear sessionStorage and redirect
-      if (itemId === 'buy-now-temp') {
-        sessionStorage.removeItem('buyNowItem')
+      if (itemId?.startsWith('buy-now-temp')) {
+        sessionStorage.removeItem('buyNowItems')
         router.push('/checkout')
         return
       }
@@ -1136,8 +1178,21 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-6 lg:py-8">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Breadcrumb */}
-        <div className="mb-4">
+        {/* Back Button - Mobile only */}
+        <div className="mb-4 md:hidden">
+          <button 
+            onClick={() => router.back()} 
+            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Back</span>
+          </button>
+        </div>
+
+        {/* Breadcrumb - Desktop only */}
+        <div className="mb-4 hidden md:block">
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm flex-wrap">
             <Link
               href="/"
@@ -1148,20 +1203,20 @@ export default function CheckoutPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
             </Link>
-            {cartItems.length > 0 && cartItems.map((item, index) => (
-              <div key={item.id} className="flex items-center gap-2">
+            {cartItems.length > 0 && (
+              <div className="flex items-center gap-2">
                 <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
                 <Link
-                  href={`/products/${item.product.slug}`}
+                  href={`/products/${cartItems[0].product.slug}`}
                   className="text-gray-500 transition-colors hover:text-gray-900 truncate max-w-[150px]"
-                  title={item.product.name}
+                  title={cartItems[0].product.name}
                 >
-                  {item.product.name}
+                  {cartItems[0].product.name}
                 </Link>
               </div>
-            ))}
+            )}
             <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -1227,13 +1282,8 @@ export default function CheckoutPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <h3 className="font-medium text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
-                            {item.product.name}
+                            {(item as any).variant_name || item.product.name}
                           </h3>
-                          {(item as any).variant_name && (
-                            <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                              {(item as any).variant_name}
-                            </p>
-                          )}
                         </div>
                         {item.id.startsWith('quick-') && (
                           <button

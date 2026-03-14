@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/common'
 import { formatPrice } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
-import { CheckCircle, Package, Truck, Mail, Phone } from 'lucide-react'
+import { CheckCircle, Package, Truck, Mail, Phone, Copy, Check } from 'lucide-react'
+import { toast } from 'sonner'
 
 type Order = {
   id: string
@@ -40,6 +41,7 @@ function OrderConfirmationContent() {
   
   const [isLoading, setIsLoading] = useState(true)
   const [order, setOrder] = useState<Order | null>(null)
+  const [isCopied, setIsCopied] = useState(false)
 
   useEffect(() => {
     if (orderNumber) {
@@ -110,6 +112,19 @@ function OrderConfirmationContent() {
     return `${formatDate(minDate)} - ${formatDate(maxDate)}`
   }
 
+  const copyOrderNumber = async () => {
+    if (!order?.order_number) return
+    
+    try {
+      await navigator.clipboard.writeText(order.order_number)
+      setIsCopied(true)
+      toast.success('Order number copied to clipboard!')
+      setTimeout(() => setIsCopied(false), 2000)
+    } catch (error) {
+      toast.error('Failed to copy order number')
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -141,7 +156,20 @@ function OrderConfirmationContent() {
           <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-200">
             <div>
               <p className="text-sm text-gray-600 mb-1">Order Number</p>
-              <p className="text-xl font-bold text-gray-900">{order.order_number}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xl font-bold text-gray-900">{order.order_number}</p>
+                <button
+                  onClick={copyOrderNumber}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Copy order number"
+                >
+                  {isCopied ? (
+                    <Check className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <Copy className="h-5 w-5 text-gray-600" />
+                  )}
+                </button>
+              </div>
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-600 mb-1">Order Total</p>

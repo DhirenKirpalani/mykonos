@@ -170,16 +170,24 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     if (discountCode.toLowerCase() === 'welcome10') {
       setDiscountApplied(true)
       setDiscountAmount(subtotal * 0.1)
-      toast.success('Discount applied!')
     } else {
       toast.error('Invalid discount code')
     }
   }
 
   const subtotal = cartItems.reduce((sum, item) => {
-    const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
+    let basePrice = region?.code === 'ID' && (item.product as any).price_idr 
       ? (item.product as any).price_idr 
       : (item.product as any).price_usd || 0
+    
+    // If variant is selected, use variant price
+    if (item.variant_sku && item.product.variants) {
+      const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+      if (variant) {
+        basePrice = region?.code === 'ID' ? variant.price_idr : variant.price_usd
+      }
+    }
+    
     return sum + (basePrice * item.quantity)
   }, 0)
   const total = subtotal - discountAmount
@@ -251,6 +259,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                             src={item.product.image_urls[0]}
                             alt={item.product.name}
                             fill
+                            sizes="80px"
                             className="object-cover"
                           />
                         )}
@@ -259,17 +268,8 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
                           <h3 className="text-sm font-medium tracking-wide uppercase">
-                            {item.product.name}
+                            {item.variant_name || item.product.name}
                           </h3>
-                          {item.variant_name ? (
-                            <p className="mt-1 text-xs tracking-wide text-black/60">
-                              {item.variant_name}
-                            </p>
-                          ) : (
-                            <p className="mt-1 text-xs tracking-wide text-black/60">
-                              {item.product.size}
-                            </p>
-                          )}
                         </div>
 
                         <div className="flex items-center justify-between">

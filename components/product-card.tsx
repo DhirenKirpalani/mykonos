@@ -56,6 +56,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -71,6 +72,11 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { region } = useRegion()
   const { t, locale } = useLanguage()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   // Get price based on region
   const getPrice = () => {
@@ -133,7 +139,7 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Card link */}
       <Link href={`/products/${product.slug}`} className="flex flex-col h-full" aria-label={`View ${product.name}`}>
         {/* Image Frame - 70% of card height */}
-        <div className="relative aspect-square bg-[#F1F4F8] overflow-hidden flex-[7]">
+        <div className="relative aspect-square bg-[#F1F4F8] overflow-hidden flex-[7] min-h-[200px]">
           {thumbnailUrl ? (
             isVideo(thumbnailUrl) ? (
               <video
@@ -151,14 +157,14 @@ export function ProductCard({ product }: ProductCardProps) {
                 src={thumbnailUrl}
                 alt={`${product.name} - ${product.category} fragrance`}
                 fill
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
                 className="
                   object-contain p-6 md:p-8
                   transition-transform duration-500 ease-out
                   group-hover:scale-[1.04]
                 "
-                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
                 quality={90}
-                loading="lazy"
+                priority
               />
             )
           ) : (
@@ -182,6 +188,7 @@ export function ProductCard({ product }: ProductCardProps) {
             group-hover:text-[#1C2E4A]
             mb-1.5
             leading-tight
+            min-h-[3rem] md:min-h-[2.5rem]
           ">
             {product.name}
           </h3>
@@ -203,7 +210,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {/* Pilih Lokal Badge */}
-          {product.pilih_lokal && (
+          {mounted && product.pilih_lokal && (
             <div className="mb-1">
               <span className="inline-block rounded border border-[#1C2E4A] px-2 py-0.5 text-[9px] md:text-xs text-[#1C2E4A] font-medium">
                 {locale === 'en' ? (t as any).products.pilihLokal : (t as any).produk.pilihLokal}
@@ -212,7 +219,7 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
 
           {/* Trust Signals - Rating & Sold Count */}
-          {(product.rating > 0 || product.products_sold > 0) && (
+          {mounted && (product.rating > 0 || product.products_sold > 0) && (
             <div className="flex items-center gap-1.5 text-[10px] md:text-sm">
               {product.rating > 0 && (
                 <div className="flex items-center gap-1">

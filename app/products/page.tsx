@@ -8,7 +8,7 @@ import { Pagination } from '@/components/Pagination'
 import { Breadcrumb } from '@/components/breadcrumb'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 type Product = Database['public']['Tables']['products']['Row']
 
@@ -16,11 +16,17 @@ const ITEMS_PER_PAGE = 12
 
 function ProductsContent() {
   const { t } = useLanguage()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const category = searchParams.get('category') || undefined
   const collection = searchParams.get('collection') || undefined
@@ -90,13 +96,31 @@ function ProductsContent() {
     fetchProducts()
   }, [category, collection, isNew, sort, currentPage, searchQuery])
 
+  // Prevent hydration mismatch - render loading state until mounted
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="border-b border-border/40 bg-luxury-gray-light py-4 md:py-6">
+          <div className="container mx-auto px-4 md:px-6 lg:px-8">
+            <div className="h-10 w-64 animate-pulse rounded bg-gray-200" />
+          </div>
+        </div>
+        <div className="container mx-auto px-4 py-6 md:px-6 md:py-8 lg:px-8">
+          <div className="flex min-h-[400px] items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-luxury-navy"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header with Title and Search */}
       <div className="border-b border-border/40 bg-luxury-gray-light py-4 md:py-6">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <h1 className="font-serif text-2xl font-bold md:text-3xl lg:text-4xl">
-            All Fragrances
+          <h1 className="text-2xl font-bold uppercase tracking-wider text-luxury-navy md:text-3xl lg:text-4xl">
+            {t.productsPage.allFragrances}
           </h1>
           
           {/* Search Bar - Directly under title */}
@@ -104,7 +128,7 @@ function ProductsContent() {
             <div className="relative max-w-md">
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder={t.productsPage.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-[#C2A36B] focus:outline-none focus:ring-2 focus:ring-[#C2A36B]/20"
@@ -144,7 +168,7 @@ function ProductsContent() {
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('sort', 'popular')
-                window.location.href = `/products?${params.toString()}`
+                router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                 sort === 'popular'
@@ -152,13 +176,13 @@ function ProductsContent() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Popular
+              {t.productsPage.sort.popular}
             </button>
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('sort', 'newest')
-                window.location.href = `/products?${params.toString()}`
+                router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                 sort === 'newest'
@@ -166,13 +190,13 @@ function ProductsContent() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Newest
+              {t.productsPage.sort.newest}
             </button>
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('sort', 'best-selling')
-                window.location.href = `/products?${params.toString()}`
+                router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                 sort === 'best-selling'
@@ -180,7 +204,7 @@ function ProductsContent() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Best Selling
+              {t.productsPage.sort.bestSelling}
             </button>
             <button
               onClick={() => {
@@ -191,7 +215,7 @@ function ProductsContent() {
                 } else {
                   params.set('sort', 'price-asc')
                 }
-                window.location.href = `/products?${params.toString()}`
+                router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                 sort?.startsWith('price-')
@@ -199,7 +223,7 @@ function ProductsContent() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Price {sort === 'price-desc' ? '↓' : '↑'}
+              {t.productsPage.price} {sort === 'price-desc' ? '↓' : '↑'}
             </button>
           </div>
         </div>
