@@ -103,7 +103,70 @@ export const translations = {
       allFragrances: "All Fragrances",
       product: "product",
       products: "products",
-      noProducts: "No products found matching your criteria."
+      noProducts: "No products found matching your criteria.",
+      searchPlaceholder: "Search products",
+      category: "Category",
+      fragranceFamilies: "Fragrance Families",
+      allFamilies: "All Families",
+      clearFilters: "Clear Filters",
+      applyFilters: "Apply Filters",
+      price: "Price",
+      sort: {
+        popular: "Popular",
+        newest: "Newest",
+        bestSelling: "Best Selling",
+        priceAsc: "Price: Low to High",
+        priceDesc: "Price: High to Low"
+      }
+    },
+    header: {
+      trackOrder: "Track Order",
+      region: "Region",
+      language: "Language",
+      search: "Search",
+      notifications: "Notifications",
+      cart: "Cart",
+      wishlist: "Wishlist",
+      profile: "Profile",
+      signIn: "Sign In",
+      signOut: "Sign Out"
+    },
+    searchModal: {
+      title: "Search",
+      placeholder: "Search products...",
+      topProducts: "Top Products",
+      noResults: "No products found",
+      viewAll: "View All Results"
+    },
+    cartModal: {
+      title: "Shopping Cart",
+      empty: "Your cart is empty",
+      continueShopping: "Continue Shopping",
+      viewCart: "View Cart",
+      checkout: "Checkout",
+      remove: "Remove",
+      quantity: "Quantity"
+    },
+    wishlistModal: {
+      title: "Wishlist",
+      empty: "Your wishlist is empty",
+      continueShopping: "Continue Shopping",
+      addToCart: "Add to Cart",
+      remove: "Remove"
+    },
+    notificationsModal: {
+      title: "Notifications",
+      empty: "No notifications",
+      markAllRead: "Mark all as read",
+      clearAll: "Clear all"
+    },
+    profile: {
+      title: "My Profile",
+      personalInfo: "Personal Information",
+      orders: "My Orders",
+      addresses: "Addresses",
+      settings: "Settings",
+      logout: "Logout"
     },
     about: {
       title: "Our Story",
@@ -336,7 +399,70 @@ export const translations = {
       allFragrances: "Semua Wewangian",
       product: "produk",
       products: "produk",
-      noProducts: "Tidak ada produk yang sesuai dengan kriteria Anda."
+      noProducts: "Tidak ada produk yang sesuai dengan kriteria Anda.",
+      searchPlaceholder: "Cari produk",
+      category: "Kategori",
+      fragranceFamilies: "Kategori",
+      allFamilies: "Semua Kategori",
+      clearFilters: "Hapus Filter",
+      applyFilters: "Terapkan Filter",
+      price: "Harga",
+      sort: {
+        popular: "Populer",
+        newest: "Terbaru",
+        bestSelling: "Terlaris",
+        priceAsc: "Harga: Rendah ke Tinggi",
+        priceDesc: "Harga: Tinggi ke Rendah"
+      }
+    },
+    header: {
+      trackOrder: "Lacak Pesanan",
+      region: "Wilayah",
+      language: "Bahasa",
+      search: "Cari",
+      notifications: "Notifikasi",
+      cart: "Keranjang",
+      wishlist: "Wishlist",
+      profile: "Profil",
+      signIn: "Masuk",
+      signOut: "Keluar"
+    },
+    searchModal: {
+      title: "Cari",
+      placeholder: "Cari produk...",
+      topProducts: "Produk Teratas",
+      noResults: "Tidak ada produk ditemukan",
+      viewAll: "Lihat Semua Hasil"
+    },
+    cartModal: {
+      title: "Keranjang Belanja",
+      empty: "Keranjang Anda kosong",
+      continueShopping: "Lanjutkan Belanja",
+      viewCart: "Lihat Keranjang",
+      checkout: "Checkout",
+      remove: "Hapus",
+      quantity: "Jumlah"
+    },
+    wishlistModal: {
+      title: "Wishlist",
+      empty: "Wishlist Anda kosong",
+      continueShopping: "Lanjutkan Belanja",
+      addToCart: "Tambah ke Keranjang",
+      remove: "Hapus"
+    },
+    notificationsModal: {
+      title: "Notifikasi",
+      empty: "Tidak ada notifikasi",
+      markAllRead: "Tandai semua sudah dibaca",
+      clearAll: "Hapus semua"
+    },
+    profile: {
+      title: "Profil Saya",
+      personalInfo: "Informasi Pribadi",
+      orders: "Pesanan Saya",
+      addresses: "Alamat",
+      settings: "Pengaturan",
+      logout: "Keluar"
     },
     about: {
       title: "Cerita Kami",
