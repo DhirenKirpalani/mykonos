@@ -131,7 +131,8 @@ export async function PATCH(
       'is_pre_order', 'pre_order_duration_days', 'scheduled_publish_date',
       'meta_title', 'meta_description', 'meta_keywords', 'tags',
       'image_urls', 'image_alt_texts', 'bulk_discounts', 'variants',
-      'collection', 'size', 'category'
+      'collection', 'size', 'category',
+      'pilih_lokal', 'rating', 'products_sold', 'is_popular', 'is_best_selling'
     ]
     
     // Only include allowed fields that are present in the body

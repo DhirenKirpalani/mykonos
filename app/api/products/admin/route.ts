@@ -111,6 +111,11 @@ export async function POST(request: Request) {
       category: body.collection || '', // Use collection as category for backward compatibility
       is_new: false,
       sale_price: body.sale_price || null,
+      pilih_lokal: body.pilih_lokal === true,
+      rating: body.rating || 0,
+      products_sold: body.products_sold || 0,
+      is_popular: body.is_popular === true,
+      is_best_selling: body.is_best_selling === true,
     }
 
     // Insert product

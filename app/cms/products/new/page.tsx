@@ -66,6 +66,11 @@ export default function NewProductPage() {
     meta_description: '',
     meta_keywords: '',
     tags: '',
+    pilih_lokal: false,
+    rating: '',
+    products_sold: '',
+    is_popular: false,
+    is_best_selling: false,
   })
   const [imageAltTexts, setImageAltTexts] = useState<string[]>([])
   const [bulkDiscounts, setBulkDiscounts] = useState<Array<{quantity: string, discount_percentage: string}>>([])
@@ -194,6 +199,11 @@ export default function NewProductPage() {
           scheduled_publish_date: formData.scheduled_publish_date || null,
           manufacturing_date: formData.manufacturing_date || null,
           expiration_date: formData.expiration_date || null,
+          pilih_lokal: formData.pilih_lokal,
+          rating: formData.rating ? parseFloat(formData.rating) : 0,
+          products_sold: formData.products_sold ? parseInt(formData.products_sold) : 0,
+          is_popular: formData.is_popular,
+          is_best_selling: formData.is_best_selling,
           image_urls: mediaUrls,
           image_alt_texts: imageAltTexts,
           bulk_discounts: bulkDiscounts.filter(d => d.quantity && d.discount_percentage).map(d => ({
@@ -1004,6 +1014,136 @@ export default function NewProductPage() {
               <label className="text-sm font-medium text-gray-700">
                 Featured Product (Show on homepage)
               </label>
+            </div>
+          </div>
+
+          {/* Product Tags & Sorting Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Product Tags & Sorting</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Rating (0.0 - 5.0)
+                </label>
+                <input
+                  type="number"
+                  name="rating"
+                  value={formData.rating}
+                  onChange={handleChange}
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  placeholder="e.g., 4.5"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Products Sold
+                </label>
+                <input
+                  type="number"
+                  name="products_sold"
+                  value={formData.products_sold}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="e.g., 150"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Pilih Lokal (Show local product badge)
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, pilih_lokal: true }))}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+                      formData.pilih_lokal
+                        ? 'bg-[#C2A36B] text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    True
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, pilih_lokal: false }))}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+                      !formData.pilih_lokal
+                        ? 'bg-[#C2A36B] text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    False
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Popular Product (Show in popular filter)
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, is_popular: true }))}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+                      formData.is_popular
+                        ? 'bg-[#C2A36B] text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    True
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, is_popular: false }))}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+                      !formData.is_popular
+                        ? 'bg-[#C2A36B] text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    False
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Best Selling (Show in best selling filter)
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, is_best_selling: true }))}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+                      formData.is_best_selling
+                        ? 'bg-[#C2A36B] text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    True
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, is_best_selling: false }))}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+                      !formData.is_best_selling
+                        ? 'bg-[#C2A36B] text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    False
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
