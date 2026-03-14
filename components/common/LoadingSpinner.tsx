@@ -1,6 +1,6 @@
 export function LoadingSpinner() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-luxury-navy via-luxury-navy-light to-luxury-navy overflow-hidden">
       <div className="flex flex-col items-center gap-6">
         <div className="relative">
           <h2 className="font-serif text-4xl font-medium tracking-[0.3em] text-luxury-gold md:text-5xl animate-pulse-subtle">

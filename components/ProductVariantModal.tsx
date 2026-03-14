@@ -49,7 +49,7 @@ export function ProductVariantModal({
   const minQty = product.min_purchase_quantity || 1
   const maxQty = product.max_purchase_quantity || product.stock_quantity
   
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
+  const [selectedVariants, setSelectedVariants] = useState<Map<string, { variant: ProductVariant, quantity: number }>>(new Map())
   const [quantity, setQuantity] = useState(minQty)
   const [isProcessing, setIsProcessing] = useState(false)
   
@@ -60,81 +60,146 @@ export function ProductVariantModal({
 
   const hasVariants = product.variants && product.variants.length > 0
 
-  const effectivePrice = product.sale_price && product.sale_price < product.price
+  // Get region-based price
+  const getRegionPrice = () => {
+    if (isIDR) {
+      const productWithIDR = product as any
+      return productWithIDR.price_idr || product.price
+    }
+    return product.price
+  }
+
+  const basePrice = getRegionPrice()
+  const effectivePrice = product.sale_price && product.sale_price < basePrice
     ? product.sale_price
-    : product.price
+    : basePrice
 
-  const handleVariantSelect = (variant: ProductVariant) => {
-    setSelectedVariant(variant)
-    // Reset quantity if it exceeds the variant's stock
-    if (quantity > variant.stock_quantity) {
-      setQuantity(Math.min(minQty, variant.stock_quantity))
+  // Calculate price range from variants
+  const getPriceRange = () => {
+    if (!hasVariants || !product.variants || product.variants.length === 0) {
+      return null
     }
+    const prices = product.variants.map(v => isIDR ? v.price_idr : v.price_usd)
+    const minPrice = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    return minPrice === maxPrice ? null : { min: minPrice, max: maxPrice }
   }
 
-  const handleQuantityChange = (delta: number) => {
-    const newQuantity = quantity + delta
-    
-    // Validate minimum quantity
-    if (newQuantity < minQty) {
-      toast.error(`Minimum quantity is ${minQty}`)
-      return
-    }
-    
-    // Validate maximum quantity
-    if (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && newQuantity > product.max_purchase_quantity) {
-      toast.error(`Maximum quantity is ${product.max_purchase_quantity}`)
-      return
-    }
-    
-    // Validate stock quantity
-    const availableStock = selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity
-    if (newQuantity > availableStock) {
-      toast.error(`Only ${availableStock} items available`)
-      return
-    }
-    
-    setQuantity(newQuantity)
+  const priceRange = getPriceRange()
+
+  const handleVariantToggle = (variant: ProductVariant) => {
+    setSelectedVariants(prev => {
+      const newMap = new Map(prev)
+      if (newMap.has(variant.sku)) {
+        newMap.delete(variant.sku)
+      } else {
+        newMap.set(variant.sku, { variant, quantity: minQty })
+      }
+      return newMap
+    })
   }
+
+  const handleVariantQuantityChange = (sku: string, delta: number) => {
+    setSelectedVariants(prev => {
+      const newMap = new Map(prev)
+      const item = newMap.get(sku)
+      if (!item) return prev
+      
+      const newQuantity = item.quantity + delta
+      const variant = item.variant
+      
+      // Validate minimum quantity
+      if (newQuantity < minQty) {
+        toast.error(`Minimum quantity is ${minQty}`)
+        return prev
+      }
+      
+      // Validate maximum quantity
+      if (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && newQuantity > product.max_purchase_quantity) {
+        toast.error(`Maximum quantity is ${product.max_purchase_quantity}`)
+        return prev
+      }
+      
+      // Validate stock quantity
+      if (newQuantity > variant.stock_quantity) {
+        toast.error(`Only ${variant.stock_quantity} items available`)
+        return prev
+      }
+      
+      newMap.set(sku, { variant, quantity: newQuantity })
+      return newMap
+    })
+  }
+
 
   const handleSubmit = async () => {
-    if (hasVariants && !selectedVariant) {
-      toast.error('Please select a variant')
-      return
-    }
-
-    // Validate minimum quantity
-    if (quantity < minQty) {
-      toast.error(`Minimum quantity is ${minQty}`)
-      return
-    }
-
-    // Validate maximum quantity
-    if (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && quantity > product.max_purchase_quantity) {
-      toast.error(`Maximum quantity is ${product.max_purchase_quantity}`)
-      return
-    }
-
-    // Validate stock quantity
-    const availableStock = selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity
-    if (quantity > availableStock) {
-      toast.error(`Only ${availableStock} items available`)
+    if (hasVariants && selectedVariants.size === 0) {
+      toast.error('Please select at least one variant')
       return
     }
 
     setIsProcessing(true)
     try {
-      const variantData = selectedVariant ? {
-        variant_name: selectedVariant.name,
-        variant_sku: selectedVariant.sku
-      } : undefined
+      // Handle products without variants
+      if (!hasVariants) {
+        if (mode === 'wishlist') {
+          await onAddToWishlist?.({} as any)
+          onClose()
+        } else if (mode === 'buy-now') {
+          await onBuyNow?.(product.id, quantity, {} as any)
+          // Don't close modal - let redirect happen
+        } else {
+          await onAddToCart(product.id, quantity, {} as any)
+          onClose()
+        }
+        return
+      }
+
+      // Handle products with variants
+      const variantsArray = Array.from(selectedVariants.entries())
       
-      if (mode === 'wishlist' && onAddToWishlist) {
-        await onAddToWishlist(variantData as any)
-      } else if (mode === 'buy-now' && onBuyNow) {
-        await onBuyNow(product.id, quantity, variantData as any)
+      if (mode === 'buy-now' && onBuyNow) {
+        // For Buy Now, pass all variants as an array to handle multi-variant checkout
+        const variantsData = variantsArray.map(([sku, { variant, quantity }]) => ({
+          variant_name: variant.name,
+          variant_sku: variant.sku,
+          quantity: quantity
+        }))
+        await onBuyNow(product.id, 1, variantsData as any)
       } else {
-        await onAddToCart(product.id, quantity, variantData as any)
+        // For Add to Cart and Wishlist, process each variant separately
+        let successCount = 0
+        let failCount = 0
+        
+        for (const [sku, { variant, quantity }] of variantsArray) {
+          const variantData = {
+            variant_name: variant.name,
+            variant_sku: variant.sku
+          }
+          
+          try {
+            if (mode === 'wishlist' && onAddToWishlist) {
+              await onAddToWishlist(variantData as any)
+              successCount++
+            } else {
+              await onAddToCart(product.id, quantity, variantData as any)
+              successCount++
+            }
+          } catch (error) {
+            console.error(`Failed to add variant ${variant.name}:`, error)
+            failCount++
+            // Continue to next variant instead of stopping
+          }
+        }
+        
+        // Show summary only for cart, not wishlist
+        if (variantsArray.length > 1 && mode !== 'wishlist') {
+          if (successCount > 0 && failCount === 0) {
+            toast.success(`Added ${successCount} variant${successCount > 1 ? 's' : ''} to cart`)
+          } else if (successCount > 0 && failCount > 0) {
+            toast.info(`Added ${successCount} variant${successCount > 1 ? 's' : ''}, ${failCount} already existed`)
+          }
+        }
       }
       onClose()
     } catch (error) {
@@ -144,9 +209,14 @@ export function ProductVariantModal({
     }
   }
 
+  if (!isOpen) return null
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose}>
+      <div 
+        className="fixed bottom-0 left-0 right-0 w-full max-h-[90vh] overflow-y-auto bg-white rounded-t-2xl shadow-2xl animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -157,10 +227,10 @@ export function ProductVariantModal({
         </button>
 
         {/* Content */}
-        <div className="p-6 md:p-8">
-          <div className="grid md:grid-cols-2 gap-6">
+        <div className="p-4 md:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* Product Image */}
-            <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+            <div className="relative aspect-square max-h-48 md:max-h-none rounded-lg overflow-hidden bg-gray-100">
               {product.image_urls && product.image_urls[0] && (
                 <img
                   src={product.image_urls[0]}
@@ -177,26 +247,26 @@ export function ProductVariantModal({
 
             {/* Product Details */}
             <div className="flex flex-col">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h2>
+              <h2 className="text-lg md:text-2xl font-bold text-gray-900 mb-2">{product.name}</h2>
               
               {/* Price */}
-              <div className="flex items-baseline gap-2 mb-4">
-                <span className="text-3xl font-bold text-luxury-navy">
-                  {selectedVariant 
-                    ? formatPrice(isIDR ? selectedVariant.price_idr : selectedVariant.price_usd, currencyCode)
-                    : formatPrice(effectivePrice, currencyCode)
+              <div className="flex items-baseline gap-2 mb-3 md:mb-4">
+                <span className="text-xl md:text-3xl font-bold text-luxury-navy">
+                  {priceRange
+                    ? `${formatPrice(priceRange.min, currencyCode)} - ${formatPrice(priceRange.max, currencyCode)}`
+                    : formatPrice(effectivePrice * (!hasVariants ? quantity : 1), currencyCode)
                   }
                 </span>
-                {!selectedVariant && product.sale_price && product.sale_price < product.price && (
+                {!priceRange && product.sale_price && product.sale_price < basePrice && (
                   <span className="text-lg text-gray-400 line-through">
-                    {formatPrice(product.price, currencyCode)}
+                    {formatPrice(basePrice * (!hasVariants ? quantity : 1), currencyCode)}
                   </span>
                 )}
               </div>
 
               {/* Stock Status */}
               {!hasVariants && (
-                <div className="mb-6">
+                <div className="mb-4">
                   {product.stock_quantity > 0 ? (
                     <p className="text-sm text-green-600 font-medium">
                       {product.stock_quantity} in stock
@@ -207,79 +277,111 @@ export function ProductVariantModal({
                 </div>
               )}
 
-              {/* Variant Selection */}
-              {hasVariants && (
-                <div className="space-y-4 mb-6">
+              {/* Quantity Selector for products without variants */}
+              {!hasVariants && mode !== 'wishlist' && (
+                <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Variant
+                    Quantity
                   </label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {product.variants!.map((variant, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleVariantSelect(variant)}
-                        className={`px-4 py-3 rounded-lg border-2 transition-all text-left ${
-                          selectedVariant?.sku === variant.sku
-                            ? 'border-luxury-navy bg-luxury-navy text-white'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-luxury-navy/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{variant.name}</div>
-                            <div className={`text-sm ${
-                              selectedVariant?.sku === variant.sku ? 'text-white/80' : 'text-gray-500'
-                            }`}>
-                              {variant.stock_quantity > 0 ? `${variant.stock_quantity} in stock` : 'Out of stock'}
-                            </div>
-                          </div>
-                          <div className={`font-semibold ${
-                            selectedVariant?.sku === variant.sku ? 'text-white' : 'text-luxury-navy'
-                          }`}>
-                            {formatPrice(isIDR ? variant.price_idr : variant.price_usd, currencyCode)}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setQuantity(Math.max(minQty, quantity - 1))}
+                      disabled={quantity <= minQty}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="text-lg font-semibold min-w-[3rem] text-center">{quantity}</span>
+                    <button
+                      onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
+                      disabled={quantity >= maxQty}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               )}
 
-              {/* Quantity Selector */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity
-                </label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleQuantityChange(-1)}
-                    disabled={quantity <= minQty}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="text-xl font-semibold text-gray-900 min-w-[3rem] text-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => handleQuantityChange(1)}
-                    disabled={
-                      quantity >= (selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity) ||
-                      (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && quantity >= product.max_purchase_quantity)
-                    }
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
+              {/* Variant Selection */}
+              {hasVariants && (
+                <div className="space-y-4 mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Variants
+                  </label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {product.variants!.map((variant, index) => {
+                      const isSelected = selectedVariants.has(variant.sku)
+                      const selectedItem = selectedVariants.get(variant.sku)
+                      return (
+                        <div
+                          key={index}
+                          className={`rounded-lg border-2 transition-all ${
+                            isSelected
+                              ? 'border-luxury-navy bg-luxury-navy/5'
+                              : 'border-gray-300 bg-white'
+                          }`}
+                        >
+                          <button
+                            onClick={() => handleVariantToggle(variant)}
+                            disabled={variant.stock_quantity === 0}
+                            className="w-full px-4 py-3 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{variant.name}</div>
+                                <div className="text-sm text-gray-500">
+                                  {variant.stock_quantity > 0 ? `${variant.stock_quantity} in stock` : 'Out of stock'}
+                                </div>
+                              </div>
+                              <div className="font-semibold text-luxury-navy">
+                                {formatPrice(isIDR ? variant.price_idr : variant.price_usd, currencyCode)}
+                              </div>
+                            </div>
+                          </button>
+                          {isSelected && selectedItem && mode !== 'wishlist' && (
+                            <div className="px-4 pb-3 pt-2 border-t border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700">Quantity:</span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleVariantQuantityChange(variant.sku, -1)}
+                                    disabled={selectedItem.quantity <= minQty}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </button>
+                                  <span className="text-base font-semibold text-gray-900 min-w-[2rem] text-center">
+                                    {selectedItem.quantity}
+                                  </span>
+                                  <button
+                                    onClick={() => handleVariantQuantityChange(variant.sku, 1)}
+                                    disabled={
+                                      selectedItem.quantity >= variant.stock_quantity ||
+                                      (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && selectedItem.quantity >= product.max_purchase_quantity)
+                                    }
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
+
 
               {/* Action Buttons */}
               <div className="space-y-3 mt-auto">
                 {mode === 'wishlist' ? (
                   <Button
                     onClick={handleSubmit}
-                    disabled={isProcessing || (hasVariants && !selectedVariant) || (selectedVariant ? selectedVariant.stock_quantity === 0 : product.stock_quantity === 0)}
+                    disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
                     className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-6 text-base"
                     size="lg"
                   >
@@ -291,14 +393,14 @@ export function ProductVariantModal({
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         <ShoppingCart className="h-5 w-5" />
-                        Add to Wishlist
+                        Add to Wishlist {selectedVariants.size > 0 && `(${selectedVariants.size})`}
                       </span>
                     )}
                   </Button>
                 ) : mode === 'buy-now' ? (
                   <Button
                     onClick={handleSubmit}
-                    disabled={isProcessing || (hasVariants && !selectedVariant) || (selectedVariant ? selectedVariant.stock_quantity === 0 : product.stock_quantity === 0)}
+                    disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
                     className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-6 text-base"
                     size="lg"
                   >
@@ -310,14 +412,14 @@ export function ProductVariantModal({
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         <Zap className="h-5 w-5" />
-                        Buy Now
+                        Buy Now {selectedVariants.size > 0 && `(${selectedVariants.size} variants)`}
                       </span>
                     )}
                   </Button>
                 ) : (
                   <Button
                     onClick={handleSubmit}
-                    disabled={isProcessing || (hasVariants && !selectedVariant) || (selectedVariant ? selectedVariant.stock_quantity === 0 : product.stock_quantity === 0)}
+                    disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
                     className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-6 text-base"
                     size="lg"
                   >
@@ -329,7 +431,7 @@ export function ProductVariantModal({
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         <ShoppingCart className="h-5 w-5" />
-                        Add to Cart
+                        Add to Cart {selectedVariants.size > 0 && `(${selectedVariants.size})`}
                       </span>
                     )}
                   </Button>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, X } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const fragranceFamilies = [
   'Aqua & Aromatic',
@@ -22,10 +23,12 @@ const sortOptions = [
 ]
 
 export function ProductFilters() {
+  const { t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isOpen, setIsOpen] = useState(false)
   const [fragranceDropdownOpen, setFragranceDropdownOpen] = useState(false)
+  const [tempCategory, setTempCategory] = useState<string>('')
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -44,16 +47,33 @@ export function ProductFilters() {
   const currentCategory = searchParams.get('category')
   const currentSort = searchParams.get('sort') || 'best-selling'
 
+  // Initialize temp category when modal opens
+  const handleOpenModal = () => {
+    setTempCategory(currentCategory || '')
+    setIsOpen(true)
+  }
+
+  const applyFilters = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (tempCategory) {
+      params.set('category', tempCategory)
+    } else {
+      params.delete('category')
+    }
+    router.push(`/products?${params.toString()}`)
+    setIsOpen(false)
+  }
+
   return (
     <>
       {/* Mobile Filter Toggle */}
       <div className="lg:hidden">
         <button
           data-filter-toggle
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleOpenModal}
           className="flex w-full items-center justify-between rounded-lg border border-border bg-white px-4 py-3 text-sm font-medium shadow-sm transition-colors hover:bg-gray-50"
         >
-          <span>Fragrance Families</span>
+          <span>{t.productsPage.category}</span>
           <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
@@ -70,7 +90,7 @@ export function ProductFilters() {
             <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white shadow-2xl animate-in slide-in-from-bottom duration-300">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-4 rounded-t-2xl">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Filters</h3>
+                  <h3 className="text-lg font-semibold">{t.productsPage.category}</h3>
                   <button
                     onClick={() => setIsOpen(false)}
                     className="rounded-full p-2 hover:bg-gray-100 transition-colors"
@@ -82,14 +102,14 @@ export function ProductFilters() {
               
               <div className="p-4 space-y-6">
             <div>
-              <h4 className="mb-3 text-sm font-medium text-gray-700">Fragrance Family</h4>
+              <h4 className="mb-3 text-sm font-medium text-gray-700">{t.productsPage.category}</h4>
               <div className="space-y-2">
                 <div>
                   <button
                     onClick={() => setFragranceDropdownOpen(!fragranceDropdownOpen)}
                     className="flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all bg-gray-50 text-gray-700 hover:bg-gray-100"
                   >
-                    <span>{currentCategory || 'All Families'}</span>
+                    <span>{tempCategory || t.productsPage.allFamilies}</span>
                     <ChevronDown className={`h-4 w-4 transition-transform ${fragranceDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
                   
@@ -97,27 +117,26 @@ export function ProductFilters() {
                     <div className="mt-2 space-y-2">
                       <button
                         onClick={() => {
-                          updateFilter('category', '')
+                          setTempCategory('')
                           setFragranceDropdownOpen(false)
                         }}
                         className={`block w-full rounded-lg px-4 py-2 text-left text-sm transition-all ${
-                          !currentCategory
+                          !tempCategory
                             ? 'bg-[#C2A36B] text-white font-medium'
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}
                       >
-                        All Families
+                        {t.productsPage.allFamilies}
                       </button>
                       {fragranceFamilies.map((family) => (
                         <button
                           key={family}
                           onClick={() => {
-                            updateFilter('category', family)
+                            setTempCategory(family)
                             setFragranceDropdownOpen(false)
-                            setIsOpen(false)
                           }}
                           className={`block w-full rounded-lg px-4 py-2 text-left text-sm transition-all ${
-                            currentCategory === family
+                            tempCategory === family
                               ? 'bg-[#C2A36B] text-white font-medium'
                               : 'text-gray-600 hover:bg-gray-100'
                           }`}
@@ -131,18 +150,26 @@ export function ProductFilters() {
               </div>
             </div>
 
-            {currentCategory && (
+            <div className="flex gap-2">
+              {tempCategory && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    clearFilters()
+                    setIsOpen(false)
+                  }} 
+                  className="flex-1"
+                >
+                  {t.productsPage.clearFilters}
+                </Button>
+              )}
               <Button 
-                variant="outline" 
-                onClick={() => {
-                  clearFilters()
-                  setIsOpen(false)
-                }} 
-                className="w-full"
+                onClick={applyFilters}
+                className="flex-1 bg-[#C2A36B] hover:bg-[#8A6A3F] text-white"
               >
-                Clear Filters
+                {t.productsPage.applyFilters}
               </Button>
-            )}
+            </div>
           </div>
         </div>
           </>
@@ -153,7 +180,7 @@ export function ProductFilters() {
       <div className="hidden space-y-6 lg:block">
         {/* Sort Section */}
         <div>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">Sort By</h3>
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">{t.productsPage.sort.popular.split(' ')[0]}</h3>
           <div className="space-y-2">
             <button
               onClick={() => updateFilter('sort', 'popular')}
@@ -163,7 +190,7 @@ export function ProductFilters() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Popular
+              {t.productsPage.sort.popular}
             </button>
             <button
               onClick={() => updateFilter('sort', 'newest')}
@@ -173,7 +200,7 @@ export function ProductFilters() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Newest
+              {t.productsPage.sort.newest}
             </button>
             <button
               onClick={() => updateFilter('sort', 'best-selling')}
@@ -183,7 +210,7 @@ export function ProductFilters() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Best Selling
+              {t.productsPage.sort.bestSelling}
             </button>
             <button
               onClick={() => {
@@ -200,14 +227,14 @@ export function ProductFilters() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Price {currentSort === 'price-desc' ? '↓' : '↑'}
+              {t.productsPage.price} {currentSort === 'price-desc' ? '↓' : '↑'}
             </button>
           </div>
         </div>
 
         {/* Fragrance Family Section */}
         <div>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">Fragrance Family</h3>
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">{t.productsPage.category}</h3>
           <div className="space-y-2">
             <button
               onClick={() => updateFilter('category', '')}
@@ -217,7 +244,7 @@ export function ProductFilters() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              All Families
+              {t.productsPage.allFamilies}
             </button>
             
             {fragranceFamilies.map((family) => (

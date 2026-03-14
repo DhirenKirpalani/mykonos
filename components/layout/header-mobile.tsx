@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User, Menu, X, Settings, Heart } from 'lucide-react'
+import { Search, ShoppingBag, User, Menu, X, Settings, Heart, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
@@ -18,15 +18,21 @@ import { useWishlistCount } from '@/hooks/useWishlistCount'
 
 export function HeaderMobile() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [wishlistOpen, setWishlistOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [wishlistOpen, setWishlistOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t } = useLanguage()
   const { role } = useUserRole()
   const { count: cartCount } = useCartCount()
   const { count: wishlistCount } = useWishlistCount()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const [notifications, setNotifications] = useState<Notification[]>([])
 
@@ -70,6 +76,27 @@ export function HeaderMobile() {
     }
     
     return pathname.startsWith(href) && !searchParams.toString()
+  }
+
+  // Prevent hydration mismatch - render minimal header until mounted
+  if (!mounted) {
+    return (
+      <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg lg:hidden relative">
+        <nav className="container mx-auto px-3 md:px-4">
+          <div className="flex h-16 items-center justify-between md:h-18">
+            <button className="flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:bg-white/10 md:h-10 md:w-10">
+              <Menu className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
+            </button>
+            <Link href="/" className="absolute left-1/2 -translate-x-1/2">
+              <span className="font-serif text-lg font-medium tracking-[0.25em] text-luxury-gold md:text-xl">
+                MYKONOS
+              </span>
+            </Link>
+            <div className="flex items-center gap-2 md:gap-3" />
+          </div>
+        </nav>
+      </header>
+    )
   }
 
   return (
@@ -198,7 +225,7 @@ export function HeaderMobile() {
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Track Order
+                {t.header.trackOrder}
               </Link>
 
               {/* Wishlist and Admin */}
@@ -212,7 +239,7 @@ export function HeaderMobile() {
                 >
                   <div className="flex items-center gap-3">
                     <Heart className="h-5 w-5" />
-                    <span>Wishlist</span>
+                    <span>{t.header.wishlist}</span>
                   </div>
                   {wishlistCount > 0 && (
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-luxury-gold text-xs font-bold text-luxury-navy">
@@ -239,15 +266,19 @@ export function HeaderMobile() {
                 )}
               </div>
               
-              <div className="pt-4 border-t border-white/10 mt-4 space-y-2">
-                <div className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-luxury-gold/20 transition-all">
-                  <span className="text-base font-medium text-white">Region</span>
-                  <RegionCurrencySelector />
-                </div>
-                <div className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-luxury-gold/20 transition-all">
-                  <span className="text-base font-medium text-white">Language</span>
-                  <LanguageSwitcher />
-                </div>
+              <div className="flex items-center justify-between rounded-lg px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <Globe className="h-5 w-5 text-white" />
+                  <span className="text-base font-medium text-white">{t.header.region}</span>
+                </div>  
+                <RegionCurrencySelector />
+              </div>
+              <div className="flex items-center justify-between rounded-lg px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <Globe className="h-5 w-5 text-white" />
+                  <span className="text-base font-medium text-white">{t.header.language}</span>
+                </div>  
+                <LanguageSwitcher />
               </div>
             </nav>
           </div>

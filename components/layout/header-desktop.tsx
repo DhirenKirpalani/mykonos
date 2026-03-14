@@ -22,12 +22,17 @@ export function HeaderDesktop() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [wishlistOpen, setWishlistOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t } = useLanguage()
   const { role } = useUserRole()
   const { count: cartCount } = useCartCount()
   const { count: wishlistCount } = useWishlistCount()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Sample notifications - replace with actual data from your backend
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -44,11 +49,11 @@ export function HeaderDesktop() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
-  const navigation = [
+  const navItems = [
     { name: t.nav.home, href: '/' },
     { name: t.nav.catalog, href: '/products' },
     { name: t.nav.contact, href: '/contact' },
-    { name: 'Track Order', href: '/track-order' },
+    { name: t.header.trackOrder, href: '/track-order' },
   ]
 
   useEffect(() => {
@@ -76,6 +81,25 @@ export function HeaderDesktop() {
     }
     
     return pathname.startsWith(href) && !searchParams.toString()
+  }
+
+  // Prevent hydration mismatch - render minimal header until mounted
+  if (!mounted) {
+    return (
+      <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg hidden lg:block">
+        <nav className="container mx-auto px-8">
+          <div className="flex h-20 items-center justify-center">
+            <div className="flex items-center gap-5 flex-1" />
+            <Link href="/" className="static translate-x-0">
+              <span className="font-serif text-4xl font-medium tracking-[0.25em] text-luxury-gold transition-all duration-300 hover:opacity-90">
+                MYKONOS
+              </span>
+            </Link>
+            <div className="flex items-center gap-5 flex-1 justify-end" />
+          </div>
+        </nav>
+      </header>
+    )
   }
 
   return (
@@ -205,7 +229,7 @@ export function HeaderDesktop() {
             role="navigation"
             aria-label="Main navigation"
           >
-            {navigation.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}

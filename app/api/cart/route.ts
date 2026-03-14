@@ -38,8 +38,19 @@ export async function GET(request: Request) {
     // Calculate subtotal
     const typedItems = items as unknown as CartItemWithProduct[]
     const subtotal = (typedItems || []).reduce((total: number, item) => {
+      // Get variant-specific price if variant exists
+      let basePrice = item.product.price_idr
+      const itemWithVariant = item as any
+      
+      if (itemWithVariant.variant_sku && (item.product as any).variants) {
+        const variant = (item.product as any).variants.find((v: any) => v.sku === itemWithVariant.variant_sku)
+        if (variant) {
+          basePrice = variant.price_idr || variant.price_usd
+        }
+      }
+      
       const price = getEffectivePrice(
-        item.product.price_idr,
+        basePrice,
         item.product.sale_price
       )
       return total + (price * item.quantity)
@@ -113,6 +124,25 @@ export async function POST(request: Request) {
     const typedProduct = product as Product & {
       min_purchase_quantity?: number | null
       max_purchase_quantity?: number | null
+      variants?: Array<{
+        sku: string
+        name: string
+        price_usd: number
+        price_idr: number
+        stock_quantity: number
+      }>
+    }
+
+    // Get variant-specific data if variant is specified
+    let variantStock = typedProduct.stock_quantity ?? 0
+    let basePrice = typedProduct.price_idr || typedProduct.price_usd
+    
+    if (variant_sku && typedProduct.variants) {
+      const variant = typedProduct.variants.find(v => v.sku === variant_sku)
+      if (variant) {
+        variantStock = variant.stock_quantity
+        basePrice = variant.price_idr || variant.price_usd
+      }
     }
 
     // Validate quantity constraints
@@ -127,17 +157,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check inventory
-    if ((typedProduct.stock_quantity ?? 0) < quantity) {
+    // Check inventory (use variant stock if variant is specified)
+    if (variantStock < quantity) {
       return NextResponse.json(
-        { error: `Only ${typedProduct.stock_quantity ?? 0} items available` },
+        { error: `Only ${variantStock} items available` },
         { status: 400 }
       )
     }
 
-    // Determine which price to use based on region (stored in product)
-    // For now, we'll use price_idr if available, otherwise price_usd
-    const basePrice = typedProduct.price_idr || typedProduct.price_usd
     const priceAtAdd = getEffectivePrice(basePrice, typedProduct.sale_price)
 
     // Check if item already in cart (same product AND same variant)
@@ -161,7 +188,7 @@ export async function POST(request: Request) {
       // Update quantity
       const newQuantity = typedExisting.quantity + quantity
 
-      // Check maximum quantity for combined total
+      // Check maximum quantity for combined total (per variant, not per product)
       if (maxQty && newQuantity > maxQty) {
         return NextResponse.json(
           { error: `Maximum quantity is ${maxQty}` },
@@ -169,9 +196,10 @@ export async function POST(request: Request) {
         )
       }
 
-      if (newQuantity > (typedProduct.stock_quantity ?? 0)) {
+      // Check stock for this specific variant
+      if (newQuantity > variantStock) {
         return NextResponse.json(
-          { error: `Only ${typedProduct.stock_quantity ?? 0} items available` },
+          { error: `Only ${variantStock} items available` },
           { status: 400 }
         )
       }
