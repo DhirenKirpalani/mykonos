@@ -100,7 +100,18 @@ export default function ChatManagementPage() {
         (payload) => {
           const newMessage = payload.new as Message
           setMessages(prev => {
+            // Check if this is a real message replacing an optimistic one
+            const hasOptimistic = prev.some(m => m.id && typeof m.id === 'string' && m.id.startsWith('temp-'))
+            
+            // If we already have this exact message ID, don't add it again
             if (prev.some(m => m.id === newMessage.id)) return prev
+            
+            // If we have an optimistic message and this is from the agent, replace it
+            if (hasOptimistic && newMessage.sender_type === 'agent') {
+              return prev.map(m => (m.id && typeof m.id === 'string' && m.id.startsWith('temp-')) ? newMessage : m)
+            }
+            
+            // Otherwise, just add the new message
             return [...prev, newMessage]
           })
           
@@ -357,6 +368,21 @@ export default function ChatManagementPage() {
         return
       }
 
+      // Create optimistic message to show immediately
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        conversation_id: selectedConversation.id,
+        sender_type: 'agent',
+        sender_id: session.user.id,
+        sender_name: currentUser?.full_name || currentUser?.email || 'Support Agent',
+        message_text: messageText,
+        is_read: true,
+        created_at: new Date().toISOString(),
+      }
+
+      // Add optimistic message immediately
+      setMessages(prev => [...prev, optimisticMessage])
+
       const { error } = await supabase.rpc('send_chat_message', {
         p_conversation_id: selectedConversation.id,
         p_sender_type: 'agent',
@@ -367,7 +393,7 @@ export default function ChatManagementPage() {
 
       if (error) throw error
 
-      // Message will be added automatically via Realtime INSERT event
+      // The Realtime INSERT event will replace the optimistic message with the real one
 
       await (supabase
         .from('chat_conversations') as any)
@@ -384,6 +410,8 @@ export default function ChatManagementPage() {
       console.error('Failed to send message:', error)
       toast.error('Failed to send message')
       setMessageInput(messageText)
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => !(m.id && typeof m.id === 'string' && m.id.startsWith('temp-'))))
     } finally {
       setSending(false)
     }
@@ -534,6 +562,9 @@ export default function ChatManagementPage() {
                 {(() => {
                   const formatMessageDate = (dateString: string) => {
                     const date = new Date(dateString)
+                    if (isNaN(date.getTime())) {
+                      return 'Today'
+                    }
                     const today = new Date()
                     const yesterday = new Date(today)
                     yesterday.setDate(yesterday.getDate() - 1)
@@ -550,7 +581,8 @@ export default function ChatManagementPage() {
                   const groupMessagesByDate = (messages: Message[]) => {
                     const groups: { [key: string]: Message[] } = {}
                     messages.forEach(msg => {
-                      const dateKey = new Date(msg.created_at).toDateString()
+                      const date = new Date(msg.created_at)
+                      const dateKey = isNaN(date.getTime()) ? new Date().toDateString() : date.toDateString()
                       if (!groups[dateKey]) {
                         groups[dateKey] = []
                       }
@@ -597,10 +629,19 @@ export default function ChatManagementPage() {
                       <p className="whitespace-pre-wrap text-sm">{message.message_text}</p>
                       <div className="mt-1 flex items-center gap-1 text-xs">
                         <span className="opacity-70">
-                          {new Date(message.created_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {(() => {
+                            const date = new Date(message.created_at)
+                            if (isNaN(date.getTime())) {
+                              return new Date().toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            }
+                            return date.toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          })()}
                         </span>
                         {message.sender_type === 'agent' && (
                           <span className="font-bold" style={{ color: message.is_read ? '#3b82f6' : '#9ca3af' }}>

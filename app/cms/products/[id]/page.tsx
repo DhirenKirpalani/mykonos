@@ -10,11 +10,13 @@ import { toast } from 'sonner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { VariantStockModal } from '@/components/VariantStockModal'
+import { ProductEditTabs } from '@/components/ProductEditTabs'
 
 export default function EditProductPage() {
   const router = useRouter()
   const params = useParams()
   const productId = params.id as string
+  const [activeTab, setActiveTab] = useState('basic')
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [uploadingMedia, setUploadingMedia] = useState(false)
@@ -33,7 +35,9 @@ export default function EditProductPage() {
     price_usd: '',
     price_idr: '',
     cost_price: '',
+    cost_price_idr: '',
     compare_at_price: '',
+    compare_at_price_idr: '',
     stock_quantity: '',
     low_stock_threshold: '',
     allow_backorder: false,
@@ -65,6 +69,7 @@ export default function EditProductPage() {
     max_purchase_quantity: '',
     is_pre_order: false,
     pre_order_duration_days: '',
+    pre_order_release_date: '',
     scheduled_publish_date: '',
     meta_title: '',
     meta_description: '',
@@ -83,6 +88,8 @@ export default function EditProductPage() {
     sku: string
     price_usd: string
     price_idr: string
+    compare_at_price_usd: string
+    compare_at_price_idr: string
     stock_quantity: string
     image_url: string
   }>>([])
@@ -124,7 +131,9 @@ export default function EditProductPage() {
           price_usd: product.price_usd?.toString() || '',
           price_idr: product.price_idr?.toString() || '',
           cost_price: product.cost_price?.toString() || '',
+          cost_price_idr: product.cost_price_idr?.toString() || '',
           compare_at_price: product.compare_at_price?.toString() || '',
+          compare_at_price_idr: product.compare_at_price_idr?.toString() || '',
           stock_quantity: product.stock_quantity?.toString() || '',
           low_stock_threshold: product.low_stock_threshold?.toString() || '',
           allow_backorder: product.allow_backorder ?? false,
@@ -156,6 +165,7 @@ export default function EditProductPage() {
           max_purchase_quantity: product.max_purchase_quantity?.toString() || '',
           is_pre_order: product.is_pre_order ?? false,
           pre_order_duration_days: product.pre_order_duration_days?.toString() || '',
+          pre_order_release_date: product.pre_order_release_date || '',
           scheduled_publish_date: product.scheduled_publish_date || '',
           meta_title: product.meta_title || '',
           meta_description: product.meta_description || '',
@@ -443,7 +453,12 @@ export default function EditProductPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+        <ProductEditTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        
         <div className="space-y-6">
+          {/* Basic Info Tab */}
+          {activeTab === 'basic' && (
+          <>
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">
@@ -503,6 +518,62 @@ export default function EditProductPage() {
                 className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Category
+              </label>
+              <select
+                name="fragrance_family"
+                value={formData.fragrance_family}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+              >
+                <option value="">Select Category</option>
+                <option value="Oriental">Oriental</option>
+                <option value="Powdery Elegance">Powdery Elegance</option>
+                <option value="Aqua & Aromatic">Aqua & Aromatic</option>
+                <option value="Gourmand Galore">Gourmand Galore</option>
+                <option value="Floral Fantasy">Floral Fantasy</option>
+                <option value="Fresh Fruity">Fresh Fruity</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Collection
+              </label>
+              <select
+                name="collection"
+                value={formData.collection}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+              >
+                <option value="">Select Collection</option>
+                <option value="Extrait de Parfum">Extrait de Parfum</option>
+                <option value="Eau de Parfum">Eau de Parfum</option>
+                <option value="Eau de Toilette">Eau de Toilette</option>
+                <option value="Eau de Cologne">Eau de Cologne</option>
+                <option value="Parfum">Parfum</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Gender
+              </label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+              >
+                <option value="">Select Gender</option>
+                <option value="Unisex">Unisex</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
           </div>
 
           <div>
@@ -516,7 +587,12 @@ export default function EditProductPage() {
               className="min-h-[200px]"
             />
           </div>
+          </>
+          )}
 
+          {/* Pricing & Inventory Tab */}
+          {activeTab === 'pricing' && (
+          <>
           {/* Pricing Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Pricing</h3>
@@ -572,12 +648,44 @@ export default function EditProductPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
+                  Cost Price (IDR)
+                </label>
+                <input
+                  type="number"
+                  name="cost_price_idr"
+                  value={formData.cost_price_idr}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="For profit calculation"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
                   Compare-at Price (USD)
                 </label>
                 <input
                   type="number"
                   name="compare_at_price"
                   value={formData.compare_at_price}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Original price for sales"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Compare-at Price (IDR)
+                </label>
+                <input
+                  type="number"
+                  name="compare_at_price_idr"
+                  value={formData.compare_at_price_idr}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
@@ -650,128 +758,12 @@ export default function EditProductPage() {
               </label>
             </div>
           </div>
+          </>
+          )}
 
-          {/* Product Details Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Product Details</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Fragrance Family
-                </label>
-                <select
-                  name="fragrance_family"
-                  value={formData.fragrance_family}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                >
-                  <option value="">Select Fragrance Family</option>
-                  <option value="Oriental">Oriental</option>
-                  <option value="Powdery Elegance">Powdery Elegance</option>
-                  <option value="Aqua & Aromatic">Aqua & Aromatic</option>
-                  <option value="Gourmand Galore">Gourmand Galore</option>
-                  <option value="Floral Fantasy">Floral Fantasy</option>
-                  <option value="Fresh Fruity">Fresh Fruity</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Collection
-                </label>
-                <select
-                  name="collection"
-                  value={formData.collection}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                >
-                  <option value="">Select Collection</option>
-                  <option value="Extrait de Parfum">Extrait de Parfum</option>
-                  <option value="Eau de Parfum">Eau de Parfum</option>
-                  <option value="Eau de Toilette">Eau de Toilette</option>
-                  <option value="Eau de Cologne">Eau de Cologne</option>
-                  <option value="Parfum">Parfum</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Formulation
-                </label>
-                <select
-                  name="formulation"
-                  value={formData.formulation}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                >
-                  <option value="">Select Formulation</option>
-                  <option value="Spray">Spray</option>
-                  <option value="Roll-on">Roll-on</option>
-                  <option value="Splash">Splash</option>
-                  <option value="Solid">Solid</option>
-                  <option value="Oil">Oil</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Gender
-                </label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Unisex">Unisex</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Edition Type
-                </label>
-                <select
-                  name="edition_type"
-                  value={formData.edition_type}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                >
-                  <option value="">Select Edition Type</option>
-                  <option value="Regular Edition">Regular Edition</option>
-                  <option value="Limited Edition">Limited Edition</option>
-                  <option value="Special Edition">Special Edition</option>
-                  <option value="Collector's Edition">Collector's Edition</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Country of Origin
-                </label>
-                <select
-                  name="country_of_origin"
-                  value={formData.country_of_origin}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                >
-                  <option value="">Select Country</option>
-                  <option value="France">France</option>
-                  <option value="United Arab Emirates">United Arab Emirates</option>
-                  <option value="Italy">Italy</option>
-                  <option value="United States">United States</option>
-                  <option value="United Kingdom">United Kingdom</option>
-                  <option value="Indonesia">Indonesia</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
+          {/* Fragrance Details Tab */}
+          {activeTab === 'fragrance' && (
+          <>
           {/* Fragrance Notes Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Fragrance Notes</h3>
@@ -813,149 +805,95 @@ export default function EditProductPage() {
                   name="base_notes"
                   value={formData.base_notes}
                   onChange={handleChange}
-                  placeholder="e.g., Oud, Amber"
+                  placeholder="e.g., Oud, Musk"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
             </div>
           </div>
 
-          {/* Specifications Section */}
+          {/* Product Specifications */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Specifications</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Product Specifications</h3>
             <div className="grid gap-6 md:grid-cols-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Volume (ml)
+                  Formulation
                 </label>
                 <select
-                  name="volume_ml"
-                  value={formData.volume_ml}
+                  name="formulation"
+                  value={formData.formulation}
                   onChange={handleChange}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 >
-                  <option value="">Select Volume</option>
-                  <option value="5">5 ml</option>
-                  <option value="10">10 ml</option>
-                  <option value="15">15 ml</option>
-                  <option value="30">30 ml</option>
-                  <option value="50">50 ml</option>
-                  <option value="75">75 ml</option>
-                  <option value="100">100 ml</option>
-                  <option value="125">125 ml</option>
-                  <option value="150">150 ml</option>
-                  <option value="200">200 ml</option>
+                  <option value="">Select Formulation</option>
+                  <option value="Spray">Spray</option>
+                  <option value="Roll-on">Roll-on</option>
+                  <option value="Splash">Splash</option>
+                  <option value="Solid">Solid</option>
+                  <option value="Oil">Oil</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Product Weight (grams)
+                  Volume (ml)
                 </label>
                 <input
                   type="number"
-                  name="weight_grams"
-                  value={formData.weight_grams}
+                  name="volume_ml"
+                  value={formData.volume_ml}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  placeholder="e.g., 150"
+                  placeholder="e.g., 50"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Country of Origin
+                </label>
+                <select
+                  name="country_of_origin"
+                  value={formData.country_of_origin}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                >
+                  <option value="">Select Country</option>
+                  <option value="France">France</option>
+                  <option value="United Arab Emirates">United Arab Emirates</option>
+                  <option value="Italy">Italy</option>
+                  <option value="United States">United States</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Indonesia">Indonesia</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Shelf Life (months)
                 </label>
-                <select
+                <input
+                  type="number"
                   name="shelf_life_months"
                   value={formData.shelf_life_months}
                   onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                >
-                  <option value="">Select Shelf Life</option>
-                  <option value="12">12 months</option>
-                  <option value="18">18 months</option>
-                  <option value="24">24 months</option>
-                  <option value="36">36 months</option>
-                  <option value="48">48 months</option>
-                  <option value="60">60 months</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Shipping & Package Dimensions Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Shipping & Package Dimensions</h3>
-            <div className="grid gap-6 md:grid-cols-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Shipping Weight (grams)
-                </label>
-                <input
-                  type="number"
-                  name="shipping_weight_grams"
-                  value={formData.shipping_weight_grams}
-                  onChange={handleChange}
-                  step="0.01"
                   min="0"
-                  placeholder="Includes packaging"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Length (cm)
-                </label>
-                <input
-                  type="number"
-                  name="package_length_cm"
-                  value={formData.package_length_cm}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Package length"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Width (cm)
-                </label>
-                <input
-                  type="number"
-                  name="package_width_cm"
-                  value={formData.package_width_cm}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Package width"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Height (cm)
-                </label>
-                <input
-                  type="number"
-                  name="package_height_cm"
-                  value={formData.package_height_cm}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Package height"
+                  placeholder="e.g., 36"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
             </div>
           </div>
+          </>
+          )}
 
+          {/* SEO Tab */}
+          {activeTab === 'seo' && (
+          <>
           {/* SEO Fields Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">SEO & Marketing</h3>
@@ -1021,87 +959,103 @@ export default function EditProductPage() {
               </div>
             </div>
           </div>
+          </>
+          )}
 
-          {/* Compliance Fields Section */}
+          {/* Shipping Tab */}
+          {activeTab === 'shipping' && (
+          <>
+          {/* Shipping & Dimensions Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Compliance & Certifications</h3>
-            <div className="grid gap-6 md:grid-cols-2">
+            <h3 className="text-lg font-semibold text-gray-900">Shipping & Package Dimensions</h3>
+            <div className="grid gap-6 md:grid-cols-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Manufacturing Date
-                </label>
-                <input
-                  type="date"
-                  name="manufacturing_date"
-                  value={formData.manufacturing_date}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Expiration Date
-                </label>
-                <input
-                  type="date"
-                  name="expiration_date"
-                  value={formData.expiration_date}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                name="halal_certified"
-                checked={formData.halal_certified}
-                onChange={(e) => setFormData(prev => ({ ...prev, halal_certified: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
-              />
-              <label className="text-sm font-medium text-gray-700">
-                Halal Certified
-              </label>
-            </div>
-          </div>
-
-          {/* Purchase Limits Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Purchase Limits</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Minimum Purchase Quantity *
+                  Product Weight (grams)
                 </label>
                 <input
                   type="number"
-                  name="min_purchase_quantity"
-                  value={formData.min_purchase_quantity}
+                  name="weight_grams"
+                  value={formData.weight_grams}
                   onChange={handleChange}
-                  min="1"
-                  required
+                  step="0.01"
+                  min="0"
+                  placeholder="e.g., 150"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Maximum Purchase Quantity
+                  Shipping Weight (grams)
                 </label>
                 <input
                   type="number"
-                  name="max_purchase_quantity"
-                  value={formData.max_purchase_quantity}
+                  name="shipping_weight_grams"
+                  value={formData.shipping_weight_grams}
                   onChange={handleChange}
-                  min="1"
-                  placeholder="Leave empty for no limit"
+                  step="0.01"
+                  min="0"
+                  placeholder="Includes packaging"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Length (cm)
+                </label>
+                <input
+                  type="number"
+                  name="package_length_cm"
+                  value={formData.package_length_cm}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Package length"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Width (cm)
+                </label>
+                <input
+                  type="number"
+                  name="package_width_cm"
+                  value={formData.package_width_cm}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Package width"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Height (cm)
+                </label>
+                <input
+                  type="number"
+                  name="package_height_cm"
+                  value={formData.package_height_cm}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Package height"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
             </div>
           </div>
+          </>
+          )}
 
+          {/* Publishing Tab */}
+          {activeTab === 'publishing' && (
+          <>
           {/* Pre-Order Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Pre-Order Settings</h3>
@@ -1120,6 +1074,7 @@ export default function EditProductPage() {
               </div>
 
               {formData.is_pre_order && (
+                <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Pre-Order Duration (days)
@@ -1130,27 +1085,40 @@ export default function EditProductPage() {
                     value={formData.pre_order_duration_days}
                     onChange={handleChange}
                     min="1"
-                    placeholder="e.g., 14"
+                    placeholder="e.g., 30"
                     className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pre-Order Release Date
+                  </label>
+                  <input
+                    type="date"
+                    name="pre_order_release_date"
+                    value={formData.pre_order_release_date}
+                    onChange={handleChange}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                  />
+                </div>
+                </>
               )}
             </div>
           </div>
 
-          {/* Scheduled Publish Section */}
+          {/* Publishing & Status Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Publishing & Status</h3>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Product Status *
+                  Status
                 </label>
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
-                  required
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 >
                   <option value="draft">Draft</option>
@@ -1161,7 +1129,7 @@ export default function EditProductPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Scheduled Publish Date (Optional)
+                  Scheduled Publish Date
                 </label>
                 <input
                   type="datetime-local"
@@ -1170,9 +1138,9 @@ export default function EditProductPage() {
                   onChange={handleChange}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
-                <p className="mt-1 text-xs text-gray-500">Leave empty to publish immediately</p>
               </div>
             </div>
+
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -1182,141 +1150,16 @@ export default function EditProductPage() {
                 className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
               />
               <label className="text-sm font-medium text-gray-700">
-                Featured Product (Show on homepage)
+                Featured Product
               </label>
             </div>
           </div>
+          </>
+          )}
 
-          {/* Product Tags & Sorting Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Product Tags & Sorting</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Rating (0.0 - 5.0)
-                </label>
-                <input
-                  type="number"
-                  name="rating"
-                  value={formData.rating}
-                  onChange={handleChange}
-                  min="0"
-                  max="5"
-                  step="0.1"
-                  placeholder="e.g., 4.5"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Products Sold
-                </label>
-                <input
-                  type="number"
-                  name="products_sold"
-                  value={formData.products_sold}
-                  onChange={handleChange}
-                  min="0"
-                  placeholder="e.g., 150"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pilih Lokal (Show local product badge)
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, pilih_lokal: true }))}
-                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-                      formData.pilih_lokal
-                        ? 'bg-[#C2A36B] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    True
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, pilih_lokal: false }))}
-                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-                      !formData.pilih_lokal
-                        ? 'bg-[#C2A36B] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    False
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Popular Product (Show in popular filter)
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, is_popular: true }))}
-                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-                      formData.is_popular
-                        ? 'bg-[#C2A36B] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    True
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, is_popular: false }))}
-                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-                      !formData.is_popular
-                        ? 'bg-[#C2A36B] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    False
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Best Selling (Show in best selling filter)
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, is_best_selling: true }))}
-                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-                      formData.is_best_selling
-                        ? 'bg-[#C2A36B] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    True
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, is_best_selling: false }))}
-                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-                      !formData.is_best_selling
-                        ? 'bg-[#C2A36B] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    False
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
+          {/* Variants Tab */}
+          {activeTab === 'variants' && (
+          <>
           {/* Bulk Discounts Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -1400,7 +1243,7 @@ export default function EditProductPage() {
                 )}
                 <Button
                   type="button"
-                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', stock_quantity: '', image_url: '' }])}
+                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', compare_at_price_usd: '', compare_at_price_idr: '', stock_quantity: '', image_url: '' }])}
                   variant="outline"
                   size="sm"
                 >
@@ -1491,6 +1334,42 @@ export default function EditProductPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
+                      Compare-at Price (USD)
+                    </label>
+                    <input
+                      type="number"
+                      value={variant.compare_at_price_usd}
+                      onChange={(e) => {
+                        const newVariants = [...variants]
+                        newVariants[index].compare_at_price_usd = e.target.value
+                        setVariants(newVariants)
+                      }}
+                      step="0.01"
+                      min="0"
+                      placeholder="Original price"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Compare-at Price (IDR)
+                    </label>
+                    <input
+                      type="number"
+                      value={variant.compare_at_price_idr}
+                      onChange={(e) => {
+                        const newVariants = [...variants]
+                        newVariants[index].compare_at_price_idr = e.target.value
+                        setVariants(newVariants)
+                      }}
+                      step="0.01"
+                      min="0"
+                      placeholder="Original price"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
                       Stock Quantity
                     </label>
                     <input
@@ -1525,40 +1404,12 @@ export default function EditProductPage() {
               </div>
             ))}
           </div>
+          </>
+          )}
 
-          {/* Regulatory & Shipping Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Regulatory & Shipping</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Official Distribution Authorization No. (BPOM, PIRT)
-                </label>
-                <input
-                  type="text"
-                  name="bpom_number"
-                  value={formData.bpom_number}
-                  onChange={handleChange}
-                  placeholder="e.g., NA18201234567"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Ships From
-                </label>
-                <input
-                  type="text"
-                  name="ships_from"
-                  value={formData.ships_from}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-            </div>
-          </div>
-
+          {/* Media Tab */}
+          {activeTab === 'media' && (
+          <>
           {/* Media Upload Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Product Media</h3>
@@ -1673,7 +1524,74 @@ export default function EditProductPage() {
               )}
             </div>
           </div>
+          </>
+          )}
 
+          {/* Advanced Tab */}
+          {activeTab === 'advanced' && (
+          <>
+          {/* Compliance & Certifications Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Compliance & Certifications</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Manufacturing Date
+                </label>
+                <input
+                  type="date"
+                  name="manufacturing_date"
+                  value={formData.manufacturing_date}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Expiration Date
+                </label>
+                <input
+                  type="date"
+                  name="expiration_date"
+                  value={formData.expiration_date}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Official Distribution Authorization No. (BPOM, PIRT)
+                </label>
+                <input
+                  type="text"
+                  name="bpom_number"
+                  value={formData.bpom_number}
+                  onChange={handleChange}
+                  placeholder="e.g., NA18201234567"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  name="halal_certified"
+                  checked={formData.halal_certified}
+                  onChange={(e) => setFormData(prev => ({ ...prev, halal_certified: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  Halal Certified
+                </label>
+              </div>
+            </div>
+          </div>
+          </>
+          )}
+
+          {/* Submit Buttons - Always Visible */}
           <div className="flex gap-4 border-t border-gray-200 pt-6">
             <Button
               type="submit"

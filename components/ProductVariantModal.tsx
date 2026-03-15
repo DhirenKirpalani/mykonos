@@ -212,9 +212,9 @@ export function ProductVariantModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center md:p-4" onClick={onClose}>
       <div 
-        className="fixed bottom-0 left-0 right-0 w-full max-h-[90vh] overflow-y-auto bg-white rounded-t-2xl shadow-2xl animate-slide-up"
+        className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto md:left-auto md:right-auto w-full md:max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-t-2xl md:rounded-2xl shadow-2xl animate-slide-up md:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
