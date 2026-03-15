@@ -18,6 +18,11 @@ interface Product {
   is_visible: boolean
   created_at: string
   image_url?: string
+  variants?: Array<{
+    name: string
+    sku: string
+    stock_quantity: number
+  }>
 }
 
 export default function ProductsPage() {

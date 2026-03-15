@@ -78,6 +78,25 @@ export function ProductCard({ product }: ProductCardProps) {
     setMounted(true)
   }, [])
   
+  // Check if product has variants with different prices
+  const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
+  const variantPrices = hasVariants ? (product as any).variants.map((v: any) => 
+    region?.code === 'ID' ? (v.price_idr || 0) : (v.price_usd || 0)
+  ).filter((p: number) => p > 0) : []
+  
+  const minVariantPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0
+  const maxVariantPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0
+  const hasPriceRange = hasVariants && minVariantPrice > 0 && maxVariantPrice > minVariantPrice
+  
+  // Get compare-at prices for variants
+  const variantCompareAtPrices = hasVariants ? (product as any).variants.map((v: any) => 
+    region?.code === 'ID' ? (v.compare_at_price_idr || 0) : (v.compare_at_price_usd || 0)
+  ).filter((p: number) => p > 0) : []
+  
+  const minVariantCompareAtPrice = variantCompareAtPrices.length > 0 ? Math.min(...variantCompareAtPrices) : 0
+  const maxVariantCompareAtPrice = variantCompareAtPrices.length > 0 ? Math.max(...variantCompareAtPrices) : 0
+  const hasCompareAtPriceRange = hasVariants && minVariantCompareAtPrice > 0 && maxVariantCompareAtPrice > minVariantCompareAtPrice
+  
   // Get price based on region
   const getPrice = () => {
     if (region?.code === 'ID' && (product as any).price_idr) {
@@ -194,18 +213,33 @@ export function ProductCard({ product }: ProductCardProps) {
           </h3>
 
           {/* Price with discount */}
-          <div className="flex items-center gap-2 mb-1">
-            <p className="
-              text-sm md:text-lg
-              text-[#1C2E4A]
-              font-bold
-            ">
-              {region ? formatPrice(getPrice(), region.currency_code) : '...'}
-            </p>
-            {product.sale_price && product.sale_price < getPrice() && (
-              <span className="text-[10px] md:text-sm text-red-600 font-medium">
-                -{Math.round(((getPrice() - product.sale_price) / getPrice()) * 100)}%
-              </span>
+          <div className="flex flex-col gap-0.5 mb-1">
+            <div className="flex items-center gap-2">
+              <p className="
+                text-sm md:text-lg
+                text-[#1C2E4A]
+                font-bold
+              ">
+                {region ? (
+                  hasPriceRange 
+                    ? `${formatPrice(minVariantPrice, region.currency_code)} - ${formatPrice(maxVariantPrice, region.currency_code)}`
+                    : formatPrice(getPrice(), region.currency_code)
+                ) : '...'}
+              </p>
+              {!hasPriceRange && product.sale_price && product.sale_price < getPrice() && (
+                <span className="text-[10px] md:text-sm text-red-600 font-medium">
+                  -{Math.round(((getPrice() - product.sale_price) / getPrice()) * 100)}%
+                </span>
+              )}
+            </div>
+            {/* Compare-at price for variants */}
+            {hasPriceRange && (minVariantCompareAtPrice > minVariantPrice || maxVariantCompareAtPrice > maxVariantPrice) && (
+              <p className="text-[10px] md:text-sm text-gray-400 line-through">
+                {hasCompareAtPriceRange 
+                  ? `${formatPrice(minVariantCompareAtPrice, region?.currency_code || 'USD')} - ${formatPrice(maxVariantCompareAtPrice, region?.currency_code || 'USD')}`
+                  : formatPrice(minVariantCompareAtPrice || maxVariantCompareAtPrice, region?.currency_code || 'USD')
+                }
+              </p>
             )}
           </div>
 

@@ -12,7 +12,13 @@ interface ProductVariant {
   sku: string
   price_usd: number
   price_idr: number
+  compare_at_price_usd?: number | null
+  compare_at_price_idr?: number | null
   stock_quantity: number
+  low_stock_threshold?: number
+  in_stock?: boolean
+  min_purchase_quantity?: number
+  max_purchase_quantity?: number
   image_url?: string
 }
 
@@ -93,7 +99,8 @@ export function ProductVariantModal({
       if (newMap.has(variant.sku)) {
         newMap.delete(variant.sku)
       } else {
-        newMap.set(variant.sku, { variant, quantity: minQty })
+        // Start with quantity 1
+        newMap.set(variant.sku, { variant, quantity: 1 })
       }
       return newMap
     })
@@ -108,15 +115,19 @@ export function ProductVariantModal({
       const newQuantity = item.quantity + delta
       const variant = item.variant
       
+      // Use variant-level min/max if available, otherwise fall back to product-level
+      const variantMinQty = variant.min_purchase_quantity || product.min_purchase_quantity || 1
+      const variantMaxQty = variant.max_purchase_quantity || product.max_purchase_quantity || variant.stock_quantity
+      
       // Validate minimum quantity
-      if (newQuantity < minQty) {
-        toast.error(`Minimum quantity is ${minQty}`)
+      if (newQuantity < variantMinQty) {
+        toast.error(`Minimum quantity is ${variantMinQty}`)
         return prev
       }
       
       // Validate maximum quantity
-      if (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && newQuantity > product.max_purchase_quantity) {
-        toast.error(`Maximum quantity is ${product.max_purchase_quantity}`)
+      if (variantMaxQty !== null && variantMaxQty !== undefined && newQuantity > variantMaxQty) {
+        toast.error(`Maximum quantity is ${variantMaxQty}`)
         return prev
       }
       
@@ -269,7 +280,7 @@ export function ProductVariantModal({
                 <div className="mb-4">
                   {product.stock_quantity > 0 ? (
                     <p className="text-sm text-green-600 font-medium">
-                      {product.stock_quantity} in stock
+                      {product.stock_quantity - quantity} remaining ({quantity} selected)
                     </p>
                   ) : (
                     <p className="text-sm text-red-600 font-medium">Out of stock</p>
@@ -331,11 +342,24 @@ export function ProductVariantModal({
                               <div className="flex-1">
                                 <div className="font-medium text-gray-900">{variant.name}</div>
                                 <div className="text-sm text-gray-500">
-                                  {variant.stock_quantity > 0 ? `${variant.stock_quantity} in stock` : 'Out of stock'}
+                                  {isSelected && selectedItem 
+                                    ? `${variant.stock_quantity - selectedItem.quantity} remaining (${selectedItem.quantity} selected)`
+                                    : variant.stock_quantity > 0 
+                                      ? `${variant.stock_quantity} in stock` 
+                                      : 'Out of stock'
+                                  }
                                 </div>
                               </div>
-                              <div className="font-semibold text-luxury-navy">
-                                {formatPrice(isIDR ? variant.price_idr : variant.price_usd, currencyCode)}
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="font-semibold text-luxury-navy">
+                                  {formatPrice((isIDR ? variant.price_idr : variant.price_usd) * (isSelected && selectedItem ? selectedItem.quantity : 1), currencyCode)}
+                                </div>
+                                {((isIDR && variant.compare_at_price_idr && variant.compare_at_price_idr > variant.price_idr) ||
+                                  (!isIDR && variant.compare_at_price_usd && variant.compare_at_price_usd > variant.price_usd)) && (
+                                  <div className="text-sm text-gray-400 line-through">
+                                    {formatPrice((isIDR ? variant.compare_at_price_idr : variant.compare_at_price_usd)! * (isSelected && selectedItem ? selectedItem.quantity : 1), currencyCode)}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </button>
@@ -346,7 +370,7 @@ export function ProductVariantModal({
                                 <div className="flex items-center gap-2">
                                   <button
                                     onClick={() => handleVariantQuantityChange(variant.sku, -1)}
-                                    disabled={selectedItem.quantity <= minQty}
+                                    disabled={selectedItem.quantity <= (variant.min_purchase_quantity || product.min_purchase_quantity || 1)}
                                     className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   >
                                     <Minus className="h-3 w-3" />
@@ -356,10 +380,11 @@ export function ProductVariantModal({
                                   </span>
                                   <button
                                     onClick={() => handleVariantQuantityChange(variant.sku, 1)}
-                                    disabled={
-                                      selectedItem.quantity >= variant.stock_quantity ||
-                                      (product.max_purchase_quantity !== null && product.max_purchase_quantity !== undefined && selectedItem.quantity >= product.max_purchase_quantity)
-                                    }
+                                    disabled={(() => {
+                                      const variantMaxQty = variant.max_purchase_quantity || product.max_purchase_quantity
+                                      return selectedItem.quantity >= variant.stock_quantity ||
+                                        (variantMaxQty !== null && variantMaxQty !== undefined && selectedItem.quantity >= variantMaxQty)
+                                    })()}
                                     className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   >
                                     <Plus className="h-3 w-3" />
