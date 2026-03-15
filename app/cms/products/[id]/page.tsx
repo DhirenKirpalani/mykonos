@@ -91,6 +91,10 @@ export default function EditProductPage() {
     compare_at_price_usd: string
     compare_at_price_idr: string
     stock_quantity: string
+    low_stock_threshold: string
+    in_stock: boolean
+    min_purchase_quantity: string
+    max_purchase_quantity: string
     image_url: string
   }>>([])
   const [variantStockModalOpen, setVariantStockModalOpen] = useState(false)
@@ -217,7 +221,13 @@ export default function EditProductPage() {
             sku: v.sku || '',
             price_usd: v.price_usd?.toString() || '',
             price_idr: v.price_idr?.toString() || '',
+            compare_at_price_usd: v.compare_at_price_usd?.toString() || '',
+            compare_at_price_idr: v.compare_at_price_idr?.toString() || '',
             stock_quantity: v.stock_quantity?.toString() || '',
+            low_stock_threshold: v.low_stock_threshold?.toString() || '',
+            in_stock: v.in_stock !== undefined ? v.in_stock : true,
+            min_purchase_quantity: v.min_purchase_quantity?.toString() || '1',
+            max_purchase_quantity: v.max_purchase_quantity?.toString() || '',
             image_url: v.image_url || ''
           })))
         }
@@ -387,7 +397,13 @@ export default function EditProductPage() {
             sku: v.sku,
             price_usd: parseFloat(v.price_usd) || 0,
             price_idr: parseFloat(v.price_idr) || 0,
+            compare_at_price_usd: v.compare_at_price_usd ? parseFloat(v.compare_at_price_usd) : null,
+            compare_at_price_idr: v.compare_at_price_idr ? parseFloat(v.compare_at_price_idr) : null,
             stock_quantity: parseInt(v.stock_quantity) || 0,
+            low_stock_threshold: v.low_stock_threshold ? parseInt(v.low_stock_threshold) : null,
+            in_stock: v.in_stock !== undefined ? v.in_stock : true,
+            min_purchase_quantity: v.min_purchase_quantity ? parseInt(v.min_purchase_quantity) : 1,
+            max_purchase_quantity: v.max_purchase_quantity ? parseInt(v.max_purchase_quantity) : null,
             image_url: v.image_url
           })),
         })
@@ -756,6 +772,42 @@ export default function EditProductPage() {
               <label className="text-sm font-medium text-gray-700">
                 Allow Backorders (when out of stock)
               </label>
+            </div>
+          </div>
+
+          {/* Purchase Limits Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Purchase Limits</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Minimum Purchase Quantity *
+                </label>
+                <input
+                  type="number"
+                  name="min_purchase_quantity"
+                  value={formData.min_purchase_quantity}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Maximum Purchase Quantity
+                </label>
+                <input
+                  type="number"
+                  name="max_purchase_quantity"
+                  value={formData.max_purchase_quantity}
+                  onChange={handleChange}
+                  min="1"
+                  placeholder="Leave empty for no limit"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
             </div>
           </div>
           </>
@@ -1243,7 +1295,7 @@ export default function EditProductPage() {
                 )}
                 <Button
                   type="button"
-                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', compare_at_price_usd: '', compare_at_price_idr: '', stock_quantity: '', image_url: '' }])}
+                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', compare_at_price_usd: '', compare_at_price_idr: '', stock_quantity: '', low_stock_threshold: '', in_stock: true, min_purchase_quantity: '1', max_purchase_quantity: '', image_url: '' }])}
                   variant="outline"
                   size="sm"
                 >
@@ -1381,6 +1433,72 @@ export default function EditProductPage() {
                         setVariants(newVariants)
                       }}
                       min="0"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Low Stock Threshold
+                    </label>
+                    <input
+                      type="number"
+                      value={variant.low_stock_threshold}
+                      onChange={(e) => {
+                        const newVariants = [...variants]
+                        newVariants[index].low_stock_threshold = e.target.value
+                        setVariants(newVariants)
+                      }}
+                      min="0"
+                      placeholder="Alert when stock below this"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      In Stock
+                    </label>
+                    <select
+                      value={variant.in_stock?.toString() || 'true'}
+                      onChange={(e) => {
+                        const newVariants = [...variants]
+                        newVariants[index].in_stock = e.target.value === 'true'
+                        setVariants(newVariants)
+                      }}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    >
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Min Purchase Quantity
+                    </label>
+                    <input
+                      type="number"
+                      value={variant.min_purchase_quantity}
+                      onChange={(e) => {
+                        const newVariants = [...variants]
+                        newVariants[index].min_purchase_quantity = e.target.value
+                        setVariants(newVariants)
+                      }}
+                      min="1"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Max Purchase Quantity
+                    </label>
+                    <input
+                      type="number"
+                      value={variant.max_purchase_quantity}
+                      onChange={(e) => {
+                        const newVariants = [...variants]
+                        newVariants[index].max_purchase_quantity = e.target.value
+                        setVariants(newVariants)
+                      }}
+                      placeholder="Leave empty for no limit"
                       className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                     />
                   </div>
@@ -1585,6 +1703,89 @@ export default function EditProductPage() {
                 <label className="text-sm font-medium text-gray-700">
                   Halal Certified
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Settings Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Additional Settings</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  name="pilih_lokal"
+                  checked={formData.pilih_lokal}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pilih_lokal: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  Pilih Lokal (Local Product)
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  name="is_popular"
+                  checked={formData.is_popular}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_popular: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  Mark as Popular
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  name="is_best_selling"
+                  checked={formData.is_best_selling}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_best_selling: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  Mark as Best Selling
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Analytics & Display Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Analytics & Display</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Rating (0-5)
+                </label>
+                <input
+                  type="number"
+                  name="rating"
+                  value={formData.rating}
+                  onChange={handleChange}
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  placeholder="e.g., 4.5"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Products Sold
+                </label>
+                <input
+                  type="number"
+                  name="products_sold"
+                  value={formData.products_sold}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="e.g., 150"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
               </div>
             </div>
           </div>
