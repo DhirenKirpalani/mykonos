@@ -148,13 +148,20 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
       {/* Content */}
       <div className="p-4">
-        {product.fragrance_family && (
-          <p className="mb-1 text-xs text-muted-foreground">{product.fragrance_family}</p>
-        )}
-        <h3 className="mb-2 font-serif text-lg font-medium line-clamp-1">
+        <div className="flex items-center justify-between mb-1">
+          {product.fragrance_family && (
+            <p className="text-xs text-muted-foreground">{product.fragrance_family}</p>
+          )}
+          {product.in_stock && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              In Stock
+            </span>
+          )}
+        </div>
+        <h3 className="mb-0.5 sm:mb-1 font-serif text-lg font-medium line-clamp-1">
           {product.name}
         </h3>
-        <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+        <p className="mb-1.5 sm:mb-2 text-sm text-muted-foreground line-clamp-2">
           {product.description}
         </p>
         <div className="flex items-center justify-between">

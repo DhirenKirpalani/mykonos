@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Eye, Package, Truck, CheckCircle } from 'lucide-react'
+import { Search, Eye, Package, Truck, CheckCircle, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { LoadingSpinner } from '@/components/common'
+import { AuditLogModal } from '@/components/AuditLogModal'
 
 interface Order {
   id: string
@@ -26,6 +28,8 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [auditLogOpen, setAuditLogOpen] = useState(false)
+  const [auditOrder, setAuditOrder] = useState<Order | null>(null)
 
   useEffect(() => {
     fetchOrders()
@@ -102,11 +106,7 @@ export default function OrdersPage() {
   })
 
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-gray-500">Loading orders...</div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (
@@ -151,6 +151,7 @@ export default function OrdersPage() {
                 <th className="pb-3">Date</th>
                 <th className="pb-3">Total</th>
                 <th className="pb-3">Status</th>
+                <th className="pb-3">Audit</th>
                 <th className="pb-3">Actions</th>
               </tr>
             </thead>
@@ -177,6 +178,19 @@ export default function OrdersPage() {
                       {getStatusIcon(order.status)}
                       {order.status}
                     </span>
+                  </td>
+                  <td className="py-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setAuditOrder(order)
+                        setAuditLogOpen(true)
+                      }}
+                      className="text-luxury-gold hover:text-luxury-gold/80"
+                    >
+                      <Clock className="h-4 w-4" />
+                    </Button>
                   </td>
                   <td className="py-4">
                     <div className="flex items-center gap-2">
@@ -209,6 +223,16 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+
+      {auditOrder && (
+        <AuditLogModal
+          isOpen={auditLogOpen}
+          onClose={() => setAuditLogOpen(false)}
+          entityType="order"
+          entityId={auditOrder.id}
+          entityName={auditOrder.order_number}
+        />
+      )}
     </div>
   )
 }

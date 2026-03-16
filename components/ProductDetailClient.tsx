@@ -376,33 +376,33 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
 
     {/* Sticky Bottom Action Bar - Mobile Only */}
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
-      <div className="flex items-center gap-2 p-3">
+      <div className="flex items-center gap-2 p-2 sm:p-3">
         {/* Wishlist Icon */}
         <button 
           onClick={() => handleAddToWishlist()}
           disabled={isAddingToWishlist}
-          className="flex items-center justify-center w-12 h-12 border border-gray-300 rounded disabled:opacity-50"
+          className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50"
         >
-          <Heart className="h-5 w-5 text-gray-600" />
+          <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
         </button>
         
         {/* Divider */}
-        <div className="h-12 w-px bg-gray-300" />
+        <div className="h-10 sm:h-12 w-px bg-gray-300" />
         
         {/* Cart Icon */}
         <button 
           onClick={() => handleAddToCart(undefined, quantity)}
           disabled={isAddingToCart}
-          className="flex items-center justify-center w-12 h-12 border border-gray-300 rounded disabled:opacity-50"
+          className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50"
         >
-          <ShoppingBag className="h-5 w-5 text-gray-600" />
+          <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
         </button>
         
         {/* Buy Now Button */}
         <button 
           onClick={() => handleBuyNow(undefined, quantity)}
           disabled={isBuyingNow}
-          className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 px-4 rounded disabled:opacity-50"
+          className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-2 px-3 sm:py-3 sm:px-4 rounded disabled:opacity-50 text-sm sm:text-base"
         >
           {isBuyingNow ? 'Processing...' : 'Buy Now'}
         </button>

@@ -119,7 +119,7 @@ export async function PATCH(
     // Map of allowed fields to update
     const allowedFields = [
       'name', 'slug', 'sku', 'description', 'brand',
-      'price_usd', 'price_idr', 'cost_price', 'compare_at_price',
+      'price_usd', 'price_idr', 'cost_price', 'cost_price_idr', 'compare_at_price', 'compare_at_price_idr',
       'stock_quantity', 'low_stock_threshold', 'allow_backorder', 'in_stock',
       'volume_ml', 'weight_grams', 'shipping_weight_grams',
       'package_length_cm', 'package_width_cm', 'package_height_cm',
@@ -128,11 +128,12 @@ export async function PATCH(
       'bpom_number', 'halal_certified', 'manufacturing_date', 'expiration_date',
       'ships_from', 'status', 'is_featured', 'is_visible',
       'min_purchase_quantity', 'max_purchase_quantity',
-      'is_pre_order', 'pre_order_duration_days', 'scheduled_publish_date',
+      'is_pre_order', 'pre_order_duration_days', 'pre_order_release_date', 'scheduled_publish_date',
       'meta_title', 'meta_description', 'meta_keywords', 'tags',
-      'image_urls', 'image_alt_texts', 'bulk_discounts', 'variants',
+      'image_urls', 'video_urls', 'image_alt_texts', 'bulk_discounts', 'variants',
       'collection', 'size', 'category',
-      'pilih_lokal', 'rating', 'products_sold', 'is_popular', 'is_best_selling'
+      'pilih_lokal', 'rating', 'products_sold', 'is_popular', 'is_best_selling',
+      'sale_price'
     ]
     
     // Only include allowed fields that are present in the body
@@ -149,6 +150,21 @@ export async function PATCH(
       .single()
 
     if (error) throw error
+
+    // Create audit log entry
+    try {
+      await supabase.from('audit_logs').insert({
+        entity_type: 'product',
+        entity_id: id,
+        action: 'updated',
+        changes: updateData,
+        user_id: user.id,
+        user_email: user.email || 'unknown'
+      })
+    } catch (auditError) {
+      console.error('Audit log creation error:', auditError)
+      // Don't fail the request if audit logging fails
+    }
 
     // Revalidate product pages to reflect changes immediately
     try {

@@ -1,3 +1,5 @@
+'use client'
+
 import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCarousel } from '@/components/product-carousel'
@@ -11,6 +13,8 @@ import { ProductShippingInfo } from '@/components/ProductShippingInfo'
 import { CollapsibleDescription } from '@/components/CollapsibleDescription'
 import { ExpandableSpecifications } from '@/components/ExpandableSpecifications'
 import { Database } from '@/lib/supabase/database.types'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { useState, useEffect } from 'react'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,19 +49,37 @@ async function getRelatedProducts(fragranceFamily: string, currentId: string) {
   return data
 }
 
-export default async function ProductDetailPage({
+export default function ProductDetailPage({
   params,
 }: {
   params: { slug: string }
 }) {
-  const product = await getProduct(params.slug)
+  const { t, locale } = useLanguage()
+  const productTranslations = locale === 'id' ? (t as any).produk : (t as any).products
+  const [product, setProduct] = useState<Product | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
-  if (!product) {
-    notFound()
+  useEffect(() => {
+    async function loadProduct() {
+      const productData = await getProduct(params.slug)
+      if (!productData) {
+        notFound()
+      }
+      setProduct(productData)
+      const fragranceFamily = productData.fragrance_family || 'Uncategorized'
+      const related = await getRelatedProducts(fragranceFamily, productData.id)
+      setRelatedProducts(related)
+      setLoading(false)
+    }
+    loadProduct()
+  }, [params.slug])
+
+  if (loading || !product) {
+    return <div>Loading...</div>
   }
 
   const fragranceFamily = product.fragrance_family || 'Uncategorized'
-  const relatedProducts = await getRelatedProducts(fragranceFamily, product.id)
   const hasDiscount = product.sale_price && product.sale_price < product.price_idr
 
   // Build breadcrumb items following website route
@@ -91,12 +113,19 @@ export default async function ProductDetailPage({
 
           {/* Product Details */}
           <div className="space-y-3">
-            {/* Flash Sale Badge */}
-            {hasDiscount && (
-              <div className="inline-flex items-center gap-2 rounded bg-red-600 px-3 py-1 text-sm font-medium text-white">
-                <span>Flash Sale</span>
-              </div>
-            )}
+            {/* Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {hasDiscount && (
+                <div className="inline-flex items-center gap-2 rounded bg-red-600 px-3 py-1 text-sm font-medium text-white">
+                  <span>{productTranslations.flashSale}</span>
+                </div>
+              )}
+              {(product as any).in_stock && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {productTranslations.inStock}
+                </span>
+              )}
+            </div>
 
             {/* Price Display - Above Title */}
             {product && (
@@ -125,7 +154,7 @@ export default async function ProductDetailPage({
                 <span className="text-gray-600">
                   {(product as any).products_sold >= 1000
                     ? `${Math.floor((product as any).products_sold / 1000)}RB+`
-                    : `${(product as any).products_sold || 0}`} Terjual
+                    : `${(product as any).products_sold || 0}`} {productTranslations.sold}
                 </span>
               </div>
             </div>
@@ -133,7 +162,7 @@ export default async function ProductDetailPage({
             {/* Vouchers */}
             {hasDiscount && (
               <div>
-                <p className="mb-2 text-sm font-medium text-gray-700">Shop Vouchers</p>
+                <p className="mb-2 text-sm font-medium text-gray-700">{productTranslations.shopVouchers}</p>
                 <div className="flex flex-wrap gap-2">
                   <div className="rounded border border-[#EE4D2D] bg-white px-3 py-1.5 text-xs font-medium text-[#EE4D2D]">
                     Rp5k OFF
@@ -159,9 +188,9 @@ export default async function ProductDetailPage({
                 <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Shopping Guarantee</p>
+                <p className="text-sm font-medium text-gray-900">{productTranslations.shoppingGuarantee}</p>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  15 Days Return • 100% Original • Product Assurance Protection
+                  {productTranslations.guaranteeText}
                 </p>
               </div>
             </div>
