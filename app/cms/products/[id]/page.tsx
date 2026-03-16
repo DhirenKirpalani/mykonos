@@ -10,13 +10,12 @@ import { toast } from 'sonner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { VariantStockModal } from '@/components/VariantStockModal'
-import { ProductEditTabs } from '@/components/ProductEditTabs'
+import { LoadingSpinner } from '@/components/common'
 
 export default function EditProductPage() {
   const router = useRouter()
   const params = useParams()
   const productId = params.id as string
-  const [activeTab, setActiveTab] = useState('basic')
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [uploadingMedia, setUploadingMedia] = useState(false)
@@ -60,6 +59,12 @@ export default function EditProductPage() {
     base_notes: '',
     bpom_number: '',
     halal_certified: false,
+    promotion_start_date: '',
+    promotion_end_date: '',
+    promotion_stock_locked: '',
+    pre_order_start_date: '',
+    pre_order_end_date: '',
+    shipping_period_days: '',
     manufacturing_date: '',
     expiration_date: '',
     ships_from: 'KOTA JAKARTA TIMUR',
@@ -160,6 +165,12 @@ export default function EditProductPage() {
           base_notes: product.base_notes || '',
           bpom_number: product.bpom_number || '',
           halal_certified: product.halal_certified ?? false,
+          promotion_start_date: product.promotion_start_date || '',
+          promotion_end_date: product.promotion_end_date || '',
+          promotion_stock_locked: product.promotion_stock_locked?.toString() || '',
+          pre_order_start_date: product.pre_order_start_date || '',
+          pre_order_end_date: product.pre_order_end_date || '',
+          shipping_period_days: product.shipping_period_days?.toString() || '',
           manufacturing_date: product.manufacturing_date || '',
           expiration_date: product.expiration_date || '',
           ships_from: product.ships_from || 'KOTA JAKARTA TIMUR',
@@ -362,11 +373,13 @@ export default function EditProductPage() {
         },
         body: JSON.stringify({
           ...formData,
-          price_usd: parseFloat(formData.price_usd),
-          price_idr: parseFloat(formData.price_idr),
+          price_usd: formData.price_usd ? parseFloat(formData.price_usd) : null,
+          price_idr: formData.price_idr ? parseFloat(formData.price_idr) : null,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
+          cost_price_idr: formData.cost_price_idr ? parseFloat(formData.cost_price_idr) : null,
           compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-          stock_quantity: parseInt(formData.stock_quantity),
+          compare_at_price_idr: formData.compare_at_price_idr ? parseFloat(formData.compare_at_price_idr) : null,
+          stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
           low_stock_threshold: formData.low_stock_threshold ? parseInt(formData.low_stock_threshold) : null,
           volume_ml: formData.volume_ml ? parseInt(formData.volume_ml) : null,
           weight_grams: formData.weight_grams ? parseFloat(formData.weight_grams) : null,
@@ -375,17 +388,24 @@ export default function EditProductPage() {
           package_width_cm: formData.package_width_cm ? parseFloat(formData.package_width_cm) : null,
           package_height_cm: formData.package_height_cm ? parseFloat(formData.package_height_cm) : null,
           shelf_life_months: formData.shelf_life_months ? parseInt(formData.shelf_life_months) : null,
-          min_purchase_quantity: parseInt(formData.min_purchase_quantity) || 1,
+          min_purchase_quantity: formData.min_purchase_quantity ? parseInt(formData.min_purchase_quantity) : 1,
           max_purchase_quantity: formData.max_purchase_quantity ? parseInt(formData.max_purchase_quantity) : null,
           pre_order_duration_days: formData.pre_order_duration_days ? parseInt(formData.pre_order_duration_days) : null,
+          pre_order_release_date: formData.pre_order_release_date || null,
           scheduled_publish_date: formData.scheduled_publish_date || null,
           manufacturing_date: formData.manufacturing_date || null,
           expiration_date: formData.expiration_date || null,
-          pilih_lokal: formData.pilih_lokal,
-          rating: formData.rating ? parseFloat(formData.rating) : 0,
-          products_sold: formData.products_sold ? parseInt(formData.products_sold) : 0,
-          is_popular: formData.is_popular,
-          is_best_selling: formData.is_best_selling,
+          allow_backorder: Boolean(formData.allow_backorder),
+          in_stock: Boolean(formData.in_stock),
+          is_featured: Boolean(formData.is_featured),
+          is_pre_order: Boolean(formData.is_pre_order),
+          halal_certified: Boolean(formData.halal_certified),
+          pilih_lokal: Boolean(formData.pilih_lokal),
+          is_popular: Boolean(formData.is_popular),
+          is_best_selling: Boolean(formData.is_best_selling),
+          rating: formData.rating ? parseFloat(formData.rating) : null,
+          products_sold: formData.products_sold ? parseInt(formData.products_sold) : null,
+          sale_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
           image_urls: allMediaUrls,
           image_alt_texts: imageAltTexts,
           bulk_discounts: bulkDiscounts.filter(d => d.quantity && d.discount_percentage).map(d => ({
@@ -447,34 +467,27 @@ export default function EditProductPage() {
   }
 
   if (fetching) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-gray-500">Loading product...</div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="mb-4 sm:mb-6 flex items-center gap-2 sm:gap-4">
         <Link href="/cms/products">
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Edit Product</h1>
-          <p className="mt-2 text-gray-600">Update product information</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Edit Product</h1>
+          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Update product information</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-        <ProductEditTabs activeTab={activeTab} onTabChange={setActiveTab} />
-        
-        <div className="space-y-6">
-          {/* Basic Info Tab */}
-          {activeTab === 'basic' && (
-          <>
+      <form onSubmit={handleSubmit} className="rounded-lg bg-white p-3 sm:p-6 shadow-sm ring-1 ring-gray-200">
+        <div className="space-y-12">
+          {/* Basic Info Section */}
+          <div id="section-basic">
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">
@@ -537,7 +550,7 @@ export default function EditProductPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Category
+                Category (Fragrance Family)
               </label>
               <select
                 name="fragrance_family"
@@ -546,12 +559,12 @@ export default function EditProductPage() {
                 className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
               >
                 <option value="">Select Category</option>
-                <option value="Oriental">Oriental</option>
-                <option value="Powdery Elegance">Powdery Elegance</option>
                 <option value="Aqua & Aromatic">Aqua & Aromatic</option>
-                <option value="Gourmand Galore">Gourmand Galore</option>
                 <option value="Floral Fantasy">Floral Fantasy</option>
+                <option value="Oriental">Oriental</option>
                 <option value="Fresh Fruity">Fresh Fruity</option>
+                <option value="Powdery Elegance">Powdery Elegance</option>
+                <option value="Gourmand Galore">Gourmand Galore</option>
               </select>
             </div>
 
@@ -603,12 +616,10 @@ export default function EditProductPage() {
               className="min-h-[200px]"
             />
           </div>
-          </>
-          )}
+          </div>
 
           {/* Pricing & Inventory Tab */}
-          {activeTab === 'pricing' && (
-          <>
+          <div id="section-pricing">
           {/* Pricing Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Pricing</h3>
@@ -692,6 +703,7 @@ export default function EditProductPage() {
                   placeholder="Original price for sales"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
+                <p className="mt-1 text-xs text-gray-500">This will be used for promotions</p>
               </div>
 
               <div>
@@ -705,9 +717,55 @@ export default function EditProductPage() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  placeholder="Original price for sales"
+                  placeholder="Original price in IDR"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
+                <p className="mt-1 text-xs text-gray-500">This will be used for promotions</p>
+              </div>
+            </div>
+
+            {/* Promotion Period Section */}
+            <div className="grid gap-6 md:grid-cols-3 mt-4 p-4 bg-gray-50 rounded-lg">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Promotion Start Date
+                </label>
+                <input
+                  type="datetime-local"
+                  name="promotion_start_date"
+                  value={formData.promotion_start_date}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Promotion End Date
+                </label>
+                <input
+                  type="datetime-local"
+                  name="promotion_end_date"
+                  value={formData.promotion_end_date}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Stock Locked for Promotion
+                </label>
+                <input
+                  type="number"
+                  name="promotion_stock_locked"
+                  value={formData.promotion_stock_locked}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="Stock reserved for promotion"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+                <p className="mt-1 text-xs text-gray-500">Stock will be locked during promotion period</p>
               </div>
             </div>
           </div>
@@ -761,18 +819,6 @@ export default function EditProductPage() {
                 </select>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                name="allow_backorder"
-                checked={formData.allow_backorder}
-                onChange={(e) => setFormData(prev => ({ ...prev, allow_backorder: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
-              />
-              <label className="text-sm font-medium text-gray-700">
-                Allow Backorders (when out of stock)
-              </label>
-            </div>
           </div>
 
           {/* Purchase Limits Section */}
@@ -810,12 +856,10 @@ export default function EditProductPage() {
               </div>
             </div>
           </div>
-          </>
-          )}
+          </div>
 
           {/* Fragrance Details Tab */}
-          {activeTab === 'fragrance' && (
-          <>
+          <div id="section-fragrance">
           {/* Fragrance Notes Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Fragrance Notes</h3>
@@ -940,12 +984,10 @@ export default function EditProductPage() {
               </div>
             </div>
           </div>
-          </>
-          )}
+          </div>
 
           {/* SEO Tab */}
-          {activeTab === 'seo' && (
-          <>
+          <div id="section-seo">
           {/* SEO Fields Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">SEO & Marketing</h3>
@@ -1011,12 +1053,10 @@ export default function EditProductPage() {
               </div>
             </div>
           </div>
-          </>
-          )}
+          </div>
 
           {/* Shipping Tab */}
-          {activeTab === 'shipping' && (
-          <>
+          <div id="section-shipping">
           {/* Shipping & Dimensions Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Shipping & Package Dimensions</h3>
@@ -1100,14 +1140,28 @@ export default function EditProductPage() {
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Shipping Period (days)
+                </label>
+                <input
+                  type="number"
+                  name="shipping_period_days"
+                  value={formData.shipping_period_days}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="e.g., 3-5 days"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+                <p className="mt-1 text-xs text-gray-500">Estimated delivery time in days</p>
+              </div>
             </div>
           </div>
-          </>
-          )}
+          </div>
 
           {/* Publishing Tab */}
-          {activeTab === 'publishing' && (
-          <>
+          <div id="section-publishing">
           {/* Pre-Order Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Pre-Order Settings</h3>
@@ -1126,35 +1180,64 @@ export default function EditProductPage() {
               </div>
 
               {formData.is_pre_order && (
-                <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Pre-Order Duration (days)
-                  </label>
-                  <input
-                    type="number"
-                    name="pre_order_duration_days"
-                    value={formData.pre_order_duration_days}
-                    onChange={handleChange}
-                    min="1"
-                    placeholder="e.g., 30"
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                </div>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Pre-Order Start Date
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="pre_order_start_date"
+                      value={formData.pre_order_start_date}
+                      onChange={handleChange}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">When pre-order period begins</p>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Pre-Order Release Date
-                  </label>
-                  <input
-                    type="date"
-                    name="pre_order_release_date"
-                    value={formData.pre_order_release_date}
-                    onChange={handleChange}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Pre-Order End Date
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="pre_order_end_date"
+                      value={formData.pre_order_end_date}
+                      onChange={handleChange}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">When pre-order period ends</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Pre-Order Duration (days)
+                    </label>
+                    <input
+                      type="number"
+                      name="pre_order_duration_days"
+                      value={formData.pre_order_duration_days}
+                      onChange={handleChange}
+                      min="1"
+                      placeholder="e.g., 30"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Pre-Order Release Date
+                    </label>
+                    <input
+                      type="date"
+                      name="pre_order_release_date"
+                      value={formData.pre_order_release_date}
+                      onChange={handleChange}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Expected product release date</p>
+                  </div>
                 </div>
-                </>
               )}
             </div>
           </div>
@@ -1206,12 +1289,10 @@ export default function EditProductPage() {
               </label>
             </div>
           </div>
-          </>
-          )}
+          </div>
 
           {/* Variants Tab */}
-          {activeTab === 'variants' && (
-          <>
+          <div id="section-variants">
           {/* Bulk Discounts Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -1522,12 +1603,10 @@ export default function EditProductPage() {
               </div>
             ))}
           </div>
-          </>
-          )}
+          </div>
 
           {/* Media Tab */}
-          {activeTab === 'media' && (
-          <>
+          <div id="section-media">
           {/* Media Upload Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Product Media</h3>
@@ -1642,12 +1721,10 @@ export default function EditProductPage() {
               )}
             </div>
           </div>
-          </>
-          )}
+          </div>
 
           {/* Advanced Tab */}
-          {activeTab === 'advanced' && (
-          <>
+          <div id="section-advanced">
           {/* Compliance & Certifications Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Compliance & Certifications</h3>
@@ -1692,17 +1769,19 @@ export default function EditProductPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  name="halal_certified"
-                  checked={formData.halal_certified}
-                  onChange={(e) => setFormData(prev => ({ ...prev, halal_certified: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
-                />
-                <label className="text-sm font-medium text-gray-700">
-                  Halal Certified
-                </label>
+              <div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    name="halal_certified"
+                    checked={formData.halal_certified}
+                    onChange={(e) => setFormData(prev => ({ ...prev, halal_certified: e.target.checked }))}
+                    className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                  />
+                  <label className="text-sm font-medium text-gray-700">
+                    Halal Certified
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -1789,8 +1868,7 @@ export default function EditProductPage() {
               </div>
             </div>
           </div>
-          </>
-          )}
+          </div>
 
           {/* Submit Buttons - Always Visible */}
           <div className="flex gap-4 border-t border-gray-200 pt-6">

@@ -1,7 +1,5 @@
 'use client'
 
-import { useState } from 'react'
-
 interface Tab {
   id: string
   label: string
@@ -25,14 +23,32 @@ interface ProductEditTabsProps {
 }
 
 export function ProductEditTabs({ activeTab, onTabChange }: ProductEditTabsProps) {
+  const scrollToSection = (tabId: string) => {
+    onTabChange(tabId)
+    
+    // Use setTimeout to ensure state updates before scrolling
+    setTimeout(() => {
+      const element = document.getElementById(`section-${tabId}`)
+      if (element) {
+        const yOffset = -120 // Offset for sticky header
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset
+        
+        window.scrollTo({
+          top: y,
+          behavior: 'smooth'
+        })
+      }
+    }, 0)
+  }
+
   return (
-    <div className="border-b border-gray-200 mb-6">
+    <div className="sticky top-0 z-10 bg-white border-b border-gray-200 mb-6">
       <div className="flex gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => scrollToSection(tab.id)}
             className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
               activeTab === tab.id
                 ? 'border-luxury-gold text-luxury-gold bg-luxury-gold/5'

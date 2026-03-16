@@ -258,7 +258,14 @@ export function ProductVariantModal({
 
             {/* Product Details */}
             <div className="flex flex-col">
-              <h2 className="text-lg md:text-2xl font-bold text-gray-900 mb-2">{product.name}</h2>
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <h2 className="text-lg md:text-2xl font-bold text-gray-900">{product.name}</h2>
+                {(product as any).in_stock && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    In Stock
+                  </span>
+                )}
+              </div>
               
               {/* Price */}
               <div className="flex items-baseline gap-2 mb-3 md:mb-4">

@@ -15,6 +15,7 @@ export interface Product {
   editorial_priority: number
   image_urls: string[]
   stock_quantity: number
+  in_stock?: boolean
   created_at: string
 }
 

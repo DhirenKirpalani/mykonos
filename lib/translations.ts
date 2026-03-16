@@ -49,7 +49,12 @@ export const translations = {
       addToCart: "Add to Cart",
       quickAdd: "Quick Add",
       pilihLokal: "Pilih Lokal",
-      sold: "sold"
+      sold: "sold",
+      inStock: "In Stock",
+      flashSale: "Flash Sale",
+      shoppingGuarantee: "Shopping Guarantee",
+      guaranteeText: "15 Days Return • 100% Original • Product Assurance Protection",
+      shopVouchers: "Shop Vouchers"
     },
     checkout: {
       title: "Shopping Cart",
@@ -345,7 +350,12 @@ export const translations = {
       addToCart: "Tambah ke Keranjang",
       quickAdd: "Tambah Cepat",
       pilihLokal: "Pilih Lokal",
-      sold: "terjual"
+      sold: "terjual",
+      inStock: "Tersedia",
+      flashSale: "Flash Sale",
+      shoppingGuarantee: "Jaminan Belanja",
+      guaranteeText: "Pengembalian 15 Hari • 100% Original • Perlindungan Jaminan Produk",
+      shopVouchers: "Voucher Toko"
     },
     checkout: {
       title: "Keranjang Belanja",

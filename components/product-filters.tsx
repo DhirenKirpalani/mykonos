@@ -73,7 +73,7 @@ export function ProductFilters() {
           onClick={handleOpenModal}
           className="flex w-full items-center justify-between rounded-lg border border-border bg-white px-4 py-3 text-sm font-medium shadow-sm transition-colors hover:bg-gray-50"
         >
-          <span>{t.productsPage.category}</span>
+          <span>{currentCategory || t.productsPage.category}</span>
           <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 

@@ -262,7 +262,7 @@ export default function CMSLayout({
           </div>
         </aside>
         <main className="ml-0 flex-1 overflow-y-auto pt-16 lg:ml-64 lg:pt-0">
-          <div className="container mx-auto px-4 py-6 lg:px-8 lg:py-8">
+          <div className="mx-auto w-full px-3 py-4 sm:px-4 sm:py-6 lg:container lg:px-8 lg:py-8">
             {children}
           </div>
         </main>

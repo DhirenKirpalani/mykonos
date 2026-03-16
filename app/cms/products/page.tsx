@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Edit, Trash2, Eye, EyeOff, Upload, Package } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, EyeOff, Upload, Package, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { StockEditModal } from '@/components/StockEditModal'
+import { LoadingSpinner } from '@/components/common'
+import { AuditLogModal } from '@/components/AuditLogModal'
 
 interface Product {
   id: string
@@ -31,6 +33,8 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [stockModalOpen, setStockModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [auditLogOpen, setAuditLogOpen] = useState(false)
+  const [auditProduct, setAuditProduct] = useState<Product | null>(null)
 
   useEffect(() => {
     fetchProducts()
@@ -141,11 +145,7 @@ export default function ProductsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-gray-500">Loading products...</div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (
@@ -194,6 +194,7 @@ export default function ProductsPage() {
                 <th className="pb-3">Price (IDR)</th>
                 <th className="pb-3">Stock</th>
                 <th className="pb-3">Status</th>
+                <th className="pb-3">Audit</th>
                 <th className="pb-3">Actions</th>
               </tr>
             </thead>
@@ -243,6 +244,19 @@ export default function ProductsPage() {
                     >
                       {product.is_visible ? 'Visible' : 'Hidden'}
                     </span>
+                  </td>
+                  <td className="py-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setAuditProduct(product)
+                        setAuditLogOpen(true)
+                      }}
+                      className="text-luxury-gold hover:text-luxury-gold/80"
+                    >
+                      <Clock className="h-4 w-4" />
+                    </Button>
                   </td>
                   <td className="py-4">
                     <div className="flex items-center gap-2">
@@ -298,6 +312,16 @@ export default function ProductsPage() {
           onClose={() => setStockModalOpen(false)}
           product={selectedProduct}
           onUpdate={handleStockUpdate}
+        />
+      )}
+
+      {auditProduct && (
+        <AuditLogModal
+          isOpen={auditLogOpen}
+          onClose={() => setAuditLogOpen(false)}
+          entityType="product"
+          entityId={auditProduct.id}
+          entityName={auditProduct.name}
         />
       )}
     </div>
