@@ -15,6 +15,7 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
   const [collections, setCollections] = useState<Collection[]>([])
   const [newArrivals, setNewArrivals] = useState<Product[]>([])
+  const [bestSelling, setBestSelling] = useState<Product[]>([])
   
   useEffect(() => {
     // Check if user has visited before
@@ -33,30 +34,36 @@ export default function HomePage() {
 
   const fetchData = async () => {
     try {
-      // Fetch products
-      const { data: productsData } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_visible', true)
-        .limit(8)
+      // Fetch all data in parallel for better performance
+      const [productsResult, collectionsResult, newArrivalsResult, bestSellingResult] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*')
+          .eq('is_visible', true)
+          .eq('is_popular', true)
+          .limit(8),
+        supabase
+          .from('collections')
+          .select('*')
+          .limit(6),
+        supabase
+          .from('products')
+          .select('*')
+          .eq('is_visible', true)
+          .eq('is_new', true)
+          .limit(8),
+        supabase
+          .from('products')
+          .select('*')
+          .eq('is_visible', true)
+          .eq('is_best_selling', true)
+          .limit(8)
+      ])
 
-      // Fetch collections
-      const { data: collectionsData } = await supabase
-        .from('collections')
-        .select('*')
-        .limit(6)
-
-      // Fetch new arrivals
-      const { data: newArrivalsData } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_visible', true)
-        .eq('is_new', true)
-        .limit(8)
-
-      setProducts(productsData || [])
-      setCollections(collectionsData || [])
-      setNewArrivals(newArrivalsData || [])
+      setProducts((productsResult.data || []) as unknown as Product[])
+      setCollections((collectionsResult.data || []) as unknown as Collection[])
+      setNewArrivals((newArrivalsResult.data || []) as unknown as Product[])
+      setBestSelling((bestSellingResult.data || []) as unknown as Product[])
     } catch (error) {
       console.error('Error fetching data:', error)
     }
@@ -71,6 +78,7 @@ export default function HomePage() {
       products={products}
       collections={collections}
       newArrivals={newArrivals}
+      bestSelling={bestSelling}
     />
   )
 }

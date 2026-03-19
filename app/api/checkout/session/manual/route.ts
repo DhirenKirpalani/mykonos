@@ -15,25 +15,101 @@ export async function POST(request: Request) {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
-    const { user_id, cart_snapshot, pricing_snapshot } = body
+    const { 
+      user_id, 
+      session_id,
+      currency_code,
+      region_code,
+      customer_email,
+      guest_shipping_address,
+      cart_snapshot: providedCartSnapshot,
+      pricing_snapshot: providedPricingSnapshot
+    } = body
 
-    if (!user_id) {
+    // Either user_id or session_id must be provided
+    if (!user_id && !session_id) {
       return NextResponse.json(
-        { error: 'User ID required' },
+        { error: 'User ID or Session ID required' },
         { status: 400 }
       )
     }
 
-    if (!cart_snapshot || !Array.isArray(cart_snapshot) || cart_snapshot.length === 0) {
-      return NextResponse.json(
-        { error: 'Cart snapshot required' },
-        { status: 400 }
-      )
+    let cart_snapshot = providedCartSnapshot
+    let pricing_snapshot = providedPricingSnapshot
+
+    // If cart_snapshot not provided, fetch from database
+    if (!cart_snapshot) {
+      let cartQuery = supabase
+        .from('cart_items')
+        .select(`
+          id,
+          product_id,
+          quantity,
+          variant_sku,
+          products (
+            id,
+            name,
+            price_usd,
+            price_idr,
+            sale_price,
+            stock_quantity,
+            variants
+          )
+        `)
+
+      if (user_id) {
+        cartQuery = cartQuery.eq('user_id', user_id)
+      } else {
+        cartQuery = cartQuery.eq('session_id', session_id)
+      }
+
+      const { data: cartItems, error: cartError } = await cartQuery
+
+      if (cartError) {
+        return NextResponse.json(
+          { error: 'Failed to fetch cart items' },
+          { status: 500 }
+        )
+      }
+
+      if (!cartItems || cartItems.length === 0) {
+        return NextResponse.json(
+          { error: 'Cart is empty' },
+          { status: 400 }
+        )
+      }
+
+      // Build cart snapshot
+      cart_snapshot = cartItems.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        variant_sku: item.variant_sku,
+        product: item.products
+      }))
+
+      // Calculate pricing if not provided
+      if (!pricing_snapshot) {
+        const subtotal = cartItems.reduce((sum, item) => {
+          const product = item.products as any
+          const price = region_code === 'ID' ? product.price_idr : product.price_usd
+          const effectivePrice = product.sale_price || price
+          return sum + (effectivePrice * item.quantity)
+        }, 0)
+
+        pricing_snapshot = {
+          subtotal,
+          shipping: 0,
+          tax: subtotal * 0.1,
+          total: subtotal + (subtotal * 0.1),
+          currency_code: currency_code || (region_code === 'ID' ? 'IDR' : 'USD')
+        }
+      }
     }
 
-    if (!pricing_snapshot) {
+    // Validate we have cart data
+    if (!cart_snapshot || !pricing_snapshot) {
       return NextResponse.json(
-        { error: 'Pricing snapshot required' },
+        { error: 'Cart snapshot and pricing snapshot required' },
         { status: 400 }
       )
     }
@@ -41,11 +117,13 @@ export async function POST(request: Request) {
     const { data: checkoutSession, error: sessionError } = await supabase
       .from('checkout_sessions')
       .insert({
-        user_id: user_id,
-        session_id: null,
+        user_id: user_id || null,
+        session_id: session_id || null,
         current_step: 1,
         cart_snapshot: cart_snapshot as any,
         pricing_snapshot: pricing_snapshot as any,
+        customer_email: customer_email || null,
+        guest_shipping_address: guest_shipping_address || null,
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       } as any)
       .select()
@@ -55,17 +133,9 @@ export async function POST(request: Request) {
 
     const typedSession = checkoutSession as any
 
-    // Reserve inventory for the checkout session
-    const { error: reserveError } = await supabase.rpc('reserve_inventory_for_checkout', {
-      p_checkout_session_id: typedSession.id,
-      p_user_id: user_id,
-      p_session_id: null
-    } as any)
-
-    if (reserveError) {
-      await supabase.from('checkout_sessions').delete().eq('id', typedSession.id)
-      throw reserveError
-    }
+    // NOTE: Inventory reservation now happens when order is created (via create_order_before_payment)
+    // not at checkout session creation time. This is part of the order-first architecture.
+    // The reserve_inventory_for_order function is called after order creation.
 
     return NextResponse.json({
       session_id: typedSession.id,

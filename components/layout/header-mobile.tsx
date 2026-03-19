@@ -25,7 +25,7 @@ export function HeaderMobile() {
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   const { role } = useUserRole()
   const { count: cartCount } = useCartCount()
   const { count: wishlistCount } = useWishlistCount()
@@ -33,6 +33,11 @@ export function HeaderMobile() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    console.log('HeaderMobile: locale changed to', locale)
+    console.log('HeaderMobile: t.nav.home =', t.nav?.home)
+  }, [locale, t])
 
   const [notifications, setNotifications] = useState<Notification[]>([])
 

@@ -22,9 +22,10 @@ interface ResponsiveLayoutProps {
   products: Product[]
   collections: Collection[]
   newArrivals: Product[]
+  bestSelling: Product[]
 }
 
-export function ResponsiveLayout({ products, collections, newArrivals }: ResponsiveLayoutProps) {
+export function ResponsiveLayout({ products, collections, newArrivals, bestSelling }: ResponsiveLayoutProps) {
   const [isMobile, setIsMobile] = useState(false)
   const [isClient, setIsClient] = useState(false)
 
@@ -56,5 +57,5 @@ export function ResponsiveLayout({ products, collections, newArrivals }: Respons
     return <LoadingSpinner />
   }
 
-  return <LayoutComponent products={products} collections={collections} newArrivals={newArrivals} />
+  return <LayoutComponent products={products} collections={collections} newArrivals={newArrivals} bestSelling={bestSelling} />
 }

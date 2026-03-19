@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/database.types'
 import { formatPrice } from '@/lib/utils'
+import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
   order_items: Array<{
@@ -26,6 +28,14 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
     postal_code: string
     country: string
   }
+  paid_at?: string | null
+  packed_at?: string | null
+  shipped_at?: string | null
+  delivered_at?: string | null
+  tracking_number?: string | null
+  carrier?: string | null
+  snap_token?: string | null
+  expiry_time?: string | null
 }
 
 export default function OrderDetailsPage() {
@@ -33,6 +43,7 @@ export default function OrderDetailsPage() {
   const router = useRouter()
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
 
   useEffect(() => {
     fetchOrderDetails()
@@ -98,8 +109,65 @@ export default function OrderDetailsPage() {
         return 'text-green-600 bg-green-50'
       case 'failed':
         return 'text-red-600 bg-red-50'
+      case 'expired':
+        return 'text-gray-600 bg-gray-50'
       default:
         return 'text-yellow-600 bg-yellow-50'
+    }
+  }
+
+  const handleContinuePayment = async () => {
+    if (!order) return
+
+    setIsProcessingPayment(true)
+    try {
+      // Check if order has expired
+      if (order.expiry_time && new Date(order.expiry_time) < new Date()) {
+        alert('Payment link has expired. Please create a new order.')
+        setIsProcessingPayment(false)
+        return
+      }
+
+      // Check if snap_token exists and is valid
+      if (order.snap_token) {
+        console.log('✅ [PAYMENT] Reusing existing snap_token')
+        // Open Snap modal with existing token
+        if (typeof window !== 'undefined' && (window as any).snap) {
+          (window as any).snap.pay(order.snap_token, {
+            onSuccess: (result: any) => {
+              console.log('✅ [PAYMENT] Payment successful!', result)
+              alert('Payment successful! Your order is being processed.')
+              fetchOrderDetails() // Refresh order data
+            },
+            onPending: (result: any) => {
+              console.log('⏳ [PAYMENT] Payment pending', result)
+              alert('Payment pending. We will notify you once confirmed.')
+              fetchOrderDetails()
+              setIsProcessingPayment(false)
+            },
+            onError: (result: any) => {
+              console.error('❌ [PAYMENT] Payment error', result)
+              alert('Payment failed. Please try again.')
+              setIsProcessingPayment(false)
+            },
+            onClose: () => {
+              console.log('🚪 [PAYMENT] Payment modal closed')
+              setIsProcessingPayment(false)
+            }
+          })
+        } else {
+          alert('Payment system not loaded. Please refresh the page.')
+          setIsProcessingPayment(false)
+        }
+      } else {
+        // No snap_token, need to regenerate
+        alert('Payment link expired. Please create a new order.')
+        setIsProcessingPayment(false)
+      }
+    } catch (error) {
+      console.error('Payment error:', error)
+      alert('Failed to process payment. Please try again.')
+      setIsProcessingPayment(false)
     }
   }
 
@@ -138,40 +206,85 @@ export default function OrderDetailsPage() {
         <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <button
-              onClick={() => router.push('/account/orders')}
+            <Link
+              href="/account/orders"
               className="text-gray-600 hover:text-gray-900 mb-6 inline-flex items-center gap-2 text-sm font-medium transition-colors"
             >
               ← Back to Orders
-            </button>
+            </Link>
             <h1 className="text-4xl font-serif mb-2">Order Details</h1>
             <p className="text-gray-500 text-lg">Order #{order.order_number}</p>
           </div>
 
-          {/* Status Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Order Status</p>
-              <span className={`inline-block px-4 py-2 rounded-md text-sm font-semibold capitalize ${getStatusColor(order.status)}`}>
-                {order.status}
-              </span>
+          {/* Payment Status Alert for Pending Orders */}
+          {order.payment_status === 'pending' && (
+            <div className="mb-8 bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                    ⏳ Waiting for Payment
+                  </h3>
+                  <p className="text-sm text-yellow-800 mb-1">
+                    Your order has been created but payment is not yet complete.
+                  </p>
+                  {order.expiry_time && (
+                    <p className="text-xs text-yellow-700">
+                      Complete before: {new Date(order.expiry_time).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={handleContinuePayment}
+                  disabled={isProcessingPayment || (order.expiry_time ? new Date(order.expiry_time) < new Date() : false)}
+                  className="px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition-colors"
+                >
+                  {isProcessingPayment ? 'Processing...' : 'Continue Payment'}
+                </button>
+              </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Payment Status</p>
-              <span className={`inline-block px-4 py-2 rounded-md text-sm font-semibold capitalize ${getPaymentStatusColor(order.payment_status)}`}>
-                {order.payment_status}
-              </span>
+          )}
+
+          {/* Expired Order Alert */}
+          {order.payment_status === 'expired' && (
+            <div className="mb-8 bg-gray-50 border-2 border-gray-200 rounded-lg p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    ⏰ Payment Link Expired
+                  </h3>
+                  <p className="text-sm text-gray-700">
+                    This payment link has expired. Please create a new order to complete your purchase.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push('/checkout')}
+                  className="px-6 py-3 bg-luxury-navy text-white rounded-lg hover:bg-luxury-navy-light font-semibold transition-colors"
+                >
+                  Order Again
+                </button>
+              </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Order Date</p>
-              <p className="font-medium text-gray-900">
-                {new Date(order.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </p>
-            </div>
+          )}
+
+          {/* Order Status Timeline */}
+          <div className="mb-8">
+            <OrderStatusTimeline
+              currentStatus={order.status}
+              paymentStatus={order.payment_status}
+              createdAt={order.created_at}
+              paidAt={order.paid_at}
+              packedAt={order.packed_at}
+              shippedAt={order.shipped_at}
+              deliveredAt={order.delivered_at}
+              trackingNumber={order.tracking_number}
+              carrier={order.carrier}
+            />
           </div>
 
         {/* Order Items */}
@@ -192,8 +305,8 @@ export default function OrderDetailsPage() {
                   <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-lg">{formatPrice(item.price_at_purchase * item.quantity)}</p>
-                  <p className="text-sm text-gray-500">{formatPrice(item.price_at_purchase)} each</p>
+                  <p className="font-semibold text-lg">{formatPrice(item.price_at_purchase * item.quantity, order.currency_code)}</p>
+                  <p className="text-sm text-gray-500">{formatPrice(item.price_at_purchase, order.currency_code)} each</p>
                 </div>
               </div>
             ))}
@@ -231,27 +344,27 @@ export default function OrderDetailsPage() {
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-700">
                   <span>Subtotal</span>
-                  <span className="font-medium">{formatPrice(order.subtotal)}</span>
+                  <span className="font-medium">{formatPrice(order.subtotal, order.currency_code)}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
                   <span>Shipping</span>
-                  <span className="font-medium">{formatPrice(order.shipping_cost)}</span>
+                  <span className="font-medium">{formatPrice(order.shipping_cost, order.currency_code)}</span>
                 </div>
                 {order.discount_amount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount</span>
-                    <span className="font-medium">-{formatPrice(order.discount_amount)}</span>
+                    <span className="font-medium">-{formatPrice(order.discount_amount, order.currency_code)}</span>
                   </div>
                 )}
                 {order.tax_amount > 0 && (
                   <div className="flex justify-between text-gray-700">
                     <span>Tax</span>
-                    <span className="font-medium">{formatPrice(order.tax_amount)}</span>
+                    <span className="font-medium">{formatPrice(order.tax_amount, order.currency_code)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xl font-bold pt-4 border-t-2 border-gray-200">
                   <span>Total</span>
-                  <span>{formatPrice(order.total_amount)}</span>
+                  <span>{formatPrice(order.total_amount, order.currency_code)}</span>
                 </div>
               </div>
               {order.payment_method && (

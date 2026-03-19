@@ -71,6 +71,7 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0)
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
   const [isRecommendedExpanded, setIsRecommendedExpanded] = useState(true)
+  const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
@@ -96,6 +97,7 @@ export default function CheckoutPage() {
     setIsBuyNow(buyNowParam === 'true')
     
     initializeCheckout()
+    checkForPendingOrder()
 
     // Listen for cart updates only in cart flow (not buy now flow)
     const handleCartUpdate = async () => {
@@ -405,6 +407,71 @@ export default function CheckoutPage() {
     ))
   }
 
+  const checkForPendingOrder = async () => {
+    // DISABLED: This was causing the checkout button to show "Continue Payment"
+    // even when the user is trying to checkout with a different product.
+    // Users should explicitly navigate to their order details page and click
+    // "Continue Payment" there if they want to resume a pending order.
+    
+    console.log('⚠️ [CHECKOUT] Pending order check disabled - always showing "Place Order"')
+    return
+    
+    /* Original code commented out:
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const userId = session.user.is_anonymous ? null : session.user.id
+      const sessionId = session.user.is_anonymous ? session.user.id : null
+
+      const { data: pendingOrders } = await supabase
+        .from('orders')
+        .select('id, order_number, snap_token, snap_redirect_url, expiry_time, payment_status, total_amount')
+        .eq('payment_status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (userId) {
+        await supabase
+          .from('orders')
+          .select('id, order_number, snap_token, snap_redirect_url, expiry_time, payment_status, total_amount')
+          .eq('user_id', userId)
+          .eq('payment_status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .then(({ data }) => {
+            if (data && data.length > 0) {
+              const order = data[0] as any
+              if (!order.expiry_time || new Date(order.expiry_time) > new Date()) {
+                setPendingOrder(order)
+                console.log('✅ [CHECKOUT] Found pending order:', order.order_number)
+              }
+            }
+          })
+      } else if (sessionId) {
+        await supabase
+          .from('orders')
+          .select('id, order_number, snap_token, snap_redirect_url, expiry_time, payment_status, total_amount')
+          .eq('session_id', sessionId)
+          .eq('payment_status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .then(({ data }) => {
+            if (data && data.length > 0) {
+              const order = data[0] as any
+              if (!order.expiry_time || new Date(order.expiry_time) > new Date()) {
+                setPendingOrder(order)
+                console.log('✅ [CHECKOUT] Found pending order:', order.order_number)
+              }
+            }
+          })
+      }
+    } catch (error) {
+      console.error('Error checking for pending order:', error)
+    }
+    */
+  }
+
   const applyPromoCode = async () => {
     if (!promoCode.trim()) {
       toast.error('Please enter a promo code')
@@ -666,6 +733,97 @@ export default function CheckoutPage() {
         }
       ]
 
+      // ⭐ STEP 1: Create order FIRST (before token generation)
+      console.log('📝 [ORDER] Creating order before payment...')
+      const initialOrderResponse = await fetch('/api/orders/create-before-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkout_session_id: sessionData.session_id,
+          snap_token: null, // Will be set after token generation
+          snap_redirect_url: null,
+          user_id: session.user.id,
+        }),
+      })
+
+      const orderData = await initialOrderResponse.json()
+      if (!initialOrderResponse.ok) {
+        console.error('❌ [ORDER] Failed to create order:', orderData.error)
+        throw new Error(orderData.error || 'Failed to create order')
+      }
+
+      console.log('✅ [ORDER] Order created:', orderData.order_number)
+      
+      // Check if this is a guest user
+      const isGuest = session?.user?.is_anonymous
+      console.log('🔵 [DEBUG] Is guest user?', isGuest)
+      console.log('🔵 [DEBUG] Session:', session)
+      
+      // For guest users, redirect immediately to track-order page
+      if (isGuest) {
+        const customerEmail = orderData.customer_email || ''
+        const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
+        console.log('🔵 [GUEST] Redirecting guest immediately to:', redirectUrl)
+        toast.success('Order created! Redirecting to tracking page...')
+        setIsProcessing(false)
+        setTimeout(() => {
+          window.location.href = redirectUrl
+        }, 500)
+        return
+      }
+      if (orderData.is_existing) {
+        console.log('♻️ [ORDER] Reusing existing pending order')
+        toast.info('Continuing with your pending order')
+        
+        // If reusing and has valid snap_token, use it directly
+        if (orderData.snap_token && orderData.expiry_time) {
+          const expiryDate = new Date(orderData.expiry_time)
+          if (expiryDate > new Date()) {
+            console.log('✅ [ORDER] Reusing existing snap_token')
+            
+            // Guest users should have already been redirected earlier
+            // This code only runs for logged-in users
+            
+            // Logged-in users: open payment modal with existing token
+            const redirectUrl = '/account/orders/' + orderData.order_id
+            console.log('🔵 [USER REUSE] Redirect URL for logged-in user:', redirectUrl)
+            
+            if (typeof window !== 'undefined' && (window as any).snap) {
+              ;(window as any).snap.pay(orderData.snap_token, {
+                onSuccess: (result: any) => {
+                  console.log('✅ [PAYMENT] Payment successful!', result)
+                  toast.success('Payment successful! Processing your order...')
+                },
+                onPending: (result: any) => {
+                  console.log('⏳ [PAYMENT] Payment pending', result)
+                  toast.info('Payment pending. You can continue payment later.')
+                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  router.push(redirectUrl)
+                  setIsProcessing(false)
+                },
+                onError: (result: any) => {
+                  console.error('❌ [PAYMENT] Payment error', result)
+                  toast.error('Payment failed. You can retry later.')
+                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  router.push(redirectUrl)
+                  setIsProcessing(false)
+                },
+                onClose: () => {
+                  console.log('🚪 [PAYMENT] Payment modal closed by user')
+                  toast.info('You can continue payment later from My Orders')
+                  router.push(redirectUrl)
+                  setIsProcessing(false)
+                }
+              })
+              return // Exit early, no need to generate new token
+            }
+          } else {
+            console.log('⏰ [ORDER] Existing snap_token expired, generating new one')
+          }
+        }
+      }
+
+      // ⭐ STEP 2: Generate Midtrans token using order_number
       console.log('💳 [ORDER] Creating Midtrans payment token...')
       console.log('💰 [ORDER] Total amount (IDR):', convertToIDR(total))
       const midtransResponse = await fetch('/api/midtrans/create-token', {
@@ -675,7 +833,7 @@ export default function CheckoutPage() {
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          orderId: sessionData.session_id,
+          orderId: orderData.order_number, // Use order_number, not session_id
           amount: convertToIDR(total),
           customerDetails: {
             firstName: selectedAddress.full_name.split(' ')[0],
@@ -696,30 +854,56 @@ export default function CheckoutPage() {
       }
       console.log('✅ [ORDER] Payment token created successfully')
 
-      // Open Midtrans Snap modal
-      console.log('🪟 [ORDER] Opening Midtrans payment modal...')
+      // ⭐ STEP 3: Save snap_token back to order
+      console.log('� [ORDER] Saving snap_token to order...')
+      const updateTokenResponse = await fetch('/api/orders/update-snap-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: orderData.order_id,
+          snap_token: midtransData.token,
+          snap_redirect_url: midtransData.redirect_url,
+        }),
+      })
+
+      if (!updateTokenResponse.ok) {
+        console.error('⚠️ [ORDER] Failed to save snap_token, but continuing...')
+      } else {
+        console.log('✅ [ORDER] snap_token saved to order')
+      }
+
+      // Guest users should have already been redirected earlier
+      // This code only runs for logged-in users
+      
+      // Logged-in users: open payment modal here
+      console.log('🪟 [ORDER] Opening Midtrans payment modal for logged-in user...')
+      const redirectUrl = '/account/orders/' + orderData.order_id
+      console.log('🔵 [USER] Redirect URL for logged-in user:', redirectUrl)
+      
       if (typeof window !== 'undefined' && (window as any).snap) {
-        (window as any).snap.pay(midtransData.token, {
+        ;(window as any).snap.pay(midtransData.token, {
           onSuccess: (result: any) => {
-            // Payment successful - Midtrans will redirect to finish URL
-            // The processing page will handle order completion
             console.log('✅ [PAYMENT] Payment successful!', result)
-            console.log('🔄 [PAYMENT] Midtrans will redirect to callback URL')
             toast.success('Payment successful! Processing your order...')
           },
           onPending: (result: any) => {
             console.log('⏳ [PAYMENT] Payment pending', result)
-            toast.info('Payment pending. Please complete your payment.')
+            toast.info('Payment pending. You can continue payment later.')
+            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            router.push(redirectUrl)
             setIsProcessing(false)
           },
           onError: (result: any) => {
             console.error('❌ [PAYMENT] Payment error', result)
-            toast.error('Payment failed. Please try again.')
+            toast.error('Payment failed. You can retry later.')
+            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            router.push(redirectUrl)
             setIsProcessing(false)
           },
           onClose: () => {
             console.log('🚪 [PAYMENT] Payment modal closed by user')
-            toast.info('Payment cancelled')
+            toast.info('You can continue payment later from My Orders')
+            router.push(redirectUrl)
             setIsProcessing(false)
           }
         })
@@ -735,26 +919,18 @@ export default function CheckoutPage() {
   }
 
   const handleGuestCheckout = async (guestData: any) => {
+    console.log('🚀 [GUEST] handleGuestCheckout called')
     setIsProcessing(true)
     try {
-      // Convert to IDR only if region is not Indonesia (prices already in IDR for ID region)
-      const USD_TO_IDR = 15000 // Approximate exchange rate
-      const isIDRegion = region?.code === 'ID'
-      const convertToIDR = (amount: number) => {
-        // If already in IDR region, just round to whole number
-        if (isIDRegion) {
-          return Math.round(amount)
-        }
-        // Otherwise convert USD to IDR
-        return Math.round(amount * USD_TO_IDR)
-      }
-
       // Get current session (anonymous or authenticated)
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
         throw new Error('No session found. Please refresh the page.')
       }
+
+      console.log('🔵 [GUEST] Session:', session)
+      console.log('🔵 [GUEST] Is anonymous?', session.user.is_anonymous)
 
       // Prepare session data based on user type
       const sessionPayload: any = {}
@@ -779,30 +955,41 @@ export default function CheckoutPage() {
         sessionPayload.items = itemsToCheckout
       }
 
+      // Build cart snapshot from frontend state
+      const cart_snapshot = [...cartItems, ...quickAddedItems].map(item => {
+        const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
+          ? (item.product as any).price_idr 
+          : (item.product as any).price_usd || 0
+        const effectivePrice = getEffectivePrice(basePrice, item.product.sale_price)
+        
+        return {
+          product_id: item.product_id,
+          quantity: item.quantity,
+          variant_sku: (item as any).variant_sku || null,
+          price: effectivePrice,
+          product: item.product
+        }
+      })
+
+      // Build pricing snapshot
+      const pricing_snapshot = {
+        subtotal,
+        shipping,
+        tax,
+        total,
+        currency_code: region?.currency_code || 'USD'
+      }
+
       // Create checkout session
-      const sessionResponse = await fetch('/api/checkout/session', {
+      const sessionResponse = await fetch('/api/checkout/session/manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...sessionPayload,
           currency_code: region?.currency_code,
           region_code: region?.code,
-        }),
-      })
-
-      const sessionData = await sessionResponse.json()
-      if (!sessionResponse.ok) {
-        throw new Error(sessionData.error || 'Failed to create checkout session')
-      }
-
-      // Update with guest shipping info
-      const updateResponse = await fetch('/api/checkout/session', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionData.session_id,
           customer_email: guestData.email,
-          new_address: {
+          guest_shipping_address: {
             full_name: guestData.full_name,
             phone: guestData.phone,
             address_line1: guestData.address_line1,
@@ -812,20 +999,100 @@ export default function CheckoutPage() {
             postal_code: guestData.postal_code,
             country: guestData.country,
           },
-          current_step: 1,
+          cart_snapshot,
+          pricing_snapshot,
         }),
       })
 
-      if (!updateResponse.ok) {
-        const updateData = await updateResponse.json()
-        throw new Error(updateData.error || 'Failed to update shipping info')
+      const sessionData = await sessionResponse.json()
+      if (!sessionResponse.ok) {
+        throw new Error(sessionData.error || 'Failed to create checkout session')
       }
 
-      // Prepare items for Midtrans - include shipping and tax as line items
+      console.log('✅ [GUEST] Checkout session created:', sessionData.session_id)
+
+      // ⭐ STEP 1: Create order FIRST (before token generation) - ORDER-FIRST ARCHITECTURE
+      console.log('📝 [GUEST] Creating order before payment...')
+      const initialOrderResponse = await fetch('/api/orders/create-before-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkout_session_id: sessionData.session_id,
+          snap_token: null,
+          snap_redirect_url: null,
+          user_id: session.user.is_anonymous ? null : session.user.id,
+          session_id: session.user.is_anonymous ? session.user.id : null,
+        }),
+      })
+
+      const orderData = await initialOrderResponse.json()
+      if (!initialOrderResponse.ok) {
+        console.error('❌ [GUEST] Failed to create order:', orderData.error)
+        throw new Error(orderData.error || 'Failed to create order')
+      }
+
+      console.log('✅ [GUEST] Order created:', orderData.order_number)
+      console.log('🔵 [GUEST] Order data:', orderData)
+
+      // If order already has snap_token and it's not expired, reuse it
+      if (orderData.snap_token && orderData.expiry_time) {
+        const expiryDate = new Date(orderData.expiry_time)
+        if (expiryDate > new Date()) {
+          console.log('✅ [GUEST] Reusing existing snap_token')
+          
+          // Store order info in sessionStorage for track-order page
+          sessionStorage.setItem('guestOrderInfo', JSON.stringify({
+            order_number: orderData.order_number,
+            customer_email: guestData.email
+          }))
+
+          // Open Midtrans modal with existing token
+          if (typeof window !== 'undefined' && (window as any).snap) {
+            ;(window as any).snap.pay(orderData.snap_token, {
+              onSuccess: (result: any) => {
+                console.log('✅ [PAYMENT] Payment successful!', result)
+                toast.success('Payment successful! Processing your order...')
+                window.location.href = '/track-order'
+              },
+              onPending: (result: any) => {
+                console.log('⏳ [PAYMENT] Payment pending', result)
+                toast.info('Payment pending. You can continue payment later.')
+                window.location.href = '/track-order'
+                setIsProcessing(false)
+              },
+              onError: (result: any) => {
+                console.error('❌ [PAYMENT] Payment error', result)
+                toast.error('Payment failed. You can retry later.')
+                window.location.href = '/track-order'
+                setIsProcessing(false)
+              },
+              onClose: () => {
+                console.log('🚪 [PAYMENT] Payment modal closed by user')
+                toast.info('You can continue payment anytime from the order tracking page')
+                window.location.href = '/track-order'
+                setIsProcessing(false)
+              }
+            })
+            return
+          }
+        }
+      }
+
+      // Generate new Midtrans token
+      console.log('� [GUEST] Generating new Midtrans token...')
+      
+      const USD_TO_IDR = 15000
+      const isIDRegion = region?.code === 'ID'
+      const convertToIDR = (amount: number) => {
+        if (isIDRegion) {
+          return Math.round(amount)
+        }
+        return Math.round(amount * USD_TO_IDR)
+      }
+
       const itemsForMidtrans = [
         ...[...cartItems, ...quickAddedItems].map(item => {
           const basePrice = getBasePrice(item.product, (item as any).variant_sku)
-          // Use only variant name if available, otherwise product name
           const itemName = (item as any).variant_name || item.product.name
           return {
             id: item.product_id,
@@ -834,14 +1101,12 @@ export default function CheckoutPage() {
             quantity: item.quantity,
           }
         }),
-        // Add shipping as a line item
         {
           id: 'shipping',
           name: 'Shipping Fee',
           price: convertToIDR(shipping),
           quantity: 1,
         },
-        // Add tax as a line item
         {
           id: 'tax',
           name: 'Tax (10%)',
@@ -850,14 +1115,11 @@ export default function CheckoutPage() {
         }
       ]
 
-      // Create Midtrans payment token
       const midtransResponse = await fetch('/api/midtrans/create-token', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId: sessionData.session_id,
+          orderId: orderData.order_id,
           amount: convertToIDR(total),
           customerDetails: {
             firstName: guestData.full_name.split(' ')[0],
@@ -870,58 +1132,58 @@ export default function CheckoutPage() {
       })
 
       const midtransData = await midtransResponse.json()
-
       if (!midtransResponse.ok) {
         throw new Error(midtransData.error || 'Failed to create payment token')
       }
 
+      // Save snap_token to order
+      await fetch(`/api/orders/${orderData.order_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          snap_token: midtransData.token,
+          snap_redirect_url: midtransData.redirect_url,
+        }),
+      })
+
+      // Store order info in sessionStorage
+      sessionStorage.setItem('guestOrderInfo', JSON.stringify({
+        order_number: orderData.order_number,
+        customer_email: guestData.email
+      }))
+
       // Open Midtrans Snap modal
       if (typeof window !== 'undefined' && (window as any).snap) {
-        (window as any).snap.pay(midtransData.token, {
-          onSuccess: async (result: any) => {
-            // Payment successful - complete the order
+        ;(window as any).snap.pay(midtransData.token, {
+          onSuccess: (result: any) => {
+            console.log('✅ [PAYMENT] Payment successful!', result)
             toast.success('Payment successful! Processing your order...')
-            
-            try {
-              const completeResponse = await fetch('/api/checkout/complete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  checkout_session_id: sessionData.session_id,
-                  payment_method_type: 'midtrans',
-                }),
-              })
-
-              const completeData = await completeResponse.json()
-
-              if (completeResponse.ok && completeData.order_id) {
-                sessionStorage.removeItem('buyNowItems')
-                router.push(`/checkout/confirmation?order=${completeData.order_number}`)
-              } else {
-                throw new Error(completeData.error || 'Failed to place order')
-              }
-            } catch (error: any) {
-              console.error('Order completion error:', error)
-              toast.error('Payment successful but order completion failed. Please contact support.')
-            }
+            window.location.href = '/track-order'
           },
           onPending: (result: any) => {
-            toast.info('Payment pending. Please complete your payment.')
+            console.log('⏳ [PAYMENT] Payment pending', result)
+            toast.info('Payment pending. You can continue payment later.')
+            window.location.href = '/track-order'
             setIsProcessing(false)
           },
           onError: (result: any) => {
-            toast.error('Payment failed. Please try again.')
+            console.error('❌ [PAYMENT] Payment error', result)
+            toast.error('Payment failed. You can retry later.')
+            window.location.href = '/track-order'
             setIsProcessing(false)
           },
           onClose: () => {
-            toast.info('Payment cancelled')
+            console.log('🚪 [PAYMENT] Payment modal closed by user')
+            toast.info('You can continue payment anytime from the order tracking page')
+            window.location.href = '/track-order'
             setIsProcessing(false)
           }
         })
       } else {
-        console.error('❌ [ORDER] Midtrans Snap not loaded')
         throw new Error('Midtrans Snap not loaded. Please refresh the page.')
       }
+      
+      return
     } catch (error: any) {
       console.error('❌ [ORDER] Order placement failed:', error)
       console.error('❌ [ORDER] Error details:', error.message)
@@ -1593,8 +1855,8 @@ export default function CheckoutPage() {
                       </span>
                     ) : (
                       <span className="flex items-center justify-center gap-2">
-                        <Lock className="h-5 w-5" />
-                        {t.checkout.placeOrder} · {region ? formatRegionPrice(total, region) : formatCurrencyPrice(total, currency)}
+                        {!pendingOrder && <Lock className="h-5 w-5" />}
+                        {pendingOrder ? 'Continue Payment' : t.checkout.placeOrder} · {region ? formatRegionPrice(total, region) : formatCurrencyPrice(total, currency)}
                       </span>
                     )}
                   </Button>

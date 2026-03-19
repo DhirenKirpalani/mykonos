@@ -76,7 +76,13 @@ export function AuditLogModal({ isOpen, onClose, entityType, entityId, entityNam
   const formatChanges = (changes: any) => {
     if (!changes) return null
     
+    // Handle empty object
+    if (Object.keys(changes).length === 0) {
+      return <div className="text-sm text-gray-500">No changes recorded</div>
+    }
+    
     return Object.entries(changes).map(([key, value]: [string, any]) => {
+      // Handle old format with from/to
       if (typeof value === 'object' && value !== null && 'from' in value && 'to' in value) {
         return (
           <div key={key} className="text-sm">
@@ -86,7 +92,16 @@ export function AuditLogModal({ isOpen, onClose, entityType, entityId, entityNam
           </div>
         )
       }
-      return null
+      
+      // Handle new format (raw values)
+      return (
+        <div key={key} className="text-sm">
+          <span className="font-medium text-gray-700">{key}:</span>{' '}
+          <span className="text-green-600">
+            {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+          </span>
+        </div>
+      )
     })
   }
 

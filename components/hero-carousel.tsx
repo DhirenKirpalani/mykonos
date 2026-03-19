@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface HeroMedia {
   media_type: 'video' | 'image'
@@ -11,6 +12,7 @@ interface HeroMedia {
 }
 
 export function HeroCarousel() {
+  const { t } = useTranslation()
   const [heroMedia, setHeroMedia] = useState<HeroMedia | null>(null)
 
   useEffect(() => {
@@ -94,7 +96,7 @@ export function HeroCarousel() {
               href="/products"
               className="inline-block border-2 border-luxury-gold bg-luxury-gold px-8 py-4 text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-transparent hover:text-white"
             >
-              Explore Collection
+              {t('home.shopNow')}
             </Link>
           </motion.div>
         </div>

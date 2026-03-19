@@ -22,6 +22,7 @@ import {
 import { useUserRole } from '@/hooks/useUserRole'
 import { canManageProducts, canManagePromotions, canManageOrders, canAccessCMS } from '@/lib/utils/permissions'
 import { Toaster } from 'sonner'
+import { usePrefetchCMSData } from '@/hooks/useCMSData'
 
 export default function CMSLayout({
   children,
@@ -35,6 +36,7 @@ export default function CMSLayout({
   const [unreadCount, setUnreadCount] = useState(0)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const { prefetchProducts, prefetchOrders, prefetchCustomers } = usePrefetchCMSData()
 
   // Check authentication and authorization
   useEffect(() => {
@@ -228,11 +230,24 @@ export default function CMSLayout({
                 // Highlight if exact match or if current path starts with the item's path (for child routes)
                 const isActive = pathname === item.href || 
                   (item.href !== '/cms' && pathname.startsWith(item.href + '/'))
+                
+                // Determine prefetch handler based on route
+                const handleMouseEnter = () => {
+                  if (item.href.includes('/products')) {
+                    prefetchProducts()
+                  } else if (item.href.includes('/orders')) {
+                    prefetchOrders()
+                  } else if (item.href.includes('/customers')) {
+                    prefetchCustomers()
+                  }
+                }
+                
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
+                    onMouseEnter={handleMouseEnter}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       isActive

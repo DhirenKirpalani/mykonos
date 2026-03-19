@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
       fraud_status,
       signature_key,
       gross_amount,
+      currency,
       transaction_id,
       payment_type,
       bank,
@@ -38,22 +39,25 @@ export async function POST(request: NextRequest) {
       acquirer,
     })
 
-    // Skip signature verification for testing
-    // TODO: Re-enable this in production with proper signature validation
-    /*
+    // ✅ Payment Verification - Verify signature to prevent fraud
     const serverKey = process.env.MIDTRANS_SERVER_KEY || ''
-    const hash = crypto
-      .createHash('sha512')
-      .update(`${order_id}${transaction_status}${gross_amount}${serverKey}`)
-      .digest('hex')
+    if (serverKey) {
+      const hash = crypto
+        .createHash('sha512')
+        .update(`${order_id}${transaction_status}${gross_amount}${serverKey}`)
+        .digest('hex')
 
-    if (hash !== signature_key) {
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 403 }
-      )
+      if (hash !== signature_key) {
+        console.error('❌ Invalid signature - potential fraud attempt')
+        return NextResponse.json(
+          { error: 'Invalid signature' },
+          { status: 403 }
+        )
+      }
+      console.log('✅ Signature verified')
+    } else {
+      console.warn('⚠️ MIDTRANS_SERVER_KEY not set - skipping signature verification (UNSAFE)')
     }
-    */
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -66,106 +70,139 @@ export async function POST(request: NextRequest) {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    let paymentStatus = 'pending'
-    let orderStatus = 'pending'
-
-    if (transaction_status === 'capture') {
-      if (fraud_status === 'accept') {
-        paymentStatus = 'completed'
-        orderStatus = 'processing'
-      } else if (fraud_status === 'challenge') {
-        paymentStatus = 'pending'
-        orderStatus = 'pending'
-      }
-    } else if (transaction_status === 'settlement') {
-      paymentStatus = 'completed'
-      orderStatus = 'processing'
-    } else if (
-      transaction_status === 'cancel' ||
-      transaction_status === 'deny' ||
-      transaction_status === 'expire'
-    ) {
-      paymentStatus = 'failed'
-      orderStatus = 'cancelled'
-    } else if (transaction_status === 'pending') {
-      paymentStatus = 'pending'
-      orderStatus = 'pending'
+    console.log('Processing payment status for order:', order_id)
+    
+    // Get the order ID from order_number
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('order_number', order_id)
+      .single()
+    
+    if (!orderData) {
+      console.error('Order not found:', order_id)
+      return NextResponse.json(
+        { error: 'Order not found' },
+        { status: 404 }
+      )
     }
-
-    console.log('Updating order:', order_id, 'to status:', orderStatus)
     
-    // Extract last 4 digits from masked card if available
+    const orderId = (orderData as any).id
+    console.log('Found order ID:', orderId)
+    
+    // ✅ Idempotency Check - Prevent duplicate webhook processing
+    const { data: currentOrder } = await supabase
+      .from('orders')
+      .select('payment_status, total_amount')
+      .eq('id', orderId)
+      .single()
+    
+    if (!currentOrder) {
+      console.error('Order not found in idempotency check:', orderId)
+      return NextResponse.json(
+        { error: 'Order not found' },
+        { status: 404 }
+      )
+    }
+    
+    const typedCurrentOrder = currentOrder as any
+    
+    // If already completed, ignore duplicate webhook
+    if (typedCurrentOrder.payment_status === 'completed') {
+      console.log('⚠️ Webhook already processed - order already completed, ignoring duplicate')
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Already processed',
+        order_id: orderId 
+      })
+    }
+    
+    // Verify gross_amount matches order total (fraud prevention)
+    const expectedAmount = Math.round(typedCurrentOrder.total_amount)
+    const receivedAmount = Math.round(parseFloat(gross_amount))
+    if (expectedAmount !== receivedAmount) {
+      console.error('❌ Amount mismatch - potential fraud', {
+        expected: expectedAmount,
+        received: receivedAmount
+      })
+      return NextResponse.json(
+        { error: 'Amount mismatch' },
+        { status: 400 }
+      )
+    }
+    
+    // Use the new complete_order_payment function with amount verification
+    console.log('Calling complete_order_payment with status:', transaction_status)
+    const { error: completeError } = await supabase.rpc('complete_order_payment', {
+      p_order_id: orderId,
+      p_payment_intent_id: transaction_id,
+      p_transaction_status: transaction_status,
+      p_gross_amount: parseFloat(gross_amount),
+      p_currency: currency
+    } as any)
+    
+    if (completeError) {
+      console.error('Failed to complete order payment:', completeError)
+      return NextResponse.json(
+        { error: 'Failed to complete order payment' },
+        { status: 500 }
+      )
+    }
+    
+    console.log('Order payment completed successfully')
+    
+    // Update additional payment metadata
     const cardLast4 = masked_card ? masked_card.slice(-4) : null
-    
-    const updateData: any = {
-      payment_status: paymentStatus,
-      status: orderStatus,
-      payment_intent_id: transaction_id,
-      payment_method: payment_type,
+    const metadataUpdate: any = {
       midtrans_order_id: order_id,
       midtrans_transaction_id: transaction_id,
       payment_method_type: payment_type,
       payment_channel: bank || acquirer,
       card_type: card_type,
       card_last4: cardLast4,
-      payment_metadata: body, // Store full Midtrans response
+      payment_metadata: body,
     }
     
-    console.log('Order update data:', JSON.stringify(updateData, null, 2))
-    
-    const { error: updateError } = await (supabase
+    await supabase
       .from('orders')
-      .update as any)(updateData)
-      .eq('order_number', order_id)
+      .update(metadataUpdate)
+      .eq('id', orderId)
 
-    if (updateError) {
-      console.error('Failed to update order:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update order' },
-        { status: 500 }
-      )
-    }
-    
-    console.log('Order updated successfully')
-
+    // Get updated order data
     const { data: order } = await supabase
       .from('orders')
-      .select('id, user_id, payment_method_type, payment_channel, card_type, card_last4')
-      .eq('order_number', order_id)
+      .select('id, user_id, payment_status, status')
+      .eq('id', orderId)
       .single()
     
     console.log('Updated order data:', order)
 
     if (order) {
-      // Add order status history
-      await supabase.from('order_status_history').insert({
-        order_id: (order as any).id,
-        status: orderStatus,
-        notes: `Payment ${transaction_status} via ${payment_type}. Transaction ID: ${transaction_id}`,
-      } as any)
-
+      const typedOrder = order as any
+      
       // Create notification for user based on payment status
       let notificationTitle = ''
       let notificationMessage = ''
       let notificationType: 'order' | 'payment' | 'promotion' | 'general' = 'order'
 
-      if (paymentStatus === 'completed') {
+      if (transaction_status === 'capture' || transaction_status === 'settlement') {
         notificationTitle = 'Payment Successful! 🎉'
         notificationMessage = `Your payment for order #${order_id} has been confirmed. Your order is now being processed.`
         notificationType = 'payment'
-      } else if (paymentStatus === 'failed') {
-        notificationTitle = 'Payment Failed'
-        notificationMessage = `Unfortunately, your payment for order #${order_id} could not be processed. Please try again or contact support.`
+      } else if (transaction_status === 'expire') {
+        notificationTitle = 'Payment Link Expired'
+        notificationMessage = `Your payment link for order #${order_id} has expired. You can create a new order to complete your purchase.`
         notificationType = 'payment'
-      } else if (paymentStatus === 'pending' && transaction_status === 'pending') {
+      } else if (transaction_status === 'pending') {
         notificationTitle = 'Payment Pending'
         notificationMessage = `Your payment for order #${order_id} is being processed. We'll notify you once it's confirmed.`
         notificationType = 'payment'
       }
+      // Note: For 'cancel' and 'deny', we keep order as pending for retry, so no notification
 
       if (notificationTitle) {
         await supabase.from('notifications').insert({
-          user_id: (order as any).user_id,
+          user_id: typedOrder.user_id,
           title: notificationTitle,
           message: notificationMessage,
           type: notificationType,
@@ -179,8 +216,7 @@ export async function POST(request: NextRequest) {
       order_id,
       transaction_id,
       payment_type,
-      status: orderStatus,
-      payment_status: paymentStatus,
+      transaction_status,
     })
 
     return NextResponse.json({ success: true })
