@@ -384,6 +384,163 @@ npm start
 - ✅ **Courier Integration**: Multi-courier API configuration
 - ✅ **Tax Configuration**: Region-based tax display settings
 
+## API Documentation
+
+### Complete API Reference
+See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for comprehensive API documentation including:
+- All API endpoints with request/response formats
+- Authentication requirements
+- End-to-end checkout flow diagrams
+- Database functions
+- Error handling
+- Testing guidelines
+
+### Quick API Overview
+
+#### Cart Management
+- `GET /api/cart` - Get cart items
+- `POST /api/cart` - Add item to cart
+- `DELETE /api/cart/[id]` - Remove item from cart
+- `POST /api/cart/merge` - Merge guest cart with user cart
+- `POST /api/cart/validate` - Validate cart before checkout
+
+#### Checkout Flow (Order-First Architecture)
+1. `POST /api/checkout/session` - Create checkout session
+2. `PATCH /api/checkout/session` - Update shipping/payment details
+3. `POST /api/midtrans/create-token` - Generate payment token
+4. `POST /api/orders/create-before-payment` - Create order (reserves inventory)
+5. `POST /api/midtrans/webhook` - Process payment webhook
+6. `GET /api/midtrans/callback` - Handle payment redirect
+
+#### Order Management
+- `GET /api/orders` - Get user orders
+- `GET /api/orders/[id]` - Get order details
+- `POST /api/orders/create-before-payment` - Create order before payment
+- `GET /api/orders/verify-payment/[id]` - Manually verify payment
+- `PATCH /api/orders/[id]/status` - Update order status (admin)
+- `POST /api/orders/[id]/shipping` - Create shipment (admin)
+
+#### Payment Processing
+- `POST /api/midtrans/create-token` - Generate Midtrans Snap token
+- `GET /api/midtrans/callback` - Payment redirect handler
+- `POST /api/midtrans/webhook` - Payment webhook (server-to-server)
+
+### End-to-End Checkout Flow
+
+#### Order-First Architecture
+The system uses an **order-first architecture** where orders are created BEFORE payment is processed:
+
+```
+1. User adds items to cart
+   ↓
+2. User clicks "Checkout"
+   → POST /api/checkout/session
+   → Creates checkout_session with cart snapshot
+   ↓
+3. User enters shipping details
+   → PATCH /api/checkout/session
+   → Updates shipping address & method
+   ↓
+4. User clicks "Place Order"
+   → POST /api/midtrans/create-token
+   → Generates payment token
+   ↓
+5. CREATE ORDER (before payment)
+   → POST /api/orders/create-before-payment
+   → Creates order with status: "pending_payment"
+   → Reserves inventory
+   → Sets 24-hour expiry
+   ↓
+6. User completes payment in Midtrans modal
+   → Midtrans processes payment
+   ↓
+7. Payment webhook received
+   → POST /api/midtrans/webhook
+   → Verifies signature
+   → Calls complete_order_payment()
+   → Updates order status to "completed"
+   → Confirms inventory reservation
+   ↓
+8. User redirected to confirmation page
+   → GET /api/midtrans/callback
+   → Redirects to /checkout/confirmation
+```
+
+#### Key Features
+
+**Duplicate Order Prevention**:
+- Checks for existing pending orders with same cart items
+- Reuses existing order if found (prevents inventory abuse)
+- Creates new order only if cart differs or order expired
+
+**Inventory Management**:
+- Inventory reserved when order is created (step 5)
+- Reservation confirmed when payment completes (step 7)
+- Inventory released if order expires (24 hours)
+
+**Guest Checkout Support**:
+- Uses session_id instead of user_id
+- Stores shipping address in checkout_session
+- Order info stored in sessionStorage
+- Track order via order_number + email
+
+**Payment Flow**:
+- Order created first (reserves inventory)
+- Payment token generated
+- Midtrans Snap modal opened
+- Webhook updates order on payment success
+- Callback redirects user to confirmation
+
+### Database Functions
+
+**create_order_before_payment**:
+- Creates order with pending_payment status
+- Creates order_items from cart_snapshot
+- Calls reserve_inventory_for_order()
+- Sets 24-hour expiry time
+
+**complete_order_payment**:
+- Updates order status to completed
+- Sets payment_status to completed
+- Confirms inventory reservation
+- Clears user's cart
+
+**reserve_inventory_for_order**:
+- Decrements product stock_quantity
+- Creates inventory_reservation records
+- Validates sufficient stock
+
+**find_pending_order**:
+- Finds existing pending order for user/session/email
+- Used for duplicate prevention
+
+### API Best Practices
+
+**Frontend**:
+```typescript
+// ✅ Correct: Order-first
+const order = await createOrderBeforePayment(checkoutSession)
+const token = await createMidtransToken(order)
+openPaymentModal(token)
+
+// ❌ Wrong: Payment-first
+const token = await createMidtransToken()
+openPaymentModal(token)
+const order = await createOrder() // Too late! Inventory not reserved
+```
+
+**Error Handling**:
+- Always check for existing pending orders
+- Handle payment webhook failures with manual verification
+- Implement proper loading states
+- Use sessionStorage for guest checkout (not URL params)
+
+**Security**:
+- Verify Midtrans webhook signatures
+- Use server-side API routes for sensitive operations
+- Never expose order details in URLs
+- Validate inventory before order creation
+
 ## Future Enhancements
 
 - [ ] Enhanced search with autocomplete and AI-powered recommendations
