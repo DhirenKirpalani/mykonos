@@ -16,6 +16,9 @@ export interface Product {
   image_urls: string[]
   stock_quantity: number
   in_stock?: boolean
+  pilih_lokal?: boolean
+  rating?: number
+  products_sold?: number
   created_at: string
 }
 

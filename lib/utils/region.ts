@@ -47,12 +47,19 @@ export function formatPrice(
   }
 
   // Use Intl.NumberFormat for proper currency formatting
-  return new Intl.NumberFormat(locale, {
+  const formatted = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: region.currency_code,
     minimumFractionDigits: decimalPlaces,
     maximumFractionDigits: decimalPlaces,
   }).format(amount)
+  
+  // For IDR, ensure it uses 'Rp.' with period instead of 'Rp' without period
+  if (region.currency_code === 'IDR') {
+    return formatted.replace(/^Rp\s/, 'Rp. ')
+  }
+  
+  return formatted
 }
 
 /**
