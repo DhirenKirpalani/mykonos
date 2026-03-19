@@ -16,6 +16,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { useCartCount } from '@/hooks/useCartCount'
 import { useWishlistCount } from '@/hooks/useWishlistCount'
+import { useUserProfile } from '@/hooks/useUserProfile'
 
 export function HeaderDesktop() {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -29,6 +30,8 @@ export function HeaderDesktop() {
   const { role } = useUserRole()
   const { count: cartCount } = useCartCount()
   const { count: wishlistCount } = useWishlistCount()
+  const { profile, getInitials } = useUserProfile()
+  const userInitials = getInitials()
 
   useEffect(() => {
     setMounted(true)
@@ -211,14 +214,18 @@ export function HeaderDesktop() {
             <Link 
               href="/account"
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95 font-semibold text-sm",
                 pathname.startsWith('/account')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
               aria-label="Account"
             >
-              <User className="h-5 w-5" aria-hidden="true" />
+              {userInitials ? (
+                <span className="font-serif">{userInitials}</span>
+              ) : (
+                <User className="h-5 w-5" aria-hidden="true" />
+              )}
             </Link>
           </div>
         </div>

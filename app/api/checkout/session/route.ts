@@ -130,19 +130,9 @@ export async function POST(request: Request) {
 
     const typedSession = checkoutSession as any
 
-    console.log('🔒 [API] Reserving inventory...')
-    const { error: reserveError } = await supabase.rpc('reserve_inventory_for_checkout', {
-      p_checkout_session_id: typedSession.id,
-      p_user_id: user_id || null,
-      p_session_id: session_id || null
-    } as any)
-
-    if (reserveError) {
-      console.error('❌ [API] Failed to reserve inventory:', reserveError)
-      await supabase.from('checkout_sessions').delete().eq('id', typedSession.id)
-      throw reserveError
-    }
-    console.log('✅ [API] Inventory reserved successfully')
+    // NOTE: Inventory reservation now happens when order is created (via create_order_before_payment)
+    // not at checkout session creation time. This is part of the order-first architecture.
+    // The reserve_inventory_for_order function is called after order creation.
 
     console.log('✅ [API] Checkout session created successfully')
     return NextResponse.json({

@@ -13,13 +13,15 @@ interface ProductCarouselProps {
   products: Product[]
   backgroundColor?: string
   titleColor?: string
+  variant?: 'new' | 'popular' | 'bestselling'
 }
 
 export function ProductCarousel({ 
   title, 
   products,
   backgroundColor = 'bg-gradient-to-b from-[#C2A36B] to-[#B8945E]',
-  titleColor = 'text-[#1C2E4A]'
+  titleColor = 'text-[#1C2E4A]',
+  variant = 'new'
 }: ProductCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -58,10 +60,24 @@ export function ProductCarousel({
     setTimeout(() => checkScrollability(), 300)
   }
 
-  // Determine divider color based on title color
-  const dividerColor = titleColor === 'text-[#1C2E4A]' 
-    ? 'bg-[#1C2E4A]/70' 
-    : 'bg-[#C2A36B]/50'
+  // Determine divider color based on variant
+  const dividerColor = variant === 'popular' 
+    ? 'bg-[#C2A36B]/70' 
+    : 'bg-[#1C2E4A]/70'
+  
+  // Card styling based on variant
+  const getCardClasses = () => {
+    switch(variant) {
+      case 'new':
+        return 'bg-white border-2 border-[#E8DCC4] hover:border-[#C2A36B] hover:shadow-2xl'
+      case 'popular':
+        return 'bg-[#1C2E4A]/80 backdrop-blur-sm border-2 border-[#C2A36B]/30 hover:border-[#C2A36B] hover:shadow-2xl hover:shadow-[#C2A36B]/20'
+      case 'bestselling':
+        return 'bg-gradient-to-br from-white to-[#F5EFE6] border-2 border-[#C2A36B]/50 hover:border-[#C2A36B] hover:shadow-2xl hover:shadow-[#C2A36B]/30'
+      default:
+        return 'bg-white'
+    }
+  }
 
   return (
     <section className={`relative ${backgroundColor} py-6 md:py-8 lg:py-10`}>

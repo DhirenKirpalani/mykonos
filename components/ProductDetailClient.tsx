@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
 import { ProductVariantModal } from '@/components/ProductVariantModal'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface ProductDetailClientProps {
   product?: any
@@ -36,6 +37,7 @@ interface ProductDetailClientProps {
 }
 
 export function ProductDetailClient({ productId, productName, productSlug, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, productData, product }: ProductDetailClientProps) {
+  const { t } = useTranslation()
   const router = useRouter()
   const [quantity, setQuantity] = useState(minQuantity)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
@@ -351,7 +353,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           onClick={() => handleBuyNow(undefined, quantity)}
           disabled={isBuyingNow}
         >
-          {isBuyingNow ? 'Processing...' : 'Buy Now'}
+          {isBuyingNow ? t('common.loading') : t('product.buyNow')}
         </Button>
         <Button 
           className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 text-base transition-all duration-300"
@@ -360,7 +362,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           disabled={isAddingToCart}
         >
           <ShoppingBag className="mr-2 h-5 w-5" />
-          {isAddingToCart ? 'Adding to Cart...' : 'Add to Cart'}
+          {isAddingToCart ? t('common.loading') : t('product.addToCart')}
         </Button>
         <Button 
           variant="outline" 
@@ -370,7 +372,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           disabled={isAddingToWishlist}
         >
           <Heart className="mr-2 h-5 w-5" />
-          {isAddingToWishlist ? 'Adding...' : 'Add to Wishlist'}
+          {isAddingToWishlist ? t('common.loading') : t('product.addToWishlist')}
         </Button>
       </div>
 
@@ -404,7 +406,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           disabled={isBuyingNow}
           className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-2 px-3 sm:py-3 sm:px-4 rounded disabled:opacity-50 text-sm sm:text-base"
         >
-          {isBuyingNow ? 'Processing...' : 'Buy Now'}
+          {isBuyingNow ? t('common.loading') : t('product.buyNow')}
         </button>
       </div>
     </div>

@@ -26,53 +26,58 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/checkout?error=missing_order_id', request.url))
     }
 
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    
+    // Get order by order_number (which is the orderId in callback)
+    console.log('🔍 [CALLBACK] Finding order with order_number:', orderId)
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select('id, order_number')
+      .eq('order_number', orderId)
+      .single()
+    
+    if (!orderData) {
+      console.error('❌ [CALLBACK] Order not found:', orderId)
+      return NextResponse.redirect(new URL('/checkout?error=order_not_found', request.url))
+    }
+    
+    const order = orderData as any
+    console.log('✅ [CALLBACK] Found order ID:', order.id)
+    
     // Check payment status
     console.log('🔍 [CALLBACK] Checking transaction status:', transactionStatus)
     if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
-      console.log('✅ [CALLBACK] Payment successful, creating order...')
-      // Payment successful - complete the order
-      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+      console.log('✅ [CALLBACK] Payment successful, completing order...')
       
       const paymentIntentId = `pi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       console.log('🎫 [CALLBACK] Generated payment intent ID:', paymentIntentId)
-      console.log('📝 [CALLBACK] Calling create_order_from_checkout...')
-      console.log('📋 [CALLBACK] Parameters:', { checkout_session_id: orderId, payment_intent_id: paymentIntentId })
+      console.log('📝 [CALLBACK] Calling complete_order_payment...')
       
-      const { data: orderIdResult, error: orderError } = await supabase.rpc('create_order_from_checkout', {
-        p_checkout_session_id: orderId,
-        p_payment_intent_id: paymentIntentId
+      const { error: completeError } = await supabase.rpc('complete_order_payment', {
+        p_order_id: order.id,
+        p_payment_intent_id: paymentIntentId,
+        p_transaction_status: transactionStatus
       } as any)
 
-      if (orderError) {
-        console.error('❌ [CALLBACK] Order creation error:', orderError)
-        console.error('❌ [CALLBACK] Error details:', orderError.message, orderError.details, orderError.hint)
-        return NextResponse.redirect(new URL('/checkout?error=order_creation_failed', request.url))
+      if (completeError) {
+        console.error('❌ [CALLBACK] Order completion error:', completeError)
+        console.error('❌ [CALLBACK] Error details:', completeError.message, completeError.details, completeError.hint)
+        return NextResponse.redirect(new URL('/checkout?error=payment_completion_failed', request.url))
       }
       
-      console.log('✅ [CALLBACK] Order created successfully, ID:', orderIdResult)
-
-      // Get order number
-      console.log('📋 [CALLBACK] Fetching order number...')
-      const { data: order } = await supabase
-        .from('orders')
-        .select('order_number')
-        .eq('id', orderIdResult)
-        .single()
-
-      const typedOrder = order as any
-      console.log('✅ [CALLBACK] Order number:', typedOrder?.order_number)
+      console.log('✅ [CALLBACK] Order payment completed successfully')
 
       // Redirect to confirmation page
       console.log('🔄 [CALLBACK] Redirecting to confirmation page')
-      return NextResponse.redirect(new URL(`/checkout/confirmation?order=${typedOrder?.order_number}`, request.url))
+      return NextResponse.redirect(new URL(`/checkout/confirmation?order=${order.order_number}`, request.url))
     } else if (transactionStatus === 'pending') {
-      // Payment pending
-      console.log('⏳ [CALLBACK] Payment pending, redirecting...')
-      return NextResponse.redirect(new URL(`/checkout?info=payment_pending`, request.url))
+      // Payment pending - order already exists, just redirect
+      console.log('⏳ [CALLBACK] Payment pending, redirecting to orders...')
+      return NextResponse.redirect(new URL(`/account/orders/${order.id}?info=payment_pending`, request.url))
     } else {
-      // Payment failed or cancelled
+      // Payment failed or cancelled - order still exists as pending
       console.log('❌ [CALLBACK] Payment failed or cancelled, status:', transactionStatus)
-      return NextResponse.redirect(new URL(`/checkout?error=payment_failed`, request.url))
+      return NextResponse.redirect(new URL(`/account/orders/${order.id}?info=payment_failed`, request.url))
     }
   } catch (error) {
     console.error('❌ [CALLBACK] Midtrans callback error:', error)

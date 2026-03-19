@@ -2,26 +2,17 @@
 
 import dynamic from 'next/dynamic'
 import { HeroCarousel } from '@/components/hero-carousel'
-import { ImageCarousel } from '@/components/image-carousel'
-import { ImageCarousel2 } from '@/components/image-carousel-2'
-import { ImageCarousel3 } from '@/components/image-carousel-3'
-import { ImageCarousel4 } from '@/components/image-carousel-4'
-import { PromotionSection } from '@/components/promotion-section'
-import { FragranceFamiliesCarousel } from '@/components/fragrance-families-carousel'
+import { FragranceFamiliesGrid } from '@/components/fragrance-families-grid'
 import { Database } from '@/lib/supabase/database.types'
 
 const ProductCarousel = dynamic(() => import('@/components/product-carousel').then(mod => ({ default: mod.ProductCarousel })), {
-  loading: () => <div className="h-96 bg-gradient-to-b from-[#1a1a2e] to-[#16213e] animate-pulse" />,
-  ssr: false
+  loading: () => <div className="h-96 animate-pulse bg-gradient-to-b from-gray-200 to-gray-100" />,
+  ssr: true
 })
 
-const CategorySection = dynamic(() => import('@/components/category-section').then(mod => ({ default: mod.CategorySection })), {
-  loading: () => <div className="h-96 bg-gradient-to-b from-[#e8dcc4] to-[#f5f0e8] animate-pulse" />,
-  ssr: false
+const ScrollReveal = dynamic(() => import('@/components/scroll-reveal').then(mod => ({ default: mod.ScrollReveal })), {
+  ssr: true
 })
-
-const CollectionCard = dynamic(() => import('@/components/collection-card').then(mod => ({ default: mod.CollectionCard })))
-const ScrollReveal = dynamic(() => import('@/components/scroll-reveal').then(mod => ({ default: mod.ScrollReveal })))
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -33,42 +24,51 @@ interface HomeDesktopProps {
   products: Product[]
   collections: Collection[]
   newArrivals: Product[]
+  bestSelling: Product[]
 }
 
-export function HomeDesktop({ products, collections, newArrivals }: HomeDesktopProps) {
+export function HomeDesktop({ products, collections, newArrivals, bestSelling }: HomeDesktopProps) {
   return (
     <div className="min-h-screen">
       <HeroCarousel />
-      
-      <ImageCarousel />
-      
-      <ImageCarousel2 />
-      
-      <ImageCarousel3 />
-      
-      <ImageCarousel4 />
-      
-      <PromotionSection />
 
       {newArrivals.length > 0 && (
-        <ProductCarousel 
-          title="New Arrivals" 
-          products={newArrivals}
-          backgroundColor="bg-gradient-to-b from-[#C2A36B] to-[#B8945E]"
-          titleColor="text-[#1C2E4A]"
-        />
+        <section className="relative bg-gradient-to-br from-[#F5EFE6] via-[#E8DCC4] to-[#D4C5A0] py-8 md:py-12 lg:py-16">
+          <ProductCarousel 
+            title="New Arrivals" 
+            products={newArrivals}
+            backgroundColor="bg-transparent"
+            titleColor="text-[#1C2E4A]"
+            variant="new"
+          />
+        </section>
       )}
 
       {products.length > 0 && (
-        <ProductCarousel 
-          title="Trending Now" 
-          products={products}
-          backgroundColor="bg-gradient-to-b from-[#1E3456] to-[#142A46]"
-          titleColor="text-[#C2A36B]/90"
-        />
+        <section className="relative bg-gradient-to-br from-[#1C2E4A] via-[#16213E] to-[#0F1729] py-8 md:py-12 lg:py-16">
+          <ProductCarousel 
+            title="Popular" 
+            products={products}
+            backgroundColor="bg-transparent"
+            titleColor="text-[#C2A36B]"
+            variant="popular"
+          />
+        </section>
+      )}
+
+      {bestSelling.length > 0 && (
+        <section className="relative bg-gradient-to-br from-[#C2A36B] via-[#B8945E] to-[#A67C52] py-8 md:py-12 lg:py-16">
+          <ProductCarousel 
+            title="Best Selling" 
+            products={bestSelling}
+            backgroundColor="bg-transparent"
+            titleColor="text-[#1C2E4A]"
+            variant="bestselling"
+          />
+        </section>
       )}
       
-      <FragranceFamiliesCarousel />
+      <FragranceFamiliesGrid />
 
       <section className="relative bg-luxury-navy py-16 text-white md:py-24 lg:py-40">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.05)_1px,_transparent_0)] bg-[length:40px_40px]" />

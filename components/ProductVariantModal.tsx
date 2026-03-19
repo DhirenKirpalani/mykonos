@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useRegion } from '@/contexts/RegionContext'
 import { formatPrice } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface ProductVariant {
   name: string
@@ -51,6 +52,7 @@ export function ProductVariantModal({
   onAddToWishlist,
   mode,
 }: ProductVariantModalProps) {
+  const { t } = useTranslation()
   const { region } = useRegion()
   const minQty = product.min_purchase_quantity || 1
   const maxQty = product.max_purchase_quantity || product.stock_quantity
@@ -299,7 +301,7 @@ export function ProductVariantModal({
               {!hasVariants && mode !== 'wishlist' && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Quantity
+                    {t('product.quantity')}
                   </label>
                   <div className="flex items-center gap-3">
                     <button
@@ -444,7 +446,7 @@ export function ProductVariantModal({
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         <Zap className="h-5 w-5" />
-                        Buy Now {selectedVariants.size > 0 && `(${selectedVariants.size} variants)`}
+                        {t('product.buyNow')} {selectedVariants.size > 0 && `(${selectedVariants.size} variants)`}
                       </span>
                     )}
                   </Button>

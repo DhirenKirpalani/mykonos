@@ -1,23 +1,37 @@
 'use client'
 
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Globe } from 'lucide-react'
 
 export function LanguageSwitcher() {
   const { locale, setLocale } = useLanguage()
 
+  const handleLanguageChange = (newLocale: 'en' | 'id') => {
+    console.log('Language switch clicked:', newLocale)
+    setLocale(newLocale)
+  }
+
   return (
-    <div className="relative">
+    <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1">
       <button
-        onClick={() => setLocale(locale === 'en' ? 'id' : 'en')}
-        className="flex h-10 w-10 items-center justify-center rounded-lg transition-all hover:bg-white/10 active:scale-95"
-        aria-label="Switch language"
+        onClick={() => handleLanguageChange('en')}
+        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+          locale === 'en'
+            ? 'bg-luxury-gold text-luxury-navy'
+            : 'text-white/70 hover:text-white hover:bg-white/10'
+        }`}
       >
-        <Globe className="h-5 w-5" />
+        EN
       </button>
-      <span className="absolute -bottom-1 -right-1 rounded-full bg-luxury-gold px-1.5 py-0.5 text-[10px] font-medium text-white">
-        {locale.toUpperCase()}
-      </span>
+      <button
+        onClick={() => handleLanguageChange('id')}
+        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+          locale === 'id'
+            ? 'bg-luxury-gold text-luxury-navy'
+            : 'text-white/70 hover:text-white hover:bg-white/10'
+        }`}
+      >
+        ID
+      </button>
     </div>
   )
 }

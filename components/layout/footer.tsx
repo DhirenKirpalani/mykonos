@@ -58,19 +58,19 @@ export function Footer() {
   }
 
   return (
-    <footer className="bg-luxury-navy text-white overflow-hidden">
-      <div className="container mx-auto px-4 py-8 sm:py-12 lg:px-8 max-w-full">
-        <div className="flex flex-col gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 break-words">
+    <footer className="bg-luxury-navy text-white overflow-hidden mt-12 sm:mt-16">
+      <div className="container mx-auto px-4 py-6 sm:py-8 lg:py-12 lg:px-8 max-w-full">
+        <div className="flex flex-col gap-6 sm:gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 break-words">
           {/* Brand Column */}
           <div className="overflow-hidden">
             <Link href="/" className="inline-block">
-              <span className="font-serif text-2xl font-medium tracking-[0.25em] text-luxury-gold">
+              <span className="font-serif text-xl sm:text-2xl font-medium tracking-[0.25em] text-luxury-gold">
                 MYKONOS
               </span>
             </Link>
-            <div className="mt-6">
-              <p className="text-sm font-medium text-white">{t.footer.followUs}</p>
-              <div className="mt-3 flex gap-3">
+            <div className="mt-4 sm:mt-6">
+              <p className="text-xs sm:text-sm font-medium text-white">{t.footer.followUs}</p>
+              <div className="mt-2 sm:mt-3 flex gap-3">
                 <Link
                   href="https://www.instagram.com/officialmykonos/"
                   target="_blank"
@@ -93,14 +93,14 @@ export function Footer() {
 
           {/* About Column */}
           <div>
-            <h3 className="text-sm font-medium uppercase tracking-wider text-white">{t.footer.houseOfMykonos}</h3>
-            <ul className="mt-4 space-y-2">
+            <h3 className="text-xs sm:text-sm font-medium uppercase tracking-wider text-white">{t.footer.houseOfMykonos}</h3>
+            <ul className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
               {footerLinks.about.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
                     className={cn(
-                      "text-sm transition-colors hover:text-luxury-gold",
+                      "text-xs sm:text-sm transition-colors hover:text-luxury-gold",
                       isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
                     )}
                   >
@@ -113,14 +113,14 @@ export function Footer() {
 
           {/* Customer Service Column */}
           <div>
-            <h3 className="text-sm font-medium uppercase tracking-wider text-white">{t.footer.customerService}</h3>
-            <ul className="mt-4 space-y-2">
+            <h3 className="text-xs sm:text-sm font-medium uppercase tracking-wider text-white">{t.footer.customerService}</h3>
+            <ul className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
               {footerLinks.customerService.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
                     className={cn(
-                      "text-sm transition-colors hover:text-luxury-gold",
+                      "text-xs sm:text-sm transition-colors hover:text-luxury-gold",
                       isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
                     )}
                   >
@@ -133,14 +133,14 @@ export function Footer() {
 
           {/* Legal Column */}
           <div>
-            <h3 className="text-sm font-medium uppercase tracking-wider text-white">{t.footer.legal}</h3>
-            <ul className="mt-4 space-y-2">
+            <h3 className="text-xs sm:text-sm font-medium uppercase tracking-wider text-white">{t.footer.legal}</h3>
+            <ul className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
                     className={cn(
-                      "text-sm transition-colors hover:text-luxury-gold",
+                      "text-xs sm:text-sm transition-colors hover:text-luxury-gold",
                       isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
                     )}
                   >
@@ -153,7 +153,7 @@ export function Footer() {
         </div>
 
         {/* Copyright Section */}
-        <div className="mt-8 border-t border-white/10 pt-6">
+        <div className="mt-6 sm:mt-8 border-t border-white/10 pt-4 sm:pt-6">
           <p className="text-center text-xs text-gray-400">
             © {new Date().getFullYear()} {t.footer.copyright}
           </p>

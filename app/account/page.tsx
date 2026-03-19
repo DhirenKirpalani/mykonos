@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { LoadingSpinner } from '@/components/common'
@@ -9,11 +10,13 @@ import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/lib/supabase/database.types'
 import { useAuth } from '@/contexts/AuthContext'
 import { ShippingAddresses } from '@/components/account/ShippingAddresses'
+import { cn } from '@/lib/utils'
 
 type UserProfile = Database['public']['Tables']['users']['Row']
 
 export default function AccountPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, isLoading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [userData, setUserData] = useState({
@@ -99,24 +102,39 @@ export default function AccountPage() {
           <div className="space-y-2">
             <h2 className="font-serif text-xl font-bold">Account</h2>
             <nav className="space-y-1">
-              <button 
-                onClick={() => router.push('/account')}
-                className="block w-full rounded-md bg-luxury-gold px-4 py-2 text-left text-sm text-white"
+              <Link 
+                href="/account"
+                className={cn(
+                  "block w-full rounded-md px-4 py-2 text-left text-sm transition-colors",
+                  pathname === '/account'
+                    ? "bg-luxury-gold text-white"
+                    : "hover:bg-luxury-gray-light"
+                )}
               >
                 Profile
-              </button>
-              <button 
-                onClick={() => router.push('/account/orders')}
-                className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light"
+              </Link>
+              <Link 
+                href="/account/orders"
+                className={cn(
+                  "block w-full rounded-md px-4 py-2 text-left text-sm transition-colors",
+                  pathname.startsWith('/account/orders')
+                    ? "bg-luxury-gold text-white"
+                    : "hover:bg-luxury-gray-light"
+                )}
               >
                 Orders
-              </button>
-              <button 
-                onClick={() => router.push('/account/settings')}
-                className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light"
+              </Link>
+              <Link 
+                href="/account/settings"
+                className={cn(
+                  "block w-full rounded-md px-4 py-2 text-left text-sm transition-colors",
+                  pathname === '/account/settings'
+                    ? "bg-luxury-gold text-white"
+                    : "hover:bg-luxury-gray-light"
+                )}
               >
                 Settings
-              </button>
+              </Link>
             </nav>
           </div>
 
@@ -171,7 +189,7 @@ export default function AccountPage() {
                     value={userData.phone}
                     onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
                     className="w-full rounded-md border border-input bg-background px-4 py-3 focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="+62 812-3456-7890"
                   />
                 </div>
                 <div className="flex gap-4">

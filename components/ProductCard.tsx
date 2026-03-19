@@ -147,30 +147,40 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-1">
-          {product.fragrance_family && (
-            <p className="text-xs text-muted-foreground">{product.fragrance_family}</p>
-          )}
-          {product.in_stock && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              In Stock
-            </span>
-          )}
-        </div>
-        <h3 className="mb-0.5 sm:mb-1 font-serif text-lg font-medium line-clamp-1">
+      <div className="p-3 sm:p-4">
+        <h3 className="mb-1.5 font-serif text-sm sm:text-base md:text-lg font-semibold line-clamp-2 leading-tight">
           {product.name}
         </h3>
-        <p className="mb-1.5 sm:mb-2 text-sm text-muted-foreground line-clamp-2">
-          {product.description}
-        </p>
-        <div className="flex items-center justify-between">
+        
+        <div className="mb-2">
           <PriceDisplay
             price={product.price}
             salePrice={product.sale_price}
             showOriginal={true}
           />
-          <span className="text-xs text-muted-foreground">{product.size}</span>
+        </div>
+
+        {product.pilih_lokal && (
+          <div className="mb-1.5">
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-[#1C2E4A] text-white border border-[#C2A36B]">
+              Pilih Lokal
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 text-xs sm:text-sm">
+          {product.rating && (
+            <div className="flex items-center gap-0.5">
+              <span className="text-yellow-500 text-base">★</span>
+              <span className="font-semibold text-[#1C2E4A]">{product.rating}</span>
+            </div>
+          )}
+          {product.products_sold && product.products_sold > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground">|</span>
+              <span className="font-medium text-[#1C2E4A]">{product.products_sold}RB+ sold</span>
+            </div>
+          )}
         </div>
       </div>
     </Link>

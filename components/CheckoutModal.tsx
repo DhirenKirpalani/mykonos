@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Mail, MapPin, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Mail, MapPin, CheckCircle2, AlertCircle, Map } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useRegion } from '@/contexts/RegionContext'
 import { COUNTRIES, validatePhone, validateAddress, validatePostalCode, getCountryByRegion, formatPhoneNumber } from '@/lib/utils/address'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal'
+import dynamic from 'next/dynamic'
+
+const MapPicker = dynamic(() => import('@/components/map/MapPicker').then(mod => ({ default: mod.MapPicker })), {
+  ssr: false,
+  loading: () => <div className="h-[300px] flex items-center justify-center bg-luxury-gray-light rounded-lg">Loading map...</div>
+})
 
 interface CheckoutModalProps {
   isOpen: boolean
@@ -41,6 +47,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
   const [passwordError, setPasswordError] = useState('')
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [showMap, setShowMap] = useState(false)
   
   const [email, setEmail] = useState('')
   const [shippingForm, setShippingForm] = useState({
@@ -608,6 +615,57 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 <p className="text-xs text-gray-500 mt-1">Based on your region</p>
               </div>
             </div>
+
+            {/* Map Picker Section */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowMap(!showMap)}
+                className="inline-flex items-center gap-2 text-sm font-medium text-luxury-gold hover:text-luxury-gold/80 transition-colors"
+              >
+                <Map className="h-4 w-4" />
+                {showMap ? 'Hide Map' : 'Pick Location from Map'}
+              </button>
+            </div>
+
+            {showMap && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Click on the map to automatically fill in address details
+                </p>
+                <MapPicker
+                  onLocationSelect={(location) => {
+                    const updates: any = {}
+                    
+                    if (location.address) {
+                      updates.address_line1 = location.address.split(',')[0] || ''
+                    }
+                    if (location.city) {
+                      updates.city = location.city
+                    }
+                    if (location.state) {
+                      updates.state_province = location.state
+                    }
+                    if (location.postalCode) {
+                      updates.postal_code = location.postalCode
+                    }
+                    if (location.country) {
+                      const matchedCountry = Object.values(COUNTRIES).find(
+                        c => c.name.toLowerCase() === location.country?.toLowerCase()
+                      )
+                      if (matchedCountry) {
+                        updates.country = matchedCountry.name
+                      }
+                    }
+                    
+                    setShippingForm(prev => ({ ...prev, ...updates }))
+                    toast.success('Address details filled from map')
+                  }}
+                  initialPosition={shippingForm.country === 'Indonesia' ? [-6.2088, 106.8456] : [40.7128, -74.0060]}
+                  height="300px"
+                />
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <Button 

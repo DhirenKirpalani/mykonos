@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Package, ChevronRight } from 'lucide-react'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
@@ -17,10 +17,19 @@ type Order = {
   total_amount: number
   currency_code: string
   created_at: string
+  order_items: Array<{
+    id: string
+    quantity: number
+    product: {
+      name: string
+      image_urls: string[]
+    }
+  }>
 }
 
 export default function OrdersPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [orders, setOrders] = useState<Order[]>([])
@@ -38,10 +47,20 @@ export default function OrdersPage() {
         
         setIsAuthenticated(true)
         
-        // Fetch user orders
+        // Fetch user orders with product information
         const { data, error } = await supabase
           .from('orders')
-          .select('*')
+          .select(`
+            *,
+            order_items (
+              id,
+              quantity,
+              product:products (
+                name,
+                image_urls
+              )
+            )
+          `)
           .eq('user_id', session.user.id)
           .order('created_at', { ascending: false })
 
@@ -94,15 +113,39 @@ export default function OrdersPage() {
           <div className="space-y-2">
             <h2 className="font-serif text-xl font-bold">Account</h2>
             <nav className="space-y-1">
-              <button onClick={() => router.push('/account')} className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
+              <Link 
+                href="/account"
+                className={cn(
+                  "block w-full rounded-md px-4 py-2 text-left text-sm transition-colors",
+                  pathname === '/account'
+                    ? "bg-luxury-gold text-white"
+                    : "hover:bg-luxury-gray-light"
+                )}
+              >
                 Profile
-              </button>
-              <button onClick={() => router.push('/account/orders')} className="block w-full rounded-md bg-luxury-gold px-4 py-2 text-left text-sm text-white">
+              </Link>
+              <Link 
+                href="/account/orders"
+                className={cn(
+                  "block w-full rounded-md px-4 py-2 text-left text-sm transition-colors",
+                  pathname.startsWith('/account/orders')
+                    ? "bg-luxury-gold text-white"
+                    : "hover:bg-luxury-gray-light"
+                )}
+              >
                 Orders
-              </button>
-              <button onClick={() => router.push('/account/settings')} className="block w-full rounded-md px-4 py-2 text-left text-sm hover:bg-luxury-gray-light">
+              </Link>
+              <Link 
+                href="/account/settings"
+                className={cn(
+                  "block w-full rounded-md px-4 py-2 text-left text-sm transition-colors",
+                  pathname === '/account/settings'
+                    ? "bg-luxury-gold text-white"
+                    : "hover:bg-luxury-gray-light"
+                )}
+              >
                 Settings
-              </button>
+              </Link>
             </nav>
           </div>
 
@@ -118,36 +161,72 @@ export default function OrdersPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {orders.map((order) => (
-                  <Link
-                    key={order.id}
-                    href={`/account/orders/${order.id}`}
-                    className="block rounded-lg border border-border/40 p-6 hover:border-luxury-gold transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">{order.order_number}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(order.created_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </p>
+                {orders.map((order) => {
+                  const firstProduct = order.order_items?.[0]?.product
+                  const totalItems = order.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
+                  
+                  return (
+                    <Link
+                      key={order.id}
+                      href={`/account/orders/${order.id}`}
+                      className="block rounded-lg border border-border/40 hover:border-luxury-gold transition-all hover:shadow-md overflow-hidden"
+                    >
+                      <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
+                        {/* Product Image */}
+                        {firstProduct && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={firstProduct.image_urls?.[0] || '/placeholder.png'}
+                              alt={firstProduct.name}
+                              className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Order Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-sm sm:text-base mb-0.5">{order.order_number}</h3>
+                              {firstProduct && (
+                                <p className="text-xs sm:text-sm text-gray-700 mb-1 line-clamp-1">
+                                  {firstProduct.name}
+                                  {order.order_items.length > 1 && (
+                                    <span className="text-muted-foreground ml-1">
+                                      +{order.order_items.length - 1} more
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(order.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })} · {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                              </p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                          </div>
+                          
+                          <div className="flex items-center justify-between gap-2 mt-2">
+                            <span className={cn("px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusColor(order.status))}>
+                              {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                            </span>
+                            <span className="font-semibold text-xs sm:text-sm whitespace-nowrap">
+                              {order.currency_code === 'IDR' 
+                                ? `Rp. ${order.total_amount.toLocaleString('id-ID')}`
+                                : order.currency_code === 'USD' 
+                                ? `$${order.total_amount.toFixed(2)}`
+                                : `${order.currency_code} ${order.total_amount.toFixed(2)}`
+                              }
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className={cn("px-3 py-1 rounded-full text-xs font-medium", getStatusColor(order.status))}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </span>
-                      <span className="font-semibold">
-                        {order.currency_code === 'USD' ? '$' : order.currency_code === 'EUR' ? '€' : order.currency_code === 'GBP' ? '£' : order.currency_code}
-                        {order.total_amount.toFixed(2)}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  )
+                })}
               </div>
             )}
           </div>
