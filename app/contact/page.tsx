@@ -21,21 +21,21 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="border-b border-border/40 bg-luxury-gray-light py-12">
+      <div className="border-b border-border/40 bg-luxury-gray-light py-8 sm:py-12">
         <div className="container mx-auto px-4 lg:px-8">
-          <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
+          <h1 className="mb-3 sm:mb-4 font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">
             {t.contact.title}
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground">
             {t.contact.subtitle}
           </p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-2">
+      <div className="container mx-auto px-4 py-8 sm:py-12 lg:px-8">
+        <div className="grid gap-8 sm:gap-12 lg:grid-cols-2">
           <div>
-            <h2 className="mb-6 font-serif text-2xl font-bold">{t.contact.sendMessage}</h2>
+            <h2 className="mb-4 sm:mb-6 font-serif text-xl sm:text-2xl font-bold">{t.contact.sendMessage}</h2>
             <form className="space-y-6">
               <div>
                 <label htmlFor="name" className="mb-2 block text-sm font-medium">
@@ -76,29 +76,29 @@ export default function ContactPage() {
             </form>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             <div>
-              <h2 className="mb-6 font-serif text-2xl font-bold">{t.contact.getInTouch}</h2>
-              <div className="space-y-6">
+              <h2 className="mb-4 sm:mb-6 font-serif text-xl sm:text-2xl font-bold">{t.contact.getInTouch}</h2>
+              <div className="space-y-4 sm:space-y-6">
                 <a
                   href="https://wa.me/6285780218514"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-4 transition-opacity hover:opacity-80"
+                  className="flex items-start gap-3 sm:gap-4 transition-opacity hover:opacity-80"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-luxury-gold/10">
-                    <WhatsappLogo className="h-6 w-6 text-luxury-gold" weight="fill" />
+                  <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-luxury-gold/10">
+                    <WhatsappLogo className="h-5 w-5 sm:h-6 sm:w-6 text-luxury-gold" weight="fill" />
                   </div>
                   <div>
-                    <p className="font-medium">{t.contact.whatsapp}</p>
-                    <p className="text-muted-foreground">+62 857-8021-8514</p>
+                    <p className="font-medium text-sm sm:text-base">{t.contact.whatsapp}</p>
+                    <p className="text-muted-foreground text-sm">+62 857-8021-8514</p>
                   </div>
                 </a>
               </div>
             </div>
 
-            <div className="rounded-lg bg-luxury-gray-light p-6">
-              <h3 className="mb-4 font-serif text-xl font-bold">{t.contact.businessHours}</h3>
+            <div className="rounded-lg bg-luxury-gray-light p-4 sm:p-6">
+              <h3 className="mb-3 sm:mb-4 font-serif text-lg sm:text-xl font-bold">{t.contact.businessHours}</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t.contact.mondayFriday}</span>

@@ -225,22 +225,22 @@ export function ProductVariantModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center md:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
       <div 
-        className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto md:left-auto md:right-auto w-full md:max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-t-2xl md:rounded-2xl shadow-2xl animate-slide-up md:animate-none"
+        className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto md:left-auto md:right-auto w-full md:max-w-4xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto bg-white rounded-t-2xl md:rounded-2xl shadow-2xl animate-slide-up md:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
           aria-label="Close"
         >
-          <X className="h-5 w-5 text-gray-600" />
+          <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
         </button>
 
         {/* Content */}
-        <div className="p-4 md:p-8">
+        <div className="p-3 sm:p-4 md:p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* Product Image */}
             <div className="relative aspect-square max-h-48 md:max-h-none rounded-lg overflow-hidden bg-gray-100">

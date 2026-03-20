@@ -12,6 +12,7 @@ import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
 import { ProductShippingInfo } from '@/components/ProductShippingInfo'
 import { CollapsibleDescription } from '@/components/CollapsibleDescription'
 import { ExpandableSpecifications } from '@/components/ExpandableSpecifications'
+import { LoadingSpinner } from '@/components/common'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useState, useEffect } from 'react'
@@ -55,7 +56,7 @@ export default function ProductDetailPage({
   params: { slug: string }
 }) {
   const { t, locale } = useLanguage()
-  const productTranslations = locale === 'id' ? (t as any).produk : (t as any).products
+  const productTranslations = t.products
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,7 +77,7 @@ export default function ProductDetailPage({
   }, [params.slug])
 
   if (loading || !product) {
-    return <div>Loading...</div>
+    return <LoadingSpinner />
   }
 
   const fragranceFamily = product.fragrance_family || 'Uncategorized'
@@ -96,7 +97,7 @@ export default function ProductDetailPage({
         <div className="mb-3 md:hidden">
           <Link href="/products" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
             <ArrowLeft className="h-4 w-4" />
-            <span>Back</span>
+            <span>{t.common.back}</span>
           </Link>
         </div>
 

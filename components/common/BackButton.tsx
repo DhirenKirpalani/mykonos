@@ -3,14 +3,16 @@
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface BackButtonProps {
   href?: string
   label?: string
 }
 
-export function BackButton({ href, label = 'Back' }: BackButtonProps) {
+export function BackButton({ href, label }: BackButtonProps) {
   const router = useRouter()
+  const { t } = useLanguage()
 
   const handleClick = () => {
     if (href) {
@@ -28,7 +30,7 @@ export function BackButton({ href, label = 'Back' }: BackButtonProps) {
       className="gap-2 text-muted-foreground hover:text-foreground"
     >
       <ArrowLeft className="h-4 w-4" />
-      {label}
+      {label || t.common.back}
     </Button>
   )
 }

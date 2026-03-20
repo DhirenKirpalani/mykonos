@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Mail, MapPin, CheckCircle2, AlertCircle, Map } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useRegion } from '@/contexts/RegionContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { COUNTRIES, validatePhone, validateAddress, validatePostalCode, getCountryByRegion, formatPhoneNumber } from '@/lib/utils/address'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal'
@@ -37,6 +38,7 @@ interface CheckoutModalProps {
 
 export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps) {
   const { region } = useRegion()
+  const { t } = useLanguage()
   const [step, setStep] = useState<'email' | 'password' | 'address'>('email')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [checkingEmail, setCheckingEmail] = useState(false)
@@ -299,7 +301,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
             {step === 'email' && (
               <>
                 <Mail className="h-5 w-5 text-luxury-navy" />
-                Enter Your Email
+                {t.emailModal.title}
               </>
             )}
             {step === 'password' && (
@@ -311,7 +313,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
             {step === 'address' && (
               <>
                 <MapPin className="h-5 w-5 text-luxury-navy" />
-                Shipping Address
+                {t.shippingModal.title}
               </>
             )}
           </DialogTitle>
@@ -320,14 +322,14 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
         {step === 'email' && (
           <form onSubmit={handleEmailSubmit} className="space-y-4 pt-4">
             <div>
-              <Label htmlFor="modal-email">Email Address *</Label>
+              <Label htmlFor="modal-email">{t.emailModal.emailAddress} *</Label>
               <div className="relative">
                 <Input
                   id="modal-email"
                   type="email"
                   value={email}
                   onChange={handleEmailChange}
-                  placeholder="your@email.com"
+                  placeholder={t.trackOrder.emailPlaceholder}
                   required
                   disabled={checkingEmail || isSubmitting}
                   autoFocus
@@ -352,19 +354,19 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 <p className="text-sm text-red-600 mt-1">Please enter a valid email address</p>
               )}
               {emailValid === true && !checkingEmail && (
-                <p className="text-sm text-green-600 mt-1">Valid email format</p>
+                <p className="text-sm text-green-600 mt-1">{t.emailModal.validFormat}</p>
               )}
               <p className="text-xs text-gray-500 mt-2">
-                We'll send your order confirmation to this email
+                {t.emailModal.confirmationText}
               </p>
             </div>
 
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
-                Cancel
+                {t.emailModal.cancel}
               </Button>
               <Button type="submit" className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light">
-                Continue
+                {t.emailModal.continue}
               </Button>
             </div>
           </form>
@@ -435,7 +437,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
           <form onSubmit={handleAddressSubmit} className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="modal-full_name">Full Name *</Label>
+                <Label htmlFor="modal-full_name">{t.shippingModal.fullName} *</Label>
                 <Input
                   id="modal-full_name"
                   value={shippingForm.full_name}
@@ -447,7 +449,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 />
               </div>
               <div>
-                <Label htmlFor="modal-phone">Phone Number *</Label>
+                <Label htmlFor="modal-phone">{t.shippingModal.phoneNumber} *</Label>
                 <Input
                   id="modal-phone"
                   type="tel"
@@ -480,7 +482,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
             </div>
 
             <div>
-              <Label htmlFor="modal-address_line1">Address Line 1 *</Label>
+              <Label htmlFor="modal-address_line1">{t.shippingModal.addressLine1} *</Label>
               <Input
                 id="modal-address_line1"
                 value={shippingForm.address_line1}
@@ -495,7 +497,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                     })
                   }
                 }}
-                placeholder="Street address (e.g., 123 Main St)"
+                placeholder={t.shippingModal.streetPlaceholder}
                 className={validationErrors.address_line1 ? 'border-red-500' : ''}
                 required
               />
@@ -505,20 +507,20 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
             </div>
 
             <div>
-              <Label htmlFor="modal-address_line2">Address Line 2</Label>
+              <Label htmlFor="modal-address_line2">{t.shippingModal.addressLine2}</Label>
               <Input
                 id="modal-address_line2"
                 value={shippingForm.address_line2}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                   setShippingForm({...shippingForm, address_line2: e.target.value})
                 }
-                placeholder="Apartment, suite, etc. (optional)"
+                placeholder={t.shippingModal.apartmentPlaceholder}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="modal-city">City *</Label>
+                <Label htmlFor="modal-city">{t.shippingModal.city} *</Label>
                 <Select
                   value={shippingForm.city}
                   onValueChange={(value: string) => {
@@ -533,7 +535,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                   }}
                 >
                   <SelectTrigger className={validationErrors.city ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Select city" />
+                    <SelectValue placeholder={t.shippingModal.selectCity} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
                     {currentCountry?.cities.map((city) => (
@@ -548,7 +550,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 )}
               </div>
               <div>
-                <Label htmlFor="modal-state_province">State/Province *</Label>
+                <Label htmlFor="modal-state_province">{t.shippingModal.stateProvince} *</Label>
                 <Select
                   value={shippingForm.state_province}
                   onValueChange={(value: string) => {
@@ -563,7 +565,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                   }}
                 >
                   <SelectTrigger className={validationErrors.state_province ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Select state" />
+                    <SelectValue placeholder={t.shippingModal.selectState} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
                     {currentCountry?.states.map((state) => (
@@ -581,7 +583,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="modal-postal_code">Postal Code *</Label>
+                <Label htmlFor="modal-postal_code">{t.shippingModal.postalCode} *</Label>
                 <Input
                   id="modal-postal_code"
                   value={shippingForm.postal_code}
@@ -604,7 +606,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 )}
               </div>
               <div>
-                <Label htmlFor="modal-country">Country *</Label>
+                <Label htmlFor="modal-country">{t.shippingModal.country} *</Label>
                 <Input
                   id="modal-country"
                   value={shippingForm.country}
@@ -612,7 +614,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                   className="bg-gray-50"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Based on your region</p>
+                <p className="text-xs text-gray-500 mt-1">{t.shippingModal.basedOnRegion}</p>
               </div>
             </div>
 
@@ -624,7 +626,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 className="inline-flex items-center gap-2 text-sm font-medium text-luxury-gold hover:text-luxury-gold/80 transition-colors"
               >
                 <Map className="h-4 w-4" />
-                {showMap ? 'Hide Map' : 'Pick Location from Map'}
+                {showMap ? 'Hide Map' : t.shippingModal.pickLocation}
               </button>
             </div>
 
@@ -675,14 +677,14 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 className="flex-1"
                 disabled={isSubmitting}
               >
-                Back
+                {t.shippingModal.back}
               </Button>
               <Button 
                 type="submit" 
                 className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Processing...' : 'Place Order'}
+                {isSubmitting ? 'Processing...' : t.shippingModal.placeOrder}
               </Button>
             </div>
           </form>

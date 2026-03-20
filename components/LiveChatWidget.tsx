@@ -196,6 +196,15 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
 
   const loadOrCreateConversation = async () => {
     setIsLoading(true)
+    // Show loading skeleton immediately
+    setMessages([{
+      id: 'loading-1',
+      sender_type: 'system',
+      sender_name: 'System',
+      message_text: 'Connecting to support...',
+      created_at: new Date().toISOString(),
+      is_read: true
+    }])
     try {
       // For authenticated users, try to load existing open conversation
       if (user) {

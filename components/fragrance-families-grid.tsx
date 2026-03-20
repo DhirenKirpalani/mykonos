@@ -71,7 +71,7 @@ export function FragranceFamiliesGrid() {
             </div>
           </div>
         ) : fragranceFamilies.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 max-w-6xl mx-auto">
             {fragranceFamilies.map((family, index) => {
               const Icon = getIconForFamily(family.name)
               return (
@@ -80,24 +80,25 @@ export function FragranceFamiliesGrid() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05, duration: 0.4 }}
+                  className="h-full"
                 >
                   <Link 
                     href={`/products?category=${encodeURIComponent(family.name)}`}
-                    className="group block relative"
+                    className="group block relative h-full"
                   >
-                    <div className="relative bg-white rounded-2xl p-6 md:p-8 shadow-md hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-[#C2A36B] h-full flex flex-col items-center text-center">
-                      <div className="mb-4 md:mb-5 relative">
-                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[#C2A36B]/20 to-[#8A6A3F]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                          <Icon className="w-8 h-8 md:w-10 md:h-10 text-[#8A6A3F] group-hover:text-[#C2A36B] transition-colors duration-300" strokeWidth={1.5} />
+                    <div className="relative bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-md hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-[#C2A36B] h-full min-h-[180px] sm:min-h-[200px] flex flex-col items-center justify-center text-center">
+                      <div className="mb-3 sm:mb-4 md:mb-5 relative flex-shrink-0">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[#C2A36B]/20 to-[#8A6A3F]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                          <Icon className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[#8A6A3F] group-hover:text-[#C2A36B] transition-colors duration-300" strokeWidth={1.5} />
                         </div>
                         <div className="absolute -inset-2 bg-gradient-to-br from-[#C2A36B]/20 to-transparent rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
                       </div>
                       
-                      <h3 className="font-serif text-base md:text-lg font-bold text-[#1C2E4A] mb-2 group-hover:text-[#8A6A3F] transition-colors duration-300">
+                      <h3 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#1C2E4A] mb-1.5 sm:mb-2 group-hover:text-[#8A6A3F] transition-colors duration-300">
                         {family.name}
                       </h3>
                       
-                      <p className="text-xs md:text-sm text-[#5A4A3A]/80 line-clamp-2 leading-relaxed">
+                      <p className="text-xs md:text-sm text-[#5A4A3A]/80 leading-relaxed flex-grow">
                         {family.description}
                       </p>
                       
