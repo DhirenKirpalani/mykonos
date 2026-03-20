@@ -94,7 +94,7 @@ export function HeroCarousel() {
           >
             <Link
               href="/products"
-              className="inline-block border-2 border-luxury-gold bg-luxury-gold px-8 py-4 text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-transparent hover:text-white"
+              className="inline-block border-2 border-luxury-gold bg-luxury-gold px-4 py-2 sm:px-8 sm:py-4 text-xs sm:text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-transparent hover:text-white"
             >
               {t('home.shopNow')}
             </Link>

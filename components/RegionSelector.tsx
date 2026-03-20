@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Globe, Check, ChevronDown } from 'lucide-react'
+import { Globe, Check, ChevronDown, X } from 'lucide-react'
 import { useRegion } from '@/contexts/RegionContext'
 import { Region } from '@/lib/types/region'
 import { supabase } from '@/lib/supabase/client'
@@ -67,8 +67,15 @@ export function RegionSelector() {
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border border-border/40 bg-white shadow-xl">
-            <div className="p-4 border-b border-border/40 bg-gray-50">
-              <h3 className="font-semibold text-gray-900 text-base">Select Your Region</h3>
+            <div className="p-4 border-b border-border/40 bg-gray-50 relative">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="absolute top-3 right-3 rounded-full p-1 hover:bg-gray-200 transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4 text-gray-600" />
+              </button>
+              <h3 className="font-semibold text-gray-900 text-base pr-8">Select Your Region</h3>
               {detectionResult && (
                 <p className="mt-1 text-xs text-gray-600">
                   {detectionResult.source === 'user_profile' && '✓ Based on your profile'}

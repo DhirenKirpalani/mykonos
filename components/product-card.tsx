@@ -156,15 +156,15 @@ export function ProductCard({ product }: ProductCardProps) {
       )}
 
       {/* Card link */}
-      <Link href={`/products/${product.slug}`} className="flex flex-col h-full" aria-label={`View ${product.name}`}>
-        {/* Image Frame - 70% of card height */}
-        <div className="relative aspect-square bg-[#F1F4F8] overflow-hidden flex-[7] min-h-[200px]">
+      <Link href={`/products/${product.slug}`} className="flex flex-col" aria-label={`View ${product.name}`}>
+        {/* Image Frame - Fixed aspect ratio */}
+        <div className="relative aspect-square bg-[#F1F4F8] overflow-hidden">
           {thumbnailUrl ? (
             isVideo(thumbnailUrl) ? (
               <video
                 src={thumbnailUrl}
                 className="
-                  h-full w-full object-contain p-6 md:p-8
+                  h-full w-full object-cover
                   transition-transform duration-500 ease-out
                   group-hover:scale-[1.04]
                 "
@@ -178,7 +178,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
                 className="
-                  object-contain p-6 md:p-8
+                  object-cover
                   transition-transform duration-500 ease-out
                   group-hover:scale-[1.04]
                 "
@@ -195,9 +195,9 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Text - 30% of card height */}
-        <div className="px-2.5 py-2 md:px-3 md:py-2 flex-[3] flex flex-col justify-start">
-          {/* Product Name - More lines on mobile */}
+        {/* Content - Fixed heights for consistency */}
+        <div className="flex flex-col p-2 md:p-3">
+          {/* Product Name - Fixed height */}
           <h3 className="
             text-[11px] md:text-sm
             text-[#1C2E4A]
@@ -207,13 +207,13 @@ export function ProductCard({ product }: ProductCardProps) {
             group-hover:text-[#1C2E4A]
             mb-1.5
             leading-tight
-            min-h-[3rem] md:min-h-[2.5rem]
+            h-[3rem] md:h-[2.5rem]
           ">
             {product.name}
           </h3>
 
-          {/* Price with discount */}
-          <div className="flex flex-col gap-0.5 mb-1">
+          {/* Price with discount - Fixed height with extra space for strikethrough */}
+          <div className="flex flex-col gap-0.5 mb-2 h-[3rem] md:h-[3rem]">
             <div className="flex items-center gap-2">
               <p className="
                 text-sm md:text-lg
@@ -243,18 +243,19 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
           </div>
 
-          {/* Pilih Lokal Badge */}
-          {mounted && product.pilih_lokal && (
-            <div className="mb-1">
+          {/* Pilih Lokal Badge - Fixed height */}
+          <div className="mb-1.5 h-[1.25rem]">
+            {mounted && product.pilih_lokal && (
               <span className="inline-block rounded border border-[#1C2E4A] px-2 py-0.5 text-[9px] md:text-xs text-[#1C2E4A] font-medium">
-                {locale === 'en' ? (t as any).products.pilihLokal : (t as any).produk.pilihLokal}
+                {t.products.pilihLokal}
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Trust Signals - Rating & Sold Count */}
-          {mounted && (product.rating > 0 || product.products_sold > 0) && (
-            <div className="flex items-center gap-1.5 text-[10px] md:text-sm">
+          {/* Trust Signals - Rating & Sold Count - Fixed height */}
+          <div className="h-[1.25rem] md:h-[1.5rem]">
+            {mounted && (product.rating > 0 || product.products_sold > 0) && (
+              <div className="flex items-center gap-1.5 text-[10px] md:text-sm">
               {product.rating > 0 && (
                 <div className="flex items-center gap-1">
                   <svg className="h-3.5 w-3.5 md:h-4 md:w-4 fill-amber-500" viewBox="0 0 20 20">
@@ -270,11 +271,12 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="text-gray-600">
                   {product.products_sold >= 1000
                     ? `${Math.floor(product.products_sold / 1000)}RB+`
-                    : `${product.products_sold}+`} {locale === 'en' ? (t as any).products.sold : (t as any).produk.sold}
+                    : `${product.products_sold}+`} {t.products.sold}
                 </span>
               )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </Link>
     </motion.div>

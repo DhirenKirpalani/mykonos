@@ -1,21 +1,47 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function LoginPage() {
+  const { t } = useLanguage()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const router = useRouter()
+
+  // Pre-fill email from track order page or remembered credentials
+  useEffect(() => {
+    // First check for signin context from track order
+    const signinContext = sessionStorage.getItem('signinContext')
+    if (signinContext) {
+      try {
+        const { email: savedEmail } = JSON.parse(signinContext)
+        if (savedEmail) {
+          setEmail(savedEmail)
+        }
+      } catch (error) {
+        console.error('Error parsing signin context:', error)
+      }
+    }
+    
+    // Then check for remembered credentials
+    const rememberedEmail = localStorage.getItem('rememberedEmail')
+    if (rememberedEmail && !signinContext) {
+      setEmail(rememberedEmail)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,6 +85,13 @@ export default function LoginPage() {
         localStorage.removeItem('cached_cart')
       }
 
+      // Handle Remember Me
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email)
+      } else {
+        localStorage.removeItem('rememberedEmail')
+      }
+
       toast.success('Welcome back!', {
         description: 'You have successfully logged in.',
       })
@@ -77,9 +110,9 @@ export default function LoginPage() {
         <div className="mx-auto max-w-md">
           <div className="rounded-lg bg-white p-8 shadow-lg">
             <div className="mb-8 text-center">
-              <h1 className="mb-2 font-serif text-3xl font-bold">Welcome Back</h1>
+              <h1 className="mb-2 font-serif text-3xl font-bold">{t.auth.welcomeBack}</h1>
               <p className="text-sm text-muted-foreground">
-                Sign in to your Mykonos account
+                {t.auth.signInSubtitle}
               </p>
             </div>
 
@@ -92,7 +125,7 @@ export default function LoginPage() {
 
               <div>
                 <label htmlFor="email" className="mb-2 block text-sm font-medium">
-                  Email Address
+                  {t.auth.emailAddress}
                 </label>
                 <input
                   type="email"
@@ -107,14 +140,14 @@ export default function LoginPage() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label htmlFor="password" className="text-sm font-medium">
-                    Password
+                    {t.auth.password}
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowForgotPassword(true)}
                     className="text-sm text-luxury-gold hover:underline"
                   >
-                    Forgot password?
+                    {t.auth.forgotPassword}
                   </button>
                 </div>
                 <div className="relative">
@@ -140,10 +173,12 @@ export default function LoginPage() {
                 <input
                   type="checkbox"
                   id="remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
                 />
                 <label htmlFor="remember" className="ml-2 text-sm text-muted-foreground">
-                  Remember me
+                  {t.auth.rememberMe}
                 </label>
               </div>
 
@@ -152,15 +187,15 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full rounded-md bg-luxury-gold px-6 py-3 font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? t.auth.signingIn : t.auth.signIn}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Don't have an account?{' '}
+                {t.auth.dontHaveAccount}{' '}
                 <Link href="/register" className="font-medium text-luxury-gold hover:underline">
-                  Create Account
+                  {t.auth.createAccount}
                 </Link>
               </p>
             </div>

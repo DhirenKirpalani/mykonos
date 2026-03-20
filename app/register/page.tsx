@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
@@ -8,8 +8,10 @@ import { supabase } from '@/lib/supabase/client'
 import { validatePassword, validateEmail } from '@/lib/validation'
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator'
 import { toast } from 'sonner'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function RegisterPage() {
+  const { t } = useLanguage()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -25,6 +27,21 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+
+  // Pre-fill email from track order page
+  useEffect(() => {
+    const signupContext = sessionStorage.getItem('signupContext')
+    if (signupContext) {
+      try {
+        const { email: savedEmail } = JSON.parse(signupContext)
+        if (savedEmail) {
+          setFormData(prev => ({ ...prev, email: savedEmail }))
+        }
+      } catch (error) {
+        console.error('Error parsing signup context:', error)
+      }
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -197,9 +214,9 @@ export default function RegisterPage() {
         <div className="mx-auto max-w-md">
           <div className="rounded-lg bg-white p-8 shadow-lg">
             <div className="mb-8 text-center">
-              <h1 className="mb-2 font-serif text-3xl font-bold">Create Account</h1>
+              <h1 className="mb-2 font-serif text-3xl font-bold">{t.auth.createAccountTitle}</h1>
               <p className="text-sm text-muted-foreground">
-                Join Mykonos and discover luxury fragrances
+                {t.auth.signUpSubtitle}
               </p>
             </div>
 
@@ -213,7 +230,7 @@ export default function RegisterPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label htmlFor="firstName" className="mb-2 block text-sm font-medium">
-                    First Name *
+                    {t.auth.firstName} *
                   </label>
                   <input
                     type="text"
@@ -226,7 +243,7 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <label htmlFor="lastName" className="mb-2 block text-sm font-medium">
-                    Last Name *
+                    {t.auth.lastName} *
                   </label>
                   <input
                     type="text"
@@ -241,7 +258,7 @@ export default function RegisterPage() {
 
               <div>
                 <label htmlFor="email" className="mb-2 block text-sm font-medium">
-                  Email Address *
+                  {t.auth.emailAddress} *
                 </label>
                 <input
                   type="email"
@@ -255,7 +272,7 @@ export default function RegisterPage() {
 
               <div>
                 <label htmlFor="phone" className="mb-2 block text-sm font-medium">
-                  Phone Number
+                  {t.auth.phone}
                 </label>
                 <input
                   type="tel"
@@ -268,7 +285,7 @@ export default function RegisterPage() {
 
               <div>
                 <label htmlFor="password" className="mb-2 block text-sm font-medium">
-                  Password *
+                  {t.auth.password} *
                 </label>
                 <div className="relative">
                   <input
@@ -293,7 +310,7 @@ export default function RegisterPage() {
 
               <div>
                 <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium">
-                  Confirm Password *
+                  {t.auth.confirmPassword} *
                 </label>
                 <div className="relative">
                   <input
@@ -324,14 +341,7 @@ export default function RegisterPage() {
                   className="mt-1 h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
                 />
                 <label htmlFor="terms" className="ml-2 text-sm text-muted-foreground">
-                  I agree to the{' '}
-                  <Link href="/terms" target="_blank" className="text-luxury-gold hover:underline">
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link href="/privacy" target="_blank" className="text-luxury-gold hover:underline">
-                    Privacy Policy
-                  </Link>
+                  {t.auth.agreeToTerms}
                 </label>
               </div>
 
@@ -340,15 +350,15 @@ export default function RegisterPage() {
                 disabled={loading || isSubmitting}
                 className="w-full rounded-md bg-luxury-gold px-6 py-3 font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading || isSubmitting ? 'Creating Account...' : 'Create Account'}
+                {loading || isSubmitting ? t.auth.registering : t.auth.createAccount}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Already have an account?{' '}
+                {t.auth.haveAccount}{' '}
                 <Link href="/login" className="font-medium text-luxury-gold hover:underline">
-                  Sign In
+                  {t.auth.signIn}
                 </Link>
               </p>
             </div>

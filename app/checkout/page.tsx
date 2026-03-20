@@ -853,9 +853,21 @@ export default function CheckoutPage() {
         throw new Error(midtransData.error || 'Failed to create payment token')
       }
       console.log('✅ [ORDER] Payment token created successfully')
+      console.log('📊 [TOKEN DEBUG] Midtrans token details:', {
+        token_preview: midtransData.token?.substring(0, 20) + '...',
+        token_length: midtransData.token?.length,
+        has_redirect_url: !!midtransData.redirect_url,
+        order_id: orderData.order_id
+      })
 
       // ⭐ STEP 3: Save snap_token back to order
-      console.log('� [ORDER] Saving snap_token to order...')
+      console.log('💾 [TOKEN DEBUG] Saving snap_token to order...')
+      console.log('📤 [TOKEN DEBUG] Update request payload:', {
+        order_id: orderData.order_id,
+        token_length: midtransData.token?.length,
+        has_redirect_url: !!midtransData.redirect_url
+      })
+
       const updateTokenResponse = await fetch('/api/orders/update-snap-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -866,9 +878,20 @@ export default function CheckoutPage() {
         }),
       })
 
+      console.log('📥 [TOKEN DEBUG] Update response status:', updateTokenResponse.status)
+
       if (!updateTokenResponse.ok) {
+        const errorData = await updateTokenResponse.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ [TOKEN DEBUG] Failed to save snap_token!', {
+          status: updateTokenResponse.status,
+          statusText: updateTokenResponse.statusText,
+          error: errorData,
+          order_id: orderData.order_id
+        })
         console.error('⚠️ [ORDER] Failed to save snap_token, but continuing...')
       } else {
+        const successData = await updateTokenResponse.json().catch(() => ({}))
+        console.log('✅ [TOKEN DEBUG] snap_token saved successfully!', successData)
         console.log('✅ [ORDER] snap_token saved to order')
       }
 
@@ -1040,11 +1063,32 @@ export default function CheckoutPage() {
         if (expiryDate > new Date()) {
           console.log('✅ [GUEST] Reusing existing snap_token')
           
-          // Store order info in sessionStorage for track-order page
-          sessionStorage.setItem('guestOrderInfo', JSON.stringify({
+          // Store order info in sessionStorage and localStorage for track-order page
+          const orderInfo = JSON.stringify({
             order_number: orderData.order_number,
             customer_email: guestData.email
-          }))
+          })
+          sessionStorage.setItem('guestOrderInfo', orderInfo)
+          localStorage.setItem('guestOrderInfo', orderInfo)
+          
+          // Add to order history array for session tracking
+          const orderHistoryItem = {
+            order_number: orderData.order_number,
+            customer_email: guestData.email,
+            created_at: new Date().toISOString()
+          }
+          
+          const existingHistory = localStorage.getItem('orderHistory')
+          let orderHistory = existingHistory ? JSON.parse(existingHistory) : []
+          
+          // Check if order already exists in history
+          const orderExists = orderHistory.some((o: any) => o.order_number === orderData.order_number)
+          if (!orderExists) {
+            orderHistory.unshift(orderHistoryItem) // Add to beginning
+            orderHistory = orderHistory.slice(0, 10) // Keep only last 10 orders
+            localStorage.setItem('orderHistory', JSON.stringify(orderHistory))
+            console.log('📚 [GUEST REUSE] Order added to session history')
+          }
 
           // Open Midtrans modal with existing token
           if (typeof window !== 'undefined' && (window as any).snap) {
@@ -1115,6 +1159,12 @@ export default function CheckoutPage() {
         }
       ]
 
+      console.log('📤 [GUEST TOKEN DEBUG] Calling Midtrans API...', {
+        orderId: orderData.order_id,
+        amount: convertToIDR(total),
+        itemCount: itemsForMidtrans.length
+      })
+
       const midtransResponse = await fetch('/api/midtrans/create-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1131,26 +1181,79 @@ export default function CheckoutPage() {
         }),
       })
 
+      console.log('📥 [GUEST TOKEN DEBUG] Midtrans response status:', midtransResponse.status)
+
       const midtransData = await midtransResponse.json()
+      
       if (!midtransResponse.ok) {
+        console.error('❌ [GUEST TOKEN DEBUG] Midtrans token creation failed!', {
+          status: midtransResponse.status,
+          error: midtransData
+        })
         throw new Error(midtransData.error || 'Failed to create payment token')
       }
 
+      console.log('✅ [GUEST TOKEN DEBUG] Midtrans token created!', {
+        has_token: !!midtransData.token,
+        token_preview: midtransData.token?.substring(0, 20) + '...',
+        has_redirect_url: !!midtransData.redirect_url
+      })
+
       // Save snap_token to order
-      await fetch(`/api/orders/${orderData.order_id}`, {
-        method: 'PATCH',
+      console.log('💾 [GUEST TOKEN DEBUG] Saving token to order via update-snap-token API...')
+      const saveTokenResponse = await fetch('/api/orders/update-snap-token', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          order_id: orderData.order_id,
           snap_token: midtransData.token,
           snap_redirect_url: midtransData.redirect_url,
         }),
       })
 
-      // Store order info in sessionStorage
-      sessionStorage.setItem('guestOrderInfo', JSON.stringify({
+      console.log('📥 [GUEST TOKEN DEBUG] Save token response status:', saveTokenResponse.status)
+
+      if (!saveTokenResponse.ok) {
+        const errorData = await saveTokenResponse.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ [GUEST TOKEN DEBUG] Failed to save token to order!', {
+          status: saveTokenResponse.status,
+          error: errorData,
+          order_id: orderData.order_id
+        })
+        // Continue anyway - user can still pay via track order page
+      } else {
+        console.log('✅ [GUEST TOKEN DEBUG] Token saved to order successfully!')
+      }
+
+      // Store order info in both sessionStorage (for immediate redirect) and localStorage (for persistence)
+      const orderInfo = JSON.stringify({
         order_number: orderData.order_number,
         customer_email: guestData.email
-      }))
+      })
+      sessionStorage.setItem('guestOrderInfo', orderInfo)
+      localStorage.setItem('guestOrderInfo', orderInfo)
+      
+      // Add to order history array for session tracking
+      const orderHistoryItem = {
+        order_number: orderData.order_number,
+        customer_email: guestData.email,
+        created_at: new Date().toISOString()
+      }
+      
+      const existingHistory = localStorage.getItem('orderHistory')
+      let orderHistory = existingHistory ? JSON.parse(existingHistory) : []
+      
+      // Check if order already exists in history
+      const orderExists = orderHistory.some((o: any) => o.order_number === orderData.order_number)
+      if (!orderExists) {
+        orderHistory.unshift(orderHistoryItem) // Add to beginning
+        // Keep only last 10 orders
+        orderHistory = orderHistory.slice(0, 10)
+        localStorage.setItem('orderHistory', JSON.stringify(orderHistory))
+        console.log('📚 [GUEST] Order added to session history')
+      }
+      
+      console.log('💾 [GUEST] Order info saved to localStorage for persistent access')
 
       // Open Midtrans Snap modal
       if (typeof window !== 'undefined' && (window as any).snap) {
@@ -1449,7 +1552,7 @@ export default function CheckoutPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            <span>Back</span>
+            <span>{t.common.back}</span>
           </button>
         </div>
 
