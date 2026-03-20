@@ -1,15 +1,14 @@
 'use client'
 
 import React, { createContext, useContext, useState } from 'react'
-import { translations as newTranslations } from '@/i18n'
-import { translations as oldTranslations } from '@/lib/translations'
+import { translations } from '@/lib/translations'
 
 export type Locale = 'en' | 'id'
 
 type LanguageContextType = {
   locale: Locale
   setLocale: (locale: Locale) => void
-  t: any // Combined translations type
+  t: any
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
@@ -36,32 +35,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     console.log('Locale state updated to:', newLocale)
     console.log('LocalStorage saved:', localStorage.getItem('locale'))
   }
-  
-  // Merge old and new translations - old translations take precedence for existing keys
-  const getTranslations = React.useCallback((lang: Locale) => {
-    const old = oldTranslations[lang]
-    const newT = newTranslations[lang]
-    
-    // Create a merged object with both old nested structure and new flat structure
-    return {
-      ...old,
-      // Add new flat translations as direct properties
-      ...Object.keys(newT).reduce((acc, key) => {
-        // Convert 'nav.home' to nested structure if needed
-        const parts = key.split('.')
-        if (parts.length === 1) {
-          acc[key] = newT[key as keyof typeof newT]
-        }
-        return acc
-      }, {} as any)
-    }
-  }, [])
 
   // Use useMemo to ensure translations update when locale changes
   const currentTranslations = React.useMemo(() => {
     console.log('Generating translations for locale:', locale)
-    return getTranslations(locale)
-  }, [locale, getTranslations])
+    return translations[locale]
+  }, [locale])
 
   // Log whenever locale changes
   React.useEffect(() => {
