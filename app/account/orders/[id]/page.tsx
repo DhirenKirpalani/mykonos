@@ -298,7 +298,7 @@ export default function OrderDetailsPage() {
               currentStatus={order.status}
               paymentStatus={order.payment_status}
               createdAt={order.created_at}
-              paidAt={order.paid_at}
+              paidAt={order.completed_at}
               packedAt={order.packed_at}
               shippedAt={order.shipped_at}
               deliveredAt={order.delivered_at}
