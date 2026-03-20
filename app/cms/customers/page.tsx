@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 interface Customer {
-  id: string
+  id?: string
   first_name: string
   last_name: string
   email: string
@@ -15,6 +15,7 @@ interface Customer {
   created_at: string
   order_count?: number
   total_spent?: number
+  is_guest?: boolean
 }
 
 export default function CustomersPage() {
@@ -85,16 +86,20 @@ export default function CustomersPage() {
                 <th className="pb-3">Orders</th>
                 <th className="pb-3">Total Spent</th>
                 <th className="pb-3">Joined</th>
-                <th className="pb-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="text-sm">
+              {filteredCustomers.map((customer, index) => (
+                <tr key={customer.id || customer.email || index} className="text-sm">
                   <td className="py-4">
                     <div>
                       <div className="font-medium text-gray-900">
                         {customer.first_name} {customer.last_name}
+                        {customer.is_guest && (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            Guest
+                          </span>
+                        )}
                       </div>
                       <div className="text-gray-500">{customer.email}</div>
                     </div>
@@ -116,7 +121,7 @@ export default function CustomersPage() {
                   <td className="py-4">
                     <div className="flex items-center gap-2 text-gray-600">
                       <MapPin className="h-3 w-3" />
-                      <span>{customer.country}</span>
+                      <span>{customer.country || 'N/A'}</span>
                     </div>
                   </td>
                   <td className="py-4 text-gray-900">
@@ -127,13 +132,6 @@ export default function CustomersPage() {
                   </td>
                   <td className="py-4 text-gray-600">
                     {new Date(customer.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="py-4">
-                    <Link href={`/cms/customers/${customer.id}`}>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </Link>
                   </td>
                 </tr>
               ))}

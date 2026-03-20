@@ -5,6 +5,14 @@ import { Plus, Edit, Trash2, Save, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase/client'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface AnnouncementMessage {
   id: string
@@ -31,6 +39,8 @@ export default function AnnouncementBarPage() {
   const [newMessage, setNewMessage] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
   const [uploadingHero, setUploadingHero] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -139,8 +149,8 @@ export default function AnnouncementBarPage() {
     }
   }
 
-  const handleDeleteMessage = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this message?')) return
+  const handleDeleteMessage = async () => {
+    if (!messageToDelete) return
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -149,7 +159,7 @@ export default function AnnouncementBarPage() {
         return
       }
 
-      const response = await fetch(`/api/admin/announcement/${id}`, {
+      const response = await fetch(`/api/admin/announcement/${messageToDelete}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`
@@ -159,6 +169,8 @@ export default function AnnouncementBarPage() {
       if (!response.ok) throw new Error('Failed to delete message')
 
       toast.success('Message deleted successfully')
+      setDeleteDialogOpen(false)
+      setMessageToDelete(null)
       fetchData()
     } catch (error) {
       console.error('Error deleting message:', error)
@@ -375,7 +387,10 @@ export default function AnnouncementBarPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteMessage(message.id)}
+                      onClick={() => {
+                        setMessageToDelete(message.id)
+                        setDeleteDialogOpen(true)
+                      }}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -437,6 +452,34 @@ export default function AnnouncementBarPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Message</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this message? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false)
+                setMessageToDelete(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteMessage}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

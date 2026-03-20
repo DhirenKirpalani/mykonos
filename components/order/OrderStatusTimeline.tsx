@@ -209,17 +209,12 @@ export function OrderStatusTimeline({
               <h4 className="font-semibold text-sm mb-1">Questions about your order?</h4>
               <p className="text-sm text-gray-600">Our customer service team is here to help</p>
             </div>
-            <button 
-              onClick={() => {
-                // Open Tawk.to chat widget
-                if (typeof window !== 'undefined' && (window as any).Tawk_API) {
-                  (window as any).Tawk_API.maximize()
-                }
-              }}
-              className="px-4 py-2 bg-luxury-gold text-white rounded-md hover:bg-luxury-gold/90 transition-colors text-sm font-medium whitespace-nowrap"
+            <a 
+              href="/contact"
+              className="px-4 py-2 bg-luxury-gold text-white rounded-md hover:bg-luxury-gold/90 transition-colors text-sm font-medium whitespace-nowrap inline-block text-center"
             >
               Contact Support
-            </button>
+            </a>
           </div>
         </div>
       </div>

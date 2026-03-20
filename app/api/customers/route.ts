@@ -15,10 +15,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
 
-    // Query users table directly
+    // Query users table directly, excluding admin users
     let query = supabase
       .from('users')
-      .select('id, email, first_name, last_name, phone, country, created_at')
+      .select('id, email, first_name, last_name, phone, country, created_at, role')
+      .neq('role', 'admin')
       .order('created_at', { ascending: false })
 
     // Apply search filter
@@ -33,39 +34,63 @@ export async function GET(request: Request) {
       throw error
     }
 
-    // Fetch order counts and totals for each customer
-    if (customers && customers.length > 0) {
-      const customerIds = customers.map((c: any) => c.id)
-      
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('user_id, total_amount')
-        .in('user_id', customerIds)
+    // Fetch all orders including guest orders
+    const { data: allOrders } = await supabase
+      .from('orders')
+      .select('user_id, customer_name, customer_email, total_amount, created_at')
 
-      // Calculate order counts and total spent per customer
-      const orderStats = new Map()
-      orders?.forEach((order: any) => {
+    // Calculate order counts and total spent per customer
+    const orderStats = new Map()
+    const guestCustomers = new Map()
+
+    allOrders?.forEach((order: any) => {
+      if (order.user_id) {
+        // Registered user order
         const existing = orderStats.get(order.user_id) || { count: 0, total: 0 }
         orderStats.set(order.user_id, {
           count: existing.count + 1,
           total: existing.total + (order.total_amount || 0)
         })
-      })
-
-      // Merge stats into customers
-      const customersWithStats = customers.map((customer: any) => {
-        const stats = orderStats.get(customer.id) || { count: 0, total: 0 }
-        return {
-          ...customer,
-          order_count: stats.count,
-          total_spent: stats.total
+      } else if (order.customer_email) {
+        // Guest order
+        const existing = guestCustomers.get(order.customer_email) || {
+          email: order.customer_email,
+          first_name: order.customer_name?.split(' ')[0] || 'Guest',
+          last_name: order.customer_name?.split(' ').slice(1).join(' ') || '',
+          phone: null,
+          country: '',
+          created_at: order.created_at,
+          order_count: 0,
+          total_spent: 0,
+          is_guest: true
         }
-      })
+        guestCustomers.set(order.customer_email, {
+          ...existing,
+          order_count: existing.order_count + 1,
+          total_spent: existing.total_spent + (order.total_amount || 0),
+          created_at: order.created_at < existing.created_at ? order.created_at : existing.created_at
+        })
+      }
+    })
 
-      return NextResponse.json(customersWithStats)
-    }
+    // Merge stats into registered customers
+    const customersWithStats = customers?.map((customer: any) => {
+      const stats = orderStats.get(customer.id) || { count: 0, total: 0 }
+      return {
+        ...customer,
+        order_count: stats.count,
+        total_spent: stats.total,
+        is_guest: false
+      }
+    }) || []
 
-    return NextResponse.json(customers || [])
+    // Combine registered and guest customers
+    const allCustomers = [...customersWithStats, ...Array.from(guestCustomers.values())]
+    
+    // Sort by created_at descending
+    allCustomers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    return NextResponse.json(allCustomers)
   } catch (error: any) {
     console.error('Customers fetch error:', error)
     return NextResponse.json(

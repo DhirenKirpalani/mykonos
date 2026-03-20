@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/database.types'
 import { formatPrice } from '@/lib/utils'
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { toast } from 'sonner'
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
   order_items: Array<{
@@ -41,6 +43,7 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
 export default function OrderDetailsPage() {
   const params = useParams()
   const router = useRouter()
+  const { t } = useLanguage()
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
@@ -48,6 +51,23 @@ export default function OrderDetailsPage() {
   useEffect(() => {
     fetchOrderDetails()
   }, [params.id])
+
+  // Load Midtrans Snap script
+  useEffect(() => {
+    const snapScript = 'https://app.sandbox.midtrans.com/snap/snap.js'
+    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ''
+    
+    const script = document.createElement('script')
+    script.src = snapScript
+    script.setAttribute('data-client-key', clientKey)
+    script.async = true
+    
+    document.body.appendChild(script)
+    
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
 
   const fetchOrderDetails = async () => {
     try {
@@ -123,7 +143,7 @@ export default function OrderDetailsPage() {
     try {
       // Check if order has expired
       if (order.expiry_time && new Date(order.expiry_time) < new Date()) {
-        alert('Payment link has expired. Please create a new order.')
+        toast.error('Payment link has expired. Please create a new order.')
         setIsProcessingPayment(false)
         return
       }
@@ -136,18 +156,18 @@ export default function OrderDetailsPage() {
           (window as any).snap.pay(order.snap_token, {
             onSuccess: (result: any) => {
               console.log('✅ [PAYMENT] Payment successful!', result)
-              alert('Payment successful! Your order is being processed.')
+              toast.success('Payment successful! Your order is being processed.')
               fetchOrderDetails() // Refresh order data
             },
             onPending: (result: any) => {
               console.log('⏳ [PAYMENT] Payment pending', result)
-              alert('Payment pending. We will notify you once confirmed.')
+              toast.info('Payment pending. We will notify you once confirmed.')
               fetchOrderDetails()
               setIsProcessingPayment(false)
             },
             onError: (result: any) => {
               console.error('❌ [PAYMENT] Payment error', result)
-              alert('Payment failed. Please try again.')
+              toast.error('Payment failed. Please try again.')
               setIsProcessingPayment(false)
             },
             onClose: () => {
@@ -156,17 +176,17 @@ export default function OrderDetailsPage() {
             }
           })
         } else {
-          alert('Payment system not loaded. Please refresh the page.')
+          toast.error('Payment system not loaded. Please refresh the page.')
           setIsProcessingPayment(false)
         }
       } else {
         // No snap_token, need to regenerate
-        alert('Payment link expired. Please create a new order.')
+        toast.error('Payment link expired. Please create a new order.')
         setIsProcessingPayment(false)
       }
     } catch (error) {
       console.error('Payment error:', error)
-      alert('Failed to process payment. Please try again.')
+      toast.error('Failed to process payment. Please try again.')
       setIsProcessingPayment(false)
     }
   }
@@ -193,7 +213,7 @@ export default function OrderDetailsPage() {
             onClick={() => router.push('/account/orders')}
             className="text-blue-600 hover:underline"
           >
-            Back to Orders
+            {t.account.backToOrders}
           </button>
         </div>
       </div>
@@ -210,9 +230,9 @@ export default function OrderDetailsPage() {
               href="/account/orders"
               className="text-gray-600 hover:text-gray-900 mb-6 inline-flex items-center gap-2 text-sm font-medium transition-colors"
             >
-              ← Back to Orders
+              ← {t.account.backToOrders}
             </Link>
-            <h1 className="text-4xl font-serif mb-2">Order Details</h1>
+            <h1 className="text-4xl font-serif mb-2">{t.account.orderDetails}</h1>
             <p className="text-gray-500 text-lg">Order #{order.order_number}</p>
           </div>
 
@@ -222,10 +242,10 @@ export default function OrderDetailsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-yellow-900 mb-2">
-                    ⏳ Waiting for Payment
+                    ⏳ {t.account.waitingForPayment}
                   </h3>
                   <p className="text-sm text-yellow-800 mb-1">
-                    Your order has been created but payment is not yet complete.
+                    {t.account.orderNotComplete}
                   </p>
                   {order.expiry_time && (
                     <p className="text-xs text-yellow-700">
@@ -244,7 +264,7 @@ export default function OrderDetailsPage() {
                   disabled={isProcessingPayment || (order.expiry_time ? new Date(order.expiry_time) < new Date() : false)}
                   className="px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition-colors"
                 >
-                  {isProcessingPayment ? 'Processing...' : 'Continue Payment'}
+                  {isProcessingPayment ? t.common.loading : t.account.continuePayment}
                 </button>
               </div>
             </div>
@@ -382,8 +402,8 @@ export default function OrderDetailsPage() {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
     </div>
   )
 }

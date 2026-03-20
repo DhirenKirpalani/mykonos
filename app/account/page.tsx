@@ -11,6 +11,7 @@ import { Database } from '@/lib/supabase/database.types'
 import { useAuth } from '@/contexts/AuthContext'
 import { ShippingAddresses } from '@/components/account/ShippingAddresses'
 import { cn } from '@/lib/utils'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 type UserProfile = Database['public']['Tables']['users']['Row']
 
@@ -18,6 +19,7 @@ export default function AccountPage() {
   const router = useRouter()
   const pathname = usePathname()
   const { user, isLoading: authLoading } = useAuth()
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(true)
   const [userData, setUserData] = useState({
     firstName: '',
@@ -90,9 +92,9 @@ export default function AccountPage() {
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
-          <Breadcrumbs items={[{ label: 'Account', href: '/account' }]} />
+          <Breadcrumbs items={[{ label: t.account.account, href: '/account' }]} />
           <h1 className="mt-4 mb-4 font-serif text-4xl font-bold lg:text-5xl">
-            My Account
+            {t.account.myAccount}
           </h1>
         </div>
       </div>
@@ -100,7 +102,7 @@ export default function AccountPage() {
       <div className="container mx-auto px-4 py-12 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-4">
           <div className="space-y-2">
-            <h2 className="font-serif text-xl font-bold">Account</h2>
+            <h2 className="mb-4 font-serif text-xl font-bold">{t.account.account}</h2>
             <nav className="space-y-1">
               <Link 
                 href="/account"
@@ -111,7 +113,7 @@ export default function AccountPage() {
                     : "hover:bg-luxury-gray-light"
                 )}
               >
-                Profile
+                {t.account.profile}
               </Link>
               <Link 
                 href="/account/orders"
@@ -122,7 +124,7 @@ export default function AccountPage() {
                     : "hover:bg-luxury-gray-light"
                 )}
               >
-                Orders
+                {t.account.orders}
               </Link>
               <Link 
                 href="/account/settings"
@@ -133,19 +135,19 @@ export default function AccountPage() {
                     : "hover:bg-luxury-gray-light"
                 )}
               >
-                Settings
+                {t.account.settings}
               </Link>
             </nav>
           </div>
 
           <div className="lg:col-span-3 space-y-8">
             <div className="rounded-lg border border-border/40 p-8">
-              <h2 className="mb-6 font-serif text-2xl font-bold">Profile Information</h2>
+              <h2 className="mb-6 font-serif text-2xl font-bold">{t.account.profileInformation}</h2>
               <div className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-medium">
-                      First Name
+                      {t.account.firstName}
                     </label>
                     <input
                       type="text"
@@ -157,7 +159,7 @@ export default function AccountPage() {
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium">
-                      Last Name
+                      {t.account.lastName}
                     </label>
                     <input
                       type="text"
@@ -170,7 +172,7 @@ export default function AccountPage() {
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium">
-                    Email
+                    {t.account.email}
                   </label>
                   <input
                     type="email"
@@ -182,7 +184,7 @@ export default function AccountPage() {
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium">
-                    Phone
+                    {t.account.phone}
                   </label>
                   <input
                     type="tel"
@@ -218,7 +220,7 @@ export default function AccountPage() {
                       }
                     }}
                   >
-                    Save Changes
+                    {t.account.saveChanges}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -228,14 +230,14 @@ export default function AccountPage() {
                       router.push('/login')
                     }}
                   >
-                    Logout
+                    {t.account.logout}
                   </Button>
                 </div>
               </div>
             </div>
 
             <div className="rounded-lg border border-border/40 p-8">
-              <h2 className="mb-6 font-serif text-2xl font-bold">Shipping Addresses</h2>
+              <h2 className="mb-6 font-serif text-2xl font-bold">{t.account.shippingAddresses}</h2>
               <ShippingAddresses userId={user.id} />
             </div>
           </div>

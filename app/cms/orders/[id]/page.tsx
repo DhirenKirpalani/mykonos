@@ -120,6 +120,8 @@ export default function OrderDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'pending_payment':
+        return 'bg-orange-100 text-orange-800'
       case 'pending':
         return 'bg-yellow-100 text-yellow-800'
       case 'processing':
@@ -132,6 +134,32 @@ export default function OrderDetailPage() {
         return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const formatCurrency = (amount: number, currency: string) => {
+    if (currency === 'IDR') {
+      return `Rp${amount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    }
+    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending_payment':
+        return 'Pending Payment'
+      case 'pending':
+        return 'Pending'
+      case 'processing':
+        return 'Processing'
+      case 'shipped':
+        return 'Shipped'
+      case 'delivered':
+        return 'Delivered'
+      case 'cancelled':
+        return 'Cancelled'
+      default:
+        return status
     }
   }
 
@@ -152,7 +180,7 @@ export default function OrderDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(order.status)}`}>
-            {order.status}
+            {getStatusLabel(order.status)}
           </span>
           <FulfillOrderButton
             orderId={order.id}
@@ -173,27 +201,28 @@ export default function OrderDetailPage() {
             </h2>
             <div className="space-y-4">
               {order.order_items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                <div key={item.id} className="flex items-start gap-4 py-4 border-b border-gray-100 last:border-0">
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">{item.product.name}</p>
-                    <p className="text-sm text-gray-500">SKU: {item.product.sku}</p>
+                    <p className="text-sm text-gray-500 mt-1">SKU: {item.product.sku}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {formatCurrency(item.unit_price, order.currency_code)} × {item.quantity}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-gray-900">Qty: {item.quantity}</p>
-                    <p className="text-sm text-gray-500">${item.unit_price.toFixed(2)} each</p>
-                  </div>
-                  <div className="ml-6 text-right min-w-[100px]">
-                    <p className="font-medium text-gray-900">
-                      ${(item.quantity * item.unit_price).toFixed(2)}
+                    <p className="font-semibold text-gray-900">
+                      {formatCurrency(item.quantity * item.unit_price, order.currency_code)}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <div className="flex justify-between text-lg font-semibold">
-                <span>Total</span>
-                <span>${order.total_amount.toFixed(2)} {order.currency_code}</span>
+            <div className="mt-6 pt-4 border-t-2 border-gray-300">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold text-gray-900">Total</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(order.total_amount, order.currency_code)}
+                </span>
               </div>
             </div>
           </div>
@@ -252,11 +281,13 @@ export default function OrderDetailPage() {
               <CreditCard className="h-5 w-5" />
               Payment
             </h2>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Status</span>
-                <span className={`font-medium ${
-                  order.payment_status === 'completed' ? 'text-green-600' : 'text-yellow-600'
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Status</span>
+                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  order.payment_status === 'completed' ? 'bg-green-100 text-green-800' : 
+                  order.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
                 }`}>
                   {order.payment_status}
                 </span>
@@ -264,7 +295,17 @@ export default function OrderDetailPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Date</span>
                 <span className="text-gray-900">
-                  {new Date(order.created_at).toLocaleDateString()}
+                  {new Date(order.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Amount</span>
+                <span className="font-semibold text-gray-900">
+                  {formatCurrency(order.total_amount, order.currency_code)}
                 </span>
               </div>
             </div>

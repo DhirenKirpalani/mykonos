@@ -1,7 +1,7 @@
 'use client'
 
 import { useUserRole } from '@/hooks/useUserRole'
-import { Package, ShoppingCart, Users, TrendingUp, DollarSign } from 'lucide-react'
+import { Package, ShoppingCart, Users, TrendingUp, DollarSign, AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
@@ -9,12 +9,21 @@ import { supabase } from '@/lib/supabase/client'
 
 export default function CMSPage() {
   const { role } = useUserRole()
-  const [stats, setStats] = useState([
-    { name: 'Total Products', value: '-', icon: Package, href: '/cms/products' },
-    { name: 'Pending Orders', value: '-', icon: ShoppingCart, href: '/cms/orders' },
-    { name: 'Total Customers', value: '-', icon: Users, href: '/cms/customers' },
-    { name: 'Revenue (MTD)', value: '-', icon: DollarSign, href: '#' },
+  const [stats, setStats] = useState<Array<{ name: string; value: string; icon: any; href: string; change: string | null }>>([
+    { name: 'Total Products', value: '-', icon: Package, href: '/cms/products', change: null },
+    { name: 'Total Orders', value: '-', icon: ShoppingCart, href: '/cms/orders', change: null },
+    { name: 'Total Customers', value: '-', icon: Users, href: '/cms/customers', change: null },
+    { name: 'Total Revenue', value: '-', icon: DollarSign, href: '#', change: null },
   ])
+  const [orderStats, setOrderStats] = useState({
+    pending_payment: 0,
+    pending: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0
+  })
+  const [lowStockCount, setLowStockCount] = useState(0)
   const [period, setPeriod] = useState('30d')
   const [analyticsData, setAnalyticsData] = useState<any>(null)
   const [topProducts, setTopProducts] = useState<any[]>([])
@@ -45,12 +54,12 @@ export default function CMSPage() {
 
   const fetchTopProducts = async () => {
     try {
-      // Fetch top selling products from database
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price_usd')
+        .select('id, name, price_usd, products_sold, stock_quantity')
         .eq('is_active', true)
-        .limit(3)
+        .order('products_sold', { ascending: false, nullsFirst: false })
+        .limit(5)
       
       if (data) {
         setTopProducts(data)
@@ -79,25 +88,57 @@ export default function CMSPage() {
 
   const fetchStats = async () => {
     try {
-      // Fetch real statistics from database
       const { count: productsCount } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })
       
-      const { count: ordersCount } = await supabase
+      const { count: totalOrdersCount } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
       
       const { count: usersCount } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
+        .neq('role', 'admin')
+      
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('total_amount, status')
+      
+      let totalRevenue = 0
+      const statusCounts = {
+        pending_payment: 0,
+        pending: 0,
+        processing: 0,
+        shipped: 0,
+        delivered: 0,
+        cancelled: 0
+      }
+      
+      if (ordersData) {
+        ordersData.forEach(order => {
+          totalRevenue += order.total_amount || 0
+          if (statusCounts.hasOwnProperty(order.status)) {
+            statusCounts[order.status as keyof typeof statusCounts]++
+          }
+        })
+      }
+      
+      setOrderStats(statusCounts)
+      
+      const { count: lowStock } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .lte('stock_quantity', 10)
+        .eq('is_active', true)
+      
+      setLowStockCount(lowStock || 0)
       
       setStats([
-        { name: 'Total Products', value: productsCount?.toString() || '0', icon: Package, href: '/cms/products' },
-        { name: 'Pending Orders', value: ordersCount?.toString() || '0', icon: ShoppingCart, href: '/cms/orders' },
-        { name: 'Total Customers', value: usersCount?.toString() || '0', icon: Users, href: '/cms/customers' },
-        { name: 'Revenue (MTD)', value: '-', icon: DollarSign, href: '#' },
+        { name: 'Total Products', value: productsCount?.toString() || '0', icon: Package, href: '/cms/products', change: lowStock ? `${lowStock} low stock` : null },
+        { name: 'Total Orders', value: totalOrdersCount?.toString() || '0', icon: ShoppingCart, href: '/cms/orders', change: statusCounts.pending ? `${statusCounts.pending} pending` : null },
+        { name: 'Total Customers', value: usersCount?.toString() || '0', icon: Users, href: '/cms/customers', change: null },
+        { name: 'Total Revenue', value: `Rp${totalRevenue.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, icon: DollarSign, href: '#', change: null },
       ])
     } catch (error) {
       console.error('Error fetching stats:', error)
@@ -138,9 +179,12 @@ export default function CMSPage() {
             className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-shadow hover:shadow-md"
           >
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">{stat.name}</p>
                 <p className="mt-2 text-3xl font-semibold text-gray-900">{stat.value}</p>
+                {stat.change && (
+                  <p className="mt-1 text-xs text-gray-500">{stat.change}</p>
+                )}
               </div>
               <div className="rounded-full bg-luxury-gold/10 p-3">
                 <stat.icon className="h-6 w-6 text-luxury-gold" />
@@ -171,16 +215,16 @@ export default function CMSPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Top Products</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Top Selling Products</h2>
           <div className="mt-4 space-y-4">
             {topProducts.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No products found</p>
             ) : (
               topProducts.map((product, index) => (
                 <div key={product.id} className={`flex items-center justify-between ${index < topProducts.length - 1 ? 'border-b border-gray-100 pb-4' : ''}`}>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">Product #{product.id}</p>
+                    <p className="text-sm text-gray-500">{product.products_sold || 0} sold · Stock: {product.stock_quantity || 0}</p>
                   </div>
                   <p className="font-semibold text-gray-900">${product.price_usd}</p>
                 </div>
@@ -226,26 +270,78 @@ export default function CMSPage() {
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">System Status</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Website Status</span>
-            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-              Online
-            </span>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Order Status Breakdown</h2>
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-orange-600" />
+                <span className="text-sm text-gray-600">Pending Payment</span>
+              </div>
+              <span className="font-semibold text-gray-900">{orderStats.pending_payment}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm text-gray-600">Pending</span>
+              </div>
+              <span className="font-semibold text-gray-900">{orderStats.pending}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-gray-600">Processing</span>
+              </div>
+              <span className="font-semibold text-gray-900">{orderStats.processing}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-purple-600" />
+                <span className="text-sm text-gray-600">Shipped</span>
+              </div>
+              <span className="font-semibold text-gray-900">{orderStats.shipped}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-gray-600">Delivered</span>
+              </div>
+              <span className="font-semibold text-gray-900">{orderStats.delivered}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-red-600" />
+                <span className="text-sm text-gray-600">Cancelled</span>
+              </div>
+              <span className="font-semibold text-gray-900">{orderStats.cancelled}</span>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Payment Gateway</span>
-            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-              Connected
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Inventory Sync</span>
-            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-              Active
-            </span>
+        </div>
+
+        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Inventory Alerts</h2>
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between rounded-lg bg-yellow-50 p-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <p className="font-medium text-gray-900">Low Stock Items</p>
+                  <p className="text-sm text-gray-600">{lowStockCount} products need restocking</p>
+                </div>
+              </div>
+              <Link href="/cms/products">
+                <Button variant="outline" size="sm">View</Button>
+              </Link>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Website Status</span>
+                <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                  Online
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
