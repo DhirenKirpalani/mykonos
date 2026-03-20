@@ -95,7 +95,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Skip maintenance check for API routes and static files
+  // Skip middleware for API routes (including webhooks), static files
   if (
     request.nextUrl.pathname.startsWith('/api') ||
     request.nextUrl.pathname.startsWith('/_next') ||

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { ArrowLeft, Package, User, MapPin, CreditCard, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FulfillOrderButton } from '@/components/admin/FulfillOrderButton'
+import { MarkAsPackedButton } from '@/components/admin/MarkAsPackedButton'
 import Link from 'next/link'
 
 interface Order {
@@ -17,6 +18,7 @@ interface Order {
   currency_code: string
   created_at: string
   customer_email: string
+  packed_at?: string | null
   user: {
     first_name: string
     last_name: string
@@ -126,8 +128,10 @@ export default function OrderDetailPage() {
         return 'bg-yellow-100 text-yellow-800'
       case 'processing':
         return 'bg-blue-100 text-blue-800'
-      case 'shipped':
+      case 'packed':
         return 'bg-purple-100 text-purple-800'
+      case 'shipped':
+        return 'bg-indigo-100 text-indigo-800'
       case 'delivered':
         return 'bg-green-100 text-green-800'
       case 'cancelled':
@@ -152,6 +156,8 @@ export default function OrderDetailPage() {
         return 'Pending'
       case 'processing':
         return 'Processing'
+      case 'packed':
+        return 'Packed'
       case 'shipped':
         return 'Shipped'
       case 'delivered':
@@ -182,6 +188,14 @@ export default function OrderDetailPage() {
           <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(order.status)}`}>
             {getStatusLabel(order.status)}
           </span>
+          <MarkAsPackedButton
+            orderId={order.id}
+            orderNumber={order.order_number}
+            orderStatus={order.status}
+            paymentStatus={order.payment_status}
+            packedAt={order.packed_at}
+            onSuccess={fetchOrder}
+          />
           <FulfillOrderButton
             orderId={order.id}
             orderNumber={order.order_number}

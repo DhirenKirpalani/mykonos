@@ -50,26 +50,54 @@ export default function OrdersPage() {
         setIsAuthenticated(true)
         
         // Fetch user orders with product information
-        const { data, error } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              id,
-              quantity,
-              product:products (
-                name,
-                image_urls
+        const fetchOrders = async () => {
+          const { data, error } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              order_items (
+                id,
+                quantity,
+                product:products (
+                  name,
+                  image_urls
+                )
               )
-            )
-          `)
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
+            `)
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false })
 
-        if (error) {
-          console.error('Error fetching orders:', error)
-        } else if (data) {
-          setOrders(data as Order[])
+          if (error) {
+            console.error('Error fetching orders:', error)
+          } else if (data) {
+            setOrders(data as Order[])
+          }
+        }
+
+        await fetchOrders()
+
+        // Set up real-time subscription for order updates
+        const channel = supabase
+          .channel('user-orders')
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'orders',
+              filter: `user_id=eq.${session.user.id}`,
+            },
+            (payload) => {
+              console.log('🔄 [REALTIME] Order list updated:', payload.new)
+              // Refetch orders to get updated data
+              fetchOrders()
+            }
+          )
+          .subscribe()
+
+        // Cleanup subscription on unmount
+        return () => {
+          supabase.removeChannel(channel)
         }
       } catch (error) {
         console.error('Authentication error:', error)
@@ -92,6 +120,7 @@ export default function OrdersPage() {
     switch (status) {
       case 'delivered': return 'text-green-600 bg-green-50'
       case 'shipped': return 'text-blue-600 bg-blue-50'
+      case 'packed': return 'text-purple-600 bg-purple-50'
       case 'processing': return 'text-yellow-600 bg-yellow-50'
       case 'cancelled': return 'text-red-600 bg-red-50'
       default: return 'text-gray-600 bg-gray-50'
