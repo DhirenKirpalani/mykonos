@@ -92,12 +92,29 @@ export async function POST(request: NextRequest) {
 
     console.log('Processing payment status for order:', order_id)
     
-    // Get the order ID from order_number
-    const { data: orderData } = await supabase
-      .from('orders')
-      .select('id')
-      .eq('order_number', order_id)
-      .single()
+    // Check if order_id is a UUID (guest checkout) or order_number (logged-in user)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id)
+    
+    let orderData
+    if (isUUID) {
+      // Guest checkout - order_id is the UUID
+      console.log('Guest checkout detected - looking up by UUID:', order_id)
+      const { data } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('id', order_id)
+        .single()
+      orderData = data
+    } else {
+      // Logged-in user - order_id is the order_number
+      console.log('Logged-in user detected - looking up by order_number:', order_id)
+      const { data } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('order_number', order_id)
+        .single()
+      orderData = data
+    }
     
     if (!orderData) {
       console.error('Order not found:', order_id)
