@@ -175,14 +175,6 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
-
-            <div className="flex items-start gap-3">
-              <User className="h-5 w-5 text-gray-400 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">User ID</p>
-                <p className="mt-1 font-mono text-sm text-gray-900">{profile.id}</p>
-              </div>
-            </div>
           </div>
 
           <div className="space-y-4">

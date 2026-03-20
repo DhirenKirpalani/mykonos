@@ -793,6 +793,9 @@ export default function CheckoutPage() {
                 onSuccess: (result: any) => {
                   console.log('✅ [PAYMENT] Payment successful!', result)
                   toast.success('Payment successful! Processing your order...')
+                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  router.push(redirectUrl)
+                  setIsProcessing(false)
                 },
                 onPending: (result: any) => {
                   console.log('⏳ [PAYMENT] Payment pending', result)
@@ -908,6 +911,9 @@ export default function CheckoutPage() {
           onSuccess: (result: any) => {
             console.log('✅ [PAYMENT] Payment successful!', result)
             toast.success('Payment successful! Processing your order...')
+            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            router.push(redirectUrl)
+            setIsProcessing(false)
           },
           onPending: (result: any) => {
             console.log('⏳ [PAYMENT] Payment pending', result)

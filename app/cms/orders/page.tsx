@@ -77,6 +77,7 @@ export default function OrdersPage() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
+      pending_payment: 'bg-orange-100 text-orange-800',
       pending: 'bg-yellow-100 text-yellow-800',
       processing: 'bg-blue-100 text-blue-800',
       shipped: 'bg-purple-100 text-purple-800',
@@ -84,6 +85,18 @@ export default function OrdersPage() {
       cancelled: 'bg-red-100 text-red-800',
     }
     return colors[status] || 'bg-gray-100 text-gray-800'
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending_payment: 'Pending Payment',
+      pending: 'Pending',
+      processing: 'Processing',
+      shipped: 'Shipped',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+    }
+    return labels[status] || status
   }
 
   const getStatusIcon = (status: string) => {
@@ -134,6 +147,7 @@ export default function OrdersPage() {
             className="rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
           >
             <option value="all">All Status</option>
+            <option value="pending_payment">Pending Payment</option>
             <option value="pending">Pending</option>
             <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
@@ -176,7 +190,7 @@ export default function OrdersPage() {
                   <td className="py-4">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(order.status)}`}>
                       {getStatusIcon(order.status)}
-                      {order.status}
+                      {getStatusLabel(order.status)}
                     </span>
                   </td>
                   <td className="py-4">
@@ -193,24 +207,11 @@ export default function OrdersPage() {
                     </Button>
                   </td>
                   <td className="py-4">
-                    <div className="flex items-center gap-2">
-                      <Link href={`/cms/orders/${order.order_number}`}>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <select
-                        value={order.status}
-                        onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                        className="rounded border border-gray-300 px-2 py-1 text-xs focus:border-luxury-gold focus:outline-none"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </div>
+                    <Link href={`/cms/orders/${order.order_number}`}>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </Link>
                   </td>
                 </tr>
               ))}

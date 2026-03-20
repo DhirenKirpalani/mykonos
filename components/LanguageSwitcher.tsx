@@ -11,13 +11,13 @@ export function LanguageSwitcher() {
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1">
+    <div className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white p-1">
       <button
         onClick={() => handleLanguageChange('en')}
         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
           locale === 'en'
-            ? 'bg-luxury-gold text-luxury-navy'
-            : 'text-white/70 hover:text-white hover:bg-white/10'
+            ? 'bg-luxury-gold text-white shadow-sm'
+            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
         }`}
       >
         EN
@@ -26,8 +26,8 @@ export function LanguageSwitcher() {
         onClick={() => handleLanguageChange('id')}
         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
           locale === 'id'
-            ? 'bg-luxury-gold text-luxury-navy'
-            : 'text-white/70 hover:text-white hover:bg-white/10'
+            ? 'bg-luxury-gold text-white shadow-sm'
+            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
         }`}
       >
         ID

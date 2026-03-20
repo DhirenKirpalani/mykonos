@@ -9,6 +9,7 @@ import { BackButton } from '@/components/common/BackButton'
 import { LoadingSpinner } from '@/components/common'
 import { supabase } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 type Order = {
   id: string
@@ -30,6 +31,7 @@ type Order = {
 export default function OrdersPage() {
   const router = useRouter()
   const pathname = usePathname()
+  const { t } = useLanguage()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [orders, setOrders] = useState<Order[]>([])
@@ -101,17 +103,17 @@ export default function OrdersPage() {
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
           <Breadcrumbs items={[
-            { label: 'Account', href: '/account' },
-            { label: 'Orders', href: '/account/orders' }
+            { label: t.account.account, href: '/account' },
+            { label: t.account.orders, href: '/account/orders' }
           ]} />
-          <h1 className="mt-4 font-serif text-4xl font-bold lg:text-5xl">My Orders</h1>
+          <h1 className="mt-4 font-serif text-4xl font-bold lg:text-5xl">{t.account.orders}</h1>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-12 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-4">
           <div className="space-y-2">
-            <h2 className="font-serif text-xl font-bold">Account</h2>
+            <h2 className="font-serif text-xl font-bold">{t.account.account}</h2>
             <nav className="space-y-1">
               <Link 
                 href="/account"
@@ -122,7 +124,7 @@ export default function OrdersPage() {
                     : "hover:bg-luxury-gray-light"
                 )}
               >
-                Profile
+                {t.account.profile}
               </Link>
               <Link 
                 href="/account/orders"
@@ -133,7 +135,7 @@ export default function OrdersPage() {
                     : "hover:bg-luxury-gray-light"
                 )}
               >
-                Orders
+                {t.account.orders}
               </Link>
               <Link 
                 href="/account/settings"
@@ -144,7 +146,7 @@ export default function OrdersPage() {
                     : "hover:bg-luxury-gray-light"
                 )}
               >
-                Settings
+                {t.account.settings}
               </Link>
             </nav>
           </div>
@@ -153,10 +155,10 @@ export default function OrdersPage() {
             {orders.length === 0 ? (
               <div className="rounded-lg border border-border/40 p-12 text-center">
                 <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                <h3 className="font-serif text-2xl font-bold mb-2">No orders yet</h3>
-                <p className="text-muted-foreground mb-6">Start shopping to see your orders here</p>
+                <h3 className="font-serif text-2xl font-bold mb-2">{t.account.noOrdersYet}</h3>
+                <p className="text-muted-foreground mb-6">{t.account.startShopping}</p>
                 <Link href="/products" className="inline-block rounded-md bg-luxury-gold px-6 py-3 text-white hover:bg-luxury-gold/90 transition-colors">
-                  Browse Products
+                  {t.account.browseProducts}
                 </Link>
               </div>
             ) : (
@@ -203,7 +205,7 @@ export default function OrdersPage() {
                                   month: 'short',
                                   day: 'numeric',
                                   year: 'numeric'
-                                })} · {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                                })} · {totalItems} {totalItems === 1 ? t.account.item : t.account.items}
                               </p>
                             </div>
                             <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0 mt-0.5" />

@@ -390,3 +390,17 @@ html[data-accessibility="true"] .transition-opacity {
   color: #D4AF37;
   text-decoration: underline;
 }
+
+/* Shimmer animation for skeleton loaders */
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

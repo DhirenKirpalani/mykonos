@@ -41,23 +41,42 @@ export async function POST(request: NextRequest) {
 
     // ✅ Payment Verification - Verify signature to prevent fraud
     const serverKey = process.env.MIDTRANS_SERVER_KEY || ''
-    if (serverKey) {
-      const hash = crypto
-        .createHash('sha512')
-        .update(`${order_id}${transaction_status}${gross_amount}${serverKey}`)
-        .digest('hex')
-
-      if (hash !== signature_key) {
-        console.error('❌ Invalid signature - potential fraud attempt')
-        return NextResponse.json(
-          { error: 'Invalid signature' },
-          { status: 403 }
-        )
-      }
-      console.log('✅ Signature verified')
-    } else {
-      console.warn('⚠️ MIDTRANS_SERVER_KEY not set - skipping signature verification (UNSAFE)')
+    
+    if (!serverKey) {
+      console.error('❌ MIDTRANS_SERVER_KEY not set - cannot verify signature')
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
     }
+    
+    const hash = crypto
+      .createHash('sha512')
+      .update(`${order_id}${transaction_status}${gross_amount}${serverKey}`)
+      .digest('hex')
+
+    console.log('🔐 [WEBHOOK] Signature verification:', {
+      order_id,
+      transaction_status,
+      gross_amount,
+      server_key_prefix: serverKey.substring(0, 10),
+      expected_hash: hash.substring(0, 20) + '...',
+      received_signature: signature_key.substring(0, 20) + '...',
+      match: hash === signature_key
+    })
+
+    if (hash !== signature_key) {
+      console.error('❌ [WEBHOOK] Invalid signature - potential fraud attempt or wrong server key')
+      console.error('Expected hash:', hash)
+      console.error('Received signature:', signature_key)
+      console.error('Hash input string:', `${order_id}${transaction_status}${gross_amount}${serverKey}`)
+      return NextResponse.json(
+        { error: 'Invalid signature' },
+        { status: 403 }
+      )
+    }
+    
+    console.log('✅ [WEBHOOK] Signature verified successfully')
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -132,7 +151,14 @@ export async function POST(request: NextRequest) {
     }
     
     // Use the new complete_order_payment function with amount verification
-    console.log('Calling complete_order_payment with status:', transaction_status)
+    console.log('📞 [WEBHOOK] Calling complete_order_payment with params:', {
+      order_id: orderId,
+      transaction_id,
+      transaction_status,
+      gross_amount: parseFloat(gross_amount),
+      currency
+    })
+    
     const { error: completeError } = await supabase.rpc('complete_order_payment', {
       p_order_id: orderId,
       p_payment_intent_id: transaction_id,
@@ -142,14 +168,15 @@ export async function POST(request: NextRequest) {
     } as any)
     
     if (completeError) {
-      console.error('Failed to complete order payment:', completeError)
+      console.error('❌ [WEBHOOK] Failed to complete order payment:', completeError)
+      console.error('❌ [WEBHOOK] Error details:', JSON.stringify(completeError, null, 2))
       return NextResponse.json(
         { error: 'Failed to complete order payment' },
         { status: 500 }
       )
     }
     
-    console.log('Order payment completed successfully')
+    console.log('✅ [WEBHOOK] Order payment completed successfully')
     
     // Update additional payment metadata
     const cardLast4 = masked_card ? masked_card.slice(-4) : null
@@ -169,13 +196,22 @@ export async function POST(request: NextRequest) {
       .eq('id', orderId)
 
     // Get updated order data
-    const { data: order } = await supabase
+    const { data: order, error: orderFetchError } = await supabase
       .from('orders')
-      .select('id, user_id, payment_status, status')
+      .select('id, user_id, payment_status, status, order_number')
       .eq('id', orderId)
       .single()
     
-    console.log('Updated order data:', order)
+    if (orderFetchError) {
+      console.error('❌ [WEBHOOK] Failed to fetch updated order:', orderFetchError)
+    } else {
+      console.log('✅ [WEBHOOK] Updated order data:', {
+        order_number: order.order_number,
+        payment_status: order.payment_status,
+        status: order.status,
+        user_id: order.user_id
+      })
+    }
 
     if (order) {
       const typedOrder = order as any
