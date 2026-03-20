@@ -50,6 +50,29 @@ export default function OrderDetailsPage() {
 
   useEffect(() => {
     fetchOrderDetails()
+
+    // Set up real-time subscription for order updates
+    const channel = supabase
+      .channel(`order-${params.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${params.id}`,
+        },
+        (payload) => {
+          console.log('🔄 [REALTIME] Order updated:', payload.new)
+          // Refetch order details to get updated data
+          fetchOrderDetails()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [params.id])
 
   // Load Midtrans Snap script
@@ -114,6 +137,10 @@ export default function OrderDetailsPage() {
     switch (status) {
       case 'processing':
         return 'text-blue-600 bg-blue-50'
+      case 'packed':
+        return 'text-purple-600 bg-purple-50'
+      case 'shipped':
+        return 'text-indigo-600 bg-indigo-50'
       case 'completed':
         return 'text-green-600 bg-green-50'
       case 'cancelled':

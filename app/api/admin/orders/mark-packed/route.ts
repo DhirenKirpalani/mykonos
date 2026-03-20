@@ -63,10 +63,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update order with packed timestamp
+    // Update order with packed timestamp and status
     const { error: updateError } = await supabase
       .from('orders')
       .update({
+        status: 'packed',
         packed_at: new Date().toISOString(),
         packed_by: user.id,
       })
