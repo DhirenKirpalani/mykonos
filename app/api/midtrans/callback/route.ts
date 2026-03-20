@@ -62,14 +62,14 @@ export async function GET(request: NextRequest) {
       if (completeError) {
         console.error('❌ [CALLBACK] Order completion error:', completeError)
         console.error('❌ [CALLBACK] Error details:', completeError.message, completeError.details, completeError.hint)
-        return NextResponse.redirect(new URL('/checkout?error=payment_completion_failed', request.url))
+        return NextResponse.redirect(new URL(`/account/orders/${order.id}?error=payment_completion_failed`, request.url))
       }
       
       console.log('✅ [CALLBACK] Order payment completed successfully')
 
-      // Redirect to confirmation page
-      console.log('🔄 [CALLBACK] Redirecting to confirmation page')
-      return NextResponse.redirect(new URL(`/checkout/confirmation?order=${order.order_number}`, request.url))
+      // Redirect to order details page
+      console.log('🔄 [CALLBACK] Redirecting to order details page')
+      return NextResponse.redirect(new URL(`/account/orders/${order.id}`, request.url))
     } else if (transactionStatus === 'pending') {
       // Payment pending - order already exists, just redirect
       console.log('⏳ [CALLBACK] Payment pending, redirecting to orders...')
