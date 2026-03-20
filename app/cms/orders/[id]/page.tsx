@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { ArrowLeft, Package, User, MapPin, CreditCard, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FulfillOrderButton } from '@/components/admin/FulfillOrderButton'
+import { MarkAsPackedButton } from '@/components/admin/MarkAsPackedButton'
 import Link from 'next/link'
 
 interface Order {
@@ -17,6 +18,7 @@ interface Order {
   currency_code: string
   created_at: string
   customer_email: string
+  packed_at?: string | null
   user: {
     first_name: string
     last_name: string
@@ -182,6 +184,14 @@ export default function OrderDetailPage() {
           <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(order.status)}`}>
             {getStatusLabel(order.status)}
           </span>
+          <MarkAsPackedButton
+            orderId={order.id}
+            orderNumber={order.order_number}
+            orderStatus={order.status}
+            paymentStatus={order.payment_status}
+            packedAt={order.packed_at}
+            onSuccess={fetchOrder}
+          />
           <FulfillOrderButton
             orderId={order.id}
             orderNumber={order.order_number}
