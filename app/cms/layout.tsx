@@ -17,7 +17,8 @@ import {
   User,
   Menu,
   X,
-  MessageCircle
+  MessageCircle,
+  Mail
 } from 'lucide-react'
 import { useUserRole } from '@/hooks/useUserRole'
 import { canManageProducts, canManagePromotions, canManageOrders, canAccessCMS } from '@/lib/utils/permissions'
@@ -149,6 +150,12 @@ export default function CMSLayout({
       href: '/cms/customers', 
       icon: Users,
       show: role === 'admin' || role === 'staff'
+    },
+    { 
+      name: 'Newsletter', 
+      href: '/cms/newsletter', 
+      icon: Mail,
+      show: role === 'admin'
     },
     { 
       name: 'Chat', 

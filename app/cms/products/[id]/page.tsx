@@ -85,6 +85,7 @@ export default function EditProductPage() {
     products_sold: '',
     is_popular: false,
     is_best_selling: false,
+    new_product_duration_days: '30',
   })
   const [imageAltTexts, setImageAltTexts] = useState<string[]>([])
   const [bulkDiscounts, setBulkDiscounts] = useState<Array<{quantity: string, discount_percentage: string}>>([])
@@ -191,6 +192,7 @@ export default function EditProductPage() {
           products_sold: product.products_sold?.toString() || '',
           is_popular: product.is_popular ?? false,
           is_best_selling: product.is_best_selling ?? false,
+          new_product_duration_days: product.new_product_duration_days?.toString() || '30',
         })
         
         if (product.image_urls && Array.isArray(product.image_urls)) {
@@ -405,6 +407,7 @@ export default function EditProductPage() {
           is_best_selling: Boolean(formData.is_best_selling),
           rating: formData.rating ? parseFloat(formData.rating) : null,
           products_sold: formData.products_sold ? parseInt(formData.products_sold) : null,
+          new_product_duration_days: formData.new_product_duration_days ? parseInt(formData.new_product_duration_days.toString()) : 30,
           sale_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
           image_urls: allMediaUrls,
           image_alt_texts: imageAltTexts,
@@ -1287,6 +1290,23 @@ export default function EditProductPage() {
               <label className="text-sm font-medium text-gray-700">
                 Featured Product
               </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                New Badge Duration (days)
+              </label>
+              <input
+                type="number"
+                name="new_product_duration_days"
+                value={formData.new_product_duration_days || 30}
+                onChange={handleChange}
+                min="0"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Number of days this product shows the "NEW" badge after creation (default: 30 days)
+              </p>
             </div>
           </div>
           </div>

@@ -7,14 +7,31 @@ export async function GET(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     
     if (!supabaseServiceKey) {
       throw new Error('Service role key not configured')
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    // Get auth token from request headers
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Create client with anon key to verify user
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    })
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
     
     if (authError || !user) {
       return NextResponse.json(
@@ -22,6 +39,9 @@ export async function GET(request: Request) {
         { status: 401 }
       )
     }
+
+    // Use service role key for data operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
@@ -77,14 +97,31 @@ export async function POST(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     
     if (!supabaseServiceKey) {
       throw new Error('Service role key not configured')
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    // Get auth token from request headers
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Create client with anon key to verify user
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    })
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
     
     if (authError || !user) {
       return NextResponse.json(
@@ -92,6 +129,9 @@ export async function POST(request: Request) {
         { status: 401 }
       )
     }
+
+    // Use service role key for data operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const body = await request.json()
     const { email } = body
@@ -134,14 +174,31 @@ export async function DELETE(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     
     if (!supabaseServiceKey) {
       throw new Error('Service role key not configured')
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    // Get auth token from request headers
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Create client with anon key to verify user
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    })
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
     
     if (authError || !user) {
       return NextResponse.json(
@@ -149,6 +206,9 @@ export async function DELETE(request: Request) {
         { status: 401 }
       )
     }
+
+    // Use service role key for data operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')

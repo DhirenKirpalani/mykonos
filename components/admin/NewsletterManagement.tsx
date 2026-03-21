@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Mail, Search, Trash2, UserPlus, Download, Filter, Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 
 interface Subscriber {
   id: string
@@ -35,6 +36,13 @@ export default function NewsletterManagement() {
   const fetchSubscribers = async () => {
     setLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        showMessage('error', 'Not authenticated')
+        setLoading(false)
+        return
+      }
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '50',
@@ -48,7 +56,11 @@ export default function NewsletterManagement() {
         params.append('search', searchTerm)
       }
 
-      const response = await fetch(`/api/admin/newsletter?${params}`)
+      const response = await fetch(`/api/admin/newsletter?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
       const data = await response.json()
 
       if (response.ok) {
@@ -75,9 +87,19 @@ export default function NewsletterManagement() {
 
     setActionLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        showMessage('error', 'Not authenticated')
+        setActionLoading(false)
+        return
+      }
+
       const response = await fetch('/api/admin/newsletter', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ email: newEmail }),
       })
 
@@ -107,9 +129,19 @@ export default function NewsletterManagement() {
 
     setActionLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        showMessage('error', 'Not authenticated')
+        setActionLoading(false)
+        return
+      }
+
       const response = await fetch('/api/admin/newsletter/bulk', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ action, ids: selectedIds }),
       })
 
@@ -134,8 +166,18 @@ export default function NewsletterManagement() {
 
     setActionLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        showMessage('error', 'Not authenticated')
+        setActionLoading(false)
+        return
+      }
+
       const response = await fetch(`/api/admin/newsletter?id=${id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
       })
 
       const data = await response.json()
