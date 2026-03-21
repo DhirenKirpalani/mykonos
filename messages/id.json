@@ -53,5 +53,20 @@
     "loading": "Memuat...",
     "error": "Kesalahan",
     "success": "Berhasil"
+  },
+  "newsletter": {
+    "title": "Berlangganan Newsletter Kami",
+    "description": "Dapatkan penawaran eksklusif, pembaruan produk baru, dan tips wewangian langsung ke inbox Anda.",
+    "placeholder": "Masukkan alamat email Anda",
+    "button": "Berlangganan",
+    "subscribing": "Berlangganan...",
+    "consent": "Saya setuju untuk menerima email pemasaran dan menerima",
+    "privacyPolicy": "Kebijakan Privasi",
+    "consentSuffix": ". Anda dapat berhenti berlangganan kapan saja.",
+    "privacyNotice": "Kami menghormati privasi Anda. Berhenti berlangganan kapan saja dari email mana pun.",
+    "successMessage": "Berhasil berlangganan! Periksa inbox Anda.",
+    "errorEmail": "Mohon masukkan alamat email Anda",
+    "errorConsent": "Mohon setujui persyaratan untuk berlangganan",
+    "errorGeneric": "Gagal berlangganan. Silakan coba lagi."
   }
 }

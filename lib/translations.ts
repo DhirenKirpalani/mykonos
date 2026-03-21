@@ -62,7 +62,23 @@ export const translations = {
       bestSellers: "Best Sellers",
       comingSoon: "COMING SOON",
       premiumFragrances: "PREMIUM FRAGRANCES",
-      andPerfumes: "AND PERFUMES"
+      andPerfumes: "AND PERFUMES",
+      discoverSignature: "Discover Your Signature",
+      fragranceFamiliesTitle: "Fragrance Families",
+      fragranceFamiliesDesc: "Each scent tells a story. Find yours among our carefully curated collections",
+      artOfPerfumery: "The Art of Perfumery",
+      experienceLuxury: "Experience Luxury",
+      experienceLuxuryDesc: "Each fragrance is a masterpiece, meticulously crafted to evoke emotions and create lasting memories.",
+      discoverStory: "Discover Our Story",
+      whyChooseMykonos: "Why Choose Mykonos",
+      uncompromisingExcellence: "Uncompromising Excellence",
+      premiumQuality: "Premium Quality",
+      premiumQualityDesc: "Only the finest ingredients sourced from around the world",
+      complimentaryGiftWrapping: "Complimentary Gift Wrapping",
+      complimentaryGiftWrappingDesc: "Every order arrives beautifully packaged",
+      freeShipping: "Free Shipping",
+      freeShippingDesc: "On all orders over $100",
+      supportedPaymentMethods: "Supported Payment Methods"
     },
     common: {
       loading: "Loading...",
@@ -76,7 +92,24 @@ export const translations = {
       back: "Back",
       next: "Next",
       submit: "Submit",
-      free: "FREE"
+      free: "FREE",
+      home: "Home",
+      products: "Products"
+    },
+    notifications: {
+      title: "Notifications",
+      noNotifications: "No notifications",
+      allCaughtUp: "You're all caught up!",
+      markAllAsRead: "Mark all as read",
+      viewAll: "View all notifications"
+    },
+    wishlist: {
+      title: "Wishlist",
+      empty: "Your wishlist is empty"
+    },
+    cart: {
+      title: "Cart",
+      empty: "Your cart is empty"
     },
     auth: {
       welcomeBack: "Welcome Back",
@@ -463,6 +496,21 @@ export const translations = {
       items: "items",
       item: "item",
       pendingPayment: "Pending payment"
+    },
+    newsletter: {
+      title: "Subscribe to Our Newsletter",
+      description: "Get exclusive offers, new product updates, and fragrance tips delivered to your inbox.",
+      placeholder: "Enter your email address",
+      button: "Subscribe",
+      subscribing: "Subscribing...",
+      consent: "I agree to receive marketing emails and accept the",
+      privacyPolicy: "Privacy Policy",
+      consentSuffix: ". You can unsubscribe at any time.",
+      privacyNotice: "We respect your privacy. Unsubscribe anytime from any email.",
+      successMessage: "Successfully subscribed! Check your inbox.",
+      errorEmail: "Please enter your email address",
+      errorConsent: "Please accept the terms to subscribe",
+      errorGeneric: "Failed to subscribe. Please try again."
     }
   },
   id: {
@@ -527,8 +575,24 @@ export const translations = {
       newArrivals: "Produk Baru",
       bestSellers: "Terlaris",
       comingSoon: "SEGERA HADIR",
-      premiumFragrances: "WEWANGIAN PREMIUM",
-      andPerfumes: "DAN PARFUM"
+      premiumFragrances: "PARFUM PREMIUM",
+      andPerfumes: "DAN WEWANGIAN",
+      discoverSignature: "Temukan Tanda Tangan Anda",
+      fragranceFamiliesTitle: "Keluarga Wewangian",
+      fragranceFamiliesDesc: "Setiap aroma menceritakan sebuah kisah. Temukan milik Anda di antara koleksi kami yang dikurasi dengan cermat",
+      artOfPerfumery: "Seni Parfum",
+      experienceLuxury: "Rasakan Kemewahan",
+      experienceLuxuryDesc: "Setiap wewangian adalah mahakarya, dibuat dengan cermat untuk membangkitkan emosi dan menciptakan kenangan abadi.",
+      discoverStory: "Temukan Cerita Kami",
+      whyChooseMykonos: "Mengapa Memilih Mykonos",
+      uncompromisingExcellence: "Keunggulan Tanpa Kompromi",
+      premiumQuality: "Kualitas Premium",
+      premiumQualityDesc: "Hanya bahan-bahan terbaik yang bersumber dari seluruh dunia",
+      complimentaryGiftWrapping: "Bungkus Kado Gratis",
+      complimentaryGiftWrappingDesc: "Setiap pesanan tiba dengan kemasan yang indah",
+      freeShipping: "Pengiriman Gratis",
+      freeShippingDesc: "Untuk semua pesanan di atas $100",
+      supportedPaymentMethods: "Metode Pembayaran yang Didukung"
     },
     common: {
       loading: "Memuat...",
@@ -542,7 +606,24 @@ export const translations = {
       back: "Kembali",
       next: "Selanjutnya",
       submit: "Kirim",
-      free: "GRATIS"
+      free: "GRATIS",
+      home: "Beranda",
+      products: "Produk"
+    },
+    notifications: {
+      title: "Notifikasi",
+      noNotifications: "Tidak ada notifikasi",
+      allCaughtUp: "Anda sudah melihat semuanya!",
+      markAllAsRead: "Tandai semua sudah dibaca",
+      viewAll: "Lihat semua notifikasi"
+    },
+    wishlist: {
+      title: "Wishlist",
+      empty: "Wishlist Anda kosong"
+    },
+    cart: {
+      title: "Keranjang",
+      empty: "Keranjang Anda kosong"
     },
     auth: {
       welcomeBack: "Selamat Datang Kembali",
@@ -929,6 +1010,21 @@ export const translations = {
       items: "barang",
       item: "barang",
       pendingPayment: "Menunggu pembayaran"
+    },
+    newsletter: {
+      title: "Berlangganan Newsletter Kami",
+      description: "Dapatkan penawaran eksklusif, pembaruan produk baru, dan tips wewangian langsung ke inbox Anda.",
+      placeholder: "Masukkan alamat email Anda",
+      button: "Berlangganan",
+      subscribing: "Berlangganan...",
+      consent: "Saya setuju untuk menerima email pemasaran dan menerima",
+      privacyPolicy: "Kebijakan Privasi",
+      consentSuffix: ". Anda dapat berhenti berlangganan kapan saja.",
+      privacyNotice: "Kami menghormati privasi Anda. Berhenti berlangganan kapan saja dari email mana pun.",
+      successMessage: "Berhasil berlangganan! Periksa inbox Anda.",
+      errorEmail: "Mohon masukkan alamat email Anda",
+      errorConsent: "Mohon setujui persyaratan untuk berlangganan",
+      errorGeneric: "Gagal berlangganan. Silakan coba lagi."
     }
   }
 } as const;
