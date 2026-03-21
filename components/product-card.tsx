@@ -78,6 +78,12 @@ export function ProductCard({ product }: ProductCardProps) {
     setMounted(true)
   }, [])
   
+  // Calculate days since product creation for debugging
+  const daysSinceCreation = product.created_at 
+    ? Math.floor((Date.now() - new Date(product.created_at).getTime()) / (1000 * 60 * 60 * 24))
+    : 0
+  const newBadgeDuration = (product as any).new_product_duration_days || 30
+  
   // Check if product has variants with different prices
   const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
   const variantPrices = hasVariants ? (product as any).variants.map((v: any) => 
@@ -152,6 +158,27 @@ export function ProductCard({ product }: ProductCardProps) {
           "
         >
           Hall | ORI
+        </motion.span>
+      )}
+      
+      {/* NEW badge - Top right */}
+      {daysSinceCreation <= newBadgeDuration && (
+        <motion.span
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="
+            absolute right-2 top-2 z-10
+            rounded
+            bg-luxury-gold
+            px-2 py-0.5
+            text-[9px] md:text-[10px]
+            uppercase tracking-wide
+            text-white
+            font-bold
+          "
+        >
+          NEW
         </motion.span>
       )}
 

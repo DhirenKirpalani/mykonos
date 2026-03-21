@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export type BreadcrumbItem = {
   label: string
@@ -13,13 +14,15 @@ interface BreadcrumbProps {
 }
 
 export function Breadcrumb({ items }: BreadcrumbProps) {
+  const { t } = useLanguage()
+  
   return (
     <nav className="flex items-center space-x-2 text-sm" aria-label="Breadcrumb">
       <Link 
         href="/" 
         className="text-[#0055AA] hover:underline transition-colors"
       >
-        Home
+        {t.common.home}
       </Link>
       
       {items.map((item, index) => {

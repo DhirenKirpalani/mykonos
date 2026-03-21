@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { HeroCarousel } from '@/components/hero-carousel'
 import { FragranceFamiliesGrid } from '@/components/fragrance-families-grid'
 import { Database } from '@/lib/supabase/database.types'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { useTranslation } from '@/hooks/useTranslation'
 
 const ProductCarousel = dynamic(() => import('@/components/product-carousel').then(mod => ({ default: mod.ProductCarousel })), {
@@ -29,7 +30,8 @@ interface HomeMobileProps {
 }
 
 export function HomeMobile({ products, collections, newArrivals, bestSelling }: HomeMobileProps) {
-  const { t } = useTranslation()
+  const { t } = useLanguage()
+  const { t: translation } = useTranslation()
   
   return (
     <div className="min-h-screen">
@@ -78,21 +80,20 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling }: 
         <div className="container relative mx-auto px-4 text-center">
           <ScrollReveal>
             <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold">
-              The Art of Perfumery
+              {t.home.artOfPerfumery}
             </p>
             <h2 className="mb-4 font-serif text-2xl font-bold">
-              Experience Luxury
+              {t.home.experienceLuxury}
             </h2>
             <p className="mx-auto mb-8 max-w-3xl text-sm text-gray-300">
-              Each fragrance is a masterpiece, meticulously crafted to evoke
-              emotions and create lasting memories.
+              {t.home.experienceLuxuryDesc}
             </p>
             <Link href="/about">
               <Button
                 size="lg"
                 className="border-2 border-luxury-gold bg-luxury-gold px-6 py-3 text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-white hover:text-luxury-navy hover:border-white"
               >
-                Discover Our Story
+                {t.home.discoverStory}
               </Button>
             </Link>
           </ScrollReveal>
@@ -104,10 +105,10 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling }: 
           <ScrollReveal>
             <div className="mb-8 text-center">
               <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold">
-                Why Choose Mykonos
+                {t.home.whyChooseMykonos}
               </p>
               <h2 className="font-serif text-2xl font-bold">
-                Uncompromising Excellence
+                {t.home.uncompromisingExcellence}
               </h2>
             </div>
           </ScrollReveal>

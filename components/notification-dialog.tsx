@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Check, Package, Tag, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export interface Notification {
   id: string
@@ -29,6 +30,7 @@ export function NotificationDialog({
   onMarkAsRead,
   onMarkAllAsRead,
 }: NotificationDialogProps) {
+  const { t } = useLanguage()
   const unreadCount = notifications.filter(n => !n.read).length
 
   const getIcon = (type: Notification['type']) => {
@@ -92,11 +94,11 @@ export function NotificationDialog({
             <div className="flex items-center justify-between border-b border-gray-100 p-4">
               <div>
                 <h2 className="text-lg font-semibold text-luxury-navy">
-                  Notifications
+                  {t.notifications.title}
                 </h2>
                 {unreadCount > 0 && (
                   <p className="text-sm text-gray-500">
-                    {unreadCount} unread
+                    {unreadCount} {t.notifications.unread}
                   </p>
                 )}
               </div>
@@ -106,13 +108,13 @@ export function NotificationDialog({
                     onClick={onMarkAllAsRead}
                     className="rounded-lg px-3 py-1.5 text-sm font-medium text-luxury-gold transition-colors hover:bg-luxury-gold/10"
                   >
-                    Mark all read
+                    {t.notifications.markAllAsRead}
                   </button>
                 )}
                 <button
                   onClick={onClose}
                   className="rounded-lg p-2 transition-colors hover:bg-gray-100"
-                  aria-label="Close notifications"
+                  aria-label={t.notifications.close}
                 >
                   <X className="h-5 w-5 text-gray-500" />
                 </button>
@@ -126,9 +128,9 @@ export function NotificationDialog({
                   <div className="mb-4 rounded-full bg-gray-100 p-4">
                     <Bell className="h-8 w-8 text-gray-400" />
                   </div>
-                  <p className="text-sm font-medium text-gray-900">No notifications</p>
+                  <p className="text-sm font-medium text-gray-900">{t.notifications.noNotifications}</p>
                   <p className="mt-1 text-sm text-gray-500">
-                    You're all caught up!
+                    {t.notifications.allCaughtUp}
                   </p>
                 </div>
               ) : (
@@ -197,7 +199,7 @@ export function NotificationDialog({
                   onClick={onClose}
                   className="w-full rounded-lg py-2 text-sm font-medium text-luxury-navy transition-colors hover:bg-gray-50"
                 >
-                  View all notifications
+                  {t.notifications.viewAll}
                 </button>
               </div>
             )}

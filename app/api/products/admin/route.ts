@@ -116,6 +116,7 @@ export async function POST(request: Request) {
       products_sold: body.products_sold || 0,
       is_popular: body.is_popular === true,
       is_best_selling: body.is_best_selling === true,
+      new_product_duration_days: body.new_product_duration_days || 30,
     }
 
     // Insert product

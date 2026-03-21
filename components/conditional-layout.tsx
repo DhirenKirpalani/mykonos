@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { LiveChatWidget } from '@/components/LiveChatWidget'
+import NewsletterSubscription from '@/components/NewsletterSubscription'
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -33,6 +34,7 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
         <Header />
       </Suspense>
       <main className="flex-1">{children}</main>
+      {pathname === '/' && <NewsletterSubscription />}
       <Footer />
       <ScrollToTop />
       <LiveChatWidget />

@@ -293,10 +293,42 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
     }
   }
 
+  const getStepNumber = () => {
+    if (step === 'email') return 1
+    if (step === 'password') return 2
+    return 3
+  }
+
+  const getTotalSteps = () => {
+    // If user is registered, they go through password step (3 steps total)
+    // If not registered, they skip password (2 steps total)
+    return isRegistered ? 3 : 2
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
+          {/* Progress Indicator */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">
+                Step {step === 'password' ? 2 : step === 'address' ? (isRegistered ? 3 : 2) : 1} of {getTotalSteps()}
+              </span>
+              <span className="text-xs text-gray-500">
+                {step === 'email' ? 'Email' : step === 'password' ? 'Sign In' : 'Shipping'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-luxury-gold h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${((step === 'email' ? 1 : step === 'password' ? 2 : (isRegistered ? 3 : 2)) / getTotalSteps()) * 100}%` 
+                }}
+              />
+            </div>
+          </div>
+
           <DialogTitle className="flex items-center gap-2">
             {step === 'email' && (
               <>

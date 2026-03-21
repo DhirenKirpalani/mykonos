@@ -53,5 +53,20 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success"
+  },
+  "newsletter": {
+    "title": "Subscribe to Our Newsletter",
+    "description": "Get exclusive offers, new product updates, and fragrance tips delivered to your inbox.",
+    "placeholder": "Enter your email address",
+    "button": "Subscribe",
+    "subscribing": "Subscribing...",
+    "consent": "I agree to receive marketing emails and accept the",
+    "privacyPolicy": "Privacy Policy",
+    "consentSuffix": ". You can unsubscribe at any time.",
+    "privacyNotice": "We respect your privacy. Unsubscribe anytime from any email.",
+    "successMessage": "Successfully subscribed! Check your inbox.",
+    "errorEmail": "Please enter your email address",
+    "errorConsent": "Please accept the terms to subscribe",
+    "errorGeneric": "Failed to subscribe. Please try again."
   }
 }

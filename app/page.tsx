@@ -47,11 +47,32 @@ export default function HomePage() {
           .select('*')
           .limit(6),
         supabase
-          .from('products')
-          .select('*')
-          .eq('is_visible', true)
-          .eq('is_new', true)
-          .limit(8),
+          .from('products_new_status')
+          .select(`
+            id,
+            name,
+            slug,
+            created_at,
+            is_new_manual,
+            new_product_duration_days,
+            is_new_computed,
+            is_new_final
+          `)
+          .eq('is_new_final', true)
+          .order('created_at', { ascending: false })
+          .limit(8)
+          .then(async (result) => {
+            if (result.data) {
+              // Fetch full product details for products that are "new"
+              const productIds = result.data.map(p => p.id)
+              return supabase
+                .from('products')
+                .select('*')
+                .in('id', productIds)
+                .eq('is_visible', true)
+            }
+            return result
+          }),
         supabase
           .from('products')
           .select('*')
