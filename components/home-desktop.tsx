@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { HeroCarousel } from '@/components/hero-carousel'
 import { FragranceFamiliesGrid } from '@/components/fragrance-families-grid'
 import { Database } from '@/lib/supabase/database.types'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const ProductCarousel = dynamic(() => import('@/components/product-carousel').then(mod => ({ default: mod.ProductCarousel })), {
   loading: () => <div className="h-96 animate-pulse bg-gradient-to-b from-gray-200 to-gray-100" />,
@@ -28,6 +29,8 @@ interface HomeDesktopProps {
 }
 
 export function HomeDesktop({ products, collections, newArrivals, bestSelling }: HomeDesktopProps) {
+  const { t } = useLanguage()
+  
   return (
     <div className="min-h-screen">
       <HeroCarousel />
@@ -75,21 +78,20 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
         <div className="container relative mx-auto px-4 text-center md:px-6 lg:px-8">
           <ScrollReveal>
             <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold md:mb-4 md:text-xs md:tracking-[0.3em]">
-              The Art of Perfumery
+              {t.home.artOfPerfumery}
             </p>
             <h2 className="mb-4 font-serif text-2xl font-bold md:mb-6 md:text-4xl lg:text-6xl">
-              Experience Luxury
+              {t.home.experienceLuxury}
             </h2>
             <p className="mx-auto mb-8 max-w-3xl text-sm text-gray-300 md:mb-12 md:text-base lg:text-xl">
-              Each fragrance is a masterpiece, meticulously crafted to evoke
-              emotions and create lasting memories.
+              {t.home.experienceLuxuryDesc}
             </p>
             <Link href="/about">
               <Button
                 size="lg"
                 className="border-2 border-luxury-gold bg-luxury-gold px-6 py-3 text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-white hover:text-luxury-navy hover:border-white md:px-8 md:py-6 md:text-base"
               >
-                Discover Our Story
+                {t.home.discoverStory}
               </Button>
             </Link>
           </ScrollReveal>
@@ -101,10 +103,10 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
           <ScrollReveal>
             <div className="mb-8 text-center md:mb-12 lg:mb-16">
               <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-[#8A6A3F]/75 md:mb-3 md:text-xs md:tracking-[0.3em]">
-                Why Choose Mykonos
+                {t.home.whyChooseMykonos}
               </p>
               <h2 className="font-serif text-2xl font-bold text-[#1C2E4A] md:text-3xl lg:text-4xl">
-                Uncompromising Excellence
+                {t.home.uncompromisingExcellence}
               </h2>
             </div>
           </ScrollReveal>
@@ -129,10 +131,10 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
                 </div>
               </div>
               <h3 className="mb-3 font-serif text-xl font-bold text-[#1C2E4A] lg:text-2xl">
-                Premium Quality
+                {t.home.premiumQuality}
               </h3>
               <p className="text-[#5A4A3A]/90">
-                Only the finest ingredients sourced from around the world
+                {t.home.premiumQualityDesc}
               </p>
             </div>
             </ScrollReveal>
@@ -156,10 +158,10 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
                   </div>
                 </div>
                 <h3 className="mb-3 font-serif text-xl font-bold text-[#1C2E4A] lg:text-2xl">
-                  Complimentary Gift Wrapping
+                  {t.home.complimentaryGiftWrapping}
                 </h3>
                 <p className="text-[#5A4A3A]/90">
-                  Every order arrives beautifully packaged
+                  {t.home.complimentaryGiftWrappingDesc}
                 </p>
               </div>
             </ScrollReveal>
@@ -183,10 +185,10 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
                   </div>
                 </div>
                 <h3 className="mb-3 font-serif text-xl font-bold text-[#1C2E4A] lg:text-2xl">
-                  Free Shipping
+                  {t.home.freeShipping}
                 </h3>
                 <p className="text-[#5A4A3A]/90">
-                  On all orders over $150
+                  {t.home.freeShippingDesc}
                 </p>
               </div>
             </ScrollReveal>

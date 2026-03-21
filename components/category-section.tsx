@@ -4,11 +4,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { Flower2, Apple, Cake, Sparkles, Waves, Star, Leaf, Sun, Wind } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 type FragranceFamily = {
   id: string
   name: string
-  description: string
+  description_en: string
+  description_id: string
   image_url: string
   display_order: number
 }
@@ -32,6 +34,7 @@ const iconMap: Record<string, any> = {
 }
 
 export function CategorySection() {
+  const { locale } = useLanguage()
   const [categories, setCategories] = useState<FragranceFamily[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -113,7 +116,7 @@ export function CategorySection() {
                     {category.name}
                   </h3>
                   <p className="text-center text-[10px] uppercase tracking-wider text-white/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100 lg:text-xs">
-                    {category.description}
+                    {locale === 'id' ? category.description_id : category.description_en}
                   </p>
 
                   {/* Hover underline */}

@@ -1,22 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { useRegion } from '@/contexts/RegionContext'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { PaymentMethods } from '@/components/PaymentMethods'
 import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/common'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { CheckoutModal } from '@/components/CheckoutModal'
 import { getEffectivePrice } from '@/lib/utils/pricing'
 import { useCurrency } from '@/hooks/useCurrency'
 import { formatPrice as formatCurrencyPrice } from '@/lib/utils/currency'
-import { useRegion } from '@/contexts/RegionContext'
 import { formatPrice as formatRegionPrice } from '@/lib/utils/region'
-import { useLanguage } from '@/contexts/LanguageContext'
 
 type CartItem = {
   id: string
@@ -1970,6 +1972,11 @@ export default function CheckoutPage() {
                     )}
                   </Button>
 
+                  {/* Payment Methods */}
+                  <div className="mt-4">
+                    <PaymentMethods size="small" showTitle />
+                  </div>
+
                   {!selectedAddressId && savedAddresses.length === 0 && (
                     <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                       <p className="text-sm text-red-700 text-center font-medium">
@@ -1990,6 +1997,11 @@ export default function CheckoutPage() {
                       {t.checkout.continueToCheckout}
                     </span>
                   </Button>
+
+                  {/* Payment Methods */}
+                  <div className="mt-4">
+                    <PaymentMethods size="small" showTitle />
+                  </div>
 
                   <div className="mt-4 text-center">
                     <p className="text-sm text-gray-600">

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRegion } from '@/contexts/RegionContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { formatPrice } from '@/lib/utils/region'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -38,6 +39,7 @@ type CartModalProps = {
 
 export function CartModal({ isOpen, onClose }: CartModalProps) {
   const { region } = useRegion()
+  const { t } = useLanguage()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -220,7 +222,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
             <div className="flex items-center justify-between border-b border-black/5 px-8 py-7">
               <h2 className="flex items-center gap-3 text-xl tracking-wide font-light text-black">
                 <ShoppingBag className="h-5 w-5 stroke-[1.5]" />
-                Cart
+                {t.cart.title}
               </h2>
               <button
                 onClick={onClose}
@@ -239,7 +241,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                 </div>
               ) : cartItems.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm tracking-wide text-black/60">
-                  Your cart is empty
+                  {t.cart.empty}
                 </div>
               ) : (
                 <div className="divide-y divide-black/5">

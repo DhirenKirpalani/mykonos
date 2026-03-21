@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { ChevronRight } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { motion } from 'framer-motion'
 import { Droplets, Flower2, Sparkles, Wind, Leaf, Coffee, Apple, Flame } from 'lucide-react'
 
 type FragranceFamily = {
   id: string
   name: string
-  description: string
+  description_en: string
+  description_id: string
   image_url: string
   display_order: number
 }
@@ -29,6 +33,7 @@ const getIconForFamily = (name: string) => {
 }
 
 export function FragranceFamiliesGrid() {
+  const { t, locale } = useLanguage()
   const [fragranceFamilies, setFragranceFamilies] = useState<FragranceFamily[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -53,13 +58,13 @@ export function FragranceFamiliesGrid() {
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="mb-10 md:mb-14 text-center">
           <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-[#8A6A3F]/75 md:mb-3 md:text-xs md:tracking-[0.3em]">
-            Discover Your Signature
+            {t.home.discoverSignature}
           </p>
           <h2 className="mb-4 font-serif text-2xl font-bold text-[#1C2E4A] md:mb-6 md:text-3xl lg:text-5xl">
-            Fragrance Families
+            {t.home.fragranceFamiliesTitle}
           </h2>
           <p className="mx-auto max-w-2xl text-sm text-[#5A4A3A]/90 md:text-base lg:text-lg">
-            Each scent tells a story. Find yours among our carefully curated collections
+            {t.home.fragranceFamiliesDesc}
           </p>
         </div>
         
@@ -99,7 +104,7 @@ export function FragranceFamiliesGrid() {
                       </h3>
                       
                       <p className="text-xs md:text-sm text-[#5A4A3A]/80 leading-relaxed flex-grow">
-                        {family.description}
+                        {locale === 'id' ? family.description_id : family.description_en}
                       </p>
                       
                       <div className="mt-4 flex items-center gap-2 text-[#8A6A3F] opacity-0 group-hover:opacity-100 transition-opacity duration-300">

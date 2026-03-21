@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRegion } from '@/contexts/RegionContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { formatPrice } from '@/lib/utils/region'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -44,6 +45,7 @@ type WishlistModalProps = {
 
 export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const { region } = useRegion()
+  const { t } = useLanguage()
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -280,7 +282,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
             <div className="flex items-center justify-between border-b border-black/5 px-8 py-7">
               <h2 className="flex items-center gap-3 text-xl tracking-wide font-light text-black">
                 <Heart className="h-5 w-5 stroke-[1.5]" />
-                Wishlist
+                {t.wishlist.title}
               </h2>
               <button
                 onClick={onClose}
@@ -299,7 +301,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                 </div>
               ) : wishlistItems.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm tracking-wide text-black/60">
-                  Your wishlist is empty
+                  {t.wishlist.empty}
                 </div>
               ) : (
                 <div className="divide-y divide-black/5">
