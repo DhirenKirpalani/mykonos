@@ -56,7 +56,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -79,10 +79,18 @@ export function ProductCard({ product }: ProductCardProps) {
   }, [])
   
   // Calculate days since product creation for debugging
-  const daysSinceCreation = product.created_at 
-    ? Math.floor((Date.now() - new Date(product.created_at).getTime()) / (1000 * 60 * 60 * 24))
-    : 0
-  const newBadgeDuration = (product as any).new_product_duration_days || 30
+  const daysSinceCreation = useMemo(() => {
+    if (!product?.created_at) return 0
+    try {
+      const createdDate = new Date(product.created_at)
+      if (isNaN(createdDate.getTime())) return 0
+      return Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24))
+    } catch {
+      return 0
+    }
+  }, [product?.created_at])
+  
+  const newBadgeDuration = (product as any)?.new_product_duration_days || 30
   
   // Check if product has variants with different prices
   const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
