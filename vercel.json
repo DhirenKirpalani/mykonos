@@ -1,12 +1,7 @@
 {
-  "crons": [
+  "crons":
     {
       "path": "/api/cron/refresh-new-badges",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/expire-orders",
-      "schedule": "*/10 * * * *"
     }
-  ]
 }
