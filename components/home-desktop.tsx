@@ -38,7 +38,7 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
       {newArrivals.length > 0 && (
         <section className="relative bg-gradient-to-br from-[#F5EFE6] via-[#E8DCC4] to-[#D4C5A0] py-8 md:py-12 lg:py-16">
           <ProductCarousel 
-            title="New Arrivals" 
+            title={t.home.newArrivals} 
             products={newArrivals}
             backgroundColor="bg-transparent"
             titleColor="text-[#1C2E4A]"
@@ -50,7 +50,7 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
       {products.length > 0 && (
         <section className="relative bg-gradient-to-br from-[#1C2E4A] via-[#16213E] to-[#0F1729] py-8 md:py-12 lg:py-16">
           <ProductCarousel 
-            title="Popular" 
+            title={t.home.popular} 
             products={products}
             backgroundColor="bg-transparent"
             titleColor="text-[#C2A36B]"
@@ -62,7 +62,7 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
       {bestSelling.length > 0 && (
         <section className="relative bg-gradient-to-br from-[#C2A36B] via-[#B8945E] to-[#A67C52] py-8 md:py-12 lg:py-16">
           <ProductCarousel 
-            title="Best Selling" 
+            title={t.home.bestSellers} 
             products={bestSelling}
             backgroundColor="bg-transparent"
             titleColor="text-[#1C2E4A]"

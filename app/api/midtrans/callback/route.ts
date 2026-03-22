@@ -67,17 +67,17 @@ export async function GET(request: NextRequest) {
       
       console.log('✅ [CALLBACK] Order payment completed successfully')
 
-      // Redirect to order details page
-      console.log('🔄 [CALLBACK] Redirecting to order details page')
-      return NextResponse.redirect(new URL(`/account/orders/${order.id}`, request.url))
+      // Redirect to track order page (works for both guest and authenticated users)
+      console.log('🔄 [CALLBACK] Redirecting to track order page')
+      return NextResponse.redirect(new URL(`/track-order?success=true`, request.url))
     } else if (transactionStatus === 'pending') {
       // Payment pending - order already exists, just redirect
-      console.log('⏳ [CALLBACK] Payment pending, redirecting to orders...')
-      return NextResponse.redirect(new URL(`/account/orders/${order.id}?info=payment_pending`, request.url))
+      console.log('⏳ [CALLBACK] Payment pending, redirecting to track order...')
+      return NextResponse.redirect(new URL(`/track-order?info=payment_pending`, request.url))
     } else {
       // Payment failed or cancelled - order still exists as pending
       console.log('❌ [CALLBACK] Payment failed or cancelled, status:', transactionStatus)
-      return NextResponse.redirect(new URL(`/account/orders/${order.id}?info=payment_failed`, request.url))
+      return NextResponse.redirect(new URL(`/track-order?info=payment_failed`, request.url))
     }
   } catch (error) {
     console.error('❌ [CALLBACK] Midtrans callback error:', error)

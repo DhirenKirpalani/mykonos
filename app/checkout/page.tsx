@@ -24,6 +24,8 @@ type CartItem = {
   id: string
   product_id: string
   quantity: number
+  variant_name?: string | null
+  variant_sku?: string | null
   product: {
     name: string
     slug: string
@@ -101,16 +103,18 @@ export default function CheckoutPage() {
     initializeCheckout()
     checkForPendingOrder()
 
-    // Listen for cart updates only in cart flow (not buy now flow)
+    // Listen for cart updates only in cart flow (not buy now or order again flow)
     const handleCartUpdate = async () => {
       console.log('🔔 [CHECKOUT] Received cart-updated event')
-      // Only refetch if we're in cart flow, not buy now flow
+      // Only refetch if we're in cart flow, not buy now or order again flow
       const urlParams = new URLSearchParams(window.location.search)
       const isBuyNowFlow = urlParams.get('buyNow') === 'true'
+      const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
       
       console.log('🔍 [CHECKOUT] Is buy now flow?', isBuyNowFlow)
+      console.log('🔍 [CHECKOUT] Is order again flow?', isOrderAgainFlow)
       
-      if (!isBuyNowFlow) {
+      if (!isBuyNowFlow && !isOrderAgainFlow) {
         console.log('🔄 [CHECKOUT] Refetching cart items...')
         // Small delay to ensure database has been updated
         await new Promise(resolve => setTimeout(resolve, 100))
@@ -118,7 +122,7 @@ export default function CheckoutPage() {
         await initializeCheckout()
         console.log('✅ [CHECKOUT] Cart items refetched')
       } else {
-        console.log('⚠️ [CHECKOUT] Skipping refetch (buy now flow)')
+        console.log('⚠️ [CHECKOUT] Skipping refetch (buy now or order again flow)')
       }
     }
     window.addEventListener('cart-updated', handleCartUpdate)
@@ -130,7 +134,8 @@ export default function CheckoutPage() {
         console.log('👁️ [CHECKOUT] Page became visible, refetching cart...')
         const urlParams = new URLSearchParams(window.location.search)
         const isBuyNowFlow = urlParams.get('buyNow') === 'true'
-        if (!isBuyNowFlow) {
+        const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
+        if (!isBuyNowFlow && !isOrderAgainFlow) {
           initializeCheckout()
         }
       }
@@ -142,7 +147,8 @@ export default function CheckoutPage() {
       console.log('🎯 [CHECKOUT] Window focused, refetching cart...')
       const urlParams = new URLSearchParams(window.location.search)
       const isBuyNowFlow = urlParams.get('buyNow') === 'true'
-      if (!isBuyNowFlow) {
+      const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
+      if (!isBuyNowFlow && !isOrderAgainFlow) {
         initializeCheckout()
       }
     }
@@ -178,10 +184,16 @@ export default function CheckoutPage() {
       const buyNowItemsStr = sessionStorage.getItem('buyNowItems')
       console.log('🔍 [CHECKOUT INIT] Buy now items in storage:', buyNowItemsStr ? 'YES' : 'NO')
       
+      // Check for Order Again items in sessionStorage
+      const orderAgainItemsStr = sessionStorage.getItem('orderAgainItems')
+      console.log('🔍 [CHECKOUT INIT] Order again items in storage:', orderAgainItemsStr ? 'YES' : 'NO')
+      
       // Check URL params to determine flow
       const urlParams = new URLSearchParams(window.location.search)
       const isBuyNowFlow = urlParams.get('buyNow') === 'true'
+      const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
       console.log('🔍 [CHECKOUT INIT] Is buy now flow from URL?', isBuyNowFlow)
+      console.log('🔍 [CHECKOUT INIT] Is order again flow from URL?', isOrderAgainFlow)
       
       // Clear buyNowItems if not in buy now flow to prevent interference
       if (buyNowItemsStr && !isBuyNowFlow) {
@@ -189,7 +201,74 @@ export default function CheckoutPage() {
         sessionStorage.removeItem('buyNowItems')
       }
       
-      if (buyNowItemsStr && isBuyNowFlow) {
+      // Clear orderAgainItems if not in order again flow to prevent interference
+      if (orderAgainItemsStr && !isOrderAgainFlow) {
+        console.log('⚠️ [CHECKOUT INIT] Clearing stale orderAgainItems from sessionStorage')
+        sessionStorage.removeItem('orderAgainItems')
+      }
+      
+      if (orderAgainItemsStr && isOrderAgainFlow) {
+        // Handle Order Again flow - fetch product details for multiple products
+        console.log('🔄 [CHECKOUT INIT] Using ORDER AGAIN flow')
+        const orderAgainItems = JSON.parse(orderAgainItemsStr)
+        
+        if (!Array.isArray(orderAgainItems) || orderAgainItems.length === 0) {
+          toast.error('Invalid order data')
+          sessionStorage.removeItem('orderAgainItems')
+          router.push('/checkout')
+          return
+        }
+        
+        // Get unique product IDs from order items
+        const productIds = Array.from(new Set(orderAgainItems.map((item: any) => item.product_id)))
+        
+        // Fetch all products
+        const { data: products, error: productsError } = await supabase
+          .from('products')
+          .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
+          .in('id', productIds)
+
+        if (productsError || !products || products.length === 0) {
+          toast.error('Products not found')
+          sessionStorage.removeItem('orderAgainItems')
+          router.push('/checkout')
+          return
+        }
+
+        // Create a map of products by ID for easy lookup
+        const productMap = new Map(products.map((p: any) => [p.id, p]))
+
+        // Create cart items structure for Order Again
+        const orderAgainCartItems = orderAgainItems
+          .map((item: any, index: number) => {
+            const product = productMap.get(item.product_id)
+            if (!product) return null
+
+            return {
+              id: `order-again-temp-${index}`,
+              product_id: product.id,
+              quantity: item.quantity,
+              variant_name: item.variant_name || null,
+              variant_sku: item.variant_sku || null,
+              product: {
+                name: product.name,
+                slug: product.slug,
+                image_urls: product.image_urls,
+                price_usd: product.price_usd,
+                price_idr: product.price_idr,
+                sale_price: product.sale_price,
+                stock_quantity: product.stock_quantity,
+                variants: product.variants
+              }
+            }
+          })
+          .filter((item: any) => item !== null) as CartItem[]
+
+        console.log('✅ [CHECKOUT INIT] Order again cart items created:', orderAgainCartItems.length)
+        console.log('📦 [CHECKOUT INIT] Order again items:', orderAgainCartItems)
+        setCartItems(orderAgainCartItems)
+        setIsBuyNow(true) // Treat order again like buy now (don't refetch cart)
+      } else if (buyNowItemsStr && isBuyNowFlow) {
         // Handle Buy Now flow - fetch product details
         console.log('🛍️ [CHECKOUT INIT] Using BUY NOW flow')
         const buyNowItems = JSON.parse(buyNowItemsStr)
@@ -557,20 +636,24 @@ export default function CheckoutPage() {
       }
       console.log('✅ [ORDER] Session found, user ID:', session.user.id)
 
-      // Check if this is a Buy Now flow with items still in sessionStorage
+      // Check if this is a Buy Now or Order Again flow with items still in sessionStorage
       const buyNowItemsStr = sessionStorage.getItem('buyNowItems')
+      const orderAgainItemsStr = sessionStorage.getItem('orderAgainItems')
       console.log('🛒 [ORDER] Buy Now items in storage:', buyNowItemsStr ? 'Yes' : 'No')
+      console.log('🔄 [ORDER] Order Again items in storage:', orderAgainItemsStr ? 'Yes' : 'No')
       
       let sessionData
       
-      // Only use manual session if buyNowItems exists AND we have temp cart items
-      // After login, buyNowItems is cleared and items are in cart, so use regular flow
-      if (buyNowItemsStr && cartItems.length > 0 && cartItems[0].id?.startsWith('buy-now-temp')) {
-        console.log('🎯 [ORDER] Using Buy Now flow with manual cart snapshot')
-        // For Buy Now: Create checkout session with manual cart snapshot
-        const buyNowItems = JSON.parse(buyNowItemsStr)
+      // Only use manual session if buyNowItems/orderAgainItems exists AND we have temp cart items
+      // After login, these items are cleared and items are in cart, so use regular flow
+      const isBuyNowFlow = buyNowItemsStr && cartItems.length > 0 && cartItems[0].id?.startsWith('buy-now-temp')
+      const isOrderAgainFlow = orderAgainItemsStr && cartItems.length > 0 && cartItems[0].id?.startsWith('order-again-temp')
+      
+      if (isBuyNowFlow || isOrderAgainFlow) {
+        console.log(`🎯 [ORDER] Using ${isBuyNowFlow ? 'Buy Now' : 'Order Again'} flow with manual cart snapshot`)
+        // For Buy Now/Order Again: Create checkout session with manual cart snapshot
         
-        // Build cart snapshot from all buy now items
+        // Build cart snapshot from cart items in state
         let subtotal = 0
         const cartSnapshot = cartItems.map((item, index) => {
           const product = item.product

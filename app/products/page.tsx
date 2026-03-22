@@ -156,7 +156,7 @@ function ProductsContent() {
         <div className="mb-3 hidden md:block">
           <Breadcrumb 
             items={[
-              { label: 'Products', href: '/products' }
+              { label: t.common.products, href: '/products' }
             ]} 
           />
         </div>

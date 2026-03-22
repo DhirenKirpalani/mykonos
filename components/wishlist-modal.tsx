@@ -369,14 +369,14 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                             disabled={item.product.stock_quantity === 0 || addingToCart === item.id}
                           >
                             <ShoppingBag className="h-3.5 w-3.5" />
-                            {item.product.stock_quantity === 0 ? 'Out of Stock' : addingToCart === item.id ? 'Adding...' : 'Add to Cart'}
+                            {item.product.stock_quantity === 0 ? t.wishlist.outOfStock : addingToCart === item.id ? t.wishlist.adding : t.wishlist.addToCart}
                           </button>
                           
                           <button
                             onClick={() => removeItem(item.id)}
                             className="text-xs tracking-wide text-black/50 hover:text-black transition-colors text-left w-full"
                           >
-                            Remove
+                            {t.wishlist.remove}
                           </button>
                         </div>
                       </div>

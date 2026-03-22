@@ -326,7 +326,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                           onClick={() => removeItem(item.id)}
                           className="mt-3 text-xs tracking-wide text-black/50 hover:text-black transition-colors text-left"
                         >
-                          Remove
+                          {t.cart.remove}
                         </button>
                       </div>
                     </div>
@@ -342,14 +342,14 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                   onClick={() => setDiscountApplied(!discountApplied)}
                   className="flex w-full items-center justify-between text-left"
                 >
-                  <span className="text-sm tracking-wide font-light">Discount</span>
+                  <span className="text-sm tracking-wide font-light">{t.cart.discount}</span>
                   <span className="text-lg font-light">{discountApplied ? '−' : '+'}</span>
                 </button>
                 {discountApplied && (
                   <div className="mt-4 flex gap-2">
                     <input
                       type="text"
-                      placeholder="Discount code"
+                      placeholder={t.cart.discountCode}
                       value={discountCode}
                       onChange={(e) => setDiscountCode(e.target.value)}
                       className="flex-1 border border-black/10 bg-white px-4 py-2.5 text-sm tracking-wide placeholder:text-black/40 focus:border-black/30 focus:outline-none focus:ring-0"
@@ -358,7 +358,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                       onClick={applyDiscount}
                       className="border border-black px-6 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white"
                     >
-                      Apply
+                      {t.cart.apply}
                     </button>
                   </div>
                 )}
@@ -369,7 +369,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
             {cartItems.length > 0 && (
               <div className="border-t border-black/5 px-8 py-8">
                 <div className="mb-6 flex items-center justify-between text-sm tracking-wide">
-                  <span className="font-light">Subtotal</span>
+                  <span className="font-light">{t.cart.subtotal}</span>
                   <span className="font-medium">{region ? formatPrice(total, region) : '...'}</span>
                 </div>
 
@@ -378,7 +378,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                   onClick={onClose}
                   className="block w-full border border-black py-4 text-center text-xs tracking-[0.2em] font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white"
                 >
-                  Proceed to Checkout
+                  {t.cart.proceedToCheckout}
                 </Link>
               </div>
             )}
