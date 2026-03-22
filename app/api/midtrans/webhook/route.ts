@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
       acquirer,
       channel_response_code,
       channel_response_message,
+      expiry_time,
+      transaction_time,
     } = body
     
     console.log('Extracted payment details:', {
@@ -37,6 +39,8 @@ export async function POST(request: NextRequest) {
       card_type,
       masked_card,
       acquirer,
+      expiry_time,
+      transaction_time,
     })
 
     // ✅ Payment Verification - Verify signature to prevent fraud
@@ -92,32 +96,16 @@ export async function POST(request: NextRequest) {
 
     console.log('Processing payment status for order:', order_id)
     
-    // Check if order_id is a UUID (guest checkout) or order_number (logged-in user)
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id)
-    
-    let orderData
-    if (isUUID) {
-      // Guest checkout - order_id is the UUID
-      console.log('Guest checkout detected - looking up by UUID:', order_id)
-      const { data } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('id', order_id)
-        .single()
-      orderData = data
-    } else {
-      // Logged-in user - order_id is the order_number
-      console.log('Logged-in user detected - looking up by order_number:', order_id)
-      const { data } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('order_number', order_id)
-        .single()
-      orderData = data
-    }
+    // Both guest and logged-in users now send order_number (e.g., MYK-20260322-D498)
+    console.log('Looking up order by order_number:', order_id)
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('order_number', order_id)
+      .single()
     
     if (!orderData) {
-      console.error('Order not found:', order_id)
+      console.error('Order not found with order_number:', order_id)
       return NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
@@ -125,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
     
     const orderId = (orderData as any).id
-    console.log('Found order ID:', orderId)
+    console.log('Found order ID:', orderId, 'for order_number:', order_id)
     
     // ✅ Idempotency Check - Prevent duplicate webhook processing
     const { data: currentOrder } = await supabase
@@ -208,6 +196,12 @@ export async function POST(request: NextRequest) {
       payment_metadata: body,
     }
     
+    // If Midtrans provides expiry_time, update it in the order
+    if (expiry_time) {
+      metadataUpdate.expiry_time = expiry_time
+      console.log('📅 [WEBHOOK] Updating expiry_time from Midtrans:', expiry_time)
+    }
+    
     await supabase
       .from('orders')
       .update(metadataUpdate)
@@ -234,34 +228,90 @@ export async function POST(request: NextRequest) {
     if (order) {
       const typedOrder = order as any
       
-      // Create notification for user based on payment status
-      let notificationTitle = ''
-      let notificationMessage = ''
-      let notificationType: 'order' | 'payment' | 'promotion' | 'general' = 'order'
+      // ✅ IMPROVEMENT 6: Only notify on critical states (avoid spam)
+      const criticalStates = ['capture', 'settlement', 'refund', 'partial_refund', 'chargeback', 'reversal', 'deny', 'cancel', 'expire']
+      
+      if (!criticalStates.includes(transaction_status)) {
+        console.log(`⏭️ [WEBHOOK] Skipping notification for non-critical status: ${transaction_status}`)
+      } else {
+        // Create notification for user based on payment status
+        let notificationTitle = ''
+        let notificationMessage = ''
+        let notificationType: 'order' | 'payment' | 'promotion' | 'general' = 'order'
 
-      if (transaction_status === 'capture' || transaction_status === 'settlement') {
-        notificationTitle = 'Payment Successful! 🎉'
-        notificationMessage = `Your payment for order #${order_id} has been confirmed. Your order is now being processed.`
-        notificationType = 'payment'
-      } else if (transaction_status === 'expire') {
-        notificationTitle = 'Payment Link Expired'
-        notificationMessage = `Your payment link for order #${order_id} has expired. You can create a new order to complete your purchase.`
-        notificationType = 'payment'
-      } else if (transaction_status === 'pending') {
-        notificationTitle = 'Payment Pending'
-        notificationMessage = `Your payment for order #${order_id} is being processed. We'll notify you once it's confirmed.`
-        notificationType = 'payment'
+        switch (transaction_status) {
+        case 'capture':
+        case 'settlement':
+          notificationTitle = 'Payment Successful! 🎉'
+          notificationMessage = `Your payment for order #${order_id} has been confirmed. Your order is now being processed.`
+          notificationType = 'payment'
+          break
+
+        case 'authorize':
+          notificationTitle = 'Payment Authorized'
+          notificationMessage = `Your payment for order #${order_id} has been authorized and will be captured soon.`
+          notificationType = 'payment'
+          break
+
+        case 'challenge':
+          notificationTitle = 'Payment Under Review'
+          notificationMessage = `Your payment for order #${order_id} is under review for security purposes. We'll notify you once it's confirmed.`
+          notificationType = 'payment'
+          break
+
+        case 'pending':
+          notificationTitle = 'Payment Pending'
+          notificationMessage = `Your payment for order #${order_id} is being processed. We'll notify you once it's confirmed.`
+          notificationType = 'payment'
+          break
+
+        case 'refund':
+          notificationTitle = 'Payment Refunded'
+          notificationMessage = `Your payment for order #${order_id} has been refunded. The amount will be returned to your account within 3-7 business days.`
+          notificationType = 'payment'
+          break
+
+        case 'partial_refund':
+          notificationTitle = 'Partial Refund Processed'
+          notificationMessage = `A partial refund has been processed for order #${order_id}. The amount will be returned to your account within 3-7 business days.`
+          notificationType = 'payment'
+          break
+
+        case 'chargeback':
+          notificationTitle = 'Payment Disputed'
+          notificationMessage = `A chargeback has been initiated for order #${order_id}. Our team will contact you regarding this matter.`
+          notificationType = 'payment'
+          break
+
+        case 'reversal':
+          notificationTitle = 'Chargeback Reversed'
+          notificationMessage = `The chargeback for order #${order_id} has been reversed in your favor. Your order is being processed.`
+          notificationType = 'payment'
+          break
+
+        case 'expire':
+          notificationTitle = 'Payment Link Expired'
+          notificationMessage = `Your payment link for order #${order_id} has expired. You can create a new order to complete your purchase.`
+          notificationType = 'payment'
+          break
+
+        case 'deny':
+        case 'cancel':
+          notificationTitle = 'Payment Failed'
+          notificationMessage = `Your payment for order #${order_id} was ${transaction_status === 'deny' ? 'declined' : 'cancelled'}. Please try again or use a different payment method.`
+          notificationType = 'payment'
+          break
       }
-      // Note: For 'cancel' and 'deny', we keep order as pending for retry, so no notification
 
-      if (notificationTitle) {
-        await supabase.from('notifications').insert({
-          user_id: typedOrder.user_id,
-          title: notificationTitle,
-          message: notificationMessage,
-          type: notificationType,
-          read: false,
-        } as any)
+        if (notificationTitle) {
+          await supabase.from('notifications').insert({
+            user_id: typedOrder.user_id,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: notificationType,
+            read: false,
+          } as any)
+        }
       }
     }
 

@@ -847,6 +847,16 @@ export default function CheckoutPage() {
             phone: selectedAddress.phone,
           },
           items: itemsForMidtrans,
+          shippingAddress: {
+            firstName: selectedAddress.full_name.split(' ')[0],
+            lastName: selectedAddress.full_name.split(' ').slice(1).join(' '),
+            email: session.user.email,
+            phone: selectedAddress.phone,
+            address: `${selectedAddress.address_line1}${selectedAddress.address_line2 ? ', ' + selectedAddress.address_line2 : ''}`,
+            city: selectedAddress.city,
+            postalCode: selectedAddress.postal_code,
+            countryCode: selectedAddress.country === 'Indonesia' ? 'IDN' : 'USA',
+          },
         }),
       })
 
@@ -1168,7 +1178,7 @@ export default function CheckoutPage() {
       ]
 
       console.log('📤 [GUEST TOKEN DEBUG] Calling Midtrans API...', {
-        orderId: orderData.order_id,
+        orderId: orderData.order_number,
         amount: convertToIDR(total),
         itemCount: itemsForMidtrans.length
       })
@@ -1177,7 +1187,7 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId: orderData.order_id,
+          orderId: orderData.order_number,
           amount: convertToIDR(total),
           customerDetails: {
             firstName: guestData.full_name.split(' ')[0],
@@ -1186,6 +1196,16 @@ export default function CheckoutPage() {
             phone: guestData.phone,
           },
           items: itemsForMidtrans,
+          shippingAddress: {
+            firstName: guestData.full_name.split(' ')[0],
+            lastName: guestData.full_name.split(' ').slice(1).join(' ') || guestData.full_name,
+            email: guestData.email,
+            phone: guestData.phone,
+            address: `${guestData.address_line1}${guestData.address_line2 ? ', ' + guestData.address_line2 : ''}`,
+            city: guestData.city,
+            postalCode: guestData.postal_code,
+            countryCode: guestData.country === 'Indonesia' ? 'IDN' : 'USA',
+          },
         }),
       })
 
