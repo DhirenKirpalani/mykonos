@@ -1,7 +1,8 @@
 {
-  "crons":
+  "crons": [
     {
       "path": "/api/cron/refresh-new-badges",
       "schedule": "0 0 * * *"
     }
+  ]
 }
