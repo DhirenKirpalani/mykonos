@@ -5,7 +5,6 @@ import { HeroCarousel } from '@/components/hero-carousel'
 import { FragranceFamiliesGrid } from '@/components/fragrance-families-grid'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useTranslation } from '@/hooks/useTranslation'
 
 const ProductCarousel = dynamic(() => import('@/components/product-carousel').then(mod => ({ default: mod.ProductCarousel })), {
   loading: () => <div className="h-96 animate-pulse bg-gradient-to-b from-gray-200 to-gray-100" />,
@@ -31,7 +30,6 @@ interface HomeMobileProps {
 
 export function HomeMobile({ products, collections, newArrivals, bestSelling }: HomeMobileProps) {
   const { t } = useLanguage()
-  const { t: translation } = useTranslation()
   
   return (
     <div className="min-h-screen">
@@ -40,7 +38,7 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling }: 
       {newArrivals.length > 0 && (
         <section className="relative bg-gradient-to-br from-[#F5EFE6] via-[#E8DCC4] to-[#D4C5A0] py-8">
           <ProductCarousel 
-            title={t('home.newArrivals')}
+            title={t.home.newArrivals}
             products={newArrivals}
             backgroundColor="bg-transparent"
             titleColor="text-[#1C2E4A]"
@@ -64,7 +62,7 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling }: 
       {bestSelling.length > 0 && (
         <section className="relative bg-gradient-to-br from-[#C2A36B] via-[#B8945E] to-[#A67C52] py-8">
           <ProductCarousel 
-            title={t('home.bestSellers')}
+            title={t.home.bestSellers}
             products={bestSelling}
             backgroundColor="bg-transparent"
             titleColor="text-[#1C2E4A]"
