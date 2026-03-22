@@ -3,12 +3,10 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Home, ArrowLeft, Search, Package } from 'lucide-react'
-import { useLanguage } from '@/contexts/LanguageContext'
+import { Home, ArrowLeft, Package } from 'lucide-react'
 
 export default function NotFound() {
   const router = useRouter()
-  const { t } = useLanguage()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5EFE6] via-[#E8DCC4] to-[#D4C5A0] flex items-center justify-center px-4">
