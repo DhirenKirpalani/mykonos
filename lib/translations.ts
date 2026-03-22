@@ -59,6 +59,7 @@ export const translations = {
     home: {
       shopNow: "Shop Now",
       newArrivals: "New Arrivals",
+      popular: "Popular",
       bestSellers: "Best Sellers",
       comingSoon: "COMING SOON",
       premiumFragrances: "PREMIUM FRAGRANCES",
@@ -105,11 +106,21 @@ export const translations = {
     },
     wishlist: {
       title: "Wishlist",
-      empty: "Your wishlist is empty"
+      empty: "Your wishlist is empty",
+      addToCart: "Add to Cart",
+      remove: "Remove",
+      outOfStock: "Out of Stock",
+      adding: "Adding..."
     },
     cart: {
       title: "Cart",
-      empty: "Your cart is empty"
+      empty: "Your cart is empty",
+      remove: "Remove",
+      discount: "Discount",
+      discountCode: "Discount code",
+      apply: "Apply",
+      subtotal: "Subtotal",
+      proceedToCheckout: "Proceed to Checkout"
     },
     auth: {
       welcomeBack: "Welcome Back",
@@ -495,7 +506,23 @@ export const translations = {
       browseProducts: "Browse Products",
       items: "items",
       item: "item",
-      pendingPayment: "Pending payment"
+      pendingPayment: "Pending payment",
+      orderAgain: "Order Again",
+      contactSupport: "Contact Support",
+      paymentLinkExpired: "Payment Link Expired",
+      paymentLinkExpiredMessage: "This payment link has expired. Please create a new order to complete your purchase.",
+      orderCancelled: "Order has been cancelled",
+      orderDelivered: "Your order has been delivered!",
+      orderOnTheWay: "Your order is on the way",
+      preparingOrder: "We are preparing your order",
+      waitingPayment: "Waiting for payment confirmation",
+      orderProcessing: "Order is being processed",
+      orderCancelledLabel: "Order Cancelled",
+      trackingNumber: "Tracking Number",
+      shippingInformation: "Shipping Information",
+      carrier: "Carrier",
+      questionsOrder: "Questions about your order?",
+      customerServiceTeam: "Our customer service team is here to help"
     },
     newsletter: {
       title: "Subscribe to Our Newsletter",
@@ -572,7 +599,8 @@ export const translations = {
     },
     home: {
       shopNow: "Belanja Sekarang",
-      newArrivals: "Produk Baru",
+      newArrivals: "Koleksi Terbaru",
+      popular: "Populer",
       bestSellers: "Terlaris",
       comingSoon: "SEGERA HADIR",
       premiumFragrances: "PARFUM PREMIUM",
@@ -618,12 +646,22 @@ export const translations = {
       viewAll: "Lihat semua notifikasi"
     },
     wishlist: {
-      title: "Wishlist",
-      empty: "Wishlist Anda kosong"
+      title: "Daftar Keinginan",
+      empty: "Daftar keinginan Anda kosong",
+      addToCart: "Tambah ke Keranjang",
+      remove: "Hapus",
+      outOfStock: "Stok Habis",
+      adding: "Menambahkan..."
     },
     cart: {
       title: "Keranjang",
-      empty: "Keranjang Anda kosong"
+      empty: "Keranjang Anda kosong",
+      remove: "Hapus",
+      discount: "Diskon",
+      discountCode: "Kode diskon",
+      apply: "Terapkan",
+      subtotal: "Subtotal",
+      proceedToCheckout: "Lanjutkan ke Pembayaran"
     },
     auth: {
       welcomeBack: "Selamat Datang Kembali",
@@ -769,7 +807,7 @@ export const translations = {
       country: "Negara",
       cancel: "Batal",
       saveChanges: "Simpan Perubahan",
-      default: "Default"
+      default: "Utama"
     },
     productsPage: {
       allFragrances: "Semua Wewangian",
@@ -820,8 +858,8 @@ export const translations = {
       quantity: "Jumlah"
     },
     wishlistModal: {
-      title: "Wishlist",
-      empty: "Wishlist Anda kosong",
+      title: "Daftar Keinginan",
+      empty: "Daftar keinginan Anda kosong",
       continueShopping: "Lanjutkan Belanja",
       addToCart: "Tambah ke Keranjang",
       remove: "Hapus"
@@ -1009,7 +1047,23 @@ export const translations = {
       browseProducts: "Jelajahi Produk",
       items: "barang",
       item: "barang",
-      pendingPayment: "Menunggu pembayaran"
+      pendingPayment: "Menunggu pembayaran",
+      orderAgain: "Pesan Lagi",
+      contactSupport: "Hubungi Dukungan",
+      paymentLinkExpired: "Link Pembayaran Kedaluwarsa",
+      paymentLinkExpiredMessage: "Link pembayaran ini telah kedaluwarsa. Silakan buat pesanan baru untuk menyelesaikan pembelian Anda.",
+      orderCancelled: "Pesanan telah dibatalkan",
+      orderDelivered: "Pesanan Anda telah terkirim!",
+      orderOnTheWay: "Pesanan Anda sedang dalam perjalanan",
+      preparingOrder: "Kami sedang menyiapkan pesanan Anda",
+      waitingPayment: "Menunggu konfirmasi pembayaran",
+      orderProcessing: "Pesanan sedang diproses",
+      orderCancelledLabel: "Pesanan Dibatalkan",
+      trackingNumber: "Nomor Resi",
+      shippingInformation: "Informasi Pengiriman",
+      carrier: "Kurir",
+      questionsOrder: "Pertanyaan tentang pesanan Anda?",
+      customerServiceTeam: "Tim layanan pelanggan kami siap membantu"
     },
     newsletter: {
       title: "Berlangganan Newsletter Kami",

@@ -127,6 +127,20 @@ export default function OrdersPage() {
     }
   }
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending_payment': return 'Menunggu Pembayaran'
+      case 'processing': return 'Diproses'
+      case 'packed': return 'Dikemas'
+      case 'shipped': return 'Dikirim'
+      case 'delivered': return 'Terkirim'
+      case 'cancelled': return 'Dibatalkan'
+      case 'refunded': return 'Dikembalikan'
+      case 'disputed': return 'Disengketakan'
+      default: return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
@@ -242,7 +256,7 @@ export default function OrdersPage() {
                           
                           <div className="flex items-center justify-between gap-2 mt-2">
                             <span className={cn("px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusColor(order.status))}>
-                              {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                              {getStatusLabel(order.status)}
                             </span>
                             <span className="font-semibold text-xs sm:text-sm whitespace-nowrap">
                               {order.currency_code === 'IDR' 

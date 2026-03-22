@@ -85,7 +85,7 @@ export default function ProductDetailPage({
 
   // Build breadcrumb items following website route
   const breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Products', href: '/products' },
+    { label: t.common.products, href: '/products' },
     { label: fragranceFamily, href: `/products?category=${encodeURIComponent(fragranceFamily)}` },
     { label: product.name, href: `/products/${product.slug}` },
   ]

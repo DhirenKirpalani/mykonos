@@ -77,6 +77,7 @@ export default function TrackOrderPage() {
   const [isCreatingAccount, setIsCreatingAccount] = useState(false)
   const [sessionOrders, setSessionOrders] = useState<Order[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
   // Load session order history on mount
   useEffect(() => {
@@ -84,21 +85,25 @@ export default function TrackOrderPage() {
       setLoadingHistory(true)
       
       try {
-        // First, try to get email from localStorage
-        const orderHistory = localStorage.getItem('orderHistory')
-        let userEmail: string | null = null
+        // Check if user is authenticated
+        const { data: { session } } = await supabase.auth.getSession()
         
-        if (orderHistory) {
-          const orders = JSON.parse(orderHistory)
-          if (orders.length > 0) {
-            userEmail = orders[0].customer_email
-          }
-        }
-        
-        // If we have an email, fetch ALL orders for that email from database
-        if (userEmail) {
-          console.log('📚 [ORDER HISTORY] Fetching all orders for:', userEmail)
+        // If user is logged in (not anonymous)
+        if (session && !session.user.is_anonymous) {
+          const authenticatedEmail = session.user.email
+          console.log('🔐 [SECURITY] User authenticated with email:', authenticatedEmail)
           
+          // Clear localStorage if it contains orders from a different email
+          const orderHistory = localStorage.getItem('orderHistory')
+          if (orderHistory) {
+            const orders = JSON.parse(orderHistory)
+            if (orders.length > 0 && orders[0].customer_email !== authenticatedEmail) {
+              console.log('🧹 [SECURITY] Clearing guest order history - email mismatch')
+              localStorage.removeItem('orderHistory')
+            }
+          }
+          
+          // Fetch orders for authenticated user's email only
           const { data, error } = await supabase
             .from('orders')
             .select(`
@@ -113,18 +118,70 @@ export default function TrackOrderPage() {
                 )
               )
             `)
-            .eq('customer_email', userEmail)
+            .eq('customer_email', authenticatedEmail)
             .order('created_at', { ascending: false })
-            .limit(20) // Fetch up to 20 most recent orders
+            .limit(20)
           
           if (error) {
             console.error('Error fetching orders:', error)
           } else if (data) {
             setSessionOrders(data as Order[])
-            console.log('✅ [ORDER HISTORY] Loaded', data.length, 'orders from database')
+            console.log('✅ [ORDER HISTORY] Loaded', data.length, 'orders for authenticated user')
           }
         } else {
-          console.log('⚠️ [ORDER HISTORY] No email found in localStorage')
+          // Guest user - load from localStorage
+          const orderHistory = localStorage.getItem('orderHistory')
+          let mostRecentEmail: string | null = null
+          
+          if (orderHistory) {
+            const orders = JSON.parse(orderHistory)
+            
+            // 🔒 SECURITY: Get the most recent order's email
+            if (orders.length > 0) {
+              mostRecentEmail = orders[0].customer_email
+              
+              // 🔒 SECURITY: Filter out orders from different emails
+              const filteredOrders = orders.filter((o: any) => o.customer_email === mostRecentEmail)
+              
+              // If we filtered out orders, update localStorage
+              if (filteredOrders.length !== orders.length) {
+                console.log('🧹 [SECURITY] Removing orders from different emails. Before:', orders.length, 'After:', filteredOrders.length)
+                localStorage.setItem('orderHistory', JSON.stringify(filteredOrders))
+              }
+            }
+          }
+          
+          // If we have an email, fetch ALL orders for that email from database
+          if (mostRecentEmail) {
+            console.log('📚 [ORDER HISTORY] Fetching guest orders for:', mostRecentEmail)
+            
+            const { data, error } = await supabase
+              .from('orders')
+              .select(`
+                *,
+                order_items (
+                  id,
+                  quantity,
+                  price_at_purchase,
+                  product:products (
+                    name,
+                    image_urls
+                  )
+                )
+              `)
+              .eq('customer_email', mostRecentEmail)
+              .order('created_at', { ascending: false })
+              .limit(20)
+            
+            if (error) {
+              console.error('Error fetching orders:', error)
+            } else if (data) {
+              setSessionOrders(data as Order[])
+              console.log('✅ [ORDER HISTORY] Loaded', data.length, 'guest orders from database')
+            }
+          } else {
+            console.log('⚠️ [ORDER HISTORY] No email found in localStorage')
+          }
         }
         
         setLoadingHistory(false)
@@ -230,20 +287,21 @@ export default function TrackOrderPage() {
       return
     }
 
-    // Poll if payment is pending, expired, or failed (to catch any late updates)
-    const shouldPoll = ['pending', 'expired', 'failed'].includes(order.payment_status)
+    // Poll for any status changes (payment status OR order status)
+    const shouldPoll = ['pending', 'expired', 'failed'].includes(order.payment_status) || 
+                       ['pending_payment', 'processing', 'packed', 'shipped'].includes(order.status)
     if (!shouldPoll) {
       return
     }
 
-    console.log('🔄 [POLLING] Starting real-time payment status polling for order:', order.order_number, 'Current status:', order.payment_status)
+    console.log('🔄 [POLLING] Starting real-time status polling for order:', order.order_number, 'Payment:', order.payment_status, 'Order:', order.status)
 
     const pollInterval = setInterval(async () => {
       try {
         console.log('🔍 [POLLING] Checking order status...')
         const { data, error } = await supabase
           .from('orders')
-          .select('payment_status, status, snap_token, expiry_time, payment_metadata')
+          .select('payment_status, status, snap_token, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, carrier')
           .eq('order_number', order.order_number)
           .eq('customer_email', order.customer_email)
           .single()
@@ -255,11 +313,13 @@ export default function TrackOrderPage() {
             has_metadata: !!data.payment_metadata
           })
 
-          // Check if payment status has changed
-          if (data.payment_status !== order.payment_status) {
-            console.log('🔔 [POLLING] Payment status changed:', {
-              old: order.payment_status,
-              new: data.payment_status,
+          // Check if payment status OR order status has changed
+          if (data.payment_status !== order.payment_status || data.status !== order.status) {
+            console.log('🔔 [POLLING] Status changed:', {
+              old_payment: order.payment_status,
+              new_payment: data.payment_status,
+              old_status: order.status,
+              new_status: data.status,
               order_number: order.order_number
             })
             
@@ -517,10 +577,23 @@ export default function TrackOrderPage() {
         total_amount: data.total_amount
       })
 
+      // 🔒 SECURITY CHECK: If user is authenticated, verify email matches
+      if (user && !user.is_anonymous) {
+        const authenticatedEmail = user.email
+        const orderEmail = data.customer_email
+        
+        if (authenticatedEmail !== orderEmail) {
+          console.error('🚨 [SECURITY] Email mismatch! User:', authenticatedEmail, 'Order:', orderEmail)
+          setNotFound(true)
+          toast.error('This order does not belong to your account.')
+          return
+        }
+      }
+
       setOrder(data as Order)
       
       // Save to localStorage for persistence when user navigates away
-      if (!user) {
+      if (!user || user.is_anonymous) {
         const orderInfo = JSON.stringify({
           order_number: data.order_number,
           customer_email: email.toLowerCase().trim()
@@ -590,8 +663,13 @@ export default function TrackOrderPage() {
               {sessionOrders.map((sessionOrder) => (
                 <div
                   key={sessionOrder.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  className={`rounded-lg shadow-sm p-3 sm:p-4 hover:shadow-md transition-all cursor-pointer ${
+                    selectedOrderId === sessionOrder.id
+                      ? 'bg-luxury-navy/5 border-2 border-luxury-navy'
+                      : 'bg-white border border-gray-200'
+                  }`}
                   onClick={() => {
+                    setSelectedOrderId(sessionOrder.id)
                     setOrder(sessionOrder)
                     setEmail(sessionOrder.customer_email)
                     setOrderNumber(sessionOrder.order_number)
@@ -753,18 +831,30 @@ export default function TrackOrderPage() {
                     return getStatusIcon(order.status)
                   })()}
                   {(() => {
-                    const status = order.payment_metadata?.transaction_status
-                    if (status === 'settlement' || status === 'capture') return 'Diproses'
-                    if (status === 'authorize') return 'Diotorisasi'
-                    if (status === 'challenge') return 'Dalam Peninjauan'
-                    if (status === 'pending') return 'Menunggu Pembayaran'
-                    if (status === 'refund') return 'Dikembalikan'
-                    if (status === 'partial_refund') return 'Dikembalikan Sebagian'
-                    if (status === 'chargeback') return 'Disengketakan'
-                    if (status === 'reversal') return 'Diproses'
-                    if (status === 'expire') return 'Kadaluarsa'
-                    if (status === 'deny' || status === 'cancel') return 'Dibatalkan'
-                    return getTranslatedStatus(order.status)
+                    const paymentStatus = order.payment_metadata?.transaction_status
+                    const orderStatus = order.status
+                    
+                    // Priority: Check order status first (shipped, packed, etc.)
+                    if (orderStatus === 'shipped') return 'Dikirim'
+                    if (orderStatus === 'packed') return 'Dikemas'
+                    if (orderStatus === 'delivered') return 'Terkirim'
+                    if (orderStatus === 'cancelled') return 'Dibatalkan'
+                    
+                    // Then check payment status from Midtrans
+                    if (paymentStatus === 'settlement' || paymentStatus === 'capture') return 'Diproses'
+                    if (paymentStatus === 'authorize') return 'Diotorisasi'
+                    if (paymentStatus === 'challenge') return 'Dalam Peninjauan'
+                    if (paymentStatus === 'pending') return 'Menunggu Pembayaran'
+                    if (paymentStatus === 'refund') return 'Dikembalikan'
+                    if (paymentStatus === 'partial_refund') return 'Dikembalikan Sebagian'
+                    if (paymentStatus === 'chargeback') return 'Disengketakan'
+                    if (paymentStatus === 'reversal') return 'Diproses'
+                    if (paymentStatus === 'expire') return 'Kadaluarsa'
+                    if (paymentStatus === 'deny' || paymentStatus === 'cancel') return 'Dibatalkan'
+                    
+                    // Fallback to processing if payment completed
+                    if (orderStatus === 'processing') return 'Diproses'
+                    return getTranslatedStatus(orderStatus)
                   })()}
                 </span>
               </div>
@@ -968,12 +1058,14 @@ export default function TrackOrderPage() {
                           month: 'short',
                           year: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
+                          timeZone: 'Asia/Jakarta'
                         })
                       : new Date(order.created_at).toLocaleDateString('id-ID', {
                           year: 'numeric',
                           month: 'long',
-                          day: 'numeric'
+                          day: 'numeric',
+                          timeZone: 'Asia/Jakarta'
                         })
                     }
                   </p>
@@ -1006,7 +1098,8 @@ export default function TrackOrderPage() {
                           month: 'short',
                           year: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
+                          timeZone: 'Asia/Jakarta'
                         })}
                       </p>
                     </div>

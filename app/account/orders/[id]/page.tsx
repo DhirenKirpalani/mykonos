@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 type Order = Database['public']['Tables']['orders']['Row'] & {
   order_items: Array<{
     id: string
+    product_id: string
     quantity: number
     price_at_purchase: number
     product: {
@@ -30,14 +31,18 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
     postal_code: string
     country: string
   }
+  customer_email: string
   paid_at?: string | null
   packed_at?: string | null
   shipped_at?: string | null
   delivered_at?: string | null
+  cancelled_at?: string | null
   tracking_number?: string | null
   carrier?: string | null
   snap_token?: string | null
   expiry_time?: string | null
+  payment_metadata?: any
+  payment_method_type?: string | null
 }
 
 export default function OrderDetailsPage() {
@@ -47,6 +52,52 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState<string>('')
+
+  // Helper function to translate order status
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending_payment': return 'Menunggu Pembayaran'
+      case 'processing': return 'Diproses'
+      case 'packed': return 'Dikemas'
+      case 'shipped': return 'Dikirim'
+      case 'delivered': return 'Terkirim'
+      case 'cancelled': return 'Dibatalkan'
+      case 'refunded': return 'Dikembalikan'
+      case 'disputed': return 'Disengketakan'
+      default: return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+    }
+  }
+
+  // Real-time countdown timer
+  useEffect(() => {
+    if (!order?.expiry_time && !order?.payment_metadata?.expiry_time) return
+
+    const updateCountdown = () => {
+      const expiryTime = order.payment_metadata?.expiry_time || order.expiry_time
+      if (!expiryTime) return
+
+      const now = new Date().getTime()
+      const expiry = new Date(expiryTime).getTime()
+      const diff = expiry - now
+
+      if (diff <= 0) {
+        setTimeRemaining('Kadaluarsa')
+        return
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+      setTimeRemaining(`${hours}j ${minutes}m ${seconds}d`)
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+
+    return () => clearInterval(interval)
+  }, [order?.expiry_time, order?.payment_metadata?.expiry_time])
 
   useEffect(() => {
     fetchOrderDetails()
@@ -112,11 +163,21 @@ export default function OrderDetailsPage() {
           *,
           order_items (
             id,
+            product_id,
             quantity,
             price_at_purchase,
+            variant_name,
+            variant_sku,
             product:products (
+              id,
               name,
-              image_urls
+              slug,
+              image_urls,
+              price_usd,
+              price_idr,
+              sale_price,
+              stock_quantity,
+              variants
             )
           )
         `)
@@ -161,6 +222,27 @@ export default function OrderDetailsPage() {
       default:
         return 'text-yellow-600 bg-yellow-50'
     }
+  }
+
+  const handleOrderAgain = () => {
+    if (!order || !order.order_items || order.order_items.length === 0) {
+      toast.error('No items found in this order')
+      return
+    }
+
+    // Prepare order items for checkout (similar to Buy Now flow)
+    const orderAgainItems = order.order_items.map((item: any) => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      variant_name: item.variant_name || null,
+      variant_sku: item.variant_sku || null,
+    }))
+
+    // Store in sessionStorage
+    sessionStorage.setItem('orderAgainItems', JSON.stringify(orderAgainItems))
+    
+    // Navigate to checkout with orderAgain parameter
+    router.push('/checkout?orderAgain=true')
   }
 
   const handleContinuePayment = async () => {
@@ -276,7 +358,7 @@ export default function OrderDetailsPage() {
                   </p>
                   {order.expiry_time && (
                     <p className="text-xs text-yellow-700">
-                      Complete before: {new Date(order.expiry_time).toLocaleString('en-US', {
+                      {t.account.completeBefore}: {new Date(order.expiry_time).toLocaleString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
@@ -303,17 +385,17 @@ export default function OrderDetailsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    ⏰ Payment Link Expired
+                    ⏰ {t.account.paymentLinkExpired}
                   </h3>
                   <p className="text-sm text-gray-700">
-                    This payment link has expired. Please create a new order to complete your purchase.
+                    {t.account.paymentLinkExpiredMessage}
                   </p>
                 </div>
                 <button
-                  onClick={() => router.push('/checkout')}
+                  onClick={handleOrderAgain}
                   className="px-6 py-3 bg-luxury-navy text-white rounded-lg hover:bg-luxury-navy-light font-semibold transition-colors"
                 >
-                  Order Again
+                  {t.account.orderAgain}
                 </button>
               </div>
             </div>
@@ -329,15 +411,100 @@ export default function OrderDetailsPage() {
               packedAt={order.packed_at}
               shippedAt={order.shipped_at}
               deliveredAt={order.delivered_at}
+              cancelledAt={order.cancelled_at}
+              expiryTime={order.expiry_time}
               trackingNumber={order.tracking_number}
               carrier={order.carrier}
+              paymentMetadata={order.payment_metadata}
             />
+          </div>
+
+          {/* Order Details Grid - Same as Track Order Page */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 mb-8">
+            <div className="px-8 py-6 border-b border-gray-100">
+              <h2 className="text-2xl font-serif">Detail Pesanan</h2>
+            </div>
+            <div className="p-8">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-600 text-xs mb-1">Nomor Pesanan</p>
+                  <p className="font-mono font-semibold text-gray-900 text-sm">{order.order_number}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-xs mb-1">Tanggal Pesanan</p>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {new Date(order.created_at).toLocaleString('id-ID', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'Asia/Jakarta'
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-xs mb-1">Email</p>
+                  <p className="font-semibold text-gray-900 text-sm truncate">{order.customer_email}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-xs mb-1">Total Pembayaran</p>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {formatPrice(order.total_amount, order.currency_code)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-xs mb-1">Status Pesanan</p>
+                  <p className="font-semibold text-gray-900 text-sm">{getStatusLabel(order.status)}</p>
+                </div>
+                {(order.payment_metadata?.payment_type || order.payment_method_type || order.payment_method) && (
+                  <div>
+                    <p className="text-gray-600 text-xs mb-1">Metode Pembayaran</p>
+                    <p className="font-semibold text-gray-900 text-sm capitalize">
+                      {(order.payment_metadata?.payment_type || order.payment_method_type || order.payment_method || '').replace('_', ' ')}
+                    </p>
+                  </div>
+                )}
+                {(order.payment_metadata?.expiry_time || order.expiry_time) && (
+                  <>
+                    <div>
+                      <p className="text-gray-600 text-xs mb-1">Bayar Sebelum</p>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {new Date(order.payment_metadata?.expiry_time || order.expiry_time!).toLocaleString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'Asia/Jakarta'
+                        })}
+                      </p>
+                    </div>
+                    {/* Only show Waktu Tersisa if payment is not successful */}
+                    {!(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && order.payment_status === 'pending' && (
+                      <div>
+                        <p className="text-gray-600 text-xs mb-1">Waktu Tersisa</p>
+                        <p className="font-semibold text-gray-900 text-sm">
+                          {timeRemaining || 'Menghitung...'}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+                {order.tracking_number && (
+                  <div>
+                    <p className="text-gray-600 text-xs mb-1">Nomor Resi</p>
+                    <p className="font-mono font-semibold text-gray-900 text-sm">{order.tracking_number}</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
         {/* Order Items */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 mb-8">
           <div className="px-8 py-6 border-b border-gray-100">
-            <h2 className="text-2xl font-serif">Order Items</h2>
+            <h2 className="text-2xl font-serif">Produk Pesanan</h2>
           </div>
           <div className="p-8">
             {order.order_items.map((item) => (
@@ -349,7 +516,7 @@ export default function OrderDetailsPage() {
                 />
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg mb-1">{item.product.name}</h3>
-                  <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                  <p className="text-sm text-gray-500">Jumlah: {item.quantity}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-lg">{formatPrice(item.price_at_purchase * item.quantity, order.currency_code)}</p>
@@ -364,7 +531,7 @@ export default function OrderDetailsPage() {
           {/* Shipping Address */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-100">
             <div className="px-8 py-6 border-b border-gray-100">
-              <h2 className="text-2xl font-serif">Shipping Address</h2>
+              <h2 className="text-2xl font-serif">Alamat Pengiriman</h2>
             </div>
             <div className="p-8">
               <p className="font-semibold text-lg mb-1">{order.shipping_address.full_name}</p>
@@ -385,7 +552,7 @@ export default function OrderDetailsPage() {
           {/* Order Summary */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-100">
             <div className="px-8 py-6 border-b border-gray-100">
-              <h2 className="text-2xl font-serif">Order Summary</h2>
+              <h2 className="text-2xl font-serif">Ringkasan Pesanan</h2>
             </div>
             <div className="p-8">
               <div className="space-y-3">
@@ -394,18 +561,18 @@ export default function OrderDetailsPage() {
                   <span className="font-medium">{formatPrice(order.subtotal, order.currency_code)}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
-                  <span>Shipping</span>
+                  <span>Ongkir</span>
                   <span className="font-medium">{formatPrice(order.shipping_cost, order.currency_code)}</span>
                 </div>
                 {order.discount_amount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>Discount</span>
+                    <span>Diskon</span>
                     <span className="font-medium">-{formatPrice(order.discount_amount, order.currency_code)}</span>
                   </div>
                 )}
                 {order.tax_amount > 0 && (
                   <div className="flex justify-between text-gray-700">
-                    <span>Tax</span>
+                    <span>Pajak</span>
                     <span className="font-medium">{formatPrice(order.tax_amount, order.currency_code)}</span>
                   </div>
                 )}
@@ -416,13 +583,13 @@ export default function OrderDetailsPage() {
               </div>
               {order.payment_method && (
                 <div className="mt-6 pt-6 border-t border-gray-100">
-                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Payment Method</p>
+                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Metode Pembayaran</p>
                   <p className="font-semibold capitalize">{order.payment_method.replace('_', ' ')}</p>
                 </div>
               )}
               {order.payment_intent_id && (
                 <div className="mt-4">
-                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Transaction ID</p>
+                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">ID Transaksi</p>
                   <p className="font-mono text-xs text-gray-600 break-all">{order.payment_intent_id}</p>
                 </div>
               )}

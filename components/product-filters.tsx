@@ -265,7 +265,7 @@ export function ProductFilters() {
 
         {currentCategory && (
           <Button variant="outline" onClick={clearFilters} className="w-full">
-            Clear Filters
+            {t.productsPage.clearFilters}
           </Button>
         )}
       </div>
