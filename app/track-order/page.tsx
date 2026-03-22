@@ -12,6 +12,16 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 
+type OrderItem = {
+  id: string
+  quantity: number
+  price_at_purchase: number
+  product: {
+    name: string
+    image_urls: string[]
+  }
+}
+
 type Order = {
   id: string
   order_number: string
@@ -37,6 +47,14 @@ type Order = {
   estimated_delivery_date?: string
   snap_token?: string
   expiry_time?: string
+  payment_method_type?: string
+  order_items?: OrderItem[]
+  payment_metadata?: {
+    transaction_time?: string
+    expiry_time?: string
+    payment_type?: string
+    [key: string]: any
+  }
 }
 
 export default function TrackOrderPage() {
@@ -46,6 +64,7 @@ export default function TrackOrderPage() {
   const [orderNumber, setOrderNumber] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [order, setOrder] = useState<Order | null>(null)
+  const [timeRemaining, setTimeRemaining] = useState<string>('')
   const [notFound, setNotFound] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
 
@@ -82,7 +101,18 @@ export default function TrackOrderPage() {
           
           const { data, error } = await supabase
             .from('orders')
-            .select('*')
+            .select(`
+              *,
+              order_items (
+                id,
+                quantity,
+                price_at_purchase,
+                product:products (
+                  name,
+                  image_urls
+                )
+              )
+            `)
             .eq('customer_email', userEmail)
             .order('created_at', { ascending: false })
             .limit(20) // Fetch up to 20 most recent orders
@@ -141,7 +171,18 @@ export default function TrackOrderPage() {
             try {
               const { data, error } = await supabase
                 .from('orders')
-                .select('*')
+                .select(`
+                  *,
+                  order_items (
+                    id,
+                    quantity,
+                    price_at_purchase,
+                    product:products (
+                      name,
+                      image_urls
+                    )
+                  )
+                `)
                 .eq('order_number', order_number)
                 .eq('customer_email', customer_email)
                 .single()
@@ -182,6 +223,107 @@ export default function TrackOrderPage() {
       }
     }
   }, [user])
+
+  // Real-time polling for payment status updates
+  useEffect(() => {
+    if (!order || !order.order_number || !order.customer_email) {
+      return
+    }
+
+    // Poll if payment is pending, expired, or failed (to catch any late updates)
+    const shouldPoll = ['pending', 'expired', 'failed'].includes(order.payment_status)
+    if (!shouldPoll) {
+      return
+    }
+
+    console.log('🔄 [POLLING] Starting real-time payment status polling for order:', order.order_number, 'Current status:', order.payment_status)
+
+    const pollInterval = setInterval(async () => {
+      try {
+        console.log('🔍 [POLLING] Checking order status...')
+        const { data, error } = await supabase
+          .from('orders')
+          .select('payment_status, status, snap_token, expiry_time, payment_metadata')
+          .eq('order_number', order.order_number)
+          .eq('customer_email', order.customer_email)
+          .single()
+
+        if (!error && data) {
+          console.log('📊 [POLLING] Fetched data:', {
+            payment_status: data.payment_status,
+            status: data.status,
+            has_metadata: !!data.payment_metadata
+          })
+
+          // Check if payment status has changed
+          if (data.payment_status !== order.payment_status) {
+            console.log('🔔 [POLLING] Payment status changed:', {
+              old: order.payment_status,
+              new: data.payment_status,
+              order_number: order.order_number
+            })
+            
+            // Update the order with new status
+            setOrder(prev => prev ? { ...prev, ...data } : null)
+            
+            // Show notification based on new status
+            if (data.payment_status === 'paid') {
+              toast.success('Payment successful! Your order is being processed.')
+            } else if (data.payment_status === 'expired') {
+              toast.error('Payment has expired. Please contact support for a new payment link.')
+            } else if (data.payment_status === 'failed') {
+              toast.error('Payment failed. Please try again or contact support.')
+            }
+          } else {
+            console.log('✓ [POLLING] No status change detected')
+          }
+        } else if (error) {
+          console.error('❌ [POLLING] Error fetching order:', error)
+        }
+      } catch (error) {
+        console.error('❌ [POLLING] Error fetching order status:', error)
+      }
+    }, 5000) // Poll every 5 seconds for faster updates
+
+    // Cleanup interval on unmount or when order changes
+    return () => {
+      console.log('🛑 [POLLING] Stopping payment status polling')
+      clearInterval(pollInterval)
+    }
+  }, [order?.order_number, order?.customer_email, order?.payment_status])
+
+  // Real-time countdown timer
+  useEffect(() => {
+    if (!order) return
+
+    const expiryTime = order.payment_metadata?.expiry_time || order.expiry_time
+    if (!expiryTime) return
+
+    const updateCountdown = () => {
+      const now = new Date()
+      const expiry = new Date(expiryTime)
+      const diff = expiry.getTime() - now.getTime()
+
+      if (diff <= 0) {
+        setTimeRemaining('Kadaluarsa')
+        return
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      
+      setTimeRemaining(`${hours}j ${minutes}m ${seconds}s`)
+    }
+
+    // Update immediately
+    updateCountdown()
+
+    // Update every second
+    const interval = setInterval(updateCountdown, 1000)
+
+    return () => clearInterval(interval)
+  }, [order?.payment_metadata?.expiry_time, order?.expiry_time])
 
   const handleContinuePayment = async () => {
     console.log('🔵 [PAYMENT DEBUG] handleContinuePayment called')
@@ -336,7 +478,18 @@ export default function TrackOrderPage() {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          order_items (
+            id,
+            quantity,
+            price_at_purchase,
+            product:products (
+              name,
+              image_urls
+            )
+          )
+        `)
         .eq('customer_email', email.toLowerCase().trim())
         .eq('order_number', orderNumber.toUpperCase().trim())
         .single()
@@ -568,28 +721,78 @@ export default function TrackOrderPage() {
           </div>
         )}
 
-        {/* Order Details */}
+        {/* Order Details - Pesanan Terbaru Anda */}
         {order && (
           <div className="space-y-6">
-            {/* Order Status */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">{t('trackOrder.orderStatus')}</h2>
-                <span className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 ${getStatusColor(order.status)}`}>
-                  {getStatusIcon(order.status)}
-                  {getTranslatedStatus(order.status)}
+            {/* Main Order Card */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              {/* Status Header */}
+              <div className="flex items-center justify-between mb-4 pb-4 border-b">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Status Pesanan</h2>
+                <span className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 ${
+                  (() => {
+                    const status = order.payment_metadata?.transaction_status
+                    if (status === 'settlement' || status === 'capture' || status === 'reversal') return 'bg-blue-100 text-blue-800'
+                    if (status === 'authorize') return 'bg-purple-100 text-purple-800'
+                    if (status === 'challenge') return 'bg-orange-100 text-orange-800'
+                    if (status === 'pending') return 'bg-yellow-100 text-yellow-800'
+                    if (status === 'refund') return 'bg-gray-100 text-gray-800'
+                    if (status === 'partial_refund') return 'bg-indigo-100 text-indigo-800'
+                    if (status === 'chargeback') return 'bg-red-100 text-red-800'
+                    if (status === 'expire' || status === 'deny' || status === 'cancel') return 'bg-red-100 text-red-800'
+                    return getStatusColor(order.status)
+                  })()
+                }`}>
+                  {(() => {
+                    const status = order.payment_metadata?.transaction_status
+                    if (status === 'settlement' || status === 'capture' || status === 'reversal') return <Clock className="h-4 w-4" />
+                    if (status === 'authorize') return <CheckCircle2 className="h-4 w-4" />
+                    if (status === 'challenge') return <Clock className="h-4 w-4" />
+                    if (status === 'refund' || status === 'partial_refund') return <Package className="h-4 w-4" />
+                    if (status === 'chargeback') return <Clock className="h-4 w-4" />
+                    return getStatusIcon(order.status)
+                  })()}
+                  {(() => {
+                    const status = order.payment_metadata?.transaction_status
+                    if (status === 'settlement' || status === 'capture') return 'Diproses'
+                    if (status === 'authorize') return 'Diotorisasi'
+                    if (status === 'challenge') return 'Dalam Peninjauan'
+                    if (status === 'pending') return 'Menunggu Pembayaran'
+                    if (status === 'refund') return 'Dikembalikan'
+                    if (status === 'partial_refund') return 'Dikembalikan Sebagian'
+                    if (status === 'chargeback') return 'Disengketakan'
+                    if (status === 'reversal') return 'Diproses'
+                    if (status === 'expire') return 'Kadaluarsa'
+                    if (status === 'deny' || status === 'cancel') return 'Dibatalkan'
+                    return getTranslatedStatus(order.status)
+                  })()}
                 </span>
               </div>
 
+              {/* Success Payment Alert */}
+              {(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && (
+                <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-green-900 mb-1">Pembayaran Berhasil</h3>
+                      <p className="text-sm text-green-700">
+                        Pembayaran Anda telah dikonfirmasi. Pesanan sedang diproses dan akan segera dikirim.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Payment Status Alert */}
-              {order.payment_status === 'pending' && (
+              {order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && (
                 <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <Clock className="h-5 w-5 text-yellow-600 mt-0.5" />
                     <div className="flex-1">
                       <h3 className="font-semibold text-yellow-900 mb-1">{t('trackOrder.paymentPending')}</h3>
                       <p className="text-sm text-yellow-700 mb-3">
-                        Your order is waiting for payment. Complete your payment to process your order.
+                        Selesaikan pembayaran sebelum waktu habis untuk memproses pesanan Anda.
                       </p>
                       <Button
                         onClick={handleContinuePayment}
@@ -603,140 +806,301 @@ export default function TrackOrderPage() {
                 </div>
               )}
 
-              {/* Guest User Actions - Create Account or Sign In */}
-              {(!user || (user && user.is_anonymous)) && (
-                <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              {/* Authorized Payment Alert */}
+              {order.payment_metadata?.transaction_status === 'authorize' && (
+                <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <UserPlus className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-blue-900 mb-1 text-sm sm:text-base">{t('trackOrder.saveYourOrder')}</h3>
-                      <p className="text-xs sm:text-sm text-blue-700 mb-3">
-                        {t('trackOrder.saveYourOrderText')}
+                    <CheckCircle2 className="h-5 w-5 text-purple-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-purple-900 mb-1">Pembayaran Diotorisasi</h3>
+                      <p className="text-sm text-purple-700">
+                        Pembayaran Anda telah diotorisasi dan akan segera diproses.
                       </p>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button 
-                          onClick={() => {
-                            sessionStorage.setItem('signupContext', JSON.stringify({
-                              email,
-                              orderNumber: order.order_number,
-                              fromTrackOrder: true
-                            }))
-                            window.location.href = '/register'
-                          }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white w-full text-xs sm:text-sm"
-                        >
-                          <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                          {t('trackOrder.createAccount')}
-                        </Button>
-                        <Button 
-                          onClick={() => {
-                            sessionStorage.setItem('signinContext', JSON.stringify({
-                              email,
-                              redirectTo: '/track-order'
-                            }))
-                            window.location.href = '/login'
-                          }}
-                          variant="outline" 
-                          className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full text-xs sm:text-sm"
-                        >
-                          <LogIn className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                          {t('trackOrder.alreadyHaveAccount')}
-                        </Button>
-                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              {/* Challenge/Under Review Alert */}
+              {order.payment_metadata?.transaction_status === 'challenge' && (
+                <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-orange-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-orange-900 mb-1">Pembayaran Dalam Peninjauan</h3>
+                      <p className="text-sm text-orange-700">
+                        Pembayaran Anda sedang ditinjau untuk keamanan. Kami akan memberi tahu Anda setelah dikonfirmasi.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Refund Alert */}
+              {order.payment_metadata?.transaction_status === 'refund' && (
+                <div className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Package className="h-5 w-5 text-gray-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">Pembayaran Dikembalikan</h3>
+                      <p className="text-sm text-gray-700">
+                        Pembayaran Anda telah dikembalikan. Dana akan kembali ke akun Anda dalam 3-7 hari kerja.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Partial Refund Alert */}
+              {order.payment_metadata?.transaction_status === 'partial_refund' && (
+                <div className="mb-4 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Package className="h-5 w-5 text-indigo-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-indigo-900 mb-1">Pengembalian Sebagian Diproses</h3>
+                      <p className="text-sm text-indigo-700">
+                        Pengembalian sebagian telah diproses. Dana akan kembali ke akun Anda dalam 3-7 hari kerja.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Chargeback Alert */}
+              {order.payment_metadata?.transaction_status === 'chargeback' && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-red-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-red-900 mb-1">Pembayaran Disengketakan</h3>
+                      <p className="text-sm text-red-700">
+                        Chargeback telah dimulai untuk pesanan ini. Tim kami akan menghubungi Anda mengenai hal ini.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reversal Alert */}
+              {order.payment_metadata?.transaction_status === 'reversal' && (
+                <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-green-900 mb-1">Chargeback Dibatalkan</h3>
+                      <p className="text-sm text-green-700">
+                        Chargeback telah dibatalkan. Pembayaran Anda dikembalikan dan pesanan sedang diproses.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Expired Payment Alert */}
+              {(order.payment_status === 'expired' || order.payment_metadata?.transaction_status === 'expire') && (
+                <div className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-gray-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">Pembayaran Kadaluarsa</h3>
+                      <p className="text-sm text-gray-700">
+                        Link pembayaran telah kadaluarsa. Silakan hubungi customer support untuk bantuan.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Failed/Cancelled Payment Alert */}
+              {(order.payment_metadata?.transaction_status === 'deny' || order.payment_metadata?.transaction_status === 'cancel') && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-red-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-red-900 mb-1">Pembayaran Gagal</h3>
+                      <p className="text-sm text-red-700">
+                        Pembayaran Anda {order.payment_metadata?.transaction_status === 'deny' ? 'ditolak' : 'dibatalkan'}. Silakan coba lagi atau gunakan metode pembayaran lain.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Product Items */}
+              {order.order_items && order.order_items.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Produk</h3>
+                  <div className="space-y-3">
+                    {order.order_items.map((item) => (
+                      <div key={item.id} className="flex gap-3">
+                        <img
+                          src={item.product.image_urls[0] || '/placeholder.png'}
+                          alt={item.product.name}
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
+                          <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {formatPrice(item.price_at_purchase * item.quantity, order.currency_code as any)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Order Details Grid */}
+              <div className="grid grid-cols-2 gap-3 text-sm mb-4 pb-4 border-b">
                 <div>
-                  <p className="text-gray-600">{t('trackOrder.orderNumber')}</p>
-                  <p className="font-mono font-semibold text-gray-900">{order.order_number}</p>
+                  <p className="text-gray-600 text-xs mb-1">Nomor Pesanan</p>
+                  <p className="font-mono font-semibold text-gray-900 text-xs">{order.order_number}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">{t('trackOrder.orderDate')}</p>
-                  <p className="font-semibold text-gray-900">
-                    {new Date(order.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                  <p className="text-gray-600 text-xs mb-1">Tanggal Pesanan</p>
+                  <p className="font-semibold text-gray-900 text-xs">
+                    {order.payment_metadata?.transaction_time
+                      ? new Date(order.payment_metadata.transaction_time).toLocaleString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : new Date(order.created_at).toLocaleDateString('id-ID', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                    }
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600">{t('trackOrder.totalAmount')}</p>
-                  <p className="font-semibold text-gray-900">
+                  <p className="text-gray-600 text-xs mb-1">Email</p>
+                  <p className="font-semibold text-gray-900 text-xs truncate">{order.customer_email}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-xs mb-1">Total Pembayaran</p>
+                  <p className="font-semibold text-gray-900 text-xs">
                     {formatPrice(order.total_amount, order.currency_code as any)}
                   </p>
                 </div>
-                {order.estimated_delivery_date && (
+                {(order.payment_metadata?.payment_type || order.payment_method_type) && (
                   <div>
-                    <p className="text-gray-600">Estimated Delivery</p>
-                    <p className="font-semibold text-gray-900">
-                      {new Date(order.estimated_delivery_date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric'
-                      })}
+                    <p className="text-gray-600 text-xs mb-1">Metode Pembayaran</p>
+                    <p className="font-semibold text-gray-900 text-xs capitalize">
+                      {(order.payment_metadata?.payment_type || order.payment_method_type || '').replace('_', ' ')}
                     </p>
                   </div>
                 )}
+                {(order.payment_metadata?.expiry_time || order.expiry_time) && (
+                  <>
+                    <div>
+                      <p className="text-gray-600 text-xs mb-1">Bayar Sebelum</p>
+                      <p className="font-semibold text-gray-900 text-xs">
+                        {new Date(order.payment_metadata?.expiry_time || order.expiry_time!).toLocaleString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                    {/* Only show Waktu Tersisa if payment is not successful */}
+                    {!(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && (
+                      <div>
+                        <p className="text-gray-600 text-xs mb-1">Waktu Tersisa</p>
+                        <p className="font-semibold text-gray-900 text-xs">
+                          {timeRemaining || 'Menghitung...'}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Shipping Address - Inside Main Card */}
+              <div className="pt-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-luxury-navy" />
+                  Alamat Pengiriman
+                </h3>
+                <div className="text-gray-700 space-y-1 text-sm">
+                  <p className="font-semibold">{order.shipping_address.full_name}</p>
+                  <p>{order.shipping_address.address_line1}</p>
+                  {order.shipping_address.address_line2 && (
+                    <p>{order.shipping_address.address_line2}</p>
+                  )}
+                  <p>
+                    {order.shipping_address.city}, {order.shipping_address.state_province}{' '}
+                    {order.shipping_address.postal_code}
+                  </p>
+                  <p>{order.shipping_address.country}</p>
+                  <p className="pt-2 text-gray-600">Telepon: {order.shipping_address.phone}</p>
+                </div>
               </div>
             </div>
 
-            {/* Tracking Information */}
-            {order.tracking_number && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Truck className="h-6 w-6 text-luxury-navy" />
-                  <h2 className="text-xl font-bold text-gray-900">Tracking Information</h2>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-600">Carrier</p>
-                    <p className="font-semibold text-gray-900">
-                      {order.carrier_code || 'Standard Shipping'}
+            {/* Simpan Pesanan Anda Card */}
+            {(!user || (user && user.is_anonymous)) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6">
+                <div className="flex items-start gap-3">
+                  <UserPlus className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-blue-900 mb-1 text-sm sm:text-base">Simpan Pesanan Anda</h3>
+                    <p className="text-xs sm:text-sm text-blue-700 mb-3">
+                      Buat akun untuk melacak pesanan ini dengan mudah dan mengelola pembelian di masa mendatang.
                     </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Tracking Number</p>
-                    <p className="font-mono font-semibold text-gray-900">{order.tracking_number}</p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button 
+                        onClick={() => {
+                          sessionStorage.setItem('signupContext', JSON.stringify({
+                            email,
+                            orderNumber: order.order_number,
+                            fromTrackOrder: true
+                          }))
+                          window.location.href = '/register'
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto text-xs sm:text-sm"
+                      >
+                        <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                        Buat Akun
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          sessionStorage.setItem('signinContext', JSON.stringify({
+                            email,
+                            redirectTo: '/track-order'
+                          }))
+                          window.location.href = '/login'
+                        }}
+                        variant="outline" 
+                        className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto text-xs sm:text-sm"
+                      >
+                        <LogIn className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                        Sudah Punya Akun?
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Shipping Address */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <MapPin className="h-6 w-6 text-luxury-navy" />
-                <h2 className="text-xl font-bold text-gray-900">{t('trackOrder.shippingAddress')}</h2>
-              </div>
-              <div className="text-gray-700 space-y-1">
-                <p className="font-semibold">{order.shipping_address.full_name}</p>
-                <p>{order.shipping_address.address_line1}</p>
-                {order.shipping_address.address_line2 && (
-                  <p>{order.shipping_address.address_line2}</p>
-                )}
-                <p>
-                  {order.shipping_address.city}, {order.shipping_address.state_province}{' '}
-                  {order.shipping_address.postal_code}
-                </p>
-                <p>{order.shipping_address.country}</p>
-                <p className="pt-2 text-gray-600">{t('trackOrder.phone')}: {order.shipping_address.phone}</p>
-              </div>
-            </div>
-
-            {/* Help Section */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="font-semibold text-blue-900 mb-2">{t('trackOrder.needHelp')}</h3>
+            {/* Butuh Bantuan Card */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6">
+              <h3 className="font-semibold text-blue-900 mb-2">Butuh Bantuan?</h3>
               <p className="text-sm text-blue-700 mb-3">
-                {t('trackOrder.needHelpText')}
+                Jika Anda memiliki pertanyaan tentang pesanan Anda, tim dukungan kami siap membantu.
               </p>
               <a
                 href="/contact"
                 className="text-sm text-luxury-navy hover:underline font-semibold"
               >
-                {t('trackOrder.contactSupport')} →
+                Hubungi Customer Support →
               </a>
             </div>
           </div>

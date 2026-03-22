@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { orderId, amount, customerDetails, items } = body
+    const { orderId, amount, customerDetails, items, shippingAddress } = body
 
     if (!orderId || !amount || !customerDetails) {
       return NextResponse.json(
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     
-    const parameter = {
+    const parameter: any = {
       transaction_details: {
         order_id: orderId,
         gross_amount: amount,
@@ -72,6 +72,21 @@ export async function POST(request: NextRequest) {
       callbacks: {
         finish: `${baseUrl}/api/midtrans/callback?order_id=${orderId}`,
       },
+    }
+
+    // Add shipping address if provided
+    if (shippingAddress) {
+      parameter.customer_details.shipping_address = {
+        first_name: shippingAddress.firstName || customerDetails.firstName,
+        last_name: shippingAddress.lastName || customerDetails.lastName || '',
+        email: shippingAddress.email || customerDetails.email,
+        phone: shippingAddress.phone || customerDetails.phone,
+        address: shippingAddress.address,
+        city: shippingAddress.city,
+        postal_code: shippingAddress.postalCode,
+        country_code: shippingAddress.countryCode || 'IDN',
+      }
+      console.log('📦 [MIDTRANS] Shipping address added to transaction')
     }
 
     const transaction = await snap.createTransaction(parameter)
