@@ -175,8 +175,9 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
     const pollInterval = setInterval(async () => {
       try {
         setMessages(currentMessages => {
-          const lastMessageTime = currentMessages.length > 0 
-            ? currentMessages[currentMessages.length - 1].created_at 
+          const validMessages = currentMessages.filter(Boolean)
+          const lastMessageTime = validMessages.length > 0 
+            ? validMessages[validMessages.length - 1].created_at 
             : new Date(0).toISOString()
 
           fetch(`/api/chat/conversations/${conversationId}`, {
@@ -320,11 +321,17 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
       
       if (!response.ok) {
         console.error('Failed to load messages:', response.status)
+        if (response.status === 404) {
+          // Stale conversation ID — reset so a new one gets created
+          sessionStorage.removeItem('chat_conv_id')
+          setConversationId(null)
+          setMessages([])
+        }
         return
       }
       
       const { messages: loadedMessages } = await response.json()
-      setMessages(loadedMessages || [])
+      setMessages((loadedMessages || []).filter(Boolean))
     } catch (error) {
       console.error('Failed to load messages:', error)
     }
@@ -349,8 +356,15 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
         }),
       })
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to send message')
+      }
+
       const { message } = await response.json()
-      setMessages((prev) => [...prev, message])
+      if (message) {
+        setMessages((prev) => [...prev, message])
+      }
     } catch (error) {
       console.error('Failed to send message:', error)
       toast.error('Failed to send message')
