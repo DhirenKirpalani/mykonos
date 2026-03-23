@@ -89,7 +89,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
     }
 
     setIsAddingToCart(true)
-    
+
     try {
       // Get or create session (anonymous or authenticated)
       let { data: { session } } = await supabase.auth.getSession()
@@ -100,25 +100,31 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         if (error) {
           console.error('Failed to create anonymous session:', error)
           toast.error('Unable to add to cart. Please refresh the page.')
+          setIsAddingToCart(false)
           return
         }
         session = data.session
         
-        // Store anonymous user_id in localStorage for persistence
         if (session?.user?.is_anonymous) {
           localStorage.setItem('anonymous_user_id', session.user.id)
         }
       } else if (session.user.is_anonymous) {
-        // Store anonymous user_id for future use
         localStorage.setItem('anonymous_user_id', session.user.id)
       }
 
       if (!session?.access_token) {
         toast.error('Unable to add to cart. Please refresh the page.')
+        setIsAddingToCart(false)
         return
       }
 
-      const response = await fetch('/api/cart', {
+      // ⚡ Optimistic update — increment badge locally and reset button immediately
+      const qty = quantity || 1
+      window.dispatchEvent(new CustomEvent('cart-count-increment', { detail: { delta: qty } }))
+      setIsAddingToCart(false)
+
+      // Fire API in background; sync real count when done
+      fetch('/api/cart', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -126,25 +132,28 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         },
         body: JSON.stringify({
           product_id: productIdOverride || productId,
-          quantity: quantity || 1,
+          quantity: qty,
           variant_name: selectedVariants?.variant_name,
           variant_sku: selectedVariants?.variant_sku,
         }),
       })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Dispatch event to update cart badge
-        window.dispatchEvent(new Event('cart-updated'))
-      } else {
-        console.error('Cart API error:', data)
-        toast.error(data.error || 'Failed to add to cart')
-      }
+        .then(async (response) => {
+          if (!response.ok) {
+            const data = await response.json()
+            console.error('Cart API error:', data)
+            toast.error(data.error || 'Failed to add to cart')
+          }
+          // Always sync real count from DB after API completes
+          window.dispatchEvent(new Event('cart-updated'))
+        })
+        .catch((error) => {
+          console.error('Add to cart error:', error)
+          toast.error('Failed to add to cart')
+          window.dispatchEvent(new Event('cart-updated'))
+        })
     } catch (error) {
       console.error('Add to cart error:', error)
       toast.error('Failed to add to cart')
-    } finally {
       setIsAddingToCart(false)
     }
   }
