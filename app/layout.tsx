@@ -17,10 +17,13 @@ const playfair = Playfair_Display({
   display: 'swap',
 })
 
+const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://mykonos-test.vercel.app'
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://mykonos.com'),
+  metadataBase: new URL(baseUrl),
   title: {
-    default: 'Mykonos - Luxury Fragrances & Perfumes',
+    default: 'Mykonos - Modern & Vibrant Perfumery',
     template: '%s | Mykonos',
   },
   description: 'Discover exquisite luxury fragrances and perfumes. Experience the art of fine perfumery with our exclusive collections of niche and haute perfumery.',
@@ -49,16 +52,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://mykonos.com',
+    url: baseUrl,
     siteName: 'Mykonos',
-    title: 'Mykonos - Luxury Fragrances & Perfumes',
+    title: 'Mykonos - Modern & Vibrant Perfumery',
     description: 'Discover exquisite luxury fragrances and perfumes. Experience the art of fine perfumery with our exclusive collections of niche and haute perfumery.',
-  },
-  twitter: {
-    card: 'summary',
-    title: 'Mykonos - Luxury Fragrances & Perfumes',
-    description: 'Discover exquisite luxury fragrances and perfumes. Experience the art of fine perfumery with our exclusive collections.',
-    creator: '@mykonos',
   },
   robots: {
     index: true,
@@ -76,7 +73,7 @@ export const metadata: Metadata = {
     yandex: 'your-yandex-verification-code',
   },
   alternates: {
-    canonical: 'https://mykonos.com',
+    canonical: baseUrl,
   },
   category: 'e-commerce',
 }
@@ -88,24 +85,23 @@ export default function RootLayout({
 }) {
   const structuredData = {
     '@context': 'https://schema.org',
-    '@type': 'Store',
+    '@type': 'OnlineStore',
     name: 'Mykonos',
     description: 'Luxury fragrances and perfumes boutique offering exclusive niche and haute perfumery collections',
-    url: 'https://mykonos.com',
+    url: baseUrl,
     priceRange: '$$$$',
-    '@id': 'https://mykonos.com/#store',
+    '@id': `${baseUrl}/#store`,
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://mykonos.com/search?q={search_term_string}',
+        urlTemplate: `${baseUrl}/search?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
     sameAs: [
-      'https://www.instagram.com/mykonos',
-      'https://www.facebook.com/mykonos',
-      'https://twitter.com/mykonos',
+      'https://www.instagram.com/officialmykonos/',
+      'https://www.tiktok.com/@mykonosofficial',
     ],
   }
 
@@ -115,18 +111,6 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('scrollRestoration' in history) {
-                history.scrollRestoration = 'manual';
-              }
-              window.addEventListener('load', function() {
-                window.scrollTo(0, 0);
-              });
-            `,
-          }}
         />
       </head>
       <body className="font-sans antialiased bg-luxury-navy">

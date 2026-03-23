@@ -151,7 +151,7 @@ function ProductsContent() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-3 md:px-6 md:py-4 lg:px-8">
+      <div className="container mx-auto px-4 py-3 md:px-6 md:py-4 lg:px-8 pb-20">
         {/* Breadcrumb - Desktop only */}
         <div className="mb-3 hidden md:block">
           <Breadcrumb 

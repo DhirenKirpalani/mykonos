@@ -233,8 +233,8 @@ export default function ProductDetailPage({
       </div>
 
       {relatedProducts.length > 0 && (
-        <div className="border-t border-border/40 bg-luxury-gray-light">
-          <ProductCarousel title="You May Also Like" products={relatedProducts} />
+        <div className="border-t border-border/40 bg-luxury-gray-light pb-20">
+          <ProductCarousel title="You May Also Like" products={relatedProducts} backgroundColor="bg-luxury-gray-light" />
         </div>
       )}
     </div>

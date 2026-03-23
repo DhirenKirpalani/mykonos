@@ -98,7 +98,9 @@ export default function LoginPage() {
       
       router.push('/account')
     } catch (error: any) {
-      setError(error.message || 'Failed to sign in')
+      toast.error('Login failed', {
+        description: error.message || 'Failed to sign in'
+      })
     } finally {
       setLoading(false)
     }
@@ -132,7 +134,6 @@ export default function LoginPage() {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
                   className="w-full rounded-md border border-input bg-background px-4 py-3 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                 />
               </div>
@@ -156,7 +157,6 @@ export default function LoginPage() {
                     id="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
                     className="w-full rounded-md border border-input bg-background px-4 py-3 pr-12 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                   />
                   <button

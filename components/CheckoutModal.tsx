@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Mail, MapPin, CheckCircle2, AlertCircle, Map } from 'lucide-react'
+import { Mail, MapPin, CheckCircle2, AlertCircle, Map, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -37,6 +38,7 @@ interface CheckoutModalProps {
 }
 
 export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps) {
+  const router = useRouter()
   const { region } = useRegion()
   const { t } = useLanguage()
   const [step, setStep] = useState<'email' | 'password' | 'address'>('email')
@@ -50,6 +52,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [showMap, setShowMap] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   
   const [email, setEmail] = useState('')
   const [shippingForm, setShippingForm] = useState({
@@ -185,6 +188,10 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
     setIsSubmitting(true)
 
     try {
+      // Get anonymous user ID before login (if exists)
+      const { data: { session: anonSession } } = await supabase.auth.getSession()
+      const anonymousUserId = anonSession?.user?.is_anonymous ? anonSession.user.id : null
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -197,16 +204,42 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
       }
 
       if (data.user) {
+        // Merge anonymous cart to logged-in user
+        if (anonymousUserId) {
+          try {
+            console.log('🔄 [CHECKOUT MODAL] Merging anonymous cart:', anonymousUserId, '→', data.user.id)
+            await supabase.rpc('merge_anonymous_cart_to_user', {
+              p_anonymous_user_id: anonymousUserId,
+              p_logged_in_user_id: data.user.id
+            } as any)
+            
+            await supabase.rpc('merge_anonymous_wishlist_to_user', {
+              p_anonymous_user_id: anonymousUserId,
+              p_logged_in_user_id: data.user.id
+            } as any)
+            
+            // Clear anonymous user_id and cached cart from localStorage after merge
+            localStorage.removeItem('anonymous_user_id')
+            localStorage.removeItem('cached_cart')
+            console.log('✅ [CHECKOUT MODAL] Cart merge completed')
+          } catch (mergeError) {
+            console.error('❌ [CHECKOUT MODAL] Cart merge error:', mergeError)
+            // Don't block login if merge fails
+          }
+        }
+
         toast.success('Logged in successfully!')
-        // Close modal and reload page to show logged-in state
+        // Set flag to prevent checkout page from re-initializing before reload
+        sessionStorage.setItem('checkout_reloading', 'true')
+        // Keep loading state and reload page to show logged-in state
         // Note: Buy Now items remain in sessionStorage and will be processed during checkout
-        onClose()
+        // Don't call onClose() or setIsSubmitting(false) to prevent form flash
+        // The modal will stay open with loading state until page reloads
         window.location.reload()
       }
     } catch (error: any) {
       setPasswordError('Login failed. Please try again.')
       toast.error('Login failed')
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -279,6 +312,8 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
       setEmailValid(null)
       setIsRegistered(false)
       setFetchedAddress(null)
+      setShowPassword(false)
+      setValidationErrors({})
       setShippingForm({
         full_name: '',
         phone: '',
@@ -419,17 +454,27 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
 
             <div>
               <Label htmlFor="modal-password">Password *</Label>
-              <Input
-                id="modal-password"
-                type="password"
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={isSubmitting}
-                autoFocus
-                className={passwordError ? 'border-red-500' : ''}
-              />
+              <div className="relative">
+                <Input
+                  id="modal-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  disabled={isSubmitting}
+                  autoFocus
+                  className={passwordError ? 'border-red-500' : ''}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
               {passwordError && (
                 <p className="text-sm text-red-600 mt-1">{passwordError}</p>
               )}
