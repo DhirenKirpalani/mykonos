@@ -142,7 +142,10 @@ export const translations = {
       lastName: "Last Name",
       phone: "Phone Number",
       confirmPassword: "Confirm Password",
-      agreeToTerms: "I agree to the Terms of Service and Privacy Policy"
+      agreeToTermsPre: "I agree to the ",
+      termsOfService: "Terms of Service",
+      agreeToTermsMiddle: " and ",
+      privacyPolicy: "Privacy Policy"
     },
     product: {
       buyNow: "Buy Now",
@@ -646,8 +649,8 @@ export const translations = {
       viewAll: "Lihat semua notifikasi"
     },
     wishlist: {
-      title: "Daftar Keinginan",
-      empty: "Daftar keinginan Anda kosong",
+      title: "Wishlist",
+      empty: "Wishlist Anda kosong",
       addToCart: "Tambah ke Keranjang",
       remove: "Hapus",
       outOfStock: "Stok Habis",
@@ -683,7 +686,10 @@ export const translations = {
       lastName: "Nama Belakang",
       phone: "Nomor Telepon",
       confirmPassword: "Konfirmasi Kata Sandi",
-      agreeToTerms: "Saya setuju dengan Syarat Layanan dan Kebijakan Privasi"
+      agreeToTermsPre: "Saya setuju dengan ",
+      termsOfService: "Syarat Layanan",
+      agreeToTermsMiddle: " dan ",
+      privacyPolicy: "Kebijakan Privasi"
     },
     product: {
       buyNow: "Beli Sekarang",
@@ -858,8 +864,8 @@ export const translations = {
       quantity: "Jumlah"
     },
     wishlistModal: {
-      title: "Daftar Keinginan",
-      empty: "Daftar keinginan Anda kosong",
+      title: "Wishlist",
+      empty: "Wishlist Anda kosong",
       continueShopping: "Lanjutkan Belanja",
       addToCart: "Tambah ke Keranjang",
       remove: "Hapus"
