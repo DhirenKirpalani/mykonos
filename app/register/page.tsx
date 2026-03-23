@@ -57,7 +57,9 @@ export default function RegisterPage() {
 
     // Validate email format
     if (!validateEmail(formData.email)) {
-      setError('Please enter a valid email address')
+      toast.error('Invalid email address', {
+        description: 'Please enter a valid email address'
+      })
       setIsSubmitting(false)
       return
     }
@@ -70,7 +72,9 @@ export default function RegisterPage() {
       .single()
 
     if (existingUser) {
-      setError('An account with this email already exists')
+      toast.error('Email already exists', {
+        description: 'An account with this email already exists'
+      })
       setIsSubmitting(false)
       return
     }
@@ -78,19 +82,25 @@ export default function RegisterPage() {
     // Validate password strength
     const passwordValidation = validatePassword(formData.password)
     if (!passwordValidation.isValid) {
-      setError('Password does not meet security requirements. Please check the password strength indicator.')
+      toast.error('Weak password', {
+        description: 'Password does not meet security requirements. Please check the password strength indicator.'
+      })
       setIsSubmitting(false)
       return
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      toast.error('Passwords do not match', {
+        description: 'Please make sure both passwords are identical'
+      })
       setIsSubmitting(false)
       return
     }
 
     if (!termsAccepted) {
-      setError('You must accept the Terms of Service and Privacy Policy to continue')
+      toast.error('Terms not accepted', {
+        description: 'You must accept the Terms of Service and Privacy Policy to continue'
+      })
       setIsSubmitting(false)
       return
     }
@@ -132,7 +142,9 @@ export default function RegisterPage() {
       if (error) {
         // Handle rate limit errors specifically
         if (error.message?.includes('rate limit') || error.message?.includes('email_send_rate_limit')) {
-          setError('Too many signup attempts. Please wait a few minutes and try again.')
+          toast.error('Too many attempts', {
+            description: 'Please wait a few minutes and try again.'
+          })
           setIsSubmitting(false)
           setLoading(false)
           return
@@ -201,7 +213,9 @@ export default function RegisterPage() {
         router.push('/login')
       }, 1500)
     } catch (error: any) {
-      setError(error.message || 'Failed to create account')
+      toast.error('Registration failed', {
+        description: error.message || 'Failed to create account'
+      })
     } finally {
       setLoading(false)
       setIsSubmitting(false)
@@ -237,7 +251,6 @@ export default function RegisterPage() {
                     id="firstName"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    required
                     className="w-full rounded-md border border-input bg-background px-4 py-3 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                   />
                 </div>
@@ -250,7 +263,6 @@ export default function RegisterPage() {
                     id="lastName"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    required
                     className="w-full rounded-md border border-input bg-background px-4 py-3 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                   />
                 </div>
@@ -265,7 +277,6 @@ export default function RegisterPage() {
                   id="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
                   className="w-full rounded-md border border-input bg-background px-4 py-3 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                 />
               </div>
@@ -293,8 +304,6 @@ export default function RegisterPage() {
                     id="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                    minLength={8}
                     className="w-full rounded-md border border-input bg-background px-4 py-3 pr-12 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                   />
                   <button
@@ -318,7 +327,6 @@ export default function RegisterPage() {
                     id="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    required
                     className="w-full rounded-md border border-input bg-background px-4 py-3 pr-12 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                   />
                   <button
@@ -337,11 +345,17 @@ export default function RegisterPage() {
                   id="terms"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  required
                   className="mt-1 h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
                 />
                 <label htmlFor="terms" className="ml-2 text-sm text-muted-foreground">
-                  {t.auth.agreeToTerms}
+                  {t.auth.agreeToTermsPre}
+                  <Link href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-luxury-gold hover:underline">
+                    {t.auth.termsOfService}
+                  </Link>
+                  {t.auth.agreeToTermsMiddle}
+                  <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-luxury-gold hover:underline">
+                    {t.auth.privacyPolicy}
+                  </Link>
                 </label>
               </div>
 

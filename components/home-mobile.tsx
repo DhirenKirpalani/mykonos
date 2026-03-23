@@ -50,7 +50,7 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling }: 
       {products.length > 0 && (
         <section className="relative bg-gradient-to-br from-[#1C2E4A] via-[#16213E] to-[#0F1729] py-8">
           <ProductCarousel 
-            title="Popular" 
+            title={t.home.popular} 
             products={products}
             backgroundColor="bg-transparent"
             titleColor="text-[#C2A36B]"
@@ -73,23 +73,23 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling }: 
       
       <FragranceFamiliesGrid />
 
-      <section className="relative bg-luxury-navy py-16 text-white">
+      <section className="relative bg-white py-16 text-luxury-navy">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.05)_1px,_transparent_0)] bg-[length:40px_40px]" />
         <div className="container relative mx-auto px-4 text-center">
           <ScrollReveal>
-            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold">
+            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold/80">
               {t.home.artOfPerfumery}
             </p>
             <h2 className="mb-4 font-serif text-2xl font-bold">
               {t.home.experienceLuxury}
             </h2>
-            <p className="mx-auto mb-8 max-w-3xl text-sm text-gray-300">
+            <p className="mx-auto mb-8 max-w-3xl text-sm text-luxury-navy/80">
               {t.home.experienceLuxuryDesc}
             </p>
             <Link href="/about">
               <Button
                 size="lg"
-                className="border-2 border-luxury-gold bg-luxury-gold px-6 py-3 text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-white hover:text-luxury-navy hover:border-white"
+                className="border-2 border-luxury-gold bg-luxury-gold px-6 py-3 text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white"
               >
                 {t.home.discoverStory}
               </Button>
@@ -98,103 +98,6 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling }: 
         </div>
       </section>
 
-      <section className="bg-white py-12 pb-16">
-        <div className="container mx-auto px-4">
-          <ScrollReveal>
-            <div className="mb-8 text-center">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold">
-                {t.home.whyChooseMykonos}
-              </p>
-              <h2 className="font-serif text-2xl font-bold">
-                {t.home.uncompromisingExcellence}
-              </h2>
-            </div>
-          </ScrollReveal>
-          <div className="space-y-8">
-            <ScrollReveal delay={0}>
-              <div className="group text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-luxury-gold/20 bg-luxury-gold/5 transition-all duration-500 group-hover:border-luxury-gold group-hover:bg-luxury-gold/10">
-                  <svg
-                    className="h-8 w-8 text-luxury-gold transition-transform duration-500 group-hover:scale-110"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <h3 className="mb-3 font-serif text-lg font-bold">
-                Premium Quality
-              </h3>
-              <p className="text-sm text-gray-600">
-                Only the finest ingredients sourced from around the world
-              </p>
-            </div>
-            </ScrollReveal>
-            <ScrollReveal delay={150}>
-              <div className="group text-center">
-                <div className="mb-6 flex justify-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-luxury-gold/20 bg-luxury-gold/5 transition-all duration-500 group-hover:border-luxury-gold group-hover:bg-luxury-gold/10">
-                    <svg
-                      className="h-8 w-8 text-luxury-gold transition-transform duration-500 group-hover:scale-110"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <h3 className="mb-3 font-serif text-lg font-bold">
-                  Complimentary Gift Wrapping
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Every order arrives beautifully packaged
-                </p>
-              </div>
-            </ScrollReveal>
-            <ScrollReveal delay={300}>
-              <div className="group text-center">
-                <div className="mb-6 flex justify-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-luxury-gold/20 bg-luxury-gold/5 transition-all duration-500 group-hover:border-luxury-gold group-hover:bg-luxury-gold/10">
-                    <svg
-                      className="h-8 w-8 text-luxury-gold transition-transform duration-500 group-hover:scale-110"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <h3 className="mb-3 font-serif text-lg font-bold">
-                  Free Shipping
-                </h3>
-                <p className="text-sm text-gray-600">
-                  On all orders over $150
-                </p>
-              </div>
-            </ScrollReveal>
           </div>
-        </div>
-      </section>
-    </div>
   )
 }

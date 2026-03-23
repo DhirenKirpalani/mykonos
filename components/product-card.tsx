@@ -60,6 +60,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { BadgePercent } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Database } from '@/lib/supabase/database.types'
 
@@ -67,9 +68,10 @@ type Product = Database['public']['Tables']['products']['Row']
 
 interface ProductCardProps {
   product: Product
+  className?: string
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, className }: ProductCardProps) {
   const { region } = useRegion()
   const { t, locale } = useLanguage()
   const [mounted, setMounted] = useState(false)
@@ -137,16 +139,15 @@ export function ProductCard({ product }: ProductCardProps) {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-      className="
-        group relative
-        w-full
+      className={`group relative
+        w-full h-full
+        flex flex-col
         overflow-hidden
         rounded-lg
         bg-[#FBF9F5]
         shadow-[0_2px_8px_rgba(0,0,0,0.08)]
         hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)]
-        transition-shadow duration-300
-      "
+        transition-shadow duration-300 ${className}`}
     >
       {/* Hall/ORI badge - Top left */}
       {(product as any).halal_certified && (
@@ -230,8 +231,8 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Content - Fixed heights for consistency */}
-        <div className="flex flex-col p-2 md:p-3">
+        {/* Content */}
+        <div className="flex flex-col flex-1 p-2 md:p-3">
           {/* Product Name - Fixed height */}
           <h3 className="
             text-[11px] md:text-sm
@@ -247,39 +248,46 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.name}
           </h3>
 
-          {/* Price with discount - Fixed height with extra space for strikethrough */}
-          <div className="flex flex-col gap-0.5 mb-2 h-[3rem] md:h-[3rem]">
-            <div className="flex items-center gap-2">
-              <p className="
-                text-sm md:text-lg
-                text-[#1C2E4A]
-                font-bold
-              ">
-                {region ? (
-                  hasPriceRange 
-                    ? `${formatPrice(minVariantPrice, region.currency_code)} - ${formatPrice(maxVariantPrice, region.currency_code)}`
-                    : formatPrice(getPrice(), region.currency_code)
-                ) : '...'}
-              </p>
-              {!hasPriceRange && product.sale_price && product.sale_price < getPrice() && (
-                <span className="text-[10px] md:text-sm text-red-600 font-medium">
-                  -{Math.round(((getPrice() - product.sale_price) / getPrice()) * 100)}%
-                </span>
-              )}
-            </div>
-            {/* Compare-at price for variants */}
-            {hasPriceRange && (minVariantCompareAtPrice > minVariantPrice || maxVariantCompareAtPrice > maxVariantPrice) && (
-              <p className="text-[10px] md:text-sm text-gray-400 line-through">
-                {hasCompareAtPriceRange 
-                  ? `${formatPrice(minVariantCompareAtPrice, region?.currency_code || 'USD')} - ${formatPrice(maxVariantCompareAtPrice, region?.currency_code || 'USD')}`
-                  : formatPrice(minVariantCompareAtPrice || maxVariantCompareAtPrice, region?.currency_code || 'USD')
-                }
-              </p>
-            )}
-          </div>
+          {/* Price with discount */}
+          {(() => {
+            // Always show just the min/base price
+            const displayPrice = region
+              ? (hasVariants && minVariantPrice > 0 ? minVariantPrice : getPrice())
+              : 0
 
-          {/* Pilih Lokal Badge - Fixed height */}
-          <div className="mb-1.5 h-[1.25rem]">
+            // Compute discount percent from compare-at
+            let discountPct = 0
+            if (hasVariants && minVariantCompareAtPrice > 0 && minVariantCompareAtPrice > minVariantPrice) {
+              discountPct = Math.round((minVariantCompareAtPrice - minVariantPrice) / minVariantCompareAtPrice * 100)
+            } else if (!hasVariants && product.sale_price && product.sale_price < getPrice()) {
+              discountPct = Math.round((getPrice() - product.sale_price) / getPrice() * 100)
+            } else if (!hasVariants && region) {
+              const compareAt = region.code === 'ID' ? (product as any).compare_at_price_idr : (product as any).compare_at_price_usd
+              if (compareAt && compareAt > getPrice()) {
+                discountPct = Math.round((compareAt - getPrice()) / compareAt * 100)
+              }
+            }
+
+            return (
+              <div className="flex items-center gap-1.5 mb-1.5 flex-nowrap">
+                <p className="text-sm md:text-base text-[#1C2E4A] font-bold">
+                  {region ? formatPrice(displayPrice, region.currency_code) : '...'}
+                </p>
+                {discountPct > 0 && (
+                  <span className="inline-flex items-center gap-0.5 bg-red-50 border border-red-300 rounded px-1 py-0.5 text-[9px] md:text-[11px] text-red-600 font-semibold whitespace-nowrap">
+                    <BadgePercent className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
+                    -{discountPct}%
+                  </span>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Spacer to push badge/rating to bottom */}
+          <div className="flex-1" />
+
+          {/* Pilih Lokal Badge */}
+          <div className="mb-1.5 min-h-[1.25rem]">
             {mounted && product.pilih_lokal && (
               <span className="inline-block rounded border border-[#1C2E4A] px-2 py-0.5 text-[9px] md:text-xs text-[#1C2E4A] font-medium">
                 {t.products.pilihLokal}
@@ -287,8 +295,8 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
           </div>
 
-          {/* Trust Signals - Rating & Sold Count - Fixed height */}
-          <div className="h-[1.25rem] md:h-[1.5rem]">
+          {/* Trust Signals - Rating & Sold Count */}
+          <div>
             {mounted && (product.rating > 0 || product.products_sold > 0) && (
               <div className="flex items-center gap-1.5 text-[10px] md:text-sm">
               {product.rating > 0 && (

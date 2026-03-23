@@ -301,7 +301,7 @@ export default function TrackOrderPage() {
         console.log('🔍 [POLLING] Checking order status...')
         const { data, error } = await supabase
           .from('orders')
-          .select('payment_status, status, snap_token, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, carrier')
+          .select('payment_status, status, snap_token, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, carrier_code')
           .eq('order_number', order.order_number)
           .eq('customer_email', order.customer_email)
           .single()

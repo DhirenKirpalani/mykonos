@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, X } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { supabase } from '@/lib/supabase/client'
 
 const fragranceFamilies = [
   'Aqua & Aromatic',
@@ -29,6 +30,8 @@ export function ProductFilters() {
   const [isOpen, setIsOpen] = useState(false)
   const [fragranceDropdownOpen, setFragranceDropdownOpen] = useState(false)
   const [tempCategory, setTempCategory] = useState<string>('')
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
+  const [totalCount, setTotalCount] = useState(0)
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -46,6 +49,34 @@ export function ProductFilters() {
 
   const currentCategory = searchParams.get('category')
   const currentSort = searchParams.get('sort') || 'best-selling'
+
+  // Fetch product counts for each category
+  useEffect(() => {
+    async function fetchCategoryCounts() {
+      try {
+        // Get total count
+        const { count: total } = await supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+        
+        setTotalCount(total || 0)
+
+        // Get counts for each fragrance family
+        const counts: Record<string, number> = {}
+        for (const family of fragranceFamilies) {
+          const { count } = await supabase
+            .from('products')
+            .select('*', { count: 'exact', head: true })
+            .eq('fragrance_family', family)
+          counts[family] = count || 0
+        }
+        setCategoryCounts(counts)
+      } catch (error) {
+        console.error('Error fetching category counts:', error)
+      }
+    }
+    fetchCategoryCounts()
+  }, [])
 
   // Initialize temp category when modal opens
   const handleOpenModal = () => {
@@ -126,7 +157,7 @@ export function ProductFilters() {
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}
                       >
-                        {t.productsPage.allFamilies}
+                        {t.productsPage.allFamilies} ({totalCount})
                       </button>
                       {fragranceFamilies.map((family) => (
                         <button
@@ -141,7 +172,7 @@ export function ProductFilters() {
                               : 'text-gray-600 hover:bg-gray-100'
                           }`}
                         >
-                          {family}
+                          {family} ({categoryCounts[family] || 0})
                         </button>
                       ))}
                     </div>
@@ -244,7 +275,7 @@ export function ProductFilters() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              {t.productsPage.allFamilies}
+              {t.productsPage.allFamilies} ({totalCount})
             </button>
             
             {fragranceFamilies.map((family) => (
@@ -257,7 +288,7 @@ export function ProductFilters() {
                     : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                {family}
+                {family} ({categoryCounts[family] || 0})
               </button>
             ))}
           </div>

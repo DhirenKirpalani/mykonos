@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
     const {
       order_id,
       transaction_status,
+      status_code,
       fraud_status,
       signature_key,
       gross_amount,
@@ -56,12 +57,13 @@ export async function POST(request: NextRequest) {
     
     const hash = crypto
       .createHash('sha512')
-      .update(`${order_id}${transaction_status}${gross_amount}${serverKey}`)
+      .update(`${order_id}${status_code}${gross_amount}${serverKey}`)
       .digest('hex')
 
     console.log('🔐 [WEBHOOK] Signature verification:', {
       order_id,
       transaction_status,
+      status_code,
       gross_amount,
       server_key_prefix: serverKey.substring(0, 10),
       expected_hash: hash.substring(0, 20) + '...',
@@ -70,15 +72,13 @@ export async function POST(request: NextRequest) {
     })
 
     if (hash !== signature_key) {
-      console.error('❌ [WEBHOOK] Invalid signature - potential fraud attempt or wrong server key')
-      console.error('Expected hash:', hash)
-      console.error('Received signature:', signature_key)
-      console.error('Hash input string:', `${order_id}${transaction_status}${gross_amount}${serverKey}`)
-      
-      // TEMPORARY: Allow webhook to proceed despite signature mismatch for debugging
-      // TODO: Remove this after resolving Midtrans server key issue
-      console.warn('⚠️ [WEBHOOK] SECURITY BYPASS: Continuing despite signature mismatch')
-      console.warn('⚠️ [WEBHOOK] This should be fixed by contacting Midtrans support')
+      console.error('❌ [WEBHOOK] Invalid signature - rejecting request (potential fraud attempt)')
+      console.error('Expected hash:', hash.substring(0, 20) + '...')
+      console.error('Received signature:', signature_key?.substring(0, 20) + '...')
+      return NextResponse.json(
+        { error: 'Invalid signature' },
+        { status: 401 }
+      )
     }
     
     console.log('✅ [WEBHOOK] Signature verified successfully')
@@ -143,17 +143,21 @@ export async function POST(request: NextRequest) {
     }
     
     // Verify gross_amount matches order total (fraud prevention)
-    const expectedAmount = Math.round(typedCurrentOrder.total_amount)
-    const receivedAmount = Math.round(parseFloat(gross_amount))
-    if (expectedAmount !== receivedAmount) {
-      console.error('❌ Amount mismatch - potential fraud', {
-        expected: expectedAmount,
-        received: receivedAmount
-      })
-      return NextResponse.json(
-        { error: 'Amount mismatch' },
-        { status: 400 }
-      )
+    // Only apply to actual payment confirmation events, not expire/cancel/deny
+    const paymentConfirmationStatuses = ['capture', 'settlement']
+    if (paymentConfirmationStatuses.includes(transaction_status)) {
+      const expectedAmount = Math.round(typedCurrentOrder.total_amount)
+      const receivedAmount = Math.round(parseFloat(gross_amount))
+      if (expectedAmount !== receivedAmount) {
+        console.error('❌ Amount mismatch - potential fraud', {
+          expected: expectedAmount,
+          received: receivedAmount
+        })
+        return NextResponse.json(
+          { error: 'Amount mismatch' },
+          { status: 400 }
+        )
+      }
     }
     
     // Use the new complete_order_payment function with amount verification

@@ -88,6 +88,9 @@ export default function CheckoutPage() {
   })
 
   useEffect(() => {
+    // Clear reload flag if it exists
+    sessionStorage.removeItem('checkout_reloading')
+    
     // Load Midtrans Snap script
     const snapScript = document.createElement('script')
     snapScript.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
@@ -154,6 +157,32 @@ export default function CheckoutPage() {
     }
     window.addEventListener('focus', handleFocus)
 
+    // Listen for auth state changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 [CHECKOUT] Auth state changed:', event, session?.user?.id)
+      
+      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
+        // Check if page is about to reload (flag set by CheckoutModal)
+        const isReloading = sessionStorage.getItem('checkout_reloading')
+        if (isReloading) {
+          console.log('⏭️ [CHECKOUT] Skipping re-initialization, page is reloading...')
+          return
+        }
+        
+        console.log('✅ [CHECKOUT] User signed in, waiting for cart merge...')
+        // Wait a bit for cart merge to complete
+        await new Promise(resolve => setTimeout(resolve, 500))
+        // Refetch cart items after login
+        const urlParams = new URLSearchParams(window.location.search)
+        const isBuyNowFlow = urlParams.get('buyNow') === 'true'
+        const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
+        if (!isBuyNowFlow && !isOrderAgainFlow) {
+          console.log('🔄 [CHECKOUT] Refetching cart after login...')
+          await initializeCheckout()
+        }
+      }
+    })
+
     return () => {
       // Cleanup script on unmount
       if (snapScript.parentNode) {
@@ -162,6 +191,7 @@ export default function CheckoutPage() {
       window.removeEventListener('cart-updated', handleCartUpdate)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleFocus)
+      subscription.unsubscribe()
     }
   }, [])
 
@@ -843,31 +873,29 @@ export default function CheckoutPage() {
       const isGuest = session?.user?.is_anonymous
       console.log('🔵 [DEBUG] Is guest user?', isGuest)
       console.log('🔵 [DEBUG] Session:', session)
-      
-      // For guest users, redirect immediately to track-order page
-      if (isGuest) {
-        const customerEmail = orderData.customer_email || ''
-        const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
-        console.log('🔵 [GUEST] Redirecting guest immediately to:', redirectUrl)
-        toast.success('Order created! Redirecting to tracking page...')
-        setIsProcessing(false)
-        setTimeout(() => {
-          window.location.href = redirectUrl
-        }, 500)
-        return
-      }
+
+      // Check for existing pending order FIRST (applies to both guests and logged-in users)
+      // This prevents duplicate inventory reservations
       if (orderData.is_existing) {
         console.log('♻️ [ORDER] Reusing existing pending order')
         toast.info('Continuing with your pending order')
+
+        if (isGuest) {
+          const customerEmail = orderData.customer_email || ''
+          const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
+          console.log('🔵 [GUEST REUSE] Redirecting guest to existing order tracking:', redirectUrl)
+          setIsProcessing(false)
+          setTimeout(() => {
+            window.location.href = redirectUrl
+          }, 500)
+          return
+        }
         
         // If reusing and has valid snap_token, use it directly
         if (orderData.snap_token && orderData.expiry_time) {
           const expiryDate = new Date(orderData.expiry_time)
           if (expiryDate > new Date()) {
             console.log('✅ [ORDER] Reusing existing snap_token')
-            
-            // Guest users should have already been redirected earlier
-            // This code only runs for logged-in users
             
             // Logged-in users: open payment modal with existing token
             const redirectUrl = '/account/orders/' + orderData.order_id
@@ -909,6 +937,19 @@ export default function CheckoutPage() {
             console.log('⏰ [ORDER] Existing snap_token expired, generating new one')
           }
         }
+      }
+      
+      // For NEW guest orders, redirect immediately to track-order page
+      if (isGuest) {
+        const customerEmail = orderData.customer_email || ''
+        const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
+        console.log('🔵 [GUEST] Redirecting guest immediately to:', redirectUrl)
+        toast.success('Order created! Redirecting to tracking page...')
+        setIsProcessing(false)
+        setTimeout(() => {
+          window.location.href = redirectUrl
+        }, 500)
+        return
       }
 
       // ⭐ STEP 2: Generate Midtrans token using order_number

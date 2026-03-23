@@ -20,7 +20,7 @@ export function ExpandableSpecifications({ product, fragranceFamily }: Expandabl
         >
           <div className="flex-1">
             <h3 className="text-base font-semibold text-gray-900 mb-1">Spesifikasi</h3>
-            <span className="text-sm text-gray-500">Stok, Merek, Ukuran Produk, Fragrance Notes, BPOM...</span>
+            <span className="text-sm text-gray-500">Stok, Ukuran, Fragrance Notes, Gender, Shelf Life...</span>
           </div>
           <svg 
             className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" 
@@ -89,6 +89,18 @@ export function ExpandableSpecifications({ product, fragranceFamily }: Expandabl
                 <div className="flex">
                   <span className="w-40 text-gray-600">Base Notes</span>
                   <span className="text-gray-900">{(product as any).base_notes}</span>
+                </div>
+              )}
+              {(product as any).gender && (
+                <div className="flex">
+                  <span className="w-40 text-gray-600">Gender</span>
+                  <span className="text-gray-900">{(product as any).gender}</span>
+                </div>
+              )}
+              {(product as any).shelf_life && (
+                <div className="flex">
+                  <span className="w-40 text-gray-600">Shelf Life</span>
+                  <span className="text-gray-900">{(product as any).shelf_life}</span>
                 </div>
               )}
               {(product as any).country_of_origin && (

@@ -26,6 +26,9 @@ export function ProductCarousel({
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
+  const [hasAnimated, setHasAnimated] = useState(false)
+
+  useEffect(() => setHasAnimated(true), [])
 
   const checkScrollability = useCallback(() => {
     if (!scrollRef.current) return
@@ -60,12 +63,10 @@ export function ProductCarousel({
     setTimeout(() => checkScrollability(), 300)
   }
 
-  // Determine divider color based on variant
   const dividerColor = variant === 'popular' 
     ? 'bg-[#C2A36B]/70' 
     : 'bg-[#1C2E4A]/70'
-  
-  // Card styling based on variant
+
   const getCardClasses = () => {
     switch(variant) {
       case 'new':
@@ -102,7 +103,6 @@ export function ProductCarousel({
           >
             {title}
           </h2>
-          {/* Divider with staggered reveal */}
           <motion.div
             initial={{ opacity: 0, scaleX: 0 }}
             whileInView={{ opacity: 1, scaleX: 1 }}
@@ -181,63 +181,49 @@ export function ProductCarousel({
             </button>
           )}
 
-          {/* Track */}
-          <div
+          {/* Track with drag momentum */}
+          <motion.div
             ref={scrollRef}
             className="
-              flex gap-3
-              overflow-x-auto
-              snap-x snap-mandatory
-              px-4
-              pb-3
-              scrollbar-hide
-              sm:gap-4
-              md:mx-0 md:gap-4 md:px-0 md:pb-4
-              lg:gap-6
-              lg:pb-6
+              flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-3
+              scrollbar-hide sm:gap-4 md:gap-4 lg:gap-6
               focus:outline-none
-              focus:ring-2
-              focus:ring-luxury-gold
-              focus:ring-offset-2
             "
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.15}
+            onDragEnd={() => checkScrollability()}
             style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
               WebkitOverflowScrolling: 'touch',
+              cursor: 'grab',
             }}
           >
             {products.map((product, index) => (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, y: 8 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-20%" }}
+                initial={false}
+                animate={hasAnimated ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
                 transition={{
                   duration: 0.55,
                   delay: 0.2 + index * 0.08,
                   ease: [0.25, 0.1, 0.25, 1]
                 }}
                 className="
-                  snap-start
+                  snap-center
                   flex-shrink-0
-                  w-[42vw]
-                  max-w-[160px]
-                  sm:w-[38vw]
-                  sm:max-w-[180px]
-                  md:w-[220px]
-                  md:max-w-none
-                  lg:w-[240px]
-                  xl:w-[260px]
+                  w-[42vw] max-w-[160px]
+                  sm:w-[38vw] sm:max-w-[200px]
+                  md:w-[260px]
+                  lg:w-[300px]
+                  xl:w-[320px]
                 "
               >
-                <ProductCard product={product} />
+                <ProductCard product={product} className={getCardClasses()} />
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
   )
 }
-
-

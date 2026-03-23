@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Mail, Loader2, CheckCircle2, X, AlertCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Mail, Loader2, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { toast } from 'sonner'
 
 export default function NewsletterSubscription() {
   const { t } = useLanguage()
@@ -10,32 +11,32 @@ export default function NewsletterSubscription() {
   const [consent, setConsent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [error, setError] = useState('')
-  const [showError, setShowError] = useState(false)
-
-  useEffect(() => {
-    if (error) {
-      setShowError(true)
-      const timer = setTimeout(() => {
-        setShowError(false)
-        setTimeout(() => setError(''), 300)
-      }, 4000)
-      return () => clearTimeout(timer)
-    }
-  }, [error])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
     setSuccess(false)
 
-    if (!consent) {
-      setError(t.newsletter.errorConsent)
+    // Validate all fields and show the most appropriate error
+    if (!email) {
+      toast.error('Email required', {
+        description: t.newsletter.errorEmail
+      })
       return
     }
 
-    if (!email) {
-      setError(t.newsletter.errorEmail)
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      toast.error('Invalid email', {
+        description: t.newsletter.errorEmail
+      })
+      return
+    }
+
+    if (!consent) {
+      toast.error('Consent required', {
+        description: t.newsletter.errorConsent
+      })
       return
     }
 
@@ -60,11 +61,17 @@ export default function NewsletterSubscription() {
       setEmail('')
       setConsent(false)
       
+      toast.success('Subscribed!', {
+        description: t.newsletter.successMessage
+      })
+      
       setTimeout(() => {
         setSuccess(false)
       }, 5000)
     } catch (err: any) {
-      setError(err.message || t.newsletter.errorGeneric)
+      toast.error('Subscription failed', {
+        description: err.message || t.newsletter.errorGeneric
+      })
     } finally {
       setLoading(false)
     }
@@ -101,6 +108,7 @@ export default function NewsletterSubscription() {
                 placeholder={t.newsletter.placeholder}
                 className="flex-1 px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-md border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold"
                 disabled={loading}
+                required={false}
               />
               <button
                 type="submit"
@@ -126,6 +134,7 @@ export default function NewsletterSubscription() {
                 onChange={(e) => setConsent(e.target.checked)}
                 className="mt-0.5 sm:mt-1 w-4 h-4 text-luxury-gold border-gray-300 rounded focus:ring-luxury-gold flex-shrink-0"
                 disabled={loading}
+                required={false}
               />
               <label htmlFor="newsletter-consent" className="text-xs sm:text-sm text-gray-600">
                 {t.newsletter.consent}{' '}
@@ -142,31 +151,6 @@ export default function NewsletterSubscription() {
           {t.newsletter.privacyNotice}
         </p>
       </div>
-
-      {/* Error Toast Notification */}
-      {error && (
-        <div 
-          className={`fixed bottom-4 right-4 z-50 max-w-sm transition-all duration-300 ${
-            showError ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-          }`}
-        >
-          <div className="bg-red-600 text-white rounded-lg shadow-lg p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{error}</p>
-            </div>
-            <button
-              onClick={() => {
-                setShowError(false)
-                setTimeout(() => setError(''), 300)
-              }}
-              className="text-white/80 hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
