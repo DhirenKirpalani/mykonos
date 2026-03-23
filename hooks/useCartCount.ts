@@ -45,9 +45,16 @@ export function useCartCount() {
   useEffect(() => {
     fetchCartCount()
 
-    // Listen for cart updates via custom events
+    // Listen for cart updates via custom events (triggers DB re-fetch)
     const handleCartUpdate = () => fetchCartCount()
     window.addEventListener('cart-updated', handleCartUpdate)
+
+    // Optimistic local increment — no DB round trip
+    const handleIncrement = (e: Event) => {
+      const delta = (e as CustomEvent<{ delta: number }>).detail?.delta ?? 1
+      setCount(prev => Math.max(0, prev + delta))
+    }
+    window.addEventListener('cart-count-increment', handleIncrement)
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
@@ -56,6 +63,7 @@ export function useCartCount() {
 
     return () => {
       window.removeEventListener('cart-updated', handleCartUpdate)
+      window.removeEventListener('cart-count-increment', handleIncrement)
       subscription.unsubscribe()
     }
   }, [])

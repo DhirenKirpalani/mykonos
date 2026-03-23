@@ -21,9 +21,19 @@ interface LiveChatWidgetProps {
 
 export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
   const { user } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('chat_is_open') === 'true'
+    }
+    return false
+  })
   const [isMinimized, setIsMinimized] = useState(false)
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [conversationId, setConversationId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('chat_conv_id') || null
+    }
+    return null
+  })
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -33,17 +43,20 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
   const [unreadCount, setUnreadCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Reset state when widget is closed
+  // Persist open state; reset unread count when opened
   useEffect(() => {
-    if (!isOpen) {
-      setConversationId(null)
-      setMessages([])
-      setInputMessage('')
-    } else {
-      // Reset unread count when chat is opened
+    sessionStorage.setItem('chat_is_open', isOpen ? 'true' : 'false')
+    if (isOpen) {
       setUnreadCount(0)
     }
   }, [isOpen])
+
+  // Persist conversationId so it survives hard refresh
+  useEffect(() => {
+    if (conversationId) {
+      sessionStorage.setItem('chat_conv_id', conversationId)
+    }
+  }, [conversationId])
 
   // Poll for unread messages count when chat is closed
   useEffect(() => {
@@ -107,7 +120,19 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Load existing conversation or create new one
+  // Pre-load conversation on mount so first open is instant
+  useEffect(() => {
+    const savedConvId = sessionStorage.getItem('chat_conv_id')
+    if (savedConvId) {
+      // Restore existing conversation without creating a new one
+      setIsLoading(true)
+      loadMessages(savedConvId).finally(() => setIsLoading(false))
+    } else {
+      loadOrCreateConversation()
+    }
+  }, [])
+
+  // Load conversation when opened if not yet loaded
   useEffect(() => {
     if (isOpen && !conversationId) {
       loadOrCreateConversation()
@@ -134,13 +159,14 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
             setUserName(name)
           }
         } catch (error) {
-          console.error('Failed to fetch user name:', error)
+          // fallback to email
+          if (user.email) setUserName(user.email)
         }
       }
     }
     
     fetchUserName()
-  }, [user])
+  }, [user?.id])
 
   // Poll for new messages every 3 seconds
   useEffect(() => {
@@ -167,16 +193,29 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
                 return
               }
               
-              // Only update if there are new messages
-              const newMessages = allMessages.filter((msg: Message) => 
-                msg.created_at > lastMessageTime
-              )
-              
-              if (newMessages.length > 0) {
+              if (allMessages && allMessages.length > 0) {
                 setMessages(prev => {
+                  // Build a lookup map of server messages for is_read sync
+                  const serverMap = new Map<string, Message>(
+                    allMessages.filter((m: Message) => m && m.id).map((m: Message) => [m.id, m])
+                  )
+
+                  // Update is_read on existing messages (fixes gold ✓ → ✓✓)
+                  const updated = prev.map(m => {
+                    const server = serverMap.get(m.id)
+                    if (server && server.is_read !== m.is_read) {
+                      return { ...m, is_read: server.is_read }
+                    }
+                    return m
+                  })
+
+                  // Append genuinely new messages
                   const existingIds = new Set(prev.map(m => m.id))
-                  const uniqueNew = newMessages.filter((m: Message) => !existingIds.has(m.id))
-                  return uniqueNew.length > 0 ? [...prev, ...uniqueNew] : prev
+                  const uniqueNew = allMessages.filter(
+                    (m: Message) => m && m.id && !existingIds.has(m.id)
+                  )
+
+                  return uniqueNew.length > 0 ? [...updated, ...uniqueNew] : updated
                 })
               }
             })
@@ -346,6 +385,7 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
   const groupMessagesByDate = (messages: Message[]) => {
     const groups: { [key: string]: Message[] } = {}
     messages.forEach(msg => {
+      if (!msg || !msg.created_at) return
       const dateKey = new Date(msg.created_at).toDateString()
       if (!groups[dateKey]) {
         groups[dateKey] = []

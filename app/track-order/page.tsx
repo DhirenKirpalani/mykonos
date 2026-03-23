@@ -79,6 +79,13 @@ export default function TrackOrderPage() {
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
+  // Pre-fill email for authenticated (non-anonymous) users and lock the field
+  useEffect(() => {
+    if (user && !user.is_anonymous && user.email) {
+      setEmail(user.email)
+    }
+  }, [user])
+
   // Load session order history on mount
   useEffect(() => {
     const loadSessionOrders = async () => {
@@ -226,25 +233,12 @@ export default function TrackOrderPage() {
             setOrder(null)
 
             try {
-              const { data, error } = await supabase
-                .from('orders')
-                .select(`
-                  *,
-                  order_items (
-                    id,
-                    quantity,
-                    price_at_purchase,
-                    product:products (
-                      name,
-                      image_urls
-                    )
-                  )
-                `)
-                .eq('order_number', order_number)
-                .eq('customer_email', customer_email)
-                .single()
+              const res = await fetch(
+                `/api/orders/track?email=${encodeURIComponent(customer_email)}&order_number=${encodeURIComponent(order_number)}`
+              )
+              const json = await res.json()
 
-              if (error || !data) {
+              if (!res.ok || !json.order) {
                 console.error('❌ [AUTO-LOAD] Order not found', { order_number, customer_email })
                 setNotFound(true)
                 // Don't show error toast for auto-load, just clear localStorage
@@ -254,7 +248,7 @@ export default function TrackOrderPage() {
                 }
               } else {
                 console.log('✅ [AUTO-LOAD] Order loaded successfully')
-                setOrder(data as Order)
+                setOrder(json.order as Order)
                 // Clear sessionStorage after successful load (but keep localStorage)
                 if (fromSession) {
                   sessionStorage.removeItem('guestOrderInfo')
@@ -536,29 +530,18 @@ export default function TrackOrderPage() {
     setOrder(null)
 
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            id,
-            quantity,
-            price_at_purchase,
-            product:products (
-              name,
-              image_urls
-            )
-          )
-        `)
-        .eq('customer_email', email.toLowerCase().trim())
-        .eq('order_number', orderNumber.toUpperCase().trim())
-        .single()
+      const trimmedEmail = email.toLowerCase().trim()
+      const trimmedOrder = orderNumber.toUpperCase().trim()
+      const res = await fetch(
+        `/api/orders/track?email=${encodeURIComponent(trimmedEmail)}&order_number=${encodeURIComponent(trimmedOrder)}`
+      )
+      const json = await res.json()
+      const data = json.order
 
-      if (error || !data) {
+      if (!res.ok || !data) {
         console.error('❌ [ORDER DEBUG] Order not found', {
-          error: error?.message,
-          email: email.toLowerCase().trim(),
-          orderNumber: orderNumber.toUpperCase().trim()
+          email: trimmedEmail,
+          orderNumber: trimmedOrder
         })
         setNotFound(true)
         toast.error('Order not found. Please check your email and order number.')
@@ -582,7 +565,7 @@ export default function TrackOrderPage() {
         const authenticatedEmail = user.email
         const orderEmail = data.customer_email
         
-        if (authenticatedEmail !== orderEmail) {
+        if (authenticatedEmail?.toLowerCase() !== orderEmail?.toLowerCase()) {
           console.error('🚨 [SECURITY] Email mismatch! User:', authenticatedEmail, 'Order:', orderEmail)
           setNotFound(true)
           toast.error('This order does not belong to your account.')
@@ -743,9 +726,12 @@ export default function TrackOrderPage() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    if (!user || user.is_anonymous) setEmail(e.target.value)
+                  }}
                   placeholder={t('trackOrder.emailPlaceholder')}
-                  className="pl-10"
+                  className={`pl-10 ${user && !user.is_anonymous ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                  readOnly={!!(user && !user.is_anonymous)}
                   required
                 />
               </div>

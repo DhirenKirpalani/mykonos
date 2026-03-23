@@ -51,6 +51,7 @@ export default function ChatManagementPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const lastMessageTimeRef = useRef<string>(new Date(0).toISOString())
+  const selectedConversationIdRef = useRef<string | null>(null)
   const [showConversationList, setShowConversationList] = useState(true)
 
   useEffect(() => {
@@ -67,8 +68,15 @@ export default function ChatManagementPage() {
     }
   }, [role])
 
+  // Keep ref in sync with state so effects with stale closures can read it
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId
+  }, [selectedConversationId])
+
   useEffect(() => {
     if (selectedConversationId) {
+      // Persist so hard refresh restores the same conversation
+      sessionStorage.setItem('cms_selected_conv', selectedConversationId)
       // Clear messages immediately to prevent showing old conversation
       setMessages([])
       lastMessageTimeRef.current = new Date(0).toISOString()
@@ -146,12 +154,42 @@ export default function ChatManagementPage() {
     }
   }, [selectedConversationId])
 
-  // Subscribe to message updates to track read status changes
+  // Subscribe to message inserts/updates to keep sidebar unread counts live
   useEffect(() => {
     if (role !== 'admin') return
 
     const channel = supabase
       .channel('message-read-status')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload) => {
+          const newMessage = payload.new as Message
+          // Skip increment when the admin is already viewing this conversation
+          if (newMessage.sender_type === 'customer' && !newMessage.is_read &&
+              newMessage.conversation_id !== selectedConversationIdRef.current) {
+            setConversations(prev => {
+              const updated = prev.map(conv => {
+                if (conv.id === newMessage.conversation_id) {
+                  return { ...conv, unread_count: (conv.unread_count || 0) + 1 }
+                }
+                return conv
+              })
+              // Bubble the updated conversation to the top
+              const idx = updated.findIndex(c => c.id === newMessage.conversation_id)
+              if (idx > 0) {
+                const [conv] = updated.splice(idx, 1)
+                return [conv, ...updated]
+              }
+              return updated
+            })
+          }
+        }
+      )
       .on(
         'postgres_changes',
         {
@@ -161,7 +199,7 @@ export default function ChatManagementPage() {
         },
         (payload) => {
           const updatedMessage = payload.new as Message
-          // If a message was marked as read, update the conversation's unread count
+          // If a message was marked as read, decrement the conversation's unread count
           if (updatedMessage.is_read && updatedMessage.sender_type === 'customer') {
             setConversations(prev => prev.map(conv => {
               if (conv.id === updatedMessage.conversation_id) {
@@ -170,7 +208,6 @@ export default function ChatManagementPage() {
               }
               return conv
             }))
-            // Trigger sidebar badge update
             window.dispatchEvent(new CustomEvent('chat-messages-read'))
           }
         }
@@ -262,6 +299,16 @@ export default function ChatManagementPage() {
       )
 
       setConversations(conversationsWithUnread as Conversation[])
+
+      // Restore previously selected conversation after refresh
+      const savedId = sessionStorage.getItem('cms_selected_conv')
+      if (savedId && !selectedConversationId) {
+        const saved = (conversationsWithUnread as Conversation[]).find(c => c.id === savedId)
+        if (saved) {
+          setSelectedConversation(saved)
+          setSelectedConversationId(saved.id)
+        }
+      }
       
       // Log conversations with unread messages
       const unreadConvs = conversationsWithUnread.filter((c: any) => c.unread_count > 0)
