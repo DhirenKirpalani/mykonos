@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { VariantStockModal } from '@/components/VariantStockModal'
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -98,6 +99,8 @@ export default function NewProductPage() {
     max_purchase_quantity: string
     image_url: string
   }>>([])
+  const [variantStockModalOpen, setVariantStockModalOpen] = useState(false)
+  const [savedProductId, setSavedProductId] = useState<string | null>(null)
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -341,98 +344,98 @@ export default function NewProductPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Slug *
+                </label>
+                <input
+                  type="text"
+                  name="slug"
+                  value={formData.slug}
+                  onChange={handleChange}
+                  required
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Brand *
+                </label>
+                <input
+                  type="text"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., Mykonos"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Category (Fragrance Family)
+                </label>
+                <select
+                  name="fragrance_family"
+                  value={formData.fragrance_family}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                >
+                  <option value="">Select Category</option>
+                  <option value="Aqua & Aromatic">Aqua & Aromatic</option>
+                  <option value="Floral Fantasy">Floral Fantasy</option>
+                  <option value="Oriental">Oriental</option>
+                  <option value="Fresh Fruity">Fresh Fruity</option>
+                  <option value="Powdery Elegance">Powdery Elegance</option>
+                  <option value="Gourmand Galore">Gourmand Galore</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Collection
+                </label>
+                <input
+                  type="text"
+                  name="collection"
+                  value={formData.collection}
+                  onChange={handleChange}
+                  placeholder="e.g., Signature Collection"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Gender
+                </label>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Unisex">Unisex</option>
+                  <option value="Men">Men</option>
+                  <option value="Women">Women</option>
+                </select>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Slug *
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description
               </label>
-              <input
-                type="text"
-                name="slug"
-                value={formData.slug}
-                onChange={handleChange}
-                required
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+              <RichTextEditor
+                value={formData.description}
+                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                placeholder="Enter product description with formatting..."
+                className="min-h-[200px]"
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Brand *
-              </label>
-              <input
-                type="text"
-                name="brand"
-                value={formData.brand}
-                onChange={handleChange}
-                required
-                placeholder="e.g., Mykonos"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Collection
-              </label>
-              <input
-                type="text"
-                name="collection"
-                value={formData.collection}
-                onChange={handleChange}
-                placeholder="e.g., Signature Collection"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Category (Fragrance Family)
-              </label>
-              <select
-                name="fragrance_family"
-                value={formData.fragrance_family}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              >
-                <option value="">Select Category</option>
-                <option value="Aqua & Aromatic">Aqua & Aromatic</option>
-                <option value="Floral Fantasy">Floral Fantasy</option>
-                <option value="Oriental">Oriental</option>
-                <option value="Fresh Fruity">Fresh Fruity</option>
-                <option value="Powdery Elegance">Powdery Elegance</option>
-                <option value="Gourmand Galore">Gourmand Galore</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Gender
-              </label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              >
-                <option value="">Select Gender</option>
-                <option value="Unisex">Unisex</option>
-                <option value="Men">Men</option>
-                <option value="Women">Women</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <RichTextEditor
-              value={formData.description}
-              onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
-              placeholder="Enter product description with formatting..."
-              className="min-h-[200px]"
-            />
-          </div>
           </div>
           </div>
 
@@ -541,9 +544,12 @@ export default function NewProductPage() {
                 <p className="mt-1 text-xs text-gray-500">This will be used for promotions</p>
               </div>
             </div>
+          </div>
 
-            {/* Promotion Period Section */}
-            <div className="grid gap-6 md:grid-cols-3 mt-4 p-4 bg-gray-50 rounded-lg">
+          {/* Promotion Period Section */}
+          <div className="space-y-4 pt-8">
+            <h3 className="text-lg font-semibold text-gray-900">Promotion Period</h3>
+            <div className="grid gap-6 md:grid-cols-3 p-4 bg-gray-50 rounded-lg">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Promotion Start Date
@@ -589,7 +595,7 @@ export default function NewProductPage() {
           </div>
 
           {/* Inventory Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Inventory</h3>
             <div className="grid gap-6 md:grid-cols-3">
               <div>
@@ -640,7 +646,7 @@ export default function NewProductPage() {
           </div>
 
           {/* Purchase Limits Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Purchase Limits</h3>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -678,9 +684,58 @@ export default function NewProductPage() {
 
           {/* Fragrance Details Tab */}
           <div id="section-fragrance">
+          {/* Fragrance Notes Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Fragrance Details</h3>
-            <div className="grid gap-6 md:grid-cols-2">
+            <h3 className="text-lg font-semibold text-gray-900">Fragrance Notes</h3>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Top Notes
+                </label>
+                <input
+                  type="text"
+                  name="top_notes"
+                  value={formData.top_notes}
+                  onChange={handleChange}
+                  placeholder="e.g., Bergamot, Lemon"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Middle Notes
+                </label>
+                <input
+                  type="text"
+                  name="middle_notes"
+                  value={formData.middle_notes}
+                  onChange={handleChange}
+                  placeholder="e.g., Rose, Jasmine"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Base Notes
+                </label>
+                <input
+                  type="text"
+                  name="base_notes"
+                  value={formData.base_notes}
+                  onChange={handleChange}
+                  placeholder="e.g., Oud, Amber"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Product Specifications Section */}
+          <div className="space-y-4 pt-8">
+            <h3 className="text-lg font-semibold text-gray-900">Product Specifications</h3>
+            <div className="grid gap-6 md:grid-cols-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Formulation
@@ -761,49 +816,66 @@ export default function NewProductPage() {
               </div>
             </div>
           </div>
+          </div>
 
-          {/* Fragrance Notes Section */}
+          {/* SEO Tab */}
+          <div id="section-seo">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Fragrance Notes</h3>
-            <div className="grid gap-6 md:grid-cols-3">
+            <h3 className="text-lg font-semibold text-gray-900">SEO & Marketing</h3>
+            <div className="grid gap-6 md:grid-cols-1">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Top Notes
+                  Meta Title
                 </label>
                 <input
                   type="text"
-                  name="top_notes"
-                  value={formData.top_notes}
+                  name="meta_title"
+                  value={formData.meta_title}
                   onChange={handleChange}
-                  placeholder="e.g., Bergamot, Lemon"
+                  placeholder="e.g., Mykonos Oud Royale Eau de Parfum"
+                  maxLength={60}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+                <p className="mt-1 text-xs text-gray-500">Recommended: 50-60 characters</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Meta Description
+                </label>
+                <textarea
+                  name="meta_description"
+                  value={formData.meta_description}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Luxury oud fragrance with amber and sandalwood notes."
+                  maxLength={160}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+                <p className="mt-1 text-xs text-gray-500">Recommended: 150-160 characters</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Meta Keywords
+                </label>
+                <input
+                  type="text"
+                  name="meta_keywords"
+                  value={formData.meta_keywords}
+                  onChange={handleChange}
+                  placeholder="e.g., oud, luxury perfume, arabic fragrance"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Middle Notes
+                  Tags / Keywords
                 </label>
                 <input
                   type="text"
-                  name="middle_notes"
-                  value={formData.middle_notes}
+                  name="tags"
+                  value={formData.tags}
                   onChange={handleChange}
-                  placeholder="e.g., Rose, Jasmine"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Base Notes
-                </label>
-                <input
-                  type="text"
-                  name="base_notes"
-                  value={formData.base_notes}
-                  onChange={handleChange}
-                  placeholder="e.g., Oud, Amber"
+                  placeholder="e.g., oud, luxury, arabic, winter (comma-separated)"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
@@ -811,10 +883,262 @@ export default function NewProductPage() {
           </div>
           </div>
 
+          {/* Shipping Tab */}
+          <div id="section-shipping">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Shipping & Package Dimensions</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Product Weight (grams)
+                </label>
+                <input
+                  type="number"
+                  name="weight_grams"
+                  value={formData.weight_grams}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="e.g., 150"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Shipping Weight (grams)
+                </label>
+                <input
+                  type="number"
+                  name="shipping_weight_grams"
+                  value={formData.shipping_weight_grams}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Includes packaging"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Package Length (cm)
+                </label>
+                <input
+                  type="number"
+                  name="package_length_cm"
+                  value={formData.package_length_cm}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Package length"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Package Width (cm)
+                </label>
+                <input
+                  type="number"
+                  name="package_width_cm"
+                  value={formData.package_width_cm}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Package width"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Package Height (cm)
+                </label>
+                <input
+                  type="number"
+                  name="package_height_cm"
+                  value={formData.package_height_cm}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Package height"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Ships From
+                </label>
+                <input
+                  type="text"
+                  name="ships_from"
+                  value={formData.ships_from}
+                  onChange={handleChange}
+                  placeholder="e.g., KOTA JAKARTA TIMUR"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Shipping Period (days)
+                </label>
+                <input
+                  type="number"
+                  name="shipping_period_days"
+                  value={formData.shipping_period_days}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="e.g., 3-5 days"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+                <p className="mt-1 text-xs text-gray-500">Estimated delivery time in days</p>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          {/* Pre-Order Settings */}
+          <div id="section-preorder">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Pre-Order Settings</h3>
+            <div className="flex items-center gap-3 mb-4">
+              <input
+                type="checkbox"
+                name="is_pre_order"
+                checked={formData.is_pre_order}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_pre_order: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+              />
+              <label className="text-sm font-medium text-gray-700">
+                Enable Pre-Order
+              </label>
+            </div>
+            {formData.is_pre_order && (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pre-Order Start Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="pre_order_start_date"
+                    value={formData.pre_order_start_date}
+                    onChange={handleChange}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">When pre-order period begins</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pre-Order End Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="pre_order_end_date"
+                    value={formData.pre_order_end_date}
+                    onChange={handleChange}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">When pre-order period ends</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pre-Order Duration (days)
+                  </label>
+                  <input
+                    type="number"
+                    name="pre_order_duration_days"
+                    value={formData.pre_order_duration_days}
+                    onChange={handleChange}
+                    min="1"
+                    placeholder="e.g., 14"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pre-Order Release Date
+                  </label>
+                  <input
+                    type="date"
+                    name="pre_order_release_date"
+                    value={formData.pre_order_release_date}
+                    onChange={handleChange}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Expected product release date</p>
+                </div>
+              </div>
+            )}
+          </div>
+          </div>
+
+          {/* Publishing & Status */}
+          <div id="section-publishing">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Publishing & Status</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Status
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Scheduled Publish Date
+                </label>
+                <input
+                  type="datetime-local"
+                  name="scheduled_publish_date"
+                  value={formData.scheduled_publish_date}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                name="is_featured"
+                checked={formData.is_featured}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_featured: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+              />
+              <label className="text-sm font-medium text-gray-700">
+                Featured Product
+              </label>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                New Badge Duration (days)
+              </label>
+              <input
+                type="number"
+                name="new_product_duration_days"
+                value={formData.new_product_duration_days || 30}
+                onChange={handleChange}
+                min="0"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Number of days this product shows the "NEW" badge after creation (default: 30 days)
+              </p>
+            </div>
+          </div>
+          </div>
+
           {/* Variants Tab */}
           <div id="section-variants">
           {/* Bulk Discounts Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Bulk Discounts</h3>
               <Button
@@ -878,18 +1202,44 @@ export default function NewProductPage() {
           </div>
 
           {/* Product Variants Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Product Variants</h3>
-              <Button
-                type="button"
-                onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', compare_at_price_usd: '', compare_at_price_idr: '', stock_quantity: '', low_stock_threshold: '', in_stock: true, min_purchase_quantity: '1', max_purchase_quantity: '', image_url: '' }])}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Variant
-              </Button>
+              <div className="flex gap-2">
+                {variants.length > 0 && savedProductId && (
+                  <Button
+                    type="button"
+                    onClick={() => setVariantStockModalOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    className="border-luxury-navy text-luxury-navy hover:bg-luxury-navy hover:text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Manage Variant Stock
+                  </Button>
+                )}
+                {variants.length > 0 && !savedProductId && (
+                  <Button
+                    type="button"
+                    onClick={() => toast.info('Save the product first to manage variant stock')}
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-300 text-gray-400"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Manage Variant Stock
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', compare_at_price_usd: '', compare_at_price_idr: '', stock_quantity: '', low_stock_threshold: '', in_stock: true, min_purchase_quantity: '1', max_purchase_quantity: '', image_url: '' }])}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Variant
+                </Button>
+              </div>
             </div>
             {variants.map((variant, index) => (
               <div key={index} className="rounded-lg border border-gray-200 p-4 space-y-4">
@@ -1082,414 +1432,113 @@ export default function NewProductPage() {
           {/* Media Tab */}
           <div id="section-media">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Product Images</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Product Media</h3>
+
+            {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Images
+                Product Images
               </label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
+              <div className="mt-1">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 transition-colors hover:border-luxury-gold">
+                  <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="mt-2 text-sm text-gray-600">Click to upload images</span>
+                  <span className="mt-1 text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
               {imagePreviews.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-4">
+                <div className="mt-4 space-y-4">
                   {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative">
-                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
-                      <Button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <div className="mt-2">
-                        <input
-                          type="text"
-                          placeholder="Alt text"
-                          value={imageAltTexts[index] || ''}
-                          onChange={(e) => {
-                            const newAltTexts = [...imageAltTexts]
-                            newAltTexts[index] = e.target.value
-                            setImageAltTexts(newAltTexts)
-                          }}
-                          className="w-full text-sm rounded border border-gray-300 px-2 py-1"
-                        />
+                    <div key={index} className="rounded-lg border border-gray-200 p-4">
+                      <div className="flex gap-4">
+                        <div className="relative flex-shrink-0">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="h-24 w-24 rounded-lg object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Alt Text (for SEO & Accessibility)
+                          </label>
+                          <input
+                            type="text"
+                            value={imageAltTexts[index] || ''}
+                            onChange={(e) => {
+                              const newAltTexts = [...imageAltTexts]
+                              newAltTexts[index] = e.target.value
+                              setImageAltTexts(newAltTexts)
+                            }}
+                            placeholder="e.g., Mykonos Oud Royale perfume bottle"
+                            className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Product Videos</h3>
+            {/* Video Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Videos
+                Product Videos
               </label>
-              <input
-                type="file"
-                accept="video/*"
-                multiple
-                onChange={handleVideoChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
+              <div className="mt-1">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 transition-colors hover:border-luxury-gold">
+                  <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span className="mt-2 text-sm text-gray-600">Click to upload videos</span>
+                  <span className="mt-1 text-xs text-gray-500">MP4, WEBM up to 50MB</span>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    multiple
+                    onChange={handleVideoChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
               {videoPreviews.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 gap-4">
+                <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
                   {videoPreviews.map((preview, index) => (
                     <div key={index} className="relative">
-                      <video src={preview} className="w-full h-32 object-cover rounded-lg" controls />
-                      <Button
+                      <video
+                        src={preview}
+                        className="h-32 w-full rounded-lg object-cover"
+                        controls
+                      />
+                      <button
                         type="button"
                         onClick={() => removeVideo(index)}
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2"
+                        className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        ×
+                      </button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-          </div>
-
-          {/* SEO Tab */}
-          <div id="section-seo">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">SEO & Marketing</h3>
-            <div className="grid gap-6 md:grid-cols-1">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Meta Title
-                </label>
-                <input
-                  type="text"
-                  name="meta_title"
-                  value={formData.meta_title}
-                  onChange={handleChange}
-                  placeholder="e.g., Mykonos Oud Royale Eau de Parfum"
-                  maxLength={60}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-                <p className="mt-1 text-xs text-gray-500">Recommended: 50-60 characters</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Meta Description
-                </label>
-                <textarea
-                  name="meta_description"
-                  value={formData.meta_description}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="Luxury oud fragrance with amber and sandalwood notes."
-                  maxLength={160}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-                <p className="mt-1 text-xs text-gray-500">Recommended: 150-160 characters</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Meta Keywords
-                </label>
-                <input
-                  type="text"
-                  name="meta_keywords"
-                  value={formData.meta_keywords}
-                  onChange={handleChange}
-                  placeholder="e.g., oud, luxury perfume, arabic fragrance"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Tags / Keywords
-                </label>
-                <input
-                  type="text"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleChange}
-                  placeholder="e.g., oud, luxury, arabic, winter (comma-separated)"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-            </div>
-          </div>
-          </div>
-
-          {/* Shipping Tab */}
-          <div id="section-shipping">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Shipping & Package Dimensions</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Product Weight (grams)
-                </label>
-                <input
-                  type="number"
-                  name="weight_grams"
-                  value={formData.weight_grams}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="e.g., 150"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Shipping Weight (grams)
-                </label>
-                <input
-                  type="number"
-                  name="shipping_weight_grams"
-                  value={formData.shipping_weight_grams}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Includes packaging"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Package Length (cm)
-                </label>
-                <input
-                  type="number"
-                  name="package_length_cm"
-                  value={formData.package_length_cm}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Package length"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Package Width (cm)
-                </label>
-                <input
-                  type="number"
-                  name="package_width_cm"
-                  value={formData.package_width_cm}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Package width"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Package Height (cm)
-                </label>
-                <input
-                  type="number"
-                  name="package_height_cm"
-                  value={formData.package_height_cm}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Package height"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Ships From
-                </label>
-                <input
-                  type="text"
-                  name="ships_from"
-                  value={formData.ships_from}
-                  onChange={handleChange}
-                  placeholder="e.g., KOTA JAKARTA TIMUR"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Shipping Period (days)
-                </label>
-                <input
-                  type="number"
-                  name="shipping_period_days"
-                  value={formData.shipping_period_days}
-                  onChange={handleChange}
-                  min="0"
-                  placeholder="e.g., 3-5 days"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-                <p className="mt-1 text-xs text-gray-500">Estimated delivery time in days</p>
-              </div>
-            </div>
-          </div>
-          </div>
-
-          {/* Publishing Tab */}
-          <div id="section-publishing">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Publishing Settings</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Status
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="active">Active</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Scheduled Publish Date
-                </label>
-                <input
-                  type="datetime-local"
-                  name="scheduled_publish_date"
-                  value={formData.scheduled_publish_date}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                name="is_featured"
-                checked={formData.is_featured}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_featured: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
-              />
-              <label className="text-sm font-medium text-gray-700">
-                Featured Product
-              </label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                New Badge Duration (days)
-              </label>
-              <input
-                type="number"
-                name="new_product_duration_days"
-                value={formData.new_product_duration_days || 30}
-                onChange={handleChange}
-                min="0"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Number of days this product shows the "NEW" badge after creation (default: 30 days)
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Pre-Order Settings</h3>
-            <div className="flex items-center gap-3 mb-4">
-              <input
-                type="checkbox"
-                name="is_pre_order"
-                checked={formData.is_pre_order}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_pre_order: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
-              />
-              <label className="text-sm font-medium text-gray-700">
-                Enable Pre-Order
-              </label>
-            </div>
-
-            {formData.is_pre_order && (
-              <div className="grid gap-6 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Pre-Order Start Date
-                  </label>
-                  <input
-                    type="datetime-local"
-                    name="pre_order_start_date"
-                    value={formData.pre_order_start_date}
-                    onChange={handleChange}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">When pre-order period begins</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Pre-Order End Date
-                  </label>
-                  <input
-                    type="datetime-local"
-                    name="pre_order_end_date"
-                    value={formData.pre_order_end_date}
-                    onChange={handleChange}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">When pre-order period ends</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Pre-Order Duration (days)
-                  </label>
-                  <input
-                    type="number"
-                    name="pre_order_duration_days"
-                    value={formData.pre_order_duration_days}
-                    onChange={handleChange}
-                    min="1"
-                    placeholder="e.g., 14"
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Pre-Order Release Date
-                  </label>
-                  <input
-                    type="date"
-                    name="pre_order_release_date"
-                    value={formData.pre_order_release_date}
-                    onChange={handleChange}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">Expected product release date</p>
-                </div>
-              </div>
-            )}
           </div>
           </div>
 
@@ -1526,7 +1575,7 @@ export default function NewProductPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  BPOM Number
+                  Official Distribution Authorization No. (BPOM, PIRT)
                 </label>
                 <input
                   type="text"
@@ -1556,7 +1605,7 @@ export default function NewProductPage() {
           </div>
 
           {/* Additional Settings */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Additional Settings</h3>
             <div className="space-y-4">
               <div className="grid gap-6 md:grid-cols-2">
@@ -1601,39 +1650,43 @@ export default function NewProductPage() {
                   </label>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Rating (0-5)
-                  </label>
-                  <input
-                    type="number"
-                    name="rating"
-                    value={formData.rating}
-                    onChange={handleChange}
-                    min="0"
-                    max="5"
-                    step="0.1"
-                    placeholder="e.g., 4.5"
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                </div>
+          {/* Analytics & Display */}
+          <div className="space-y-4 pt-8">
+            <h3 className="text-lg font-semibold text-gray-900">Analytics & Display</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Rating (0-5)
+                </label>
+                <input
+                  type="number"
+                  name="rating"
+                  value={formData.rating}
+                  onChange={handleChange}
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  placeholder="e.g., 4.5"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Products Sold
-                  </label>
-                  <input
-                    type="number"
-                    name="products_sold"
-                    value={formData.products_sold}
-                    onChange={handleChange}
-                    min="0"
-                    placeholder="e.g., 150"
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Products Sold
+                </label>
+                <input
+                  type="number"
+                  name="products_sold"
+                  value={formData.products_sold}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="e.g., 150"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
               </div>
             </div>
           </div>
@@ -1657,6 +1710,26 @@ export default function NewProductPage() {
 
         </div>
       </form>
+
+      {savedProductId && (
+        <VariantStockModal
+          isOpen={variantStockModalOpen}
+          onClose={() => setVariantStockModalOpen(false)}
+          product={{
+            id: savedProductId,
+            name: formData.name,
+            variants: variants.map(v => ({
+              name: v.name,
+              sku: v.sku,
+              price_usd: parseFloat(v.price_usd) || 0,
+              price_idr: parseFloat(v.price_idr) || 0,
+              stock_quantity: parseInt(v.stock_quantity) || 0,
+              image_url: v.image_url,
+            })),
+          }}
+          onUpdate={() => {}}
+        />
+      )}
     </div>
   )
 }
