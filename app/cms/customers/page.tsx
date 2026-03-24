@@ -47,13 +47,30 @@ export default function CustomersPage() {
     customer.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-gray-500">Loading customers...</div>
-      </div>
-    )
-  }
+  const SkeletonRows = () => (
+    <>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <tr key={i} className="animate-pulse">
+          <td className="py-4">
+            <div className="space-y-1.5">
+              <div className="h-4 w-32 rounded bg-gray-200" />
+              <div className="h-3 w-40 rounded bg-gray-100" />
+            </div>
+          </td>
+          <td className="py-4">
+            <div className="space-y-1.5">
+              <div className="h-3 w-36 rounded bg-gray-200" />
+              <div className="h-3 w-24 rounded bg-gray-100" />
+            </div>
+          </td>
+          <td className="py-4"><div className="h-4 w-20 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-4 w-8 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-4 w-16 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-4 w-20 rounded bg-gray-200" /></td>
+        </tr>
+      ))}
+    </>
+  )
 
   return (
     <div className="space-y-6">
@@ -89,7 +106,7 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredCustomers.map((customer, index) => (
+              {loading ? <SkeletonRows /> : filteredCustomers.map((customer, index) => (
                 <tr key={customer.id || customer.email || index} className="text-sm">
                   <td className="py-4">
                     <div>
@@ -137,7 +154,7 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
-          {filteredCustomers.length === 0 && (
+          {!loading && filteredCustomers.length === 0 && (
             <div className="py-12 text-center text-gray-500">
               No customers found.
             </div>

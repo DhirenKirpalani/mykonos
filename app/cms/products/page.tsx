@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { StockEditModal } from '@/components/StockEditModal'
-import { LoadingSpinner } from '@/components/common'
 import { AuditLogModal } from '@/components/AuditLogModal'
 
 interface Product {
@@ -144,9 +143,35 @@ export default function ProductsPage() {
     fetchProducts()
   }
 
-  if (loading) {
-    return <LoadingSpinner />
-  }
+  const SkeletonRows = () => (
+    <>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <tr key={i} className="animate-pulse">
+          <td className="py-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-lg bg-gray-200" />
+              <div className="space-y-1.5">
+                <div className="h-4 w-36 rounded bg-gray-200" />
+                <div className="h-3 w-24 rounded bg-gray-100" />
+              </div>
+            </div>
+          </td>
+          <td className="py-4"><div className="h-4 w-16 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-4 w-20 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-6 w-20 rounded-full bg-gray-200" /></td>
+          <td className="py-4"><div className="h-6 w-16 rounded-full bg-gray-200" /></td>
+          <td className="py-4"><div className="h-6 w-6 rounded bg-gray-200" /></td>
+          <td className="py-4">
+            <div className="flex gap-2">
+              <div className="h-7 w-7 rounded bg-gray-200" />
+              <div className="h-7 w-7 rounded bg-gray-200" />
+              <div className="h-7 w-7 rounded bg-gray-200" />
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  )
 
   return (
     <div className="space-y-6">
@@ -199,7 +224,7 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredProducts.map((product) => (
+              {loading ? <SkeletonRows /> : filteredProducts.map((product) => (
                 <tr key={product.id} className="text-sm">
                   <td className="py-4">
                     <div className="flex items-center gap-3">
@@ -298,7 +323,7 @@ export default function ProductsPage() {
               ))}
             </tbody>
           </table>
-          {filteredProducts.length === 0 && (
+          {!loading && filteredProducts.length === 0 && (
             <div className="py-12 text-center text-gray-500">
               No products found. Create your first product to get started.
             </div>

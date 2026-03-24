@@ -119,37 +119,29 @@ export default function UsersPage() {
 
       {/* Users Table */}
       <div className="rounded-lg border border-border bg-white shadow-sm">
-        {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="text-sm text-muted-foreground">Loading users...</div>
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="text-sm text-muted-foreground">
-              {searchQuery ? 'No users found' : 'No users yet'}
-            </div>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-border bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredUsers.map((user) => {
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-border bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4"><div className="h-4 w-48 rounded bg-gray-200" /></td>
+                    <td className="px-6 py-4"><div className="h-6 w-20 rounded-full bg-gray-200" /></td>
+                    <td className="px-6 py-4"><div className="h-4 w-24 rounded bg-gray-200" /></td>
+                    <td className="px-6 py-4"><div className="h-8 w-28 rounded bg-gray-200" /></td>
+                  </tr>
+                ))
+              ) : !loading && filteredUsers.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-muted-foreground">{searchQuery ? 'No users found' : 'No users yet'}</td></tr>
+              ) : filteredUsers.map((user) => {
                   const roleInfo = getRoleInfo(user.role)
                   return (
                     <tr key={user.id} className="hover:bg-gray-50">
@@ -194,7 +186,6 @@ export default function UsersPage() {
               </tbody>
             </table>
           </div>
-        )}
       </div>
 
       {/* Stats */}

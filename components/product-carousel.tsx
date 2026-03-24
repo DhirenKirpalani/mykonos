@@ -181,21 +181,16 @@ export function ProductCarousel({
             </button>
           )}
 
-          {/* Track with drag momentum */}
-          <motion.div
+          {/* Track */}
+          <div
             ref={scrollRef}
             className="
               flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-3
               scrollbar-hide sm:gap-4 md:gap-4 lg:gap-6
               focus:outline-none
             "
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.15}
-            onDragEnd={() => checkScrollability()}
             style={{
               WebkitOverflowScrolling: 'touch',
-              cursor: 'grab',
             }}
           >
             {products.map((product, index) => (
@@ -221,7 +216,7 @@ export function ProductCarousel({
                 <ProductCard product={product} className={getCardClasses()} />
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

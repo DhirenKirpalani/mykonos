@@ -225,25 +225,25 @@ export function ProductVariantModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div 
-        className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto md:left-auto md:right-auto w-full md:max-w-4xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto bg-white rounded-t-2xl md:rounded-2xl shadow-2xl animate-slide-up md:animate-none"
+        className="w-full md:max-w-4xl md:mx-4 max-h-[80vh] sm:max-h-[85vh] overflow-y-auto bg-white rounded-t-2xl md:rounded-2xl shadow-2xl animate-slide-up md:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          className="absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
           aria-label="Close"
         >
-          <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+          <X className="h-4 w-4 text-gray-600" />
         </button>
 
         {/* Content */}
-        <div className="p-3 sm:p-4 md:p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            {/* Product Image */}
-            <div className="relative aspect-square max-h-48 md:max-h-none rounded-lg overflow-hidden bg-gray-100">
+        <div className="p-3 sm:p-5 md:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
+            {/* Product Image - hidden on very small screens to save space */}
+            <div className="relative hidden xs:block sm:block aspect-square max-h-32 sm:max-h-40 md:max-h-none rounded-lg overflow-hidden bg-gray-100">
               {product.image_urls && product.image_urls[0] && (
                 <img
                   src={product.image_urls[0]}
@@ -261,7 +261,7 @@ export function ProductVariantModal({
             {/* Product Details */}
             <div className="flex flex-col">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <h2 className="text-lg md:text-2xl font-bold text-gray-900">{product.name}</h2>
+                <h2 className="text-base md:text-2xl font-bold text-gray-900 leading-snug">{product.name}</h2>
                 {(product as any).in_stock && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     In Stock
@@ -270,8 +270,8 @@ export function ProductVariantModal({
               </div>
               
               {/* Price */}
-              <div className="flex items-baseline gap-2 mb-3 md:mb-4">
-                <span className="text-xl md:text-3xl font-bold text-luxury-navy">
+              <div className="flex items-baseline gap-2 mb-2 md:mb-4">
+                <span className="text-lg md:text-3xl font-bold text-luxury-navy">
                   {priceRange
                     ? `${formatPrice(priceRange.min, currencyCode)} - ${formatPrice(priceRange.max, currencyCode)}`
                     : formatPrice(effectivePrice * (!hasVariants ? quantity : 1), currencyCode)
@@ -325,11 +325,11 @@ export function ProductVariantModal({
 
               {/* Variant Selection */}
               {hasVariants && (
-                <div className="space-y-4 mb-6">
+                <div className="space-y-2 mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Variants
                   </label>
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-2">
                     {product.variants!.map((variant, index) => {
                       const isSelected = selectedVariants.has(variant.sku)
                       const selectedItem = selectedVariants.get(variant.sku)
@@ -345,7 +345,7 @@ export function ProductVariantModal({
                           <button
                             onClick={() => handleVariantToggle(variant)}
                             disabled={variant.stock_quantity === 0}
-                            className="w-full px-4 py-3 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-3 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
@@ -416,7 +416,7 @@ export function ProductVariantModal({
                   <Button
                     onClick={handleSubmit}
                     disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-6 text-base"
+                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 md:py-6 text-sm md:text-base"
                     size="lg"
                   >
                     {isProcessing ? (
@@ -435,7 +435,7 @@ export function ProductVariantModal({
                   <Button
                     onClick={handleSubmit}
                     disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-6 text-base"
+                    className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-3 md:py-6 text-sm md:text-base"
                     size="lg"
                   >
                     {isProcessing ? (
@@ -454,7 +454,7 @@ export function ProductVariantModal({
                   <Button
                     onClick={handleSubmit}
                     disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-6 text-base"
+                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 md:py-6 text-sm md:text-base"
                     size="lg"
                   >
                     {isProcessing ? (
