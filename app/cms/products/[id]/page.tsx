@@ -491,7 +491,9 @@ export default function EditProductPage() {
         <div className="space-y-12">
           {/* Basic Info Section */}
           <div id="section-basic">
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+            <div className="grid gap-6 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Product Name *
@@ -608,16 +610,17 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <RichTextEditor
-              value={formData.description}
-              onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
-              placeholder="Enter product description with formatting..."
-              className="min-h-[200px]"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description
+              </label>
+              <RichTextEditor
+                value={formData.description}
+                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                placeholder="Enter product description with formatting..."
+                className="min-h-[200px]"
+              />
+            </div>
           </div>
           </div>
 
@@ -727,8 +730,12 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            {/* Promotion Period Section */}
-            <div className="grid gap-6 md:grid-cols-3 mt-4 p-4 bg-gray-50 rounded-lg">
+          </div>
+
+          {/* Promotion Period Section */}
+          <div className="space-y-4 pt-8">
+            <h3 className="text-lg font-semibold text-gray-900">Promotion Period</h3>
+            <div className="grid gap-6 md:grid-cols-3 p-4 bg-gray-50 rounded-lg">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Promotion Start Date
@@ -774,7 +781,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Inventory Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Inventory</h3>
             <div className="grid gap-6 md:grid-cols-3">
               <div>
@@ -825,7 +832,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Purchase Limits Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Purchase Limits</h3>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -912,7 +919,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Product Specifications */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Product Specifications</h3>
             <div className="grid gap-6 md:grid-cols-3">
               <div>
@@ -1063,7 +1070,7 @@ export default function EditProductPage() {
           {/* Shipping & Dimensions Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Shipping & Package Dimensions</h3>
-            <div className="grid gap-6 md:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Product Weight (grams)
@@ -1098,7 +1105,7 @@ export default function EditProductPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Length (cm)
+                  Package Length (cm)
                 </label>
                 <input
                   type="number"
@@ -1114,7 +1121,7 @@ export default function EditProductPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Width (cm)
+                  Package Width (cm)
                 </label>
                 <input
                   type="number"
@@ -1130,7 +1137,7 @@ export default function EditProductPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Height (cm)
+                  Package Height (cm)
                 </label>
                 <input
                   type="number"
@@ -1140,6 +1147,20 @@ export default function EditProductPage() {
                   step="0.01"
                   min="0"
                   placeholder="Package height"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Ships From
+                </label>
+                <input
+                  type="text"
+                  name="ships_from"
+                  value={formData.ships_from}
+                  onChange={handleChange}
+                  placeholder="e.g., KOTA JAKARTA TIMUR"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
@@ -1246,7 +1267,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Publishing & Status Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Publishing & Status</h3>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -1314,7 +1335,7 @@ export default function EditProductPage() {
           {/* Variants Tab */}
           <div id="section-variants">
           {/* Bulk Discounts Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Bulk Discounts</h3>
               <Button
@@ -1378,7 +1399,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Product Variants Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Product Variants</h3>
               <div className="flex gap-2">
@@ -1807,7 +1828,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Additional Settings Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Additional Settings</h3>
             <div className="grid gap-6 md:grid-cols-2">
               <div className="flex items-center gap-3">
@@ -1852,7 +1873,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Analytics & Display Settings */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-8">
             <h3 className="text-lg font-semibold text-gray-900">Analytics & Display</h3>
             <div className="grid gap-6 md:grid-cols-2">
               <div>

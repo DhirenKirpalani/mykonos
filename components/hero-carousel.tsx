@@ -25,7 +25,7 @@ export function HeroCarousel() {
         .from('hero_media')
         .select('media_type, media_url')
         .eq('is_active', true)
-        .single()
+        .maybeSingle()
 
       if (data) {
         setHeroMedia(data)
