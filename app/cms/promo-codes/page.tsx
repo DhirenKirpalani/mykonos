@@ -75,13 +75,26 @@ export default function PromoCodesPage() {
     promo.code.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-gray-500">Loading promo codes...</div>
-      </div>
-    )
-  }
+  const SkeletonRows = () => (
+    <>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <tr key={i} className="animate-pulse">
+          <td className="py-4"><div className="h-4 w-28 rounded bg-gray-200 font-mono" /></td>
+          <td className="py-4"><div className="h-4 w-16 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-4 w-12 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-4 w-24 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-6 w-16 rounded-full bg-gray-200" /></td>
+          <td className="py-4">
+            <div className="flex gap-2">
+              <div className="h-7 w-7 rounded bg-gray-200" />
+              <div className="h-7 w-7 rounded bg-gray-200" />
+              <div className="h-7 w-7 rounded bg-gray-200" />
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  )
 
   return (
     <div className="space-y-6">
@@ -125,7 +138,7 @@ export default function PromoCodesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredPromoCodes.map((promo) => (
+              {loading ? <SkeletonRows /> : filteredPromoCodes.map((promo) => (
                 <tr key={promo.id} className="text-sm">
                   <td className="py-4">
                     <div className="font-mono font-medium text-gray-900">{promo.code}</div>
@@ -186,7 +199,7 @@ export default function PromoCodesPage() {
               ))}
             </tbody>
           </table>
-          {filteredPromoCodes.length === 0 && (
+          {!loading && filteredPromoCodes.length === 0 && (
             <div className="py-12 text-center text-gray-500">
               No promo codes found. Create your first promo code to get started.
             </div>

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { Search, Eye, Package, Truck, CheckCircle, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { LoadingSpinner } from '@/components/common'
 import { AuditLogModal } from '@/components/AuditLogModal'
 
 interface Order {
@@ -36,22 +35,16 @@ export default function OrdersPage() {
   }, [statusFilter])
 
   const fetchOrders = async () => {
+    setLoading(true)
     try {
       const url = statusFilter === 'all' 
         ? '/api/orders/admin'
         : `/api/orders/admin?status=${statusFilter}`
       
-      console.log('Fetching orders from:', url)
       const response = await fetch(url)
-      console.log('Response status:', response.status)
-      
       if (response.ok) {
         const data = await response.json()
-        console.log('Orders received:', data)
         setOrders(data)
-      } else {
-        const errorData = await response.json()
-        console.error('Failed to fetch orders:', errorData)
       }
     } catch (error) {
       console.error('Error fetching orders:', error)
@@ -120,9 +113,26 @@ export default function OrdersPage() {
     return matchesSearch && matchesStatus
   })
 
-  if (loading) {
-    return <LoadingSpinner />
-  }
+  const SkeletonRows = () => (
+    <>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <tr key={i} className="animate-pulse">
+          <td className="py-4"><div className="h-4 w-28 rounded bg-gray-200" /></td>
+          <td className="py-4">
+            <div className="space-y-1.5">
+              <div className="h-4 w-32 rounded bg-gray-200" />
+              <div className="h-3 w-40 rounded bg-gray-100" />
+            </div>
+          </td>
+          <td className="py-4"><div className="h-4 w-20 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-4 w-16 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-6 w-24 rounded-full bg-gray-200" /></td>
+          <td className="py-4"><div className="h-6 w-6 rounded bg-gray-200" /></td>
+          <td className="py-4"><div className="h-7 w-7 rounded bg-gray-200" /></td>
+        </tr>
+      ))}
+    </>
+  )
 
   return (
     <div className="space-y-6">
@@ -172,7 +182,7 @@ export default function OrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredOrders.map((order) => (
+              {loading ? <SkeletonRows /> : filteredOrders.map((order) => (
                 <tr key={order.id} className="text-sm">
                   <td className="py-4">
                     <div className="font-medium text-gray-900">{order.order_number}</div>
@@ -219,7 +229,7 @@ export default function OrdersPage() {
               ))}
             </tbody>
           </table>
-          {filteredOrders.length === 0 && (
+          {!loading && filteredOrders.length === 0 && (
             <div className="py-12 text-center text-gray-500">
               No orders found.
             </div>
