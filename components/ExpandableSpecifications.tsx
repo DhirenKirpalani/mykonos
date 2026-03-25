@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ExpandableSpecificationsProps {
   product: any
@@ -10,112 +10,54 @@ interface ExpandableSpecificationsProps {
 
 export function ExpandableSpecifications({ product, fragranceFamily }: ExpandableSpecificationsProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const { t } = useLanguage()
+  const p = t.products
+
+  const specRows = [
+    { label: p.stock, value: product.stock_quantity !== undefined ? String(product.stock_quantity) : null },
+    { label: p.size, value: (product as any).volume_ml ? `${(product as any).volume_ml}ml` : null },
+    { label: p.collection, value: product.collection || null },
+    { label: p.fragranceFamily, value: fragranceFamily || null },
+    { label: p.topNotes, value: (product as any).top_notes || null },
+    { label: p.middleNotes, value: (product as any).middle_notes || null },
+    { label: p.baseNotes, value: (product as any).base_notes || null },
+    { label: p.gender, value: (product as any).gender || null },
+    { label: p.shelfLife, value: (product as any).shelf_life || null },
+    { label: p.countryOfOrigin, value: (product as any).country_of_origin || null },
+    { label: p.bpomNumber, value: (product as any).bpom_number || null },
+  ].filter(row => row.value !== null && row.value !== '')
 
   return (
     <div className="border-t border-gray-200">
-      {!isExpanded ? (
-        <button 
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center justify-between py-3 w-full text-left"
+      <button 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center justify-between py-3 w-full text-left"
+      >
+        <div className="flex-1">
+          <h3 className="text-base font-semibold text-gray-900 mb-1">{p.specifications}</h3>
+          {!isExpanded && (
+            <span className="text-sm text-gray-500">{p.specsPreview}</span>
+          )}
+        </div>
+        <svg 
+          className={`h-5 w-5 text-gray-400 flex-shrink-0 ml-2 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
         >
-          <div className="flex-1">
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Spesifikasi</h3>
-            <span className="text-sm text-gray-500">Stok, Ukuran, Fragrance Notes, Gender, Shelf Life...</span>
-          </div>
-          <svg 
-            className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      ) : (
-        <div>
-          <button 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center justify-between py-3 w-full"
-          >
-            <h3 className="text-base font-semibold text-gray-900">Spesifikasi</h3>
-            <svg 
-              className="h-5 w-5 text-gray-400 transition-transform rotate-90" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <div className="border-t border-gray-100 pt-3">
-            <div className="space-y-3 text-sm">
-              {product.stock_quantity !== undefined && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Stock</span>
-                  <span className="text-gray-900">{product.stock_quantity}</span>
-                </div>
-              )}
-              {(product as any).volume_ml && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Size</span>
-                  <span className="text-gray-900">{(product as any).volume_ml}ml</span>
-                </div>
-              )}
-              {product.collection && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Collection</span>
-                  <span className="text-gray-900">{product.collection}</span>
-                </div>
-              )}
-              {fragranceFamily && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Fragrance Family</span>
-                  <span className="text-gray-900">{fragranceFamily}</span>
-                </div>
-              )}
-              {(product as any).top_notes && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Top Notes</span>
-                  <span className="text-gray-900">{(product as any).top_notes}</span>
-                </div>
-              )}
-              {(product as any).middle_notes && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Middle Notes</span>
-                  <span className="text-gray-900">{(product as any).middle_notes}</span>
-                </div>
-              )}
-              {(product as any).base_notes && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Base Notes</span>
-                  <span className="text-gray-900">{(product as any).base_notes}</span>
-                </div>
-              )}
-              {(product as any).gender && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Gender</span>
-                  <span className="text-gray-900">{(product as any).gender}</span>
-                </div>
-              )}
-              {(product as any).shelf_life && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Shelf Life</span>
-                  <span className="text-gray-900">{(product as any).shelf_life}</span>
-                </div>
-              )}
-              {(product as any).country_of_origin && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">Country of Origin</span>
-                  <span className="text-gray-900">{(product as any).country_of_origin}</span>
-                </div>
-              )}
-              {(product as any).bpom_number && (
-                <div className="flex">
-                  <span className="w-40 text-gray-600">BPOM No.</span>
-                  <span className="text-gray-900">{(product as any).bpom_number}</span>
-                </div>
-              )}
-            </div>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      {isExpanded && (
+        <div className="border-t border-gray-100 pb-3">
+          <div className="space-y-2.5 text-sm pt-3">
+            {specRows.map(({ label, value }) => (
+              <div key={label} className="flex">
+                <span className="w-40 flex-shrink-0 text-gray-500">{label}</span>
+                <span className="text-gray-900 font-medium">{value}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

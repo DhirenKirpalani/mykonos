@@ -45,7 +45,9 @@ export async function POST(request: Request) {
           id,
           product_id,
           quantity,
+          variant_name,
           variant_sku,
+          price_at_add,
           products (
             id,
             name,
@@ -83,8 +85,9 @@ export async function POST(request: Request) {
       cart_snapshot = cartItems.map(item => ({
         product_id: item.product_id,
         quantity: item.quantity,
-        variant_sku: item.variant_sku,
-        product: item.products
+        price: (item as any).price_at_add,
+        variant_name: (item as any).variant_name || null,
+        variant_sku: (item as any).variant_sku || null,
       }))
 
       // Calculate pricing if not provided

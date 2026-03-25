@@ -9,9 +9,41 @@ import { Database } from '@/lib/supabase/database.types'
 type Product = Database['public']['Tables']['products']['Row']
 type Collection = Database['public']['Tables']['collections']['Row']
 
+function HomePageSkeleton() {
+  return (
+    <div className="min-h-screen animate-pulse">
+      {/* Hero skeleton */}
+      <div className="h-[35vh] sm:h-[40vh] md:h-[60vh] lg:h-[75vh] bg-gray-900" />
+
+      {/* Carousel skeleton × 3 */}
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="py-10 px-4" style={{ background: i === 2 ? '#1C2E4A' : i === 3 ? '#C2A36B' : '#F5EFE6' }}>
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto mb-8 h-6 w-36 rounded bg-white/20" />
+            <div className="flex gap-4 overflow-hidden">
+              {[...Array(4)].map((_, j) => (
+                <div key={j} className="flex-shrink-0 w-[42vw] max-w-[160px] md:w-[260px]">
+                  <div className="rounded-lg overflow-hidden">
+                    <div className="aspect-square bg-white/20" />
+                    <div className="p-3 space-y-2">
+                      <div className="h-4 w-3/4 rounded bg-white/20" />
+                      <div className="h-4 w-1/2 rounded bg-white/20" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function HomePage() {
   const router = useRouter()
   const [shouldRender, setShouldRender] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [products, setProducts] = useState<Product[]>([])
   const [collections, setCollections] = useState<Collection[]>([])
   const [newArrivals, setNewArrivals] = useState<Product[]>([])
@@ -87,11 +119,13 @@ export default function HomePage() {
       setBestSelling((bestSellingResult.data || []) as unknown as Product[])
     } catch (error) {
       console.error('Error fetching data:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
   
   if (!shouldRender) {
-    return null
+    return <HomePageSkeleton />
   }
 
   return (
@@ -100,6 +134,7 @@ export default function HomePage() {
       collections={collections}
       newArrivals={newArrivals}
       bestSelling={bestSelling}
+      isLoading={isLoading}
     />
   )
 }

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       finalCurrencyCode = 'IDR' // Default to IDR for Indonesia
     }
 
-    let cartSnapshot: Array<{ product_id: string; quantity: number; price: number | null }> = []
+    let cartSnapshot: Array<{ product_id: string; quantity: number; price: number | null; variant_name?: string | null; variant_sku?: string | null }> = []
     let subtotal = 0
 
     // If items are provided directly (Buy Now flow), use them
@@ -48,7 +48,9 @@ export async function POST(request: Request) {
       cartSnapshot = items.map((item: any) => ({
         product_id: item.product_id,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        variant_name: item.variant_name || null,
+        variant_sku: item.variant_sku || null,
       }))
       subtotal = items.reduce((sum: number, item: any) => sum + ((item.price || 0) * item.quantity), 0)
       console.log('💰 [API] Calculated subtotal:', subtotal)
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
       // Otherwise, fetch from cart_items table
       let cartQuery = supabase
         .from('cart_items')
-        .select('product_id, quantity, price_at_add')
+        .select('product_id, quantity, price_at_add, variant_name, variant_sku')
       
       if (user_id) {
         cartQuery = cartQuery.eq('user_id', user_id)
@@ -86,12 +88,16 @@ export async function POST(request: Request) {
         product_id: string
         quantity: number
         price_at_add: number | null
+        variant_name?: string | null
+        variant_sku?: string | null
       }>
 
       cartSnapshot = typedCartItems.map(item => ({
         product_id: item.product_id,
         quantity: item.quantity,
-        price: item.price_at_add
+        price: item.price_at_add,
+        variant_name: item.variant_name || null,
+        variant_sku: item.variant_sku || null,
       }))
 
       subtotal = typedCartItems.reduce((sum, item) => sum + ((item.price_at_add || 0) * item.quantity), 0)
