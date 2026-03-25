@@ -272,17 +272,27 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
       variant: 'destructive',
       onConfirm: async () => {
         try {
-          const { error } = await supabase
-            .from('shipping_addresses')
-            .delete()
-            .eq('id', addressId)
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session) throw new Error('Not authenticated')
 
-          if (error) throw error
+          const response = await fetch(`/api/addresses/${addressId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          })
+
+          const data = await response.json()
+          if (!response.ok) throw { message: data.error, status: response.status }
+
           toast.success('Address deleted successfully!')
           fetchAddresses()
         } catch (error: any) {
+          const isConflict = error?.code === '23503' || error?.message?.includes('violates foreign key') || error?.status === 409
           toast.error('Failed to delete address', {
-            description: error.message,
+            description: isConflict
+              ? 'This address is linked to an existing order and cannot be deleted.'
+              : error.message,
           })
         }
       },

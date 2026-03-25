@@ -10,16 +10,25 @@ export async function PUT(
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const authHeader = request.headers.get('Authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const token = authHeader.replace('Bearer ', '')
+
+    // Validate token first with anon client
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey)
+    const { data: { user }, error: authError } = await anonClient.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Create client with user's JWT so RLS policies run as the authenticated user
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    })
+    const session = { user }
 
     const body = await request.json()
     const {
@@ -86,22 +95,35 @@ export async function DELETE(
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const authHeader = request.headers.get('Authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const token = authHeader.replace('Bearer ', '')
+
+    // Validate token first with anon client
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey)
+    const { data: { user }, error: authError } = await anonClient.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Create client with user's JWT so RLS policies run as the authenticated user
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    })
+
+    // Nullify FK reference in orders before deleting to avoid constraint violation
+    await (supabase.from('orders') as any)
+      .update({ shipping_address_id: null })
+      .eq('shipping_address_id', params.id)
 
     const { error } = await supabase
       .from('shipping_addresses')
       .delete()
       .eq('id', params.id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
 
     if (error) {
       return NextResponse.json(

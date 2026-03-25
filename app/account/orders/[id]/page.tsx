@@ -16,6 +16,8 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
     product_id: string
     quantity: number
     price_at_purchase: number
+    variant_name?: string | null
+    variant_sku?: string | null
     product: {
       name: string
       image_urls: string[]
@@ -516,6 +518,9 @@ export default function OrderDetailsPage() {
                 />
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg mb-1">{item.product.name}</h3>
+                  {item.variant_name && (
+                    <p className="text-sm text-[#C2A36B] font-medium mb-0.5">{item.variant_name}</p>
+                  )}
                   <p className="text-sm text-gray-500">Jumlah: {item.quantity}</p>
                 </div>
                 <div className="text-right">

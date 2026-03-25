@@ -52,6 +52,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [mounted, setMounted] = useState(false)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
+  const [addedToCart, setAddedToCart] = useState<Set<string>>(new Set())
 
   const isVideo = (url: string) => {
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
@@ -65,6 +66,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   useEffect(() => {
     if (isOpen) {
       fetchWishlist()
+      setAddedToCart(new Set())
     }
   }, [isOpen])
 
@@ -241,6 +243,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
       const data = await response.json()
 
       if (response.ok) {
+        setAddedToCart(prev => new Set(prev).add(itemId))
         window.dispatchEvent(new Event('cart-updated'))
       } else {
         console.error('Cart API error:', data)
@@ -366,10 +369,10 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                                 : (item.product as any).price_usd || 0
                             )}
                             className="flex items-center justify-center gap-2 border border-black px-4 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white w-full disabled:opacity-40 disabled:bg-gray-100 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed disabled:pointer-events-none"
-                            disabled={item.product.stock_quantity === 0 || addingToCart === item.id}
+                            disabled={item.product.stock_quantity === 0 || addingToCart === item.id || addedToCart.has(item.id)}
                           >
                             <ShoppingBag className="h-3.5 w-3.5" />
-                            {item.product.stock_quantity === 0 ? t.wishlist.outOfStock : addingToCart === item.id ? t.wishlist.adding : t.wishlist.addToCart}
+                            {item.product.stock_quantity === 0 ? t.wishlist.outOfStock : addingToCart === item.id ? t.wishlist.adding : addedToCart.has(item.id) ? t.wishlist.added || 'Added' : t.wishlist.addToCart}
                           </button>
                           
                           <button

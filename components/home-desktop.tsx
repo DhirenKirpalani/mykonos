@@ -26,51 +26,81 @@ interface HomeDesktopProps {
   collections: Collection[]
   newArrivals: Product[]
   bestSelling: Product[]
+  isLoading?: boolean
 }
 
-export function HomeDesktop({ products, collections, newArrivals, bestSelling }: HomeDesktopProps) {
+function CarouselSkeleton({ bg, titleBg }: { bg: string; titleBg: string }) {
+  return (
+    <section className={`relative ${bg} py-8 md:py-12 lg:py-16`}>
+      <div className="mx-auto max-w-7xl px-3 md:px-6 lg:px-8 animate-pulse">
+        <div className={`mx-auto mb-8 h-6 w-36 rounded ${titleBg}`} />
+        <div className="flex gap-4 overflow-hidden">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-[260px] lg:w-[300px]">
+              <div className="rounded-lg overflow-hidden">
+                <div className={`aspect-square ${titleBg}`} />
+                <div className="p-3 space-y-2">
+                  <div className={`h-4 w-3/4 rounded ${titleBg}`} />
+                  <div className={`h-4 w-1/2 rounded ${titleBg}`} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export function HomeDesktop({ products, collections, newArrivals, bestSelling, isLoading }: HomeDesktopProps) {
   const { t } = useLanguage()
-  
+
   return (
     <div className="min-h-screen">
       <HeroCarousel />
 
-      {newArrivals.length > 0 && (
+      {isLoading ? (
+        <CarouselSkeleton bg="bg-gradient-to-br from-[#F5EFE6] via-[#E8DCC4] to-[#D4C5A0]" titleBg="bg-[#1C2E4A]/20" />
+      ) : newArrivals.length > 0 ? (
         <section className="relative bg-gradient-to-br from-[#F5EFE6] via-[#E8DCC4] to-[#D4C5A0] py-8 md:py-12 lg:py-16">
-          <ProductCarousel 
-            title={t.home.newArrivals} 
+          <ProductCarousel
+            title={t.home.newArrivals}
             products={newArrivals}
             backgroundColor="bg-transparent"
             titleColor="text-[#1C2E4A]"
             variant="new"
           />
         </section>
-      )}
+      ) : null}
 
-      {products.length > 0 && (
+      {isLoading ? (
+        <CarouselSkeleton bg="bg-gradient-to-br from-[#1C2E4A] via-[#16213E] to-[#0F1729]" titleBg="bg-[#C2A36B]/30" />
+      ) : products.length > 0 ? (
         <section className="relative bg-gradient-to-br from-[#1C2E4A] via-[#16213E] to-[#0F1729] py-8 md:py-12 lg:py-16">
-          <ProductCarousel 
-            title={t.home.popular} 
+          <ProductCarousel
+            title={t.home.popular}
             products={products}
             backgroundColor="bg-transparent"
             titleColor="text-[#C2A36B]"
             variant="popular"
           />
         </section>
-      )}
+      ) : null}
 
-      {bestSelling.length > 0 && (
+      {isLoading ? (
+        <CarouselSkeleton bg="bg-gradient-to-br from-[#C2A36B] via-[#B8945E] to-[#A67C52]" titleBg="bg-[#1C2E4A]/20" />
+      ) : bestSelling.length > 0 ? (
         <section className="relative bg-gradient-to-br from-[#C2A36B] via-[#B8945E] to-[#A67C52] py-8 md:py-12 lg:py-16">
-          <ProductCarousel 
-            title={t.home.bestSellers} 
+          <ProductCarousel
+            title={t.home.bestSellers}
             products={bestSelling}
             backgroundColor="bg-transparent"
             titleColor="text-[#1C2E4A]"
             variant="bestselling"
           />
         </section>
-      )}
-      
+      ) : null}
+
       <FragranceFamiliesGrid />
 
       <section className="relative bg-white py-16 text-luxury-navy md:py-24 lg:py-40">
@@ -97,7 +127,6 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling }:
           </ScrollReveal>
         </div>
       </section>
-
-          </div>
+    </div>
   )
 }

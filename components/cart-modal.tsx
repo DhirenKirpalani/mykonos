@@ -104,24 +104,35 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     const item = cartItems.find(i => i.id === itemId)
     if (!item) return
 
-    const minQty = item.product.min_purchase_quantity || 1
-    const maxQty = item.product.max_purchase_quantity || item.product.stock_quantity
+    // Use variant-level min/max if available, otherwise fall back to product-level (mirrors ProductVariantModal)
+    let effectiveStock = item.product.stock_quantity
+    let variantMinQty = item.product.min_purchase_quantity || 1
+    let variantMaxQty: number | null | undefined = item.product.max_purchase_quantity
+
+    if (item.variant_sku && item.product.variants) {
+      const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+      if (variant) {
+        effectiveStock = variant.stock_quantity
+        variantMinQty = variant.min_purchase_quantity || item.product.min_purchase_quantity || 1
+        variantMaxQty = variant.max_purchase_quantity || item.product.max_purchase_quantity || variant.stock_quantity
+      }
+    }
 
     // Validate minimum quantity
-    if (newQuantity < minQty) {
-      toast.error(`Minimum quantity is ${minQty}`)
+    if (newQuantity < variantMinQty) {
+      toast.error(`Minimum quantity is ${variantMinQty}`)
       return
     }
 
     // Validate maximum quantity
-    if (maxQty && newQuantity > maxQty) {
-      toast.error(`Maximum quantity is ${maxQty}`)
+    if (variantMaxQty !== null && variantMaxQty !== undefined && newQuantity > variantMaxQty) {
+      toast.error(`Maximum quantity is ${variantMaxQty}`)
       return
     }
 
     // Validate stock quantity
-    if (newQuantity > item.product.stock_quantity) {
-      toast.error(`Only ${item.product.stock_quantity} items available`)
+    if (newQuantity > effectiveStock) {
+      toast.error(`Only ${effectiveStock} items available`)
       return
     }
 
@@ -281,7 +292,14 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
                               className="px-3 py-2 text-black/70 hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="Decrease quantity"
-                              disabled={item.quantity <= (item.product.min_purchase_quantity || 1)}
+                              disabled={(() => {
+                                let minQty = item.product.min_purchase_quantity || 1
+                                if (item.variant_sku && item.product.variants) {
+                                  const v = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                                  if (v) minQty = v.min_purchase_quantity || item.product.min_purchase_quantity || 1
+                                }
+                                return item.quantity <= minQty
+                              })()}
                             >
                               <Minus className="h-3 w-3" />
                             </button>
@@ -292,10 +310,19 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
                               className="px-3 py-2 text-black/70 hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="Increase quantity"
-                              disabled={
-                                item.quantity >= item.product.stock_quantity ||
-                                (item.product.max_purchase_quantity !== null && item.quantity >= item.product.max_purchase_quantity)
-                              }
+                              disabled={(() => {
+                                let stockQty = item.product.stock_quantity
+                                let maxQty: number | null | undefined = item.product.max_purchase_quantity
+                                if (item.variant_sku && item.product.variants) {
+                                  const v = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                                  if (v) {
+                                    stockQty = v.stock_quantity
+                                    maxQty = v.max_purchase_quantity || item.product.max_purchase_quantity || null
+                                  }
+                                }
+                                return item.quantity >= stockQty ||
+                                  (maxQty !== null && maxQty !== undefined && item.quantity >= maxQty)
+                              })()}
                             >
                               <Plus className="h-3 w-3" />
                             </button>
