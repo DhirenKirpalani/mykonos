@@ -24,6 +24,7 @@ export function ExpandableSpecifications({ product, fragranceFamily }: Expandabl
     { label: p.gender, value: (product as any).gender || null },
     { label: p.shelfLife, value: (product as any).shelf_life || null },
     { label: p.countryOfOrigin, value: (product as any).country_of_origin || null },
+    { label: p.shipsFrom, value: (product as any).ships_from || null },
     { label: p.bpomNumber, value: (product as any).bpom_number || null },
   ].filter(row => row.value !== null && row.value !== '')
 

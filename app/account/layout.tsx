@@ -27,6 +27,15 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     return <>{children}</>
   }
 
+  // Prevent the full layout shell from flashing while auth is still resolving
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-luxury-gold/30 border-t-luxury-gold" />
+      </div>
+    )
+  }
+
   const getBreadcrumbs = () => {
     if (pathname.startsWith('/account/orders')) return [
       { label: t.account.account, href: '/account' },

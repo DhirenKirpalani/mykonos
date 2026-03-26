@@ -86,7 +86,7 @@ export default function TrackOrderPage() {
     }
   }, [user])
 
-  // Load session order history on mount
+  // Load session order history on mount — deferred so the form renders first
   useEffect(() => {
     const loadSessionOrders = async () => {
       setLoadingHistory(true)
@@ -198,7 +198,9 @@ export default function TrackOrderPage() {
       }
     }
     
-    loadSessionOrders()
+    // Defer so the search form renders on first paint before hitting the DB
+    const timer = setTimeout(loadSessionOrders, 50)
+    return () => clearTimeout(timer)
   }, [])
 
   // Auto-load order from localStorage or sessionStorage on mount
