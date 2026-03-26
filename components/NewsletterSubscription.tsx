@@ -99,57 +99,56 @@ export default function NewsletterSubscription() {
             <span className="font-medium">{t.newsletter.successMessage}</span>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 max-w-2xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t.newsletter.placeholder}
-                className="flex-1 px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-md border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold"
-                disabled={loading}
-                required={false}
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2 sm:px-8 sm:py-3 text-sm sm:text-base bg-luxury-gold hover:bg-luxury-gold-light disabled:bg-gray-400 disabled:cursor-not-allowed text-luxury-navy font-medium rounded-md transition-colors duration-200 flex items-center justify-center gap-2 whitespace-nowrap"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {t.newsletter.subscribing}
-                  </>
-                ) : (
-                  t.newsletter.button
-                )}
-              </button>
-            </div>
+          <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-3">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t.newsletter.placeholder}
+              className="w-full px-4 py-3 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold"
+              disabled={loading}
+              required={false}
+            />
 
-            <div className="flex items-start gap-2 text-left">
+            <label className="flex items-start gap-2.5 text-left cursor-pointer">
               <input
                 type="checkbox"
                 id="newsletter-consent"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 sm:mt-1 w-4 h-4 text-luxury-gold border-gray-300 rounded focus:ring-luxury-gold flex-shrink-0"
+                className="mt-0.5 w-4 h-4 accent-luxury-gold border-gray-300 rounded focus:ring-luxury-gold flex-shrink-0"
                 disabled={loading}
                 required={false}
               />
-              <label htmlFor="newsletter-consent" className="text-xs sm:text-sm text-gray-600">
+              <span className="text-xs text-gray-600 leading-relaxed">
                 {t.newsletter.consent}{' '}
                 <a href="/privacy" className="text-luxury-gold hover:underline">
                   {t.newsletter.privacyPolicy}
                 </a>
                 {t.newsletter.consentSuffix}
-              </label>
-            </div>
+              </span>
+            </label>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 text-sm bg-luxury-gold hover:bg-luxury-gold-light disabled:bg-gray-400 disabled:cursor-not-allowed text-luxury-navy font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t.newsletter.subscribing}
+                </>
+              ) : (
+                t.newsletter.button
+              )}
+            </button>
+
+            <p className="text-xs text-gray-500 text-center">
+              {t.newsletter.privacyNotice}
+            </p>
           </form>
         )}
-
-        <p className="text-xs text-gray-500 mt-3 sm:mt-4">
-          {t.newsletter.privacyNotice}
-        </p>
       </div>
     </div>
   )

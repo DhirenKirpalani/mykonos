@@ -111,6 +111,7 @@ export function HeaderDesktop() {
         <div className="flex h-20 items-center justify-center">
           <div className="flex items-center gap-5 flex-1">
             <RegionCurrencySelector />
+            <LanguageSwitcher />
           </div>
           
           <Link href="/" className="static translate-x-0">

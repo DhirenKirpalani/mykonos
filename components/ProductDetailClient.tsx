@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ShoppingBag, Heart, MessageCircle } from 'lucide-react'
+import { Dialog, DialogOverlay, DialogPortal } from '@/components/ui/dialog'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { ShoppingBag, Heart, MessageCircle, LogIn, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
@@ -45,6 +47,8 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   const [isBuyingNow, setIsBuyingNow] = useState(false)
   const [showVariantModal, setShowVariantModal] = useState(false)
   const [variantModalMode, setVariantModalMode] = useState<'add-to-cart' | 'buy-now' | 'wishlist'>('add-to-cart')
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [pendingVariantName, setPendingVariantName] = useState<string | null>(null)
 
   // Restore quantity from sessionStorage if user navigates back from checkout
   useEffect(() => {
@@ -172,8 +176,9 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session || session.user.is_anonymous) {
-        toast.error('Please login to add items to wishlist')
-        router.push('/login')
+        setIsAddingToWishlist(false)
+        setPendingVariantName(selectedVariants?.variant_name || null)
+        setShowLoginModal(true)
         return
       }
 
@@ -432,6 +437,85 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         mode={variantModalMode}
       />
     )}
+
+    {/* Login Prompt Modal — bottom sheet on mobile, centered on desktop */}
+    <Dialog open={showLoginModal} onOpenChange={(open) => { setShowLoginModal(open); if (!open) setPendingVariantName(null) }}>
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content className={
+          'fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl px-5 pb-8 pt-3 shadow-2xl focus:outline-none ' +
+          'data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-4 ' +
+          'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-4 ' +
+          'sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 ' +
+          'sm:w-full sm:max-w-sm sm:rounded-2xl sm:px-6 sm:py-6 ' +
+          'sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95 ' +
+          'sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=closed]:zoom-out-95'
+        }>
+          {/* Drag handle pill — mobile only */}
+          <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-200 sm:hidden" />
+
+          {/* Close button */}
+          <DialogPrimitive.Close className="absolute right-4 top-4 p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+
+          {/* Icon */}
+          <div className="flex justify-center mb-4">
+            <div className="w-14 h-14 bg-luxury-navy/8 rounded-full flex items-center justify-center">
+              <Heart className="h-7 w-7 text-luxury-navy" />
+            </div>
+          </div>
+
+          {/* Title */}
+          <DialogPrimitive.Title className="text-center text-xl font-semibold text-gray-900 mb-2">
+            Sign in to save items
+          </DialogPrimitive.Title>
+
+          {/* Description */}
+          <DialogPrimitive.Description className="text-center text-sm text-gray-500 mb-1">
+            Log in or create an account to save
+          </DialogPrimitive.Description>
+          <p className="text-center text-sm font-semibold text-gray-800 mb-1">
+            {productName}
+            {pendingVariantName && (
+              <span className="block text-xs font-medium text-luxury-gold mt-0.5">{pendingVariantName}</span>
+            )}
+          </p>
+          <p className="text-center text-sm text-gray-500 mb-6">to your wishlist.</p>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-3">
+            <Button
+              className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white h-12 text-base"
+              onClick={() => {
+                setShowLoginModal(false)
+                router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+              }}
+            >
+              <LogIn className="mr-2 h-5 w-5" />
+              Log in
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 text-base border-gray-300"
+              onClick={() => {
+                setShowLoginModal(false)
+                router.push(`/register?redirect=${encodeURIComponent(window.location.pathname)}`)
+              }}
+            >
+              Create account
+            </Button>
+            <button
+              className="text-sm text-gray-400 hover:text-gray-600 text-center py-2"
+              onClick={() => setShowLoginModal(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    </Dialog>
     </>
   )
 }

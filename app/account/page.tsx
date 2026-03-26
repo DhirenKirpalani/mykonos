@@ -64,8 +64,6 @@ export default function AccountPage() {
     loadUserProfile()
   }, [user, authLoading])
 
-  if (!user) return null
-
   if (authLoading || isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -73,6 +71,8 @@ export default function AccountPage() {
       </div>
     )
   }
+
+  if (!user || user.is_anonymous) return null
 
   return (
     <div className="space-y-8">
