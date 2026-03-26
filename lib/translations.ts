@@ -70,6 +70,7 @@ export const translations = {
       gender: "Gender",
       shelfLife: "Shelf Life",
       countryOfOrigin: "Country of Origin",
+      shipsFrom: "Ships From",
       bpomNumber: "BPOM No."
     },
     home: {
@@ -630,6 +631,7 @@ export const translations = {
       gender: "Gender",
       shelfLife: "Masa Simpan",
       countryOfOrigin: "Negara Asal",
+      shipsFrom: "Dikirim Dari",
       bpomNumber: "No. BPOM"
     },
     home: {

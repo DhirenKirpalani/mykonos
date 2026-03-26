@@ -21,7 +21,7 @@ export function useUserRole() {
           .from('users')
           .select('role')
           .eq('id', user.id)
-          .single()
+          .maybeSingle()
 
         if (error || !data) {
           setRole('customer')
