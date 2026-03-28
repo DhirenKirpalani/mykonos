@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
 import { ArrowLeft, Save, Search, X } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -14,8 +15,12 @@ interface Product {
   fragrance_family?: string
 }
 
-export default function NewPromoCodePage() {
+export default function EditPromoCodePage() {
   const router = useRouter()
+  const params = useParams()
+  const promoId = params.id as string
+  
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -39,10 +44,52 @@ export default function NewPromoCodePage() {
   const [selectedCategory, setSelectedCategory] = useState('')
 
   useEffect(() => {
+    fetchPromoCode()
+  }, [promoId])
+
+  useEffect(() => {
     if (formData.scope === 'specific_products' || formData.scope === 'categories') {
       fetchProducts()
     }
   }, [formData.scope])
+
+  const fetchPromoCode = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch(`/api/promo-codes/${promoId}`, {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setFormData({
+          name: data.name || '',
+          code: data.code || '',
+          discount_type: data.discount_type || 'percentage',
+          discount_value: data.discount_value?.toString() || '',
+          usage_limit: data.usage_limit_global?.toString() || '',
+          max_uses_per_user: data.usage_limit_per_user?.toString() || '1',
+          min_purchase_amount: data.min_purchase_amount?.toString() || '',
+          max_discount_cap: data.max_discount_amount?.toString() || '',
+          scope: data.scope || 'all',
+          valid_from: data.valid_from ? new Date(data.valid_from).toISOString().slice(0, 16) : '',
+          valid_until: data.valid_until ? new Date(data.valid_until).toISOString().slice(0, 16) : '',
+          is_active: data.is_active ?? true
+        })
+        setSelectedProductIds(data.applicable_product_ids || [])
+        setSelectedCategory(data.applicable_category || '')
+      } else {
+        toast.error('Failed to load voucher')
+        router.push('/cms/promo-codes')
+      }
+    } catch (error) {
+      console.error('Error fetching promo code:', error)
+      toast.error('Failed to load voucher')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchProducts = async () => {
     try {
@@ -110,34 +157,51 @@ export default function NewPromoCodePage() {
     setSaving(true)
 
     try {
-      const response = await fetch('/api/promo-codes', {
-        method: 'POST',
+      const response = await fetch(`/api/promo-codes/${promoId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          code: formData.code,
+          discount_type: formData.discount_type,
           discount_value: parseFloat(formData.discount_value),
-          usage_limit: formData.usage_limit ? parseInt(formData.usage_limit) : null,
-          max_uses_per_user: formData.max_uses_per_user ? parseInt(formData.max_uses_per_user) : null,
+          usage_limit_global: formData.usage_limit ? parseInt(formData.usage_limit) : null,
+          usage_limit_per_user: formData.max_uses_per_user ? parseInt(formData.max_uses_per_user) : null,
           min_purchase_amount: formData.min_purchase_amount ? parseFloat(formData.min_purchase_amount) : null,
-          max_discount_cap: formData.max_discount_cap ? parseFloat(formData.max_discount_cap) : null,
+          max_discount_amount: formData.max_discount_cap ? parseFloat(formData.max_discount_cap) : null,
+          scope: formData.scope,
           applicable_product_ids: formData.scope === 'specific_products' ? selectedProductIds : null,
           applicable_category: formData.scope === 'categories' ? selectedCategory : null,
+          valid_from: formData.valid_from || null,
+          valid_until: formData.valid_until || null,
+          is_active: formData.is_active,
         })
       })
 
       if (response.ok) {
-        toast.success('Voucher created successfully')
+        toast.success('Voucher updated successfully')
         router.push('/cms/promo-codes')
       } else {
         const error = await response.json()
-        toast.error(error.message || 'Failed to create voucher')
+        toast.error(error.message || 'Failed to update voucher')
       }
     } catch (error) {
-      console.error('Error creating voucher:', error)
-      toast.error('Failed to create voucher')
+      console.error('Error updating voucher:', error)
+      toast.error('Failed to update voucher')
     } finally {
       setSaving(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-luxury-gold mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading voucher...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -150,13 +214,13 @@ export default function NewPromoCodePage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create Voucher</h1>
-          <p className="mt-1 text-gray-600">Create a new voucher discount code</p>
+          <h1 className="text-3xl font-bold text-gray-900">Edit Voucher</h1>
+          <p className="mt-1 text-gray-600">Update voucher discount code</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Code Details */}
+        {/* Voucher Details - Same as create form */}
         <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Voucher Details</h2>
           
@@ -221,13 +285,9 @@ export default function NewPromoCodePage() {
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                   placeholder={formData.discount_type === 'percentage' ? 'e.g. 10' : 'e.g. 50000'}
                 />
-                <p className="mt-1 text-sm text-gray-500">
-                  {formData.discount_type === 'percentage' ? 'Percentage off (e.g. 10 = 10% off)' : 'Fixed IDR amount off'}
-                </p>
               </div>
             </div>
 
-            {/* Max Discount Cap - only show for percentage */}
             {formData.discount_type === 'percentage' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -242,12 +302,11 @@ export default function NewPromoCodePage() {
                   placeholder="e.g. 50000"
                 />
                 <p className="mt-1 text-sm text-gray-500">
-                  Cap the maximum discount amount. E.g. 20% off on Rp1.000.000 = Rp200.000 discount, but cap at Rp50.000. Leave empty for no cap.
+                  Cap the maximum discount amount. Leave empty for no cap.
                 </p>
               </div>
             )}
 
-            {/* Minimum Purchase Amount */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Minimum Purchase Amount (IDR)
@@ -284,7 +343,7 @@ export default function NewPromoCodePage() {
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                   placeholder="Unlimited"
                 />
-                <p className="mt-1 text-sm text-gray-500">Total number of times this voucher can be used across all users. Leave empty for unlimited.</p>
+                <p className="mt-1 text-sm text-gray-500">Leave empty for unlimited.</p>
               </div>
 
               <div>
@@ -299,13 +358,13 @@ export default function NewPromoCodePage() {
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                   placeholder="1"
                 />
-                <p className="mt-1 text-sm text-gray-500">How many times a single user can use this voucher. Default is 1. Leave empty for unlimited.</p>
+                <p className="mt-1 text-sm text-gray-500">Default is 1. Leave empty for unlimited.</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Scope */}
+        {/* Scope - Same as create form */}
         <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Voucher Scope</h2>
           <div className="space-y-4">
@@ -337,7 +396,7 @@ export default function NewPromoCodePage() {
               </div>
             </div>
 
-            {/* Specific Products Selector */}
+            {/* Product/Category selectors - same as create form */}
             {formData.scope === 'specific_products' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -355,7 +414,6 @@ export default function NewPromoCodePage() {
                   />
                 </div>
 
-                {/* Selected Products Tags */}
                 {selectedProductIds.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {selectedProductIds.map(id => {
@@ -376,7 +434,6 @@ export default function NewPromoCodePage() {
                   </div>
                 )}
 
-                {/* Product List */}
                 {showProductSearch && (
                   <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
                     {filteredProducts.map(product => {
@@ -409,7 +466,6 @@ export default function NewPromoCodePage() {
               </div>
             )}
 
-            {/* Category Selector */}
             {formData.scope === 'categories' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -425,7 +481,6 @@ export default function NewPromoCodePage() {
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-                <p className="mt-1 text-sm text-gray-500">All products in this category will be eligible for the voucher.</p>
               </div>
             )}
           </div>
@@ -460,7 +515,6 @@ export default function NewPromoCodePage() {
                 />
               </div>
             </div>
-
           </div>
         </div>
 
@@ -491,24 +545,6 @@ export default function NewPromoCodePage() {
           </div>
         </div>
 
-        {/* Usage Tracking (Read-only) */}
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Usage Tracking</h2>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Times Used</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">0</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Remaining Uses</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formData.usage_limit ? parseInt(formData.usage_limit) : '∞'}
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-400 mt-3">Usage data will update after the voucher is created and used by customers.</p>
-        </div>
-
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="rounded-lg bg-red-50 border border-red-200 p-4">
@@ -528,7 +564,7 @@ export default function NewPromoCodePage() {
             className="flex items-center gap-2 rounded-lg bg-luxury-gold px-6 py-3 text-sm font-medium text-white hover:bg-luxury-gold/90 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {saving ? 'Creating...' : 'Create Voucher'}
+            {saving ? 'Updating...' : 'Update Voucher'}
           </button>
           <Link
             href="/cms/promo-codes"

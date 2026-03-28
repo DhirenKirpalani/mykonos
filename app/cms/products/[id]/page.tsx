@@ -27,16 +27,12 @@ export default function EditProductPage() {
   const [uploadedVideoUrls, setUploadedVideoUrls] = useState<string[]>([])
   const [formData, setFormData] = useState({
     name: '',
-    slug: '',
     sku: '',
     description: '',
-    brand: '',
     price_usd: '',
     price_idr: '',
     cost_price: '',
     cost_price_idr: '',
-    compare_at_price: '',
-    compare_at_price_idr: '',
     stock_quantity: '',
     low_stock_threshold: '',
     allow_backorder: false,
@@ -58,13 +54,7 @@ export default function EditProductPage() {
     middle_notes: '',
     base_notes: '',
     bpom_number: '',
-    halal_certified: false,
-    promotion_start_date: '',
-    promotion_end_date: '',
-    promotion_stock_locked: '',
-    pre_order_start_date: '',
-    pre_order_end_date: '',
-    shipping_period_days: '',
+    shipping_period_days: '4',
     manufacturing_date: '',
     expiration_date: '',
     ships_from: 'KOTA JAKARTA TIMUR',
@@ -72,9 +62,8 @@ export default function EditProductPage() {
     is_featured: false,
     min_purchase_quantity: '1',
     max_purchase_quantity: '',
-    is_pre_order: false,
-    pre_order_duration_days: '',
-    pre_order_release_date: '',
+    is_pre_order: true,
+    pre_order_duration_days: '30',
     scheduled_publish_date: '',
     meta_title: '',
     meta_description: '',
@@ -86,16 +75,14 @@ export default function EditProductPage() {
     is_popular: false,
     is_best_selling: false,
     new_product_duration_days: '30',
+    tax_enabled: true,
   })
   const [imageAltTexts, setImageAltTexts] = useState<string[]>([])
-  const [bulkDiscounts, setBulkDiscounts] = useState<Array<{quantity: string, discount_percentage: string}>>([])
   const [variants, setVariants] = useState<Array<{
     name: string
     sku: string
     price_usd: string
     price_idr: string
-    compare_at_price_usd: string
-    compare_at_price_idr: string
     stock_quantity: string
     low_stock_threshold: string
     in_stock: boolean
@@ -134,16 +121,12 @@ export default function EditProductPage() {
         
         setFormData({
           name: product.name || '',
-          slug: product.slug || '',
           sku: product.sku || '',
           description: product.description || '',
-          brand: product.brand || '',
           price_usd: product.price_usd?.toString() || '',
           price_idr: product.price_idr?.toString() || '',
           cost_price: product.cost_price?.toString() || '',
           cost_price_idr: product.cost_price_idr?.toString() || '',
-          compare_at_price: product.compare_at_price?.toString() || '',
-          compare_at_price_idr: product.compare_at_price_idr?.toString() || '',
           stock_quantity: product.stock_quantity?.toString() || '',
           low_stock_threshold: product.low_stock_threshold?.toString() || '',
           allow_backorder: product.allow_backorder ?? false,
@@ -165,12 +148,6 @@ export default function EditProductPage() {
           middle_notes: product.middle_notes || '',
           base_notes: product.base_notes || '',
           bpom_number: product.bpom_number || '',
-          halal_certified: product.halal_certified ?? false,
-          promotion_start_date: product.promotion_start_date || '',
-          promotion_end_date: product.promotion_end_date || '',
-          promotion_stock_locked: product.promotion_stock_locked?.toString() || '',
-          pre_order_start_date: product.pre_order_start_date || '',
-          pre_order_end_date: product.pre_order_end_date || '',
           shipping_period_days: product.shipping_period_days?.toString() || '',
           manufacturing_date: product.manufacturing_date || '',
           expiration_date: product.expiration_date || '',
@@ -179,9 +156,8 @@ export default function EditProductPage() {
           is_featured: product.is_featured ?? false,
           min_purchase_quantity: product.min_purchase_quantity?.toString() || '1',
           max_purchase_quantity: product.max_purchase_quantity?.toString() || '',
-          is_pre_order: product.is_pre_order ?? false,
-          pre_order_duration_days: product.pre_order_duration_days?.toString() || '',
-          pre_order_release_date: product.pre_order_release_date || '',
+          is_pre_order: product.is_pre_order ?? true,
+          pre_order_duration_days: product.pre_order_duration_days?.toString() || '30',
           scheduled_publish_date: product.scheduled_publish_date || '',
           meta_title: product.meta_title || '',
           meta_description: product.meta_description || '',
@@ -193,6 +169,7 @@ export default function EditProductPage() {
           is_popular: product.is_popular ?? false,
           is_best_selling: product.is_best_selling ?? false,
           new_product_duration_days: product.new_product_duration_days?.toString() || '30',
+          tax_enabled: product.tax_enabled ?? true,
         })
         
         if (product.image_urls && Array.isArray(product.image_urls)) {
@@ -222,20 +199,12 @@ export default function EditProductPage() {
         if (product.image_alt_texts && Array.isArray(product.image_alt_texts)) {
           setImageAltTexts(product.image_alt_texts)
         }
-        if (product.bulk_discounts && Array.isArray(product.bulk_discounts)) {
-          setBulkDiscounts(product.bulk_discounts.map((d: any) => ({
-            quantity: d.quantity?.toString() || '',
-            discount_percentage: d.discount_percentage?.toString() || ''
-          })))
-        }
         if (product.variants && Array.isArray(product.variants)) {
           setVariants(product.variants.map((v: any) => ({
             name: v.name || '',
             sku: v.sku || '',
             price_usd: v.price_usd?.toString() || '',
             price_idr: v.price_idr?.toString() || '',
-            compare_at_price_usd: v.compare_at_price_usd?.toString() || '',
-            compare_at_price_idr: v.compare_at_price_idr?.toString() || '',
             stock_quantity: v.stock_quantity?.toString() || '',
             low_stock_threshold: v.low_stock_threshold?.toString() || '',
             in_stock: v.in_stock !== undefined ? v.in_stock : true,
@@ -379,8 +348,6 @@ export default function EditProductPage() {
           price_idr: formData.price_idr ? parseFloat(formData.price_idr) : null,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
           cost_price_idr: formData.cost_price_idr ? parseFloat(formData.cost_price_idr) : null,
-          compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-          compare_at_price_idr: formData.compare_at_price_idr ? parseFloat(formData.compare_at_price_idr) : null,
           stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
           low_stock_threshold: formData.low_stock_threshold ? parseInt(formData.low_stock_threshold) : null,
           volume_ml: formData.volume_ml ? parseInt(formData.volume_ml) : null,
@@ -393,7 +360,6 @@ export default function EditProductPage() {
           min_purchase_quantity: formData.min_purchase_quantity ? parseInt(formData.min_purchase_quantity) : 1,
           max_purchase_quantity: formData.max_purchase_quantity ? parseInt(formData.max_purchase_quantity) : null,
           pre_order_duration_days: formData.pre_order_duration_days ? parseInt(formData.pre_order_duration_days) : null,
-          pre_order_release_date: formData.pre_order_release_date || null,
           scheduled_publish_date: formData.scheduled_publish_date || null,
           manufacturing_date: formData.manufacturing_date || null,
           expiration_date: formData.expiration_date || null,
@@ -401,27 +367,20 @@ export default function EditProductPage() {
           in_stock: Boolean(formData.in_stock),
           is_featured: Boolean(formData.is_featured),
           is_pre_order: Boolean(formData.is_pre_order),
-          halal_certified: Boolean(formData.halal_certified),
+          tax_enabled: Boolean(formData.tax_enabled),
           pilih_lokal: Boolean(formData.pilih_lokal),
           is_popular: Boolean(formData.is_popular),
           is_best_selling: Boolean(formData.is_best_selling),
           rating: formData.rating ? parseFloat(formData.rating) : null,
           products_sold: formData.products_sold ? parseInt(formData.products_sold) : null,
           new_product_duration_days: formData.new_product_duration_days ? parseInt(formData.new_product_duration_days.toString()) : 30,
-          sale_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
           image_urls: allMediaUrls,
           image_alt_texts: imageAltTexts,
-          bulk_discounts: bulkDiscounts.filter(d => d.quantity && d.discount_percentage).map(d => ({
-            quantity: parseInt(d.quantity),
-            discount_percentage: parseFloat(d.discount_percentage)
-          })),
           variants: variants.filter(v => v.name).map(v => ({
             name: v.name,
             sku: v.sku,
             price_usd: parseFloat(v.price_usd) || 0,
             price_idr: parseFloat(v.price_idr) || 0,
-            compare_at_price_usd: v.compare_at_price_usd ? parseFloat(v.compare_at_price_usd) : null,
-            compare_at_price_idr: v.compare_at_price_idr ? parseFloat(v.compare_at_price_idr) : null,
             stock_quantity: parseInt(v.stock_quantity) || 0,
             low_stock_threshold: v.low_stock_threshold ? parseInt(v.low_stock_threshold) : null,
             in_stock: v.in_stock !== undefined ? v.in_stock : true,
@@ -461,13 +420,6 @@ export default function EditProductPage() {
     }))
   }
 
-  const generateSlug = () => {
-    const slug = formData.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-    setFormData(prev => ({ ...prev, slug }))
-  }
 
   if (fetching) {
     return <LoadingSpinner />
@@ -503,7 +455,6 @@ export default function EditProductPage() {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                onBlur={generateSlug}
                 required
                 className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
               />
@@ -520,35 +471,6 @@ export default function EditProductPage() {
                 onChange={handleChange}
                 required
                 placeholder="e.g., MYK-OUD-001"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Slug *
-              </label>
-              <input
-                type="text"
-                name="slug"
-                value={formData.slug}
-                onChange={handleChange}
-                required
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Brand *
-              </label>
-              <input
-                type="text"
-                name="brand"
-                value={formData.brand}
-                onChange={handleChange}
-                required
-                placeholder="e.g., Mykonos"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
               />
             </div>
@@ -632,7 +554,7 @@ export default function EditProductPage() {
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Selling Price (USD) *
+                  Base Price (USD) *
                 </label>
                 <input
                   type="number"
@@ -648,7 +570,7 @@ export default function EditProductPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Selling Price (IDR) *
+                  Base Price (IDR) *
                 </label>
                 <input
                   type="number"
@@ -695,89 +617,25 @@ export default function EditProductPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Compare-at Price (USD)
-                </label>
-                <input
-                  type="number"
-                  name="compare_at_price"
-                  value={formData.compare_at_price}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Original price for sales"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-                <p className="mt-1 text-xs text-gray-500">This will be used for promotions</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Compare-at Price (IDR)
-                </label>
-                <input
-                  type="number"
-                  name="compare_at_price_idr"
-                  value={formData.compare_at_price_idr}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Original price in IDR"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-                <p className="mt-1 text-xs text-gray-500">This will be used for promotions</p>
-              </div>
             </div>
 
-          </div>
-
-          {/* Promotion Period Section */}
-          <div className="space-y-4 pt-8">
-            <h3 className="text-lg font-semibold text-gray-900">Promotion Period</h3>
-            <div className="grid gap-6 md:grid-cols-3 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Promotion Start Date
-                </label>
+            <div className="pt-4">
+              <h4 className="text-md font-semibold text-gray-900 mb-4">Tax Configuration</h4>
+              <div className="flex items-center gap-3">
                 <input
-                  type="datetime-local"
-                  name="promotion_start_date"
-                  value={formData.promotion_start_date}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                  type="checkbox"
+                  name="tax_enabled"
+                  checked={formData.tax_enabled}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tax_enabled: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Promotion End Date
+                <label className="text-sm font-medium text-gray-700">
+                  Include Tax in Pricing
                 </label>
-                <input
-                  type="datetime-local"
-                  name="promotion_end_date"
-                  value={formData.promotion_end_date}
-                  onChange={handleChange}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Stock Locked for Promotion
-                </label>
-                <input
-                  type="number"
-                  name="promotion_stock_locked"
-                  value={formData.promotion_stock_locked}
-                  onChange={handleChange}
-                  min="0"
-                  placeholder="Stock reserved for promotion"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                />
-                <p className="mt-1 text-xs text-gray-500">Stock will be locked during promotion period</p>
-              </div>
+              <p className="mt-2 text-xs text-gray-500">When disabled, prices will be displayed without tax on the public website</p>
             </div>
+
           </div>
 
           {/* Inventory Section */}
@@ -1189,80 +1047,26 @@ export default function EditProductPage() {
           {/* Pre-Order Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Pre-Order Settings</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  name="is_pre_order"
-                  checked={formData.is_pre_order}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_pre_order: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
-                />
-                <label className="text-sm font-medium text-gray-700">
-                  Enable Pre-Order
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+              <p className="text-sm text-blue-800">All products are on pre-order basis by default</p>
+            </div>
+            <div className="max-w-md">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Pre-Order Duration (days) *
                 </label>
+                <input
+                  type="number"
+                  name="pre_order_duration_days"
+                  value={formData.pre_order_duration_days}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                  placeholder="e.g., 30"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                />
+                <p className="mt-1 text-xs text-gray-500">Number of days for pre-order processing (default: 30 days)</p>
               </div>
-
-              {formData.is_pre_order && (
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Pre-Order Start Date
-                    </label>
-                    <input
-                      type="datetime-local"
-                      name="pre_order_start_date"
-                      value={formData.pre_order_start_date}
-                      onChange={handleChange}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">When pre-order period begins</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Pre-Order End Date
-                    </label>
-                    <input
-                      type="datetime-local"
-                      name="pre_order_end_date"
-                      value={formData.pre_order_end_date}
-                      onChange={handleChange}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">When pre-order period ends</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Pre-Order Duration (days)
-                    </label>
-                    <input
-                      type="number"
-                      name="pre_order_duration_days"
-                      value={formData.pre_order_duration_days}
-                      onChange={handleChange}
-                      min="1"
-                      placeholder="e.g., 30"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Pre-Order Release Date
-                    </label>
-                    <input
-                      type="date"
-                      name="pre_order_release_date"
-                      value={formData.pre_order_release_date}
-                      onChange={handleChange}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">Expected product release date</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -1334,70 +1138,6 @@ export default function EditProductPage() {
 
           {/* Variants Tab */}
           <div id="section-variants">
-          {/* Bulk Discounts Section */}
-          <div className="space-y-4 pt-8">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Bulk Discounts</h3>
-              <Button
-                type="button"
-                onClick={() => setBulkDiscounts([...bulkDiscounts, { quantity: '', discount_percentage: '' }])}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Discount Tier
-              </Button>
-            </div>
-            {bulkDiscounts.map((discount, index) => (
-              <div key={index} className="grid gap-4 md:grid-cols-3 items-end">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    value={discount.quantity}
-                    onChange={(e) => {
-                      const newDiscounts = [...bulkDiscounts]
-                      newDiscounts[index].quantity = e.target.value
-                      setBulkDiscounts(newDiscounts)
-                    }}
-                    min="1"
-                    placeholder="e.g., 10"
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Discount %
-                  </label>
-                  <input
-                    type="number"
-                    value={discount.discount_percentage}
-                    onChange={(e) => {
-                      const newDiscounts = [...bulkDiscounts]
-                      newDiscounts[index].discount_percentage = e.target.value
-                      setBulkDiscounts(newDiscounts)
-                    }}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="e.g., 10"
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => setBulkDiscounts(bulkDiscounts.filter((_, i) => i !== index))}
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-
           {/* Product Variants Section */}
           <div className="space-y-4 pt-8">
             <div className="flex items-center justify-between">
@@ -1417,7 +1157,7 @@ export default function EditProductPage() {
                 )}
                 <Button
                   type="button"
-                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', compare_at_price_usd: '', compare_at_price_idr: '', stock_quantity: '', low_stock_threshold: '', in_stock: true, min_purchase_quantity: '1', max_purchase_quantity: '', image_url: '' }])}
+                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', stock_quantity: '', low_stock_threshold: '', in_stock: true, min_purchase_quantity: '1', max_purchase_quantity: '', image_url: '' }])}
                   variant="outline"
                   size="sm"
                 >
@@ -1503,42 +1243,6 @@ export default function EditProductPage() {
                       }}
                       step="0.01"
                       min="0"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Compare-at Price (USD)
-                    </label>
-                    <input
-                      type="number"
-                      value={variant.compare_at_price_usd}
-                      onChange={(e) => {
-                        const newVariants = [...variants]
-                        newVariants[index].compare_at_price_usd = e.target.value
-                        setVariants(newVariants)
-                      }}
-                      step="0.01"
-                      min="0"
-                      placeholder="Original price"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Compare-at Price (IDR)
-                    </label>
-                    <input
-                      type="number"
-                      value={variant.compare_at_price_idr}
-                      onChange={(e) => {
-                        const newVariants = [...variants]
-                        newVariants[index].compare_at_price_idr = e.target.value
-                        setVariants(newVariants)
-                      }}
-                      step="0.01"
-                      min="0"
-                      placeholder="Original price"
                       className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                     />
                   </div>
@@ -1808,21 +1512,6 @@ export default function EditProductPage() {
                   placeholder="e.g., NA18201234567"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
-              </div>
-
-              <div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    name="halal_certified"
-                    checked={formData.halal_certified}
-                    onChange={(e) => setFormData(prev => ({ ...prev, halal_certified: e.target.checked }))}
-                    className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
-                  />
-                  <label className="text-sm font-medium text-gray-700">
-                    Halal Certified
-                  </label>
-                </div>
               </div>
             </div>
           </div>

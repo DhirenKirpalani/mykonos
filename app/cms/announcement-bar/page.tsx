@@ -22,23 +22,13 @@ interface AnnouncementMessage {
   created_at: string
 }
 
-interface HeroMedia {
-  id: string
-  media_type: 'video' | 'image'
-  media_url: string
-  is_active: boolean
-  created_at: string
-}
-
 export default function AnnouncementBarPage() {
   const [messages, setMessages] = useState<AnnouncementMessage[]>([])
-  const [heroMedia, setHeroMedia] = useState<HeroMedia | null>(null)
   const [loading, setLoading] = useState(true)
   const [editingMessage, setEditingMessage] = useState<string>('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
-  const [uploadingHero, setUploadingHero] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null)
 
@@ -56,17 +46,6 @@ export default function AnnouncementBarPage() {
 
       if (messagesError) throw messagesError
       setMessages(messagesData || [])
-
-      // Fetch active hero media
-      const { data: heroData, error: heroError } = await supabase
-        .from('hero_media')
-        .select('*')
-        .eq('is_active', true)
-        .single()
-
-      if (!heroError && heroData) {
-        setHeroMedia(heroData)
-      }
     } catch (error) {
       console.error('Error fetching data:', error)
       toast.error('Failed to load data')
@@ -202,68 +181,6 @@ export default function AnnouncementBarPage() {
     } catch (error) {
       console.error('Error toggling message:', error)
       toast.error('Failed to toggle message')
-    }
-  }
-
-  const handleHeroMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    const isVideo = file.type.startsWith('video/')
-    const isImage = file.type.startsWith('image/')
-
-    if (!isVideo && !isImage) {
-      toast.error('Please upload a video or image file')
-      return
-    }
-
-    setUploadingHero(true)
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        toast.error('Authentication required')
-        return
-      }
-
-      // Upload file to storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `hero-${Date.now()}.${fileExt}`
-      const filePath = `hero/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('media')
-        .getPublicUrl(filePath)
-
-      // Update hero media via API (handles deactivation and insertion)
-      const response = await fetch('/api/admin/hero-media', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          media_type: isVideo ? 'video' : 'image',
-          media_url: publicUrl
-        })
-      })
-
-      if (!response.ok) throw new Error('Failed to update hero media')
-
-      toast.success('Hero media uploaded successfully')
-      fetchData()
-    } catch (error) {
-      console.error('Error uploading hero media:', error)
-      toast.error('Failed to upload hero media')
-    } finally {
-      setUploadingHero(false)
     }
   }
 
@@ -405,51 +322,6 @@ export default function AnnouncementBarPage() {
               <p className="text-gray-500">No messages found. Add your first message to get started.</p>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Hero Section Media */}
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Hero Section Media</h2>
-          <p className="mt-2 text-gray-600">Upload video or image for the hero section</p>
-        </div>
-
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Hero Video or Image
-              </label>
-              <input
-                type="file"
-                accept="video/*,image/*"
-                onChange={handleHeroMediaUpload}
-                disabled={uploadingHero}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-luxury-gold file:text-luxury-navy hover:file:bg-luxury-gold/90"
-              />
-              <p className="mt-2 text-xs text-gray-500">Recommended: Video (MP4) or Image (JPG, PNG) - Max 50MB</p>
-            </div>
-
-            {heroMedia && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Current Hero Media:</p>
-                {heroMedia.media_type === 'video' ? (
-                  <video
-                    src={heroMedia.media_url}
-                    className="h-48 w-full rounded-lg object-cover"
-                    controls
-                  />
-                ) : (
-                  <img
-                    src={heroMedia.media_url}
-                    alt="Hero"
-                    className="h-48 w-full rounded-lg object-cover"
-                  />
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 

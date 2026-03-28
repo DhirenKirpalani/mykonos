@@ -4,6 +4,65 @@ import type { Database } from '@/lib/supabase/database.types'
 export const dynamic = 'force-dynamic'
 
 /**
+ * Get single promo code by ID
+ */
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Get auth token from request headers
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Verify the user with the token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const { id } = params
+
+    const { data: promoCode, error } = await supabase
+      .from('promo_codes')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+
+    if (!promoCode) {
+      return NextResponse.json(
+        { error: 'Promo code not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(promoCode)
+  } catch (error: any) {
+    console.error('Get promo code error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch promo code' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
  * Update promo code
  */
 export async function PATCH(
@@ -12,12 +71,23 @@ export async function PATCH(
 ) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get auth token from request headers
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
     
-    if (!session) {
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Verify the user with the token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -25,13 +95,13 @@ export async function PATCH(
     }
 
     // Check permission
-    const { data: user } = await supabase
+    const { data: userData } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
-    if (!user || !['marketing_manager', 'admin'].includes((user as any).role || '')) {
+    if (!userData || !['marketing_manager', 'admin'].includes((userData as any).role || '')) {
       return NextResponse.json(
         { error: 'Forbidden - Marketing manager access required' },
         { status: 403 }
@@ -44,7 +114,7 @@ export async function PATCH(
     // Update promo code
     const updateData: Database['public']['Tables']['promo_codes']['Update'] = {
       ...body,
-      last_modified_by: session.user.id,
+      last_modified_by: user.id,
       updated_at: new Date().toISOString(),
     }
 
@@ -78,12 +148,23 @@ export async function DELETE(
 ) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get auth token from request headers
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
     
-    if (!session) {
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Verify the user with the token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -91,13 +172,13 @@ export async function DELETE(
     }
 
     // Check permission (admin only)
-    const { data: user } = await supabase
+    const { data: userData } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
-    if (!user || (user as any).role !== 'admin') {
+    if (!userData || (userData as any).role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
