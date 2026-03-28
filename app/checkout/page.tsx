@@ -600,15 +600,22 @@ export default function CheckoutPage() {
         return total + (price * item.quantity)
       }, 0)
 
-      const { data, error } = await supabase
-        .rpc('validate_promo_code', {
-          p_code: promoCode.trim().toUpperCase(),
-          p_cart_total: itemsSubtotal
-        } as any)
+      // Collect unique product IDs from cart for scope validation
+      const productIds = Array.from(new Set(allItems.map(item => item.product_id)))
 
-      if (error) throw error
+      const response = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: promoCode.trim().toUpperCase(),
+          region_id: region?.id,
+          cart_total: itemsSubtotal,
+          shipping_cost: shipping || 0,
+          product_ids: productIds,
+        }),
+      })
 
-      const typedData = data as any
+      const typedData = await response.json()
 
       if (typedData && typedData.is_valid) {
         setAppliedPromo(typedData)

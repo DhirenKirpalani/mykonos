@@ -18,7 +18,9 @@ import {
   Menu,
   X,
   MessageCircle,
-  Mail
+  Mail,
+  Percent,
+  Film
 } from 'lucide-react'
 import { useUserRole } from '@/hooks/useUserRole'
 import { canManageProducts, canManagePromotions, canManageOrders, canAccessCMS } from '@/lib/utils/permissions'
@@ -134,9 +136,21 @@ export default function CMSLayout({
       show: role === 'admin'
     },
     { 
-      name: 'Promo Codes', 
+      name: 'Hero Media', 
+      href: '/cms/hero-media', 
+      icon: Film,
+      show: role === 'admin'
+    },
+    { 
+      name: 'Vouchers', 
       href: '/cms/promo-codes', 
       icon: Tag,
+      show: canManagePromotions(role)
+    },
+    { 
+      name: 'Discounts', 
+      href: '/cms/discounts', 
+      icon: Percent,
       show: canManagePromotions(role)
     },
     { 

@@ -2,6 +2,7 @@
 
 export interface PromoCode {
   id: string
+  name: string
   code: string
   description: string | null
   discount_type: 'percentage' | 'fixed'
@@ -14,6 +15,10 @@ export interface PromoCode {
   valid_from: string | null
   valid_until: string | null
   is_active: boolean
+  scope: 'all' | 'specific_products' | 'categories'
+  applicable_product_ids: string[] | null
+  applicable_category: string | null
+  applies_to: 'products' | 'shipping' | 'order'
   created_at: string
   updated_at: string
 }

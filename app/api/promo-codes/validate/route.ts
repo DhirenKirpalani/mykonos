@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { code, region_id, cart_total } = body
+    const { code, region_id, cart_total, product_ids, shipping_cost } = body
 
     if (!code || !region_id || cart_total === undefined) {
       return NextResponse.json(
@@ -31,12 +31,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Call validation function
+    // Call validation function with scope-aware params
     const { data: validation, error } = await supabase.rpc('validate_promo_code', {
       p_code: code.toUpperCase(),
       p_user_id: session.user.id,
       p_region_id: region_id,
       p_cart_total: cart_total,
+      p_shipping_cost: shipping_cost || 0,
+      p_product_ids: product_ids || null,
     } as any) as { data: any; error: any }
 
     if (error) {

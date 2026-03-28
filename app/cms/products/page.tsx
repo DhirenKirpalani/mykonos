@@ -19,11 +19,19 @@ interface Product {
   is_visible: boolean
   created_at: string
   image_url?: string
+  image_urls?: string[]
   variants?: Array<{
+    id?: string
     name: string
     sku: string
     stock_quantity: number
+    price_usd?: number
+    price_idr?: number
   }>
+}
+
+interface ExpandedRows {
+  [key: string]: boolean
 }
 
 export default function ProductsPage() {
@@ -34,6 +42,14 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [auditProduct, setAuditProduct] = useState<Product | null>(null)
+  const [expandedRows, setExpandedRows] = useState<ExpandedRows>({})
+
+  const toggleRow = (productId: string) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [productId]: !prev[productId]
+    }))
+  }
 
   useEffect(() => {
     fetchProducts()
@@ -224,20 +240,49 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {loading ? <SkeletonRows /> : filteredProducts.map((product) => (
-                <tr key={product.id} className="text-sm">
+              {loading ? <SkeletonRows /> : filteredProducts.map((product) => {
+                const productImages = product.image_urls || (product.image_url ? [product.image_url] : [])
+                const imageUrls = productImages.filter(url => {
+                  const ext = url.toLowerCase().split('.').pop()
+                  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')
+                })
+                const hasVariants = product.variants && product.variants.length > 0
+                const isExpanded = expandedRows[product.id]
+                
+                return (
+                <>
+                <tr key={product.id} className="text-sm hover:bg-gray-50">
                   <td className="py-4">
                     <div className="flex items-center gap-3">
-                      {product.image_url && (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="h-12 w-12 rounded-lg object-cover"
-                        />
+                      {hasVariants && (
+                        <button
+                          onClick={() => toggleRow(product.id)}
+                          className="text-gray-400 hover:text-gray-600 transition-transform"
+                          style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                        >
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
                       )}
-                      <div>
+                      {imageUrls.length > 0 ? (
+                        <img
+                          src={imageUrls[0]}
+                          alt={product.name}
+                          className="h-16 w-16 rounded-lg object-cover border border-gray-200"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                          <Package className="h-8 w-8 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1">
                         <div className="font-medium text-gray-900">{product.name}</div>
-                        <div className="text-gray-500">{product.slug}</div>
+                        {hasVariants && product.variants && (
+                          <div className="text-xs text-gray-600 font-medium">
+                            {product.variants.length} variant{product.variants.length > 1 ? 's' : ''}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -320,7 +365,46 @@ export default function ProductsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                {hasVariants && isExpanded && product.variants && (
+                  <tr className="bg-gray-50">
+                    <td colSpan={7} className="py-3 px-6">
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold text-gray-700 uppercase mb-3">Variants</div>
+                        <div className="grid gap-2">
+                          {product.variants.map((variant, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-white rounded-lg p-3 border border-gray-200">
+                              <div className="flex items-center gap-3">
+                                <div className="text-sm font-medium text-gray-900">{variant.name}</div>
+                                <div className="text-xs text-gray-500">{variant.sku}</div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                {variant.price_usd && (
+                                  <div className="text-sm text-gray-700">${variant.price_usd.toFixed(2)}</div>
+                                )}
+                                {variant.price_idr && (
+                                  <div className="text-sm text-gray-700">Rp{variant.price_idr.toLocaleString('id-ID')}</div>
+                                )}
+                                <div className="text-sm">
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+                                    variant.stock_quantity > 10
+                                      ? 'bg-green-100 text-green-800'
+                                      : variant.stock_quantity > 0
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {variant.stock_quantity} units
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </>
+              )})}
             </tbody>
           </table>
           {!loading && filteredProducts.length === 0 && (
