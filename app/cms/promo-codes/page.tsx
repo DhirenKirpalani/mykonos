@@ -30,6 +30,7 @@ export default function PromoCodesPage() {
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'ongoing' | 'coming_soon' | 'expired' | 'inactive'>('all')
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; promoId: string | null; promoName: string }>({ isOpen: false, promoId: null, promoName: '' })
   const [deleting, setDeleting] = useState(false)
 
@@ -54,14 +55,17 @@ export default function PromoCodesPage() {
   const getVoucherStatus = (validFrom: string | null, validUntil: string | null, isActive: boolean) => {
     if (!isActive) return { label: 'Inactive', color: 'bg-gray-100 text-gray-800' }
     
-    const now = new Date()
-    const startDate = validFrom ? new Date(validFrom) : null
-    const endDate = validUntil ? new Date(validUntil) : null
+    // Get current time in UTC+7 (Jakarta timezone) for regional status calculation
+    const nowJakarta = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
     
-    if (startDate && now < startDate) {
+    // Parse dates from database (stored as UTC) and convert to Jakarta time for comparison
+    const startDate = validFrom ? new Date(new Date(validFrom).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })) : null
+    const endDate = validUntil ? new Date(new Date(validUntil).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })) : null
+    
+    if (startDate && nowJakarta < startDate) {
       return { label: 'Coming Soon', color: 'bg-blue-100 text-blue-800' }
     }
-    if (endDate && now > endDate) {
+    if (endDate && nowJakarta > endDate) {
       return { label: 'Expired', color: 'bg-red-100 text-red-800' }
     }
     return { label: 'Ongoing', color: 'bg-green-100 text-green-800' }
@@ -135,10 +139,19 @@ export default function PromoCodesPage() {
     }
   }
 
-  const filteredPromoCodes = promoCodes.filter(promo =>
-    promo.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    promo.code.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredPromoCodes = promoCodes.filter(promo => {
+    const matchesSearch = promo.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      promo.code.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    if (!matchesSearch) return false
+    
+    if (statusFilter === 'all') return true
+    
+    const status = getVoucherStatus(promo.valid_from, promo.valid_until, promo.is_active)
+    const statusKey = status.label.toLowerCase().replace(' ', '_')
+    
+    return statusKey === statusFilter
+  })
 
   const SkeletonRows = () => (
     <>
@@ -181,8 +194,8 @@ export default function PromoCodesPage() {
       </div>
 
       <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-        <div className="mb-6">
-          <div className="relative">
+        <div className="mb-6 flex gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -192,6 +205,17 @@ export default function PromoCodesPage() {
               className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
             />
           </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+          >
+            <option value="all">All Status</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="coming_soon">Coming Soon</option>
+            <option value="expired">Expired</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
 
         <div className="overflow-x-auto">
@@ -236,9 +260,9 @@ export default function PromoCodesPage() {
                     </td>
                     <td className="py-4 text-gray-600 text-xs">
                       {promo.valid_from && promo.valid_until
-                        ? `${new Date(promo.valid_from).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} - ${new Date(promo.valid_until).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                        ? `${new Date(promo.valid_from).toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '').replace(/\//g, '/').replace(' ', ', ')} - ${new Date(promo.valid_until).toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '').replace(/\//g, '/').replace(' ', ', ')}`
                         : promo.valid_until
-                        ? `Until ${new Date(promo.valid_until).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                        ? `Until ${new Date(promo.valid_until).toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '').replace(/\//g, '/').replace(' ', ', ')}`
                         : 'No expiry'}
                     </td>
                     <td className="py-4">

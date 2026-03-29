@@ -101,9 +101,9 @@ export async function PATCH(
       .eq('id', user.id)
       .single()
 
-    if (!userData || !['marketing_manager', 'admin'].includes((userData as any).role || '')) {
+    if (!userData || !['staff', 'admin'].includes((userData as any).role || '')) {
       return NextResponse.json(
-        { error: 'Forbidden - Marketing manager access required' },
+        { error: 'Forbidden - Staff access required' },
         { status: 403 }
       )
     }

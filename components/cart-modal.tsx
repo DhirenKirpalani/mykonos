@@ -47,6 +47,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
   const [discountApplied, setDiscountApplied] = useState(false)
   const [discountAmount, setDiscountAmount] = useState(0)
   const [mounted, setMounted] = useState(false)
+  const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
 
   const isVideo = (url: string) => {
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
@@ -93,6 +94,45 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
       if (error) throw error
 
       setCartItems((data as any) || [])
+      
+      // Fetch active vouchers for cart items
+      if (data && data.length > 0) {
+        const productIds = data.map((item: any) => item.product_id)
+        const { data: activeVouchers } = await supabase
+          .from('promo_codes')
+          .select('discount_type, discount_value, scope, applicable_product_ids')
+          .eq('is_active', true)
+          .lte('valid_from', new Date().toISOString())
+          .gte('valid_until', new Date().toISOString())
+        
+        if (activeVouchers && activeVouchers.length > 0) {
+          const discountMap = new Map<string, number>()
+          data.forEach((item: any) => {
+            const applicableVoucher = activeVouchers.find((v: any) =>
+              v.scope === 'all' ||
+              (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
+            )
+            
+            if (applicableVoucher) {
+              const basePrice = region?.code === 'ID' && item.product.price_idr 
+                ? item.product.price_idr 
+                : item.product.price_usd || 0
+              const price = item.product.sale_price && item.product.sale_price < basePrice 
+                ? item.product.sale_price 
+                : basePrice
+              const itemTotal = price * item.quantity
+              
+              const voucherDiscount = applicableVoucher.discount_type === 'percentage'
+                ? (itemTotal * applicableVoucher.discount_value / 100)
+                : applicableVoucher.discount_value
+              
+              discountMap.set(item.id, voucherDiscount)
+            }
+          })
+          
+          setVoucherDiscounts(discountMap)
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch cart:', error)
     } finally {
@@ -201,9 +241,14 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
       }
     }
     
-    return sum + (basePrice * item.quantity)
+    const itemTotal = basePrice * item.quantity
+    return sum + itemTotal
   }, 0)
-  const total = subtotal - discountAmount
+  
+  // Calculate total voucher discount
+  const totalVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((sum, discount) => sum + discount, 0)
+  
+  const total = subtotal - totalVoucherDiscount - discountAmount
 
   if (!mounted) return null
 
@@ -329,24 +374,33 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                           </div>
 
                           {/* Price */}
-                          <p className="text-sm font-medium tracking-wide">
-                            {region ? (() => {
-                              let price = 0
-                              // If variant is selected, find variant price
-                              if (item.variant_sku && item.product.variants) {
-                                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
-                                if (variant) {
-                                  price = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                          <div className="flex flex-col items-end gap-1">
+                            <p className="text-sm font-medium text-black">
+                              {region ? (() => {
+                                let price = 0
+                                // If variant is selected, find variant price
+                                if (item.variant_sku && item.product.variants) {
+                                  const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                                  if (variant) {
+                                    price = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                                  }
+                                } else {
+                                  // Use product price
+                                  price = region.code === 'ID' && (item.product as any).price_idr 
+                                    ? (item.product as any).price_idr 
+                                    : (item.product as any).price_usd || 0
                                 }
-                              } else {
-                                // Use product price
-                                price = region.code === 'ID' && (item.product as any).price_idr 
-                                  ? (item.product as any).price_idr 
-                                  : (item.product as any).price_usd || 0
-                              }
-                              return formatPrice(price * item.quantity, region)
-                            })() : '...'}
-                          </p>
+                                const itemTotal = price * item.quantity
+                                // Show original price (before voucher discount)
+                                return formatPrice(itemTotal, region)
+                              })() : '...'}
+                            </p>
+                            {voucherDiscounts.has(item.id) && voucherDiscounts.get(item.id)! > 0 && (
+                              <span className="text-[10px] text-orange-600 font-medium">
+                                Voucher: -{region ? formatPrice(voucherDiscounts.get(item.id)!, region) : ''}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <button
@@ -363,32 +417,14 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
             </div>
 
             {/* Discount Section */}
-            {cartItems.length > 0 && (
+            {cartItems.length > 0 && totalVoucherDiscount > 0 && (
               <div className="border-t border-black/5 px-8 py-6">
-                <button
-                  onClick={() => setDiscountApplied(!discountApplied)}
-                  className="flex w-full items-center justify-between text-left"
-                >
+                <div className="flex w-full items-center justify-between">
                   <span className="text-sm tracking-wide font-light">{t.cart.discount}</span>
-                  <span className="text-lg font-light">{discountApplied ? '−' : '+'}</span>
-                </button>
-                {discountApplied && (
-                  <div className="mt-4 flex gap-2">
-                    <input
-                      type="text"
-                      placeholder={t.cart.discountCode}
-                      value={discountCode}
-                      onChange={(e) => setDiscountCode(e.target.value)}
-                      className="flex-1 border border-black/10 bg-white px-4 py-2.5 text-sm tracking-wide placeholder:text-black/40 focus:border-black/30 focus:outline-none focus:ring-0"
-                    />
-                    <button
-                      onClick={applyDiscount}
-                      className="border border-black px-6 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white"
-                    >
-                      {t.cart.apply}
-                    </button>
-                  </div>
-                )}
+                  <span className="text-sm font-medium text-orange-600">
+                    -{region ? formatPrice(totalVoucherDiscount, region) : '...'}
+                  </span>
+                </div>
               </div>
             )}
 

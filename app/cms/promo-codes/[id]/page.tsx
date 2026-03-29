@@ -42,9 +42,11 @@ export default function EditPromoCodePage() {
   })
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
+  const [auditLogs, setAuditLogs] = useState<any[]>([])
 
   useEffect(() => {
     fetchPromoCode()
+    fetchAuditLogs()
   }, [promoId])
 
   useEffect(() => {
@@ -73,8 +75,8 @@ export default function EditPromoCodePage() {
           min_purchase_amount: data.min_purchase_amount?.toString() || '',
           max_discount_cap: data.max_discount_amount?.toString() || '',
           scope: data.scope || 'all',
-          valid_from: data.valid_from ? new Date(data.valid_from).toISOString().slice(0, 16) : '',
-          valid_until: data.valid_until ? new Date(data.valid_until).toISOString().slice(0, 16) : '',
+          valid_from: data.valid_from ? new Date(new Date(data.valid_from).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().slice(0, 16) : '',
+          valid_until: data.valid_until ? new Date(new Date(data.valid_until).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().slice(0, 16) : '',
           is_active: data.is_active ?? true
         })
         setSelectedProductIds(data.applicable_product_ids || [])
@@ -88,6 +90,35 @@ export default function EditPromoCodePage() {
       toast.error('Failed to load voucher')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAuditLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('promo_code_audit_log')
+        .select(`
+          id,
+          action,
+          changes,
+          created_at,
+          changed_by,
+          users!promo_code_audit_log_changed_by_fkey(email, full_name)
+        `)
+        .eq('promo_code_id', promoId)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (!error && data) {
+        // Transform data to match expected format
+        const transformedData = data.map(log => ({
+          ...log,
+          user: log.users
+        }))
+        setAuditLogs(transformedData)
+      }
+    } catch (error) {
+      console.error('Error fetching audit logs:', error)
     }
   }
 
@@ -157,9 +188,13 @@ export default function EditPromoCodePage() {
     setSaving(true)
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch(`/api/promo-codes/${promoId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({
           name: formData.name,
           code: formData.code,
@@ -172,8 +207,8 @@ export default function EditPromoCodePage() {
           scope: formData.scope,
           applicable_product_ids: formData.scope === 'specific_products' ? selectedProductIds : null,
           applicable_category: formData.scope === 'categories' ? selectedCategory : null,
-          valid_from: formData.valid_from || null,
-          valid_until: formData.valid_until || null,
+          valid_from: formData.valid_from ? new Date(formData.valid_from).toISOString() : null,
+          valid_until: formData.valid_until ? new Date(formData.valid_until).toISOString() : null,
           is_active: formData.is_active,
         })
       })
@@ -554,6 +589,44 @@ export default function EditPromoCodePage() {
                 <li key={idx} className="text-sm text-red-700">{error}</li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Audit Log */}
+        {auditLogs.length > 0 && (
+          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Change History</h2>
+            <div className="space-y-3">
+              {auditLogs.map((log) => (
+                <div key={log.id} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        log.action === 'created' ? 'bg-blue-100 text-blue-700' :
+                        log.action === 'updated' ? 'bg-yellow-100 text-yellow-700' :
+                        log.action === 'activated' ? 'bg-green-100 text-green-700' :
+                        log.action === 'deactivated' ? 'bg-gray-100 text-gray-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {log.action.charAt(0).toUpperCase() + log.action.slice(1)}
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        by {log.user?.full_name || log.user?.email || 'System'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {new Date(log.created_at).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

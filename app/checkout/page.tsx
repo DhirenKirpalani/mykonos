@@ -74,6 +74,8 @@ export default function CheckoutPage() {
   const [appliedPromo, setAppliedPromo] = useState<any>(null)
   const [discount, setDiscount] = useState(0)
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
+  const [vouchers, setVouchers] = useState<any[]>([])
+  const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
   const [isRecommendedExpanded, setIsRecommendedExpanded] = useState(true)
   const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [editForm, setEditForm] = useState({
@@ -298,6 +300,43 @@ export default function CheckoutPage() {
         console.log('📦 [CHECKOUT INIT] Order again items:', orderAgainCartItems)
         setCartItems(orderAgainCartItems)
         setIsBuyNow(true) // Treat order again like buy now (don't refetch cart)
+        
+        // Fetch active vouchers for order again items
+        const { data: activeVouchers } = await supabase
+          .from('promo_codes')
+          .select('discount_type, discount_value, scope, applicable_product_ids')
+          .eq('is_active', true)
+          .lte('valid_from', new Date().toISOString())
+          .gte('valid_until', new Date().toISOString())
+        
+        if (activeVouchers && activeVouchers.length > 0) {
+          setVouchers(activeVouchers)
+          
+          // Calculate voucher discounts for each order again item
+          const discountMap = new Map<string, number>()
+          orderAgainCartItems.forEach((item: any) => {
+            const applicableVoucher = activeVouchers.find((v: any) =>
+              v.scope === 'all' ||
+              (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
+            )
+            
+            if (applicableVoucher) {
+              const basePrice = region?.code === 'ID' && item.product.price_idr 
+                ? item.product.price_idr 
+                : item.product.price_usd || 0
+              const price = getEffectivePrice(basePrice, item.product.sale_price)
+              const itemTotal = price * item.quantity
+              
+              const voucherDiscount = applicableVoucher.discount_type === 'percentage'
+                ? (itemTotal * applicableVoucher.discount_value / 100)
+                : applicableVoucher.discount_value
+              
+              discountMap.set(item.id, voucherDiscount)
+            }
+          })
+          
+          setVoucherDiscounts(discountMap)
+        }
       } else if (buyNowItemsStr && isBuyNowFlow) {
         // Handle Buy Now flow - fetch product details
         console.log('🛍️ [CHECKOUT INIT] Using BUY NOW flow')
@@ -348,6 +387,43 @@ export default function CheckoutPage() {
         }))
 
         setCartItems(buyNowCartItems)
+        
+        // Fetch active vouchers for buy now items
+        const { data: activeVouchers } = await supabase
+          .from('promo_codes')
+          .select('discount_type, discount_value, scope, applicable_product_ids')
+          .eq('is_active', true)
+          .lte('valid_from', new Date().toISOString())
+          .gte('valid_until', new Date().toISOString())
+        
+        if (activeVouchers && activeVouchers.length > 0) {
+          setVouchers(activeVouchers)
+          
+          // Calculate voucher discounts for each buy now item
+          const discountMap = new Map<string, number>()
+          buyNowCartItems.forEach((item: any) => {
+            const applicableVoucher = activeVouchers.find((v: any) =>
+              v.scope === 'all' ||
+              (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
+            )
+            
+            if (applicableVoucher) {
+              const basePrice = region?.code === 'ID' && item.product.price_idr 
+                ? item.product.price_idr 
+                : item.product.price_usd || 0
+              const price = getEffectivePrice(basePrice, item.product.sale_price)
+              const itemTotal = price * item.quantity
+              
+              const voucherDiscount = applicableVoucher.discount_type === 'percentage'
+                ? (itemTotal * applicableVoucher.discount_value / 100)
+                : applicableVoucher.discount_value
+              
+              discountMap.set(item.id, voucherDiscount)
+            }
+          })
+          
+          setVoucherDiscounts(discountMap)
+        }
       } else {
         // Regular cart flow - fetch cart items
         console.log('🛒 [CHECKOUT INIT] Using CART flow')
@@ -394,6 +470,44 @@ export default function CheckoutPage() {
         } else {
           console.log('✅ [CHECKOUT INIT] Setting cart items:', cart.length)
           setCartItems(cart as any)
+          
+          // Fetch active vouchers for cart items
+          const productIds = cart.map((item: any) => item.product_id)
+          const { data: activeVouchers } = await supabase
+            .from('promo_codes')
+            .select('discount_type, discount_value, scope, applicable_product_ids')
+            .eq('is_active', true)
+            .lte('valid_from', new Date().toISOString())
+            .gte('valid_until', new Date().toISOString())
+          
+          if (activeVouchers && activeVouchers.length > 0) {
+            setVouchers(activeVouchers)
+            
+            // Calculate voucher discounts for each cart item
+            const discountMap = new Map<string, number>()
+            cart.forEach((item: any) => {
+              const applicableVoucher = activeVouchers.find((v: any) =>
+                v.scope === 'all' ||
+                (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
+              )
+              
+              if (applicableVoucher) {
+                const basePrice = region?.code === 'ID' && item.product.price_idr 
+                  ? item.product.price_idr 
+                  : item.product.price_usd || 0
+                const price = getEffectivePrice(basePrice, item.product.sale_price)
+                const itemTotal = price * item.quantity
+                
+                const voucherDiscount = applicableVoucher.discount_type === 'percentage'
+                  ? (itemTotal * applicableVoucher.discount_value / 100)
+                  : applicableVoucher.discount_value
+                
+                discountMap.set(item.id, voucherDiscount)
+              }
+            })
+            
+            setVoucherDiscounts(discountMap)
+          }
         }
       }
 
@@ -692,6 +806,7 @@ export default function CheckoutPage() {
         
         // Build cart snapshot from cart items in state
         let subtotal = 0
+        let voucherDiscountTotal = 0
         const cartSnapshot = cartItems.map((item, index) => {
           const product = item.product
           if (!product) {
@@ -714,12 +829,18 @@ export default function CheckoutPage() {
           
           const price = getEffectivePrice(basePrice, product.sale_price)
           const quantity = item.quantity || 1
-          subtotal += price * quantity
+          const itemTotal = price * quantity
+          
+          // Add voucher discount
+          const itemVoucherDiscount = voucherDiscounts.get(item.id) || 0
+          voucherDiscountTotal += itemVoucherDiscount
+          
+          subtotal += itemTotal - itemVoucherDiscount
           
           return {
             product_id: item.product_id,
             quantity: quantity,
-            price: price,
+            price: price - (itemVoucherDiscount / quantity), // Net price per unit
             variant_name: itemWithVariant.variant_name,
             variant_sku: itemWithVariant.variant_sku
           }
@@ -733,8 +854,8 @@ export default function CheckoutPage() {
             user_id: session.user.id,
             cart_snapshot: cartSnapshot,
             pricing_snapshot: {
-              subtotal,
-              discount: 0,
+              subtotal: subtotal + voucherDiscountTotal, // Original subtotal before discount
+              discount: voucherDiscountTotal,
               shipping: subtotal >= 100 ? 0 : 15,
               tax: subtotal * 0.1,
               total: subtotal + (subtotal >= 100 ? 0 : 15) + (subtotal * 0.1),
@@ -755,6 +876,10 @@ export default function CheckoutPage() {
         // This includes Buy Now items that have been transferred to cart after login
         console.log('🛍️ [ORDER] Using regular cart flow')
         console.log('📝 [ORDER] Creating checkout session from cart...')
+        
+        // Calculate total voucher discount
+        const totalVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((sum, discount) => sum + discount, 0)
+        
         const sessionResponse = await fetch('/api/checkout/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -762,6 +887,7 @@ export default function CheckoutPage() {
             user_id: session.user.id,
             currency_code: region?.currency_code,
             region_code: region?.code,
+            voucher_discount: totalVoucherDiscount,
           }),
         })
 
@@ -832,10 +958,17 @@ export default function CheckoutPage() {
           // Use only variant name if available, otherwise product name
           const itemName = itemWithVariant.variant_name || item.product.name
           
+          // Calculate price after voucher discount
+          const effectivePrice = getEffectivePrice(basePrice, item.product.sale_price)
+          const voucherDiscount = voucherDiscounts.get(item.id) || 0
+          // Voucher discount is total for all units, so divide by quantity to get per-unit price
+          const totalItemPrice = effectivePrice * item.quantity
+          const netPricePerUnit = (totalItemPrice - voucherDiscount) / item.quantity
+          
           return {
             id: item.product_id,
             name: itemName,
-            price: convertToIDR(getEffectivePrice(basePrice, item.product.sale_price)),
+            price: convertToIDR(netPricePerUnit),
             quantity: item.quantity,
           }
         }),
@@ -1287,10 +1420,16 @@ export default function CheckoutPage() {
         ...[...cartItems, ...quickAddedItems].map(item => {
           const basePrice = getBasePrice(item.product, (item as any).variant_sku)
           const itemName = (item as any).variant_name || item.product.name
+          const effectivePrice = getEffectivePrice(basePrice, item.product.sale_price)
+          const voucherDiscount = voucherDiscounts.get(item.id) || 0
+          // Voucher discount is total for all units, so divide by quantity to get per-unit price
+          const totalItemPrice = effectivePrice * item.quantity
+          const netPricePerUnit = (totalItemPrice - voucherDiscount) / item.quantity
+          
           return {
             id: item.product_id,
             name: itemName,
-            price: convertToIDR(getEffectivePrice(basePrice, item.product.sale_price)),
+            price: convertToIDR(netPricePerUnit),
             quantity: item.quantity,
           }
         }),
@@ -1687,9 +1826,14 @@ export default function CheckoutPage() {
     return total + (price * item.quantity)
   }, 0)
 
-  const shipping = subtotal >= 100 ? 0 : shippingCost
-  const tax = subtotal * 0.1
-  const total = subtotal + shipping + tax - discount
+  // Calculate total voucher discount
+  const totalVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((sum, discount) => sum + discount, 0)
+
+  // Calculate net amount after voucher discount for tax calculation
+  const netAmount = subtotal - totalVoucherDiscount
+  const shipping = netAmount >= 100 ? 0 : shippingCost
+  const tax = netAmount * 0.1
+  const total = netAmount + shipping + tax - discount
 
   if (isLoading) {
     return (
@@ -1822,14 +1966,53 @@ export default function CheckoutPage() {
                         )}
                       </div>
 
-                      {/* Quantity and Total */}
-                      <div className="flex items-center justify-between gap-3 mt-2">
-                        <span className="text-sm sm:text-base text-gray-600">
-                          Qty: {item.quantity}
-                        </span>
-                        <p className="text-sm sm:text-base font-bold text-gray-900">
-                          {region ? formatRegionPrice(price * item.quantity, region) : formatCurrencyPrice(price * item.quantity, currency)}
+                      {/* Pre-order Shipping Info */}
+                      <div className="flex items-start gap-1.5 mt-1">
+                        <svg className="mt-0.5 h-3.5 w-3.5 text-[#26AA99] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-xs text-gray-600">
+                          {(() => {
+                            const preOrderDays = (item.product as any).pre_order_duration_days || 30
+                            const today = new Date()
+                            const estimateStart = new Date(today)
+                            estimateStart.setDate(today.getDate() + preOrderDays + 3)
+                            const estimateEnd = new Date(today)
+                            estimateEnd.setDate(today.getDate() + preOrderDays + 5)
+                            const formatDate = (date: Date) => {
+                              const day = date.getDate()
+                              const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+                              return `${day} ${months[date.getMonth()]}`
+                            }
+                            return `Pre-order (dikirim dalam ${preOrderDays} hari). Estimasi tiba ${formatDate(estimateStart)} - ${formatDate(estimateEnd)}`
+                          })()}
                         </p>
+                      </div>
+
+                      {/* Quantity and Total */}
+                      <div className="flex flex-col gap-1 mt-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm sm:text-base text-gray-600">
+                            Qty: {item.quantity}
+                          </span>
+                          <p className="text-sm sm:text-base font-bold text-gray-900">
+                            {(() => {
+                              const itemTotal = price * item.quantity
+                              const voucherDiscount = voucherDiscounts.get(item.id) || 0
+                              return region ? formatRegionPrice(itemTotal - voucherDiscount, region) : formatCurrencyPrice(itemTotal - voucherDiscount, currency)
+                            })()}
+                          </p>
+                        </div>
+                        {voucherDiscounts.has(item.id) && voucherDiscounts.get(item.id)! > 0 && (
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <svg className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
+                            </svg>
+                            <span className="text-xs text-orange-600 font-medium">
+                              Voucher: -{region ? formatRegionPrice(voucherDiscounts.get(item.id)!, region) : formatCurrencyPrice(voucherDiscounts.get(item.id)!, currency)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2064,6 +2247,17 @@ export default function CheckoutPage() {
                   <span>{t.checkout.subtotal}</span>
                   <span className="font-medium text-gray-900">{region ? formatRegionPrice(subtotal, region) : formatCurrencyPrice(subtotal, currency)}</span>
                 </div>
+                {totalVoucherDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-orange-600">
+                    <div className="flex items-center gap-1.5">
+                      <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
+                      </svg>
+                      <span>Voucher Discount</span>
+                    </div>
+                    <span className="font-medium">-{region ? formatRegionPrice(totalVoucherDiscount, region) : formatCurrencyPrice(totalVoucherDiscount, currency)}</span>
+                  </div>
+                )}
                 {discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>{t.checkout.discount}</span>

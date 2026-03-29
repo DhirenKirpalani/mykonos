@@ -53,6 +53,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
   const [addedToCart, setAddedToCart] = useState<Set<string>>(new Set())
+  const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
 
   const isVideo = (url: string) => {
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
@@ -101,6 +102,44 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
 
       const items = (data as any) || []
       setWishlistItems(items)
+      
+      // Fetch active vouchers for wishlist items
+      if (items && items.length > 0) {
+        const productIds = items.map((item: any) => item.product_id)
+        const { data: activeVouchers } = await supabase
+          .from('promo_codes')
+          .select('discount_type, discount_value, scope, applicable_product_ids')
+          .eq('is_active', true)
+          .lte('valid_from', new Date().toISOString())
+          .gte('valid_until', new Date().toISOString())
+        
+        if (activeVouchers && activeVouchers.length > 0) {
+          const discountMap = new Map<string, number>()
+          items.forEach((item: any) => {
+            const applicableVoucher = activeVouchers.find((v: any) =>
+              v.scope === 'all' ||
+              (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
+            )
+            
+            if (applicableVoucher) {
+              const basePrice = region?.code === 'ID' && item.product.price_idr 
+                ? item.product.price_idr 
+                : item.product.price_usd || 0
+              const price = item.product.sale_price && item.product.sale_price < basePrice 
+                ? item.product.sale_price 
+                : basePrice
+              
+              const voucherDiscount = applicableVoucher.discount_type === 'percentage'
+                ? (price * applicableVoucher.discount_value / 100)
+                : applicableVoucher.discount_value
+              
+              discountMap.set(item.id, voucherDiscount)
+            }
+          })
+          
+          setVoucherDiscounts(discountMap)
+        }
+      }
       
       // Initialize quantities from database
       const initialQuantities: Record<string, number> = {}
@@ -340,23 +379,56 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                               {item.product.size}
                             </p>
                           )}
-                          <p className="mt-2 text-sm font-medium tracking-wide">
-                            {region ? (() => {
-                              // Get variant-specific price if variant exists
-                              let basePrice = region.code === 'ID' && (item.product as any).price_idr 
-                                ? (item.product as any).price_idr 
-                                : (item.product as any).price_usd || 0
-                              
-                              if ((item as any).variant_sku && item.product.variants) {
-                                const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
-                                if (variant) {
-                                  basePrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                          
+                          {/* Pre-order Shipping Info */}
+                          <div className="mt-2 flex items-start gap-1.5">
+                            <svg className="mt-0.5 h-3 w-3 text-[#26AA99] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p className="text-[10px] text-gray-600">
+                              {(() => {
+                                const preOrderDays = (item.product as any).pre_order_duration_days || 30
+                                const today = new Date()
+                                const estimateStart = new Date(today)
+                                estimateStart.setDate(today.getDate() + preOrderDays + 3)
+                                const estimateEnd = new Date(today)
+                                estimateEnd.setDate(today.getDate() + preOrderDays + 5)
+                                const formatDate = (date: Date) => {
+                                  const day = date.getDate()
+                                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+                                  return `${day} ${months[date.getMonth()]}`
                                 }
-                              }
-                              
-                              return formatPrice(basePrice * (quantities[item.id] || 1), region)
-                            })() : '...'}
-                          </p>
+                                return `Pre-order (dikirim dalam ${preOrderDays} hari). Estimasi tiba ${formatDate(estimateStart)} - ${formatDate(estimateEnd)}`
+                              })()}
+                            </p>
+                          </div>
+                          
+                          <div className="mt-2 flex flex-col gap-1">
+                            <p className="text-sm font-medium tracking-wide">
+                              {region ? (() => {
+                                // Get variant-specific price if variant exists
+                                let basePrice = region.code === 'ID' && (item.product as any).price_idr 
+                                  ? (item.product as any).price_idr 
+                                  : (item.product as any).price_usd || 0
+                                
+                                if ((item as any).variant_sku && item.product.variants) {
+                                  const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
+                                  if (variant) {
+                                    basePrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                                  }
+                                }
+                                
+                                const itemTotal = basePrice * (quantities[item.id] || 1)
+                                const voucherDiscount = voucherDiscounts.get(item.id) || 0
+                                return formatPrice(itemTotal - voucherDiscount, region)
+                              })() : '...'}
+                            </p>
+                            {voucherDiscounts.has(item.id) && voucherDiscounts.get(item.id)! > 0 && (
+                              <span className="text-[10px] text-orange-600 font-medium">
+                                Voucher: -{region ? formatPrice(voucherDiscounts.get(item.id)!, region) : ''}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="space-y-3">

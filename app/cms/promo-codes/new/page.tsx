@@ -122,6 +122,8 @@ export default function NewPromoCodePage() {
           max_discount_cap: formData.max_discount_cap ? parseFloat(formData.max_discount_cap) : null,
           applicable_product_ids: formData.scope === 'specific_products' ? selectedProductIds : null,
           applicable_category: formData.scope === 'categories' ? selectedCategory : null,
+          valid_from: formData.valid_from ? new Date(formData.valid_from).toISOString() : null,
+          valid_until: formData.valid_until ? new Date(formData.valid_until).toISOString() : null,
         })
       })
 

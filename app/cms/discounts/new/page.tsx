@@ -16,6 +16,7 @@ interface Product {
   price_idr: number
   stock_quantity: number
   image_url?: string
+  image_urls?: string[]
   variants?: Array<{
     id: string
     name: string
@@ -106,7 +107,7 @@ export default function NewDiscountPage() {
         stock: variant.stock_quantity,
         min_purchase: 1,
         is_active: true,
-        image_url: product.image_url,
+        image_url: product.image_urls?.[0] || product.image_url,
       }))
       setDiscountProducts(prev => [...prev, ...variantProducts])
     } else {
@@ -124,7 +125,7 @@ export default function NewDiscountPage() {
         stock: product.stock_quantity,
         min_purchase: 1,
         is_active: true,
-        image_url: product.image_url,
+        image_url: product.image_urls?.[0] || product.image_url,
       }
       setDiscountProducts(prev => [...prev, newProduct])
     }
@@ -352,8 +353,8 @@ export default function NewDiscountPage() {
                   <div key={product.id} className="border border-gray-200 rounded-lg p-3 hover:border-luxury-gold transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
-                        {product.image_url && (
-                          <img src={product.image_url} alt={product.name} className="h-12 w-12 rounded object-cover" />
+                        {product.image_urls && product.image_urls.length > 0 && (
+                          <img src={product.image_urls[0]} alt={product.name} className="h-12 w-12 rounded object-cover" />
                         )}
                         <div className="flex-1">
                           <div className="font-medium text-gray-900">{product.name}</div>
@@ -379,7 +380,7 @@ export default function NewDiscountPage() {
           )}
 
           <div className="text-sm text-gray-600 mb-4">
-            {discountProducts.length} total produk
+            {new Set(discountProducts.map(p => p.product_id)).size} total produk
           </div>
 
           {/* Bulk Discount Options */}
@@ -429,7 +430,6 @@ export default function NewDiscountPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Batas Pembelian</label>
                   <input
                     type="number"
                     value={bulkDiscount.min_purchase}
@@ -450,9 +450,14 @@ export default function NewDiscountPage() {
                 <div className="col-span-1 flex items-center">
                   <input
                     type="checkbox"
-                    checked={selectedProducts.size === discountProducts.length && discountProducts.length > 0}
+                    ref={(el) => {
+                      if (el) {
+                        el.indeterminate = selectedProducts.size > 0 && selectedProducts.size < discountProducts.length
+                      }
+                    }}
+                    checked={selectedProducts.size > 0 && selectedProducts.size === discountProducts.length}
                     onChange={() => {
-                      if (selectedProducts.size === discountProducts.length) {
+                      if (selectedProducts.size > 0) {
                         setSelectedProducts(new Set())
                       } else {
                         const allKeys = discountProducts.map(p => p.variant_id ? `${p.product_id}-${p.variant_id}` : p.product_id)
@@ -490,6 +495,13 @@ export default function NewDiscountPage() {
                         <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
+                            ref={(el) => {
+                              if (el) {
+                                const keys = items.map(item => item.variant_id ? `${item.product_id}-${item.variant_id}` : item.product_id)
+                                const selectedCount = keys.filter(k => selectedProducts.has(k)).length
+                                el.indeterminate = selectedCount > 0 && selectedCount < keys.length
+                              }
+                            }}
                             checked={items.every(item => {
                               const key = item.variant_id ? `${item.product_id}-${item.variant_id}` : item.product_id
                               return selectedProducts.has(key)
@@ -511,9 +523,32 @@ export default function NewDiscountPage() {
                           <span className="text-sm font-medium text-gray-900">{items[0].product_name}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <select className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-500">
-                            <option>Tidak T...</option>
-                          </select>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-600">Batas Pembelian:</label>
+                            <select 
+                              value={items[0].min_purchase?.toString() || ''}
+                              onChange={(e) => {
+                                // Update min_purchase for all variants of this product
+                                const newValue = e.target.value ? parseInt(e.target.value) : undefined
+                                items.forEach(item => {
+                                  const idx = discountProducts.findIndex(p => 
+                                    p.product_id === item.product_id && 
+                                    (item.variant_id ? p.variant_id === item.variant_id : !p.variant_id)
+                                  )
+                                  if (idx !== -1) {
+                                    updateDiscountProduct(idx, 'min_purchase', newValue)
+                                  }
+                                })
+                              }}
+                              className="rounded border border-gray-300 px-2 py-1 text-xs"
+                            >
+                              <option value="">Tidak T...</option>
+                              <option value="1">1</option>
+                              <option value="2">2</option>
+                              <option value="3">3</option>
+                              <option value="5">5</option>
+                            </select>
+                          </div>
                           <button
                             type="button"
                             onClick={() => {
@@ -535,17 +570,11 @@ export default function NewDiscountPage() {
                           )
                           const itemKey = item.variant_id ? `${item.product_id}-${item.variant_id}` : item.product_id
                           const isSelected = selectedProducts.has(itemKey)
-                          const discountPercent = item.discount_type === 'percentage' ? item.discount_value : (item.original_price > 0 ? Math.round((1 - item.discounted_price / item.original_price) * 100) : 0)
+                          const discountPercent = item.discount_type === 'percentage' ? item.discount_value : (item.original_price > 0 ? Math.round(((item.original_price - item.discounted_price) / item.original_price) * 100) : 0)
                           return (
                             <div key={idx} className="grid grid-cols-12 gap-2 items-center px-4 py-3 bg-white hover:bg-gray-50">
-                              {/* Checkbox */}
+                              {/* Empty space for alignment (no checkbox on variants) */}
                               <div className="col-span-1 flex items-center pl-4">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => toggleSelection(item.product_id, item.variant_id)}
-                                  className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
-                                />
                               </div>
                               {/* Variant Name */}
                               <div className="col-span-1">
@@ -556,39 +585,44 @@ export default function NewDiscountPage() {
                               <div className="col-span-1 text-sm text-gray-700">
                                 Rp{item.original_price.toLocaleString('id-ID')}
                               </div>
-                              {/* Discount Price (Rp input) + OR + Discount % */}
+                              {/* Discount Price (Rp input with spinner) */}
                               <div className="col-span-2">
                                 <div className="flex items-center gap-1">
                                   <span className="text-xs text-gray-500">Rp</span>
                                   <input
                                     type="number"
-                                    value={item.discount_type === 'fixed' ? item.discount_value : Math.round(item.discounted_price)}
+                                    value={Math.round(item.discounted_price)}
                                     onChange={(e) => {
                                       const val = parseFloat(e.target.value) || 0
-                                      updateDiscountProduct(globalIndex, 'discount_type', 'fixed')
-                                      updateDiscountProduct(globalIndex, 'discount_value', item.original_price - val)
+                                      const currentOriginalPrice = item.original_price
+                                      const newDiscountedPrice = Math.max(0, Math.min(val, currentOriginalPrice))
+                                      
+                                      setDiscountProducts(prev => {
+                                        const updated = [...prev]
+                                        const currentItem = updated[globalIndex]
+                                        updated[globalIndex] = {
+                                          ...currentItem,
+                                          discounted_price: newDiscountedPrice,
+                                          discount_value: currentItem.original_price - newDiscountedPrice,
+                                          discount_type: 'fixed'
+                                        }
+                                        return updated
+                                      })
                                     }}
-                                    className="w-20 rounded border border-gray-300 px-2 py-1 text-xs"
+                                    className="w-28 rounded border border-blue-400 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     min="0"
+                                    max={item.original_price}
+                                    step="1000"
                                   />
                                 </div>
                               </div>
-                              {/* Discount % + OR */}
+                              {/* Discount % (auto-calculated, read-only display) */}
                               <div className="col-span-2">
                                 <div className="flex items-center gap-1">
                                   <span className="text-xs text-gray-400">OR</span>
-                                  <input
-                                    type="number"
-                                    value={item.discount_type === 'percentage' ? item.discount_value : discountPercent}
-                                    onChange={(e) => {
-                                      const val = parseFloat(e.target.value) || 0
-                                      updateDiscountProduct(globalIndex, 'discount_type', 'percentage')
-                                      updateDiscountProduct(globalIndex, 'discount_value', val)
-                                    }}
-                                    className="w-12 rounded border border-gray-300 px-2 py-1 text-xs"
-                                    min="0"
-                                    max="100"
-                                  />
+                                  <div className="w-12 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-center text-gray-600">
+                                    {discountPercent}
+                                  </div>
                                   <span className="text-xs text-gray-500">%DISKON</span>
                                 </div>
                               </div>
@@ -608,19 +642,9 @@ export default function NewDiscountPage() {
                                   <option value="100">100</option>
                                 </select>
                               </div>
-                              {/* Min Purchase */}
-                              <div className="col-span-1">
-                                <select
-                                  value={item.min_purchase?.toString() || ''}
-                                  onChange={(e) => updateDiscountProduct(globalIndex, 'min_purchase', e.target.value ? parseInt(e.target.value) : undefined)}
-                                  className="w-full rounded border border-gray-300 px-1 py-1 text-xs"
-                                >
-                                  <option value="">Tidak T...</option>
-                                  <option value="1">1</option>
-                                  <option value="2">2</option>
-                                  <option value="3">3</option>
-                                  <option value="5">5</option>
-                                </select>
+                              {/* Min Purchase - Empty (now at product level) */}
+                              <div className="col-span-1 text-center text-xs text-gray-400">
+                                -
                               </div>
                               {/* Active/Inactive Toggle */}
                               <div className="col-span-1 flex justify-center">

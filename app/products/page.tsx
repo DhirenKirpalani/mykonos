@@ -23,10 +23,53 @@ function ProductsContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [productVouchers, setProductVouchers] = useState<Map<string, { discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string }>>(new Map())
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    async function fetchActiveVouchers() {
+      try {
+        const { data: vouchers, error } = await supabase
+          .from('promo_codes')
+          .select('discount_type, discount_value, scope, applicable_product_ids, valid_until')
+          .eq('is_active', true)
+          .lte('valid_from', new Date().toISOString())
+          .gte('valid_until', new Date().toISOString())
+
+        if (!error && vouchers) {
+          const voucherMap = new Map()
+          vouchers.forEach(voucher => {
+            if (voucher.scope === 'all') {
+              // Apply to all products - we'll handle this when rendering
+              voucherMap.set('__all__', {
+                discount_type: voucher.discount_type,
+                discount_value: voucher.discount_value,
+                valid_until: voucher.valid_until
+              })
+            } else if (voucher.scope === 'specific_products' && voucher.applicable_product_ids) {
+              voucher.applicable_product_ids.forEach((productId: string) => {
+                voucherMap.set(productId, {
+                  discount_type: voucher.discount_type,
+                  discount_value: voucher.discount_value,
+                  valid_until: voucher.valid_until
+                })
+              })
+            }
+          })
+          setProductVouchers(voucherMap)
+        }
+      } catch (error) {
+        console.error('Error fetching vouchers:', error)
+      }
+    }
+
+    if (mounted) {
+      fetchActiveVouchers()
+    }
+  }, [mounted])
 
   const category = searchParams.get('category') || undefined
   const collection = searchParams.get('collection') || undefined
@@ -240,9 +283,16 @@ function ProductsContent() {
             ) : products.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-                  {products.map((product: Product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
+                  {products.map((product: Product) => {
+                    const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
+                    return (
+                      <ProductCard 
+                        key={product.id} 
+                        product={product}
+                        voucher={voucher || null}
+                      />
+                    )
+                  })}
                 </div>
                 <Pagination currentPage={currentPage} totalPages={totalPages} />
               </>

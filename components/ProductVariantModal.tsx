@@ -36,7 +36,12 @@ interface ProductVariantModalProps {
     stock_quantity: number
     min_purchase_quantity?: number | null
     max_purchase_quantity?: number | null
+    pre_order_duration_days?: number | null
   }
+  voucher?: {
+    discount_type: 'percentage' | 'fixed'
+    discount_value: number
+  } | null
   onAddToCart: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
   onBuyNow?: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
   onAddToWishlist?: (selectedVariants?: Record<string, string>) => Promise<void>
@@ -47,6 +52,7 @@ export function ProductVariantModal({
   isOpen,
   onClose,
   product,
+  voucher,
   onAddToCart,
   onBuyNow,
   onAddToWishlist,
@@ -269,18 +275,70 @@ export function ProductVariantModal({
                 )}
               </div>
               
+              {/* Pre-order Shipping Info */}
+              <div className="mb-3 flex items-start gap-2">
+                <svg className="mt-0.5 h-4 w-4 text-[#26AA99] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs md:text-sm text-gray-600">
+                  {(() => {
+                    const preOrderDays = (product as any).pre_order_duration_days || 30
+                    const today = new Date()
+                    const estimateStart = new Date(today)
+                    estimateStart.setDate(today.getDate() + preOrderDays + 3)
+                    const estimateEnd = new Date(today)
+                    estimateEnd.setDate(today.getDate() + preOrderDays + 5)
+                    const formatDate = (date: Date) => {
+                      const day = date.getDate()
+                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+                      return `${day} ${months[date.getMonth()]}`
+                    }
+                    return `Pre-order (dikirim dalam ${preOrderDays} hari). Estimasi tiba ${formatDate(estimateStart)} - ${formatDate(estimateEnd)}`
+                  })()}
+                </p>
+              </div>
+
               {/* Price */}
-              <div className="flex items-baseline gap-2 mb-2 md:mb-4">
-                <span className="text-lg md:text-3xl font-bold text-luxury-navy">
-                  {priceRange
-                    ? `${formatPrice(priceRange.min, currencyCode)} - ${formatPrice(priceRange.max, currencyCode)}`
-                    : formatPrice(effectivePrice * (!hasVariants ? quantity : 1), currencyCode)
-                  }
-                </span>
-                {!priceRange && product.sale_price && product.sale_price < basePrice && (
-                  <span className="text-lg text-gray-400 line-through">
-                    {formatPrice(basePrice * (!hasVariants ? quantity : 1), currencyCode)}
+              <div className="mb-2 md:mb-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg md:text-3xl font-bold text-luxury-navy">
+                    {(() => {
+                      if (priceRange) {
+                        const voucherDiscount = voucher ? (
+                          voucher.discount_type === 'percentage' 
+                            ? (priceRange.min * voucher.discount_value / 100)
+                            : voucher.discount_value
+                        ) : 0
+                        return `${formatPrice(priceRange.min - voucherDiscount, currencyCode)} - ${formatPrice(priceRange.max - voucherDiscount, currencyCode)}`
+                      } else {
+                        const price = effectivePrice * (!hasVariants ? quantity : 1)
+                        const voucherDiscount = voucher ? (
+                          voucher.discount_type === 'percentage' 
+                            ? (price * voucher.discount_value / 100)
+                            : voucher.discount_value
+                        ) : 0
+                        return formatPrice(price - voucherDiscount, currencyCode)
+                      }
+                    })()}
                   </span>
+                  {!priceRange && product.sale_price && product.sale_price < basePrice && !voucher && (
+                    <span className="text-lg text-gray-400 line-through">
+                      {formatPrice(basePrice * (!hasVariants ? quantity : 1), currencyCode)}
+                    </span>
+                  )}
+                </div>
+                {voucher && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded px-2 py-1">
+                    <svg className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
+                    </svg>
+                    <span className="text-xs font-medium text-orange-600">
+                      Voucher Diskon {voucher.discount_type === 'percentage' 
+                        ? `${voucher.discount_value}%`
+                        : `Rp${voucher.discount_value.toLocaleString('id-ID')}`
+                      }
+                    </span>
+                  </div>
                 )}
               </div>
 
@@ -361,9 +419,17 @@ export function ProductVariantModal({
                               </div>
                               <div className="flex flex-col items-end gap-1">
                                 <div className="font-semibold text-luxury-navy">
-                                  {formatPrice((isIDR ? variant.price_idr : variant.price_usd) * (isSelected && selectedItem ? selectedItem.quantity : 1), currencyCode)}
+                                  {(() => {
+                                    const variantPrice = (isIDR ? variant.price_idr : variant.price_usd) * (isSelected && selectedItem ? selectedItem.quantity : 1)
+                                    const voucherDiscount = voucher ? (
+                                      voucher.discount_type === 'percentage' 
+                                        ? (variantPrice * voucher.discount_value / 100)
+                                        : voucher.discount_value
+                                    ) : 0
+                                    return formatPrice(variantPrice - voucherDiscount, currencyCode)
+                                  })()}
                                 </div>
-                                {((isIDR && variant.compare_at_price_idr && variant.compare_at_price_idr > variant.price_idr) ||
+                                {!voucher && ((isIDR && variant.compare_at_price_idr && variant.compare_at_price_idr > variant.price_idr) ||
                                   (!isIDR && variant.compare_at_price_usd && variant.compare_at_price_usd > variant.price_usd)) && (
                                   <div className="text-sm text-gray-400 line-through">
                                     {formatPrice((isIDR ? variant.compare_at_price_idr : variant.compare_at_price_usd)! * (isSelected && selectedItem ? selectedItem.quantity : 1), currencyCode)}
@@ -446,7 +512,30 @@ export function ProductVariantModal({
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         <Zap className="h-5 w-5" />
-                        {t('product.buyNow')} {selectedVariants.size > 0 && `(${selectedVariants.size} variants)`}
+                        {(() => {
+                          if (voucher) {
+                            // Calculate total net amount for all selected variants
+                            let totalNetAmount = 0
+                            if (hasVariants && selectedVariants.size > 0) {
+                              selectedVariants.forEach(({ variant, quantity }) => {
+                                const variantPrice = isIDR ? variant.price_idr : variant.price_usd
+                                const itemTotal = variantPrice * quantity
+                                const voucherDiscount = voucher.discount_type === 'percentage'
+                                  ? (itemTotal * voucher.discount_value / 100)
+                                  : voucher.discount_value
+                                totalNetAmount += itemTotal - voucherDiscount
+                              })
+                            } else {
+                              const itemTotal = effectivePrice * quantity
+                              const voucherDiscount = voucher.discount_type === 'percentage'
+                                ? (itemTotal * voucher.discount_value / 100)
+                                : voucher.discount_value
+                              totalNetAmount = itemTotal - voucherDiscount
+                            }
+                            return `${t('product.buyNow')} with Voucher ${formatPrice(totalNetAmount, currencyCode)}`
+                          }
+                          return `${t('product.buyNow')} ${selectedVariants.size > 0 ? `(${selectedVariants.size} variants)` : ''}`
+                        })()}
                       </span>
                     )}
                   </Button>

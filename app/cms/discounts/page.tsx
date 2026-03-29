@@ -132,10 +132,10 @@ export default function DiscountsPage() {
                       <div className="font-medium text-gray-900">{discount.name}</div>
                     </td>
                     <td className="py-4">
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 text-xs">
                         <Calendar className="h-4 w-4" />
                         <span>
-                          {new Date(discount.start_date).toLocaleDateString('id-ID')} - {new Date(discount.end_date).toLocaleDateString('id-ID')}
+                          {new Date(discount.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}, {new Date(discount.start_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(discount.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}, {new Date(discount.end_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
                         </span>
                       </div>
                     </td>
@@ -144,7 +144,7 @@ export default function DiscountsPage() {
                     </td>
                     <td className="py-4">
                       <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusBadge(discount.status)}`}>
-                        {discount.status.charAt(0).toUpperCase() + discount.status.slice(1)}
+                        {discount.status ? discount.status.charAt(0).toUpperCase() + discount.status.slice(1) : 'Unknown'}
                       </span>
                     </td>
                     <td className="py-4">

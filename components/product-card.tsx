@@ -60,7 +60,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { BadgePercent } from 'lucide-react'
+import { BadgePercent, Ticket } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Database } from '@/lib/supabase/database.types'
 
@@ -69,16 +69,54 @@ type Product = Database['public']['Tables']['products']['Row']
 interface ProductCardProps {
   product: Product
   className?: string
+  voucher?: {
+    discount_type: 'percentage' | 'fixed'
+    discount_value: number
+    valid_until: string
+  } | null
 }
 
-export function ProductCard({ product, className }: ProductCardProps) {
+export function ProductCard({ product, className, voucher }: ProductCardProps) {
   const { region } = useRegion()
   const { t, locale } = useLanguage()
   const [mounted, setMounted] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState<string>('')
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (!voucher?.valid_until || !mounted) return
+
+    const calculateTimeRemaining = () => {
+      const endDate = new Date(new Date(voucher.valid_until).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
+      const nowJakarta = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
+      const difference = endDate.getTime() - nowJakarta.getTime()
+
+      if (difference > 0) {
+        const hours = Math.floor(difference / (1000 * 60 * 60))
+        const minutes = Math.floor((difference / 1000 / 60) % 60)
+        
+        if (hours > 0) {
+          return `Sisa ${hours} jam`
+        } else if (minutes > 0) {
+          return `Sisa ${minutes} menit`
+        } else {
+          return 'Sisa < 1 menit'
+        }
+      }
+      return ''
+    }
+
+    setTimeRemaining(calculateTimeRemaining())
+
+    const timer = setInterval(() => {
+      setTimeRemaining(calculateTimeRemaining())
+    }, 60000) // Update every minute
+
+    return () => clearInterval(timer)
+  }, [voucher?.valid_until, mounted])
   
   // Calculate days since product creation for debugging
   const daysSinceCreation = useMemo(() => {
@@ -190,6 +228,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
           NEW
         </motion.span>
       )}
+      
 
       {/* Card link */}
       <Link href={`/products/${product.slug}`} className="flex flex-col" aria-label={`View ${product.name}`}>
@@ -231,6 +270,22 @@ export function ProductCard({ product, className }: ProductCardProps) {
           )}
         </div>
 
+        {/* Voucher Discount Banner - Shopee Style */}
+        {voucher && (
+          <div className="bg-[#EE4D2D] px-2 py-1.5 flex items-center gap-1.5">
+            {/* Ticket icon */}
+            <div className="bg-white/20 rounded-sm px-1 py-0.5 flex items-center justify-center">
+              <Ticket className="h-3 w-3 text-white" />
+            </div>
+            <span className="text-white text-[10px] md:text-xs font-bold">
+              Diskon Rp.{voucher.discount_type === 'percentage' 
+                ? `${(voucher.discount_value * 1000).toLocaleString('id-ID')}`
+                : `${voucher.discount_value.toLocaleString('id-ID')}`
+              }RB
+            </span>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex flex-col flex-1 p-2 md:p-3">
           {/* Product Name - Fixed height */}
@@ -255,6 +310,14 @@ export function ProductCard({ product, className }: ProductCardProps) {
               ? (hasVariants && minVariantPrice > 0 ? minVariantPrice : getPrice())
               : 0
 
+            // Apply voucher discount
+            const voucherDiscount = voucher ? (
+              voucher.discount_type === 'percentage' 
+                ? (displayPrice * voucher.discount_value / 100)
+                : voucher.discount_value
+            ) : 0
+            const netPrice = displayPrice - voucherDiscount
+
             // Compute discount percent from compare-at
             let discountPct = 0
             if (hasVariants && minVariantCompareAtPrice > 0 && minVariantCompareAtPrice > minVariantPrice) {
@@ -270,14 +333,24 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
             return (
               <div className="flex items-center gap-1.5 mb-1.5 flex-nowrap">
-                <p className="text-sm md:text-base text-[#1C2E4A] font-bold">
-                  {region ? formatPrice(displayPrice, region.currency_code) : '...'}
+                <p className="text-sm md:text-base text-[#EE4D2D] font-bold">
+                  {region ? formatPrice(voucher ? netPrice : displayPrice, region.currency_code) : '...'}
                 </p>
-                {discountPct > 0 && (
-                  <span className="inline-flex items-center gap-0.5 bg-red-50 border border-red-300 rounded px-1 py-0.5 text-[9px] md:text-[11px] text-red-600 font-semibold whitespace-nowrap">
-                    <BadgePercent className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
+                {discountPct > 0 && !voucher && (
+                  <span className="text-[10px] md:text-xs text-gray-500 font-medium">
                     -{discountPct}%
                   </span>
+                )}
+                {voucher && (
+                  <div className="relative">
+                    <svg className="h-4 w-4 md:h-5 md:w-5 text-[#EE4D2D]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 12 7.4l3.38 4.6L17 10.83 14.92 8H20v6z"/>
+                    </svg>
+                    <svg className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 md:h-3 md:w-3 bg-white rounded-full" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="11" fill="#EE4D2D"/>
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
+                    </svg>
+                  </div>
                 )}
               </div>
             )

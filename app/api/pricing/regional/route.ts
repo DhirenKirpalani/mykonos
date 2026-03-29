@@ -75,9 +75,9 @@ export async function POST(request: Request) {
       .eq('id', session.user.id)
       .single()
 
-    if (!user || !['marketing_manager', 'admin'].includes((user as any).role || '')) {
+    if (!user || !['staff', 'admin'].includes((user as any).role || '')) {
       return NextResponse.json(
-        { error: 'Forbidden - Marketing manager access required' },
+        { error: 'Forbidden - Staff access required' },
         { status: 403 }
       )
     }
