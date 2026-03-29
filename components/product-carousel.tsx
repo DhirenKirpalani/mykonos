@@ -14,6 +14,7 @@ interface ProductCarouselProps {
   backgroundColor?: string
   titleColor?: string
   variant?: 'new' | 'popular' | 'bestselling'
+  vouchers?: any[]
 }
 
 export function ProductCarousel({ 
@@ -21,7 +22,8 @@ export function ProductCarousel({
   products,
   backgroundColor = 'bg-gradient-to-b from-[#C2A36B] to-[#B8945E]',
   titleColor = 'text-[#1C2E4A]',
-  variant = 'new'
+  variant = 'new',
+  vouchers = []
 }: ProductCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -193,29 +195,41 @@ export function ProductCarousel({
               WebkitOverflowScrolling: 'touch',
             }}
           >
-            {products.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={false}
-                animate={hasAnimated ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-                transition={{
-                  duration: 0.55,
-                  delay: 0.2 + index * 0.08,
-                  ease: [0.25, 0.1, 0.25, 1]
-                }}
-                className="
-                  snap-center
-                  flex-shrink-0
-                  w-[42vw] max-w-[160px]
-                  sm:w-[38vw] sm:max-w-[200px]
-                  md:w-[260px]
-                  lg:w-[300px]
-                  xl:w-[320px]
-                "
-              >
-                <ProductCard product={product} className={getCardClasses()} />
-              </motion.div>
-            ))}
+            {products.map((product, index) => {
+              const applicableVoucher = vouchers.find(v => 
+                v.scope === 'all' || 
+                (v.scope === 'specific_products' && v.applicable_product_ids?.includes(product.id))
+              )
+              const voucherData = applicableVoucher ? {
+                discount_type: applicableVoucher.discount_type,
+                discount_value: applicableVoucher.discount_value,
+                valid_until: applicableVoucher.valid_until
+              } : null
+
+              return (
+                <motion.div
+                  key={product.id}
+                  initial={false}
+                  animate={hasAnimated ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+                  transition={{
+                    duration: 0.55,
+                    delay: 0.2 + index * 0.08,
+                    ease: [0.25, 0.1, 0.25, 1]
+                  }}
+                  className="
+                    snap-center
+                    flex-shrink-0
+                    w-[42vw] max-w-[160px]
+                    sm:w-[38vw] sm:max-w-[200px]
+                    md:w-[260px]
+                    lg:w-[300px]
+                    xl:w-[320px]
+                  "
+                >
+                  <ProductCard product={product} voucher={voucherData} className={getCardClasses()} />
+                </motion.div>
+              )
+            })}
           </div>
         </div>
       </div>

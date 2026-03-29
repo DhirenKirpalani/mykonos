@@ -32,6 +32,7 @@ export function ProductFilters() {
   const [tempCategory, setTempCategory] = useState<string>('')
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
   const [totalCount, setTotalCount] = useState(0)
+  const [isLoadingCounts, setIsLoadingCounts] = useState(true)
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -54,25 +55,54 @@ export function ProductFilters() {
   useEffect(() => {
     async function fetchCategoryCounts() {
       try {
-        // Get total count
-        const { count: total } = await supabase
+        console.log('🔍 [CATEGORY COUNTS] Starting to fetch category counts...')
+        
+        // Get total count of visible products
+        const { count: total, error: totalError } = await supabase
           .from('products')
           .select('*', { count: 'exact', head: true })
+          .eq('is_visible', true)
+        
+        console.log('📊 [CATEGORY COUNTS] Total visible products:', total)
+        if (totalError) console.error('❌ [CATEGORY COUNTS] Error fetching total:', totalError)
         
         setTotalCount(total || 0)
 
-        // Get counts for each fragrance family
+        // First, let's check what fragrance_family values actually exist
+        const { data: allProducts, error: allError } = await supabase
+          .from('products')
+          .select('fragrance_family, is_visible')
+          .eq('is_visible', true)
+        
+        console.log('📦 [CATEGORY COUNTS] All visible products fragrance_family values:', 
+          allProducts?.map(p => p.fragrance_family))
+        if (allError) console.error('❌ [CATEGORY COUNTS] Error fetching all products:', allError)
+
+        // Get counts for each fragrance family (only visible products)
         const counts: Record<string, number> = {}
+        console.log('🏷️ [CATEGORY COUNTS] Checking counts for families:', fragranceFamilies)
+        
         for (const family of fragranceFamilies) {
-          const { count } = await supabase
+          const { count, error, data } = await supabase
             .from('products')
-            .select('*', { count: 'exact', head: true })
+            .select('id, name, fragrance_family, is_visible', { count: 'exact' })
             .eq('fragrance_family', family)
+            .eq('is_visible', true)
+          
           counts[family] = count || 0
+          console.log(`   ${family}: ${count || 0} products`, error ? `(Error: ${error.message})` : '')
+          if (data && data.length > 0) {
+            console.log(`      Sample products:`, data.slice(0, 3).map(p => p.name))
+          }
         }
+        
+        console.log('✅ [CATEGORY COUNTS] Final counts:', counts)
         setCategoryCounts(counts)
       } catch (error) {
-        console.error('Error fetching category counts:', error)
+        console.error('❌ [CATEGORY COUNTS] Error fetching category counts:', error)
+      } finally {
+        console.log('🏁 [CATEGORY COUNTS] Setting isLoadingCounts to false')
+        setIsLoadingCounts(false)
       }
     }
     fetchCategoryCounts()
@@ -157,7 +187,7 @@ export function ProductFilters() {
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}
                       >
-                        {t.productsPage.allFamilies} ({totalCount})
+                        {t.productsPage.allFamilies} ({isLoadingCounts ? '...' : totalCount})
                       </button>
                       {fragranceFamilies.map((family) => (
                         <button
@@ -172,7 +202,7 @@ export function ProductFilters() {
                               : 'text-gray-600 hover:bg-gray-100'
                           }`}
                         >
-                          {family} ({categoryCounts[family] || 0})
+                          {family} ({isLoadingCounts ? '...' : (categoryCounts[family] || 0)})
                         </button>
                       ))}
                     </div>
@@ -275,7 +305,7 @@ export function ProductFilters() {
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              {t.productsPage.allFamilies} ({totalCount})
+              {t.productsPage.allFamilies} ({isLoadingCounts ? '...' : totalCount})
             </button>
             
             {fragranceFamilies.map((family) => (
@@ -288,7 +318,7 @@ export function ProductFilters() {
                     : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                {family} ({categoryCounts[family] || 0})
+                {family} ({isLoadingCounts ? '...' : (categoryCounts[family] || 0)})
               </button>
             ))}
           </div>

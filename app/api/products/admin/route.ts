@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Fetch all products ordered by created_at (bypasses RLS with service role key)
+    // Fetch all products (variants are stored as JSONB in the products table)
     const { data: products, error } = await supabase
       .from('products')
       .select('*')

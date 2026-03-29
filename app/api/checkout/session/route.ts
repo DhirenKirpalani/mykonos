@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     console.log('🔵 [API] POST /api/checkout/session - Creating checkout session')
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
-    const { user_id, session_id, items, currency_code, region_code } = body
+    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0 } = body
     
     console.log('📥 [API] Request body:', { user_id, session_id, items_count: items?.length, currency_code, region_code })
 
@@ -106,10 +106,10 @@ export async function POST(request: Request) {
 
     const pricingSnapshot = {
       subtotal,
-      discount: 0,
+      discount: voucher_discount,
       shipping: 0,
-      tax: subtotal * 0.1,
-      total: subtotal + (subtotal * 0.1),
+      tax: (subtotal - voucher_discount) * 0.1,
+      total: (subtotal - voucher_discount) + ((subtotal - voucher_discount) * 0.1),
       currency_code: finalCurrencyCode
     }
 

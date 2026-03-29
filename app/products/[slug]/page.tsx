@@ -13,6 +13,7 @@ import { ProductShippingInfo } from '@/components/ProductShippingInfo'
 import { CollapsibleDescription } from '@/components/CollapsibleDescription'
 import { ExpandableSpecifications } from '@/components/ExpandableSpecifications'
 import { LoadingSpinner } from '@/components/common'
+import { VoucherCountdown } from '@/components/VoucherCountdown'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useState, useEffect } from 'react'
@@ -60,6 +61,12 @@ export default function ProductDetailPage({
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [voucher, setVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string } | null>(null)
+  const [relatedVouchers, setRelatedVouchers] = useState<any[]>([])
+
+  const handleVoucherExpire = () => {
+    setVoucher(null)
+  }
 
   useEffect(() => {
     async function loadProduct() {
@@ -71,6 +78,37 @@ export default function ProductDetailPage({
       const fragranceFamily = productData.fragrance_family || 'Uncategorized'
       const related = await getRelatedProducts(fragranceFamily, productData.id)
       setRelatedProducts(related)
+      
+      // Fetch active vouchers for this product and related products
+      try {
+        const { data: vouchers, error } = await supabase
+          .from('promo_codes')
+          .select('discount_type, discount_value, scope, applicable_product_ids, valid_until')
+          .eq('is_active', true)
+          .lte('valid_from', new Date().toISOString())
+          .gte('valid_until', new Date().toISOString())
+
+        if (!error && vouchers && vouchers.length > 0) {
+          // Find voucher for current product
+          const applicableVoucher = vouchers.find(v => 
+            v.scope === 'all' || 
+            (v.scope === 'specific_products' && v.applicable_product_ids?.includes(productData.id))
+          )
+          if (applicableVoucher) {
+            setVoucher({
+              discount_type: applicableVoucher.discount_type as 'percentage' | 'fixed',
+              discount_value: applicableVoucher.discount_value,
+              valid_until: applicableVoucher.valid_until
+            })
+          }
+          
+          // Set vouchers for related products (for ProductCarousel)
+          setRelatedVouchers(vouchers)
+        }
+      } catch (error) {
+        console.error('Error fetching vouchers:', error)
+      }
+      
       setLoading(false)
     }
     loadProduct()
@@ -109,7 +147,7 @@ export default function ProductDetailPage({
         <div className="grid gap-4 lg:grid-cols-2">
           {/* Image Gallery */}
           <div className="w-full">
-            <ProductImageGallery images={product.image_urls} productName={product.name} />
+            <ProductImageGallery images={product.image_urls} productName={product.name} voucher={voucher} onVoucherExpire={handleVoucherExpire} />
           </div>
 
           {/* Product Details */}
@@ -134,7 +172,23 @@ export default function ProductDetailPage({
                 <ProductPriceDisplay 
                   product={product}
                   showRange={true}
+                  voucher={voucher}
                 />
+                {/* Voucher Discount Badge */}
+                {voucher && (
+                  <div className="mt-2 inline-flex items-center gap-2 bg-white border-2 border-orange-500 rounded-lg px-3 py-1.5">
+                    <svg className="h-4 w-4 text-orange-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-bold text-orange-600">
+                      Diskon {voucher.discount_type === 'percentage' 
+                        ? `${voucher.discount_value}%`
+                        : `Rp${voucher.discount_value.toLocaleString('id-ID')}`
+                      }
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -168,7 +222,6 @@ export default function ProductDetailPage({
               )}
             </div>
 
-
             {/* Shipping - Dynamic based on pre-order */}
             <div className="py-3">
               <ProductShippingInfo product={product} />
@@ -200,6 +253,7 @@ export default function ProductDetailPage({
               priceIdr={(product as any).price_idr}
               salePrice={product.sale_price}
               compareAtPrice={(product as any).compare_at_price}
+              voucher={voucher}
               productData={{
                 id: product.id,
                 name: product.name,
@@ -225,7 +279,7 @@ export default function ProductDetailPage({
 
       {relatedProducts.length > 0 && (
         <div className="border-t border-border/40 bg-luxury-gray-light pb-20">
-          <ProductCarousel title="You May Also Like" products={relatedProducts} backgroundColor="bg-luxury-gray-light" />
+          <ProductCarousel title="You May Also Like" products={relatedProducts} backgroundColor="bg-luxury-gray-light" vouchers={relatedVouchers} />
         </div>
       )}
     </div>

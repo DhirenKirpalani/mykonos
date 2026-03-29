@@ -5,15 +5,16 @@ interface ProductShippingInfoProps {
 }
 
 export function ProductShippingInfo({ product }: ProductShippingInfoProps) {
-  const shippingPeriodDays = product.shipping_period_days || 4
+  // Use pre_order_duration_days (default 30 days as all products are pre-order)
+  const preOrderDays = product.pre_order_duration_days || 30
   
   // Calculate actual dates
   const today = new Date()
   const estimateStartDate = new Date(today)
-  estimateStartDate.setDate(today.getDate() + shippingPeriodDays + 5)
+  estimateStartDate.setDate(today.getDate() + preOrderDays + 3)
   
   const estimateEndDate = new Date(today)
-  estimateEndDate.setDate(today.getDate() + shippingPeriodDays + 7)
+  estimateEndDate.setDate(today.getDate() + preOrderDays + 5)
   
   // Format dates as "DD MMM" in Indonesian
   const formatDate = (date: Date) => {
@@ -30,7 +31,7 @@ export function ProductShippingInfo({ product }: ProductShippingInfoProps) {
       </svg>
       <div className="flex-1">
         <p className="text-sm text-gray-600">
-          Pengiriman {shippingPeriodDays} hari. Estimasi tiba {formatDate(estimateStartDate)} - {formatDate(estimateEndDate)}
+          Pre-order (dikirim dalam {preOrderDays} hari). Estimasi tiba {formatDate(estimateStartDate)} - {formatDate(estimateEndDate)}
         </p>
       </div>
     </div>

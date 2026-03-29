@@ -24,6 +24,10 @@ interface ProductDetailClientProps {
   priceIdr?: number
   salePrice?: number | null
   compareAtPrice?: number | null
+  voucher?: {
+    discount_type: 'percentage' | 'fixed'
+    discount_value: number
+  } | null
   productData?: {
     id: string
     name: string
@@ -38,7 +42,7 @@ interface ProductDetailClientProps {
   }
 }
 
-export function ProductDetailClient({ productId, productName, productSlug, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, productData, product }: ProductDetailClientProps) {
+export function ProductDetailClient({ productId, productName, productSlug, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, voucher, productData, product }: ProductDetailClientProps) {
   const { t } = useTranslation()
   const router = useRouter()
   const [quantity, setQuantity] = useState(minQuantity)
@@ -420,7 +424,28 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           disabled={isBuyingNow}
           className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-2 px-3 sm:py-3 sm:px-4 rounded disabled:opacity-50 text-sm sm:text-base"
         >
-          {isBuyingNow ? t('common.loading') : t('product.buyNow')}
+          {isBuyingNow ? t('common.loading') : (() => {
+            if (voucher && productData) {
+              const basePrice = priceIdr || price
+              const effectivePrice = salePrice && salePrice < basePrice ? salePrice : basePrice
+              const itemTotal = effectivePrice * quantity
+              const voucherDiscount = voucher.discount_type === 'percentage'
+                ? (itemTotal * voucher.discount_value / 100)
+                : voucher.discount_value
+              const netAmount = itemTotal - voucherDiscount
+              
+              // Format price based on region
+              const formatPrice = (amount: number) => {
+                if (priceIdr) {
+                  return `Rp. ${Math.round(amount).toLocaleString('id-ID')}`
+                }
+                return `$${amount.toFixed(2)}`
+              }
+              
+              return `${t('product.buyNow')} with Voucher ${formatPrice(netAmount)}`
+            }
+            return t('product.buyNow')
+          })()}
         </button>
       </div>
     </div>
@@ -431,6 +456,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         isOpen={showVariantModal}
         onClose={() => setShowVariantModal(false)}
         product={productData}
+        voucher={voucher}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
         onAddToWishlist={handleAddToWishlist}

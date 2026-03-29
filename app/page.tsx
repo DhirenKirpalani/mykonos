@@ -48,6 +48,7 @@ export default function HomePage() {
   const [collections, setCollections] = useState<Collection[]>([])
   const [newArrivals, setNewArrivals] = useState<Product[]>([])
   const [bestSelling, setBestSelling] = useState<Product[]>([])
+  const [vouchers, setVouchers] = useState<any[]>([])
   
   useEffect(() => {
     // Check if user has visited before
@@ -67,7 +68,7 @@ export default function HomePage() {
   const fetchData = async () => {
     try {
       // Fetch all data in parallel for better performance
-      const [productsResult, collectionsResult, newArrivalsResult, bestSellingResult] = await Promise.all([
+      const [productsResult, collectionsResult, newArrivalsResult, bestSellingResult, vouchersResult] = await Promise.all([
         supabase
           .from('products')
           .select('*')
@@ -110,13 +111,20 @@ export default function HomePage() {
           .select('*')
           .eq('is_visible', true)
           .eq('is_best_selling', true)
-          .limit(8)
+          .limit(8),
+        supabase
+          .from('promo_codes')
+          .select('discount_type, discount_value, scope, applicable_product_ids, valid_until')
+          .eq('is_active', true)
+          .lte('valid_from', new Date().toISOString())
+          .gte('valid_until', new Date().toISOString())
       ])
 
       setProducts((productsResult.data || []) as unknown as Product[])
       setCollections((collectionsResult.data || []) as unknown as Collection[])
       setNewArrivals((newArrivalsResult.data || []) as unknown as Product[])
       setBestSelling((bestSellingResult.data || []) as unknown as Product[])
+      setVouchers(vouchersResult.data || [])
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -134,6 +142,7 @@ export default function HomePage() {
       collections={collections}
       newArrivals={newArrivals}
       bestSelling={bestSelling}
+      vouchers={vouchers}
       isLoading={isLoading}
     />
   )
