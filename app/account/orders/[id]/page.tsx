@@ -55,6 +55,7 @@ export default function OrderDetailsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState<string>('')
+  const [activeDiscounts, setActiveDiscounts] = useState<Map<string, number>>(new Map())
 
   // Helper function to translate order status
   const getStatusLabel = (status: string) => {
@@ -188,7 +189,57 @@ export default function OrderDetailsPage() {
         .single()
 
       if (error) throw error
-      setOrder(data as any)
+      const orderData = data as any
+      setOrder(orderData)
+
+      // Fetch active discounts for order items
+      if (orderData?.order_items?.length > 0) {
+        const productIds = orderData.order_items.map((i: any) => i.product_id)
+        const now = new Date().toISOString()
+        const { data: discData } = await supabase
+          .from('discount_products')
+          .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
+          .eq('is_active', true)
+          .eq('discounts.is_active', true)
+          .lte('discounts.start_date', now)
+          .gte('discounts.end_date', now)
+          .in('product_id', productIds)
+        if (discData && discData.length > 0) {
+          const discMap = new Map<string, number>()
+
+          // Build variant_id -> variant_name lookup from order items' product variants JSONB
+          const variantIdToName = new Map<string, string>()
+          orderData.order_items.forEach((item: any) => {
+            const variants: any[] = item.product?.variants || []
+            variants.forEach((v: any) => {
+              if (v.id && v.name) variantIdToName.set(v.id, v.name)
+            })
+          })
+
+          discData.forEach((d: any) => {
+            // Product-level discount (no variant_id)
+            if (!d.variant_id) {
+              if (!discMap.has(d.product_id) || d.discounted_price < discMap.get(d.product_id)!) {
+                discMap.set(d.product_id, d.discounted_price)
+              }
+            } else {
+              // Variant-specific: resolve variant_id -> variant_name
+              const variantName = variantIdToName.get(d.variant_id)
+              if (variantName) {
+                const variantNameKey = `${d.product_id}-${variantName}`
+                if (!discMap.has(variantNameKey) || d.discounted_price < discMap.get(variantNameKey)!) {
+                  discMap.set(variantNameKey, d.discounted_price)
+                }
+              }
+              // Also store as product-level fallback (lowest variant discount wins)
+              if (!discMap.has(d.product_id) || d.discounted_price < discMap.get(d.product_id)!) {
+                discMap.set(d.product_id, d.discounted_price)
+              }
+            }
+          })
+          setActiveDiscounts(discMap)
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch order:', error)
     } finally {
@@ -524,8 +575,21 @@ export default function OrderDetailsPage() {
                   <p className="text-sm text-gray-500">Jumlah: {item.quantity}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-lg">{formatPrice(item.price_at_purchase * item.quantity, order.currency_code)}</p>
-                  <p className="text-sm text-gray-500">{formatPrice(item.price_at_purchase, order.currency_code)} each</p>
+                  {(() => {
+                    const discKey = item.variant_name ? `${item.product_id}-${item.variant_name}` : item.product_id
+                    const discounted = activeDiscounts.get(discKey) ?? activeDiscounts.get(item.product_id)
+                    const displayPrice = discounted ?? item.price_at_purchase
+                    const hasDiscount = discounted !== undefined && discounted < item.price_at_purchase
+                    return (
+                      <>
+                        {hasDiscount && (
+                          <p className="text-sm text-gray-400 line-through">{formatPrice(item.price_at_purchase * item.quantity, order.currency_code)}</p>
+                        )}
+                        <p className="font-semibold text-lg">{formatPrice(displayPrice * item.quantity, order.currency_code)}</p>
+                        <p className="text-sm text-gray-500">{formatPrice(displayPrice, order.currency_code)} each</p>
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
             ))}

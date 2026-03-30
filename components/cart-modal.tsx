@@ -48,6 +48,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
   const [discountAmount, setDiscountAmount] = useState(0)
   const [mounted, setMounted] = useState(false)
   const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
+  const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
 
   const isVideo = (url: string) => {
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
@@ -95,16 +96,39 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
       setCartItems((data as any) || [])
       
-      // Fetch active vouchers for cart items
+      // Fetch active vouchers AND discounts for cart items in parallel
       if (data && data.length > 0) {
         const productIds = data.map((item: any) => item.product_id)
-        const { data: activeVouchers } = await supabase
-          .from('promo_codes')
-          .select('discount_type, discount_value, scope, applicable_product_ids')
-          .eq('is_active', true)
-          .lte('valid_from', new Date().toISOString())
-          .gte('valid_until', new Date().toISOString())
-        
+        const now = new Date().toISOString()
+        const [vouchersResult, discountsResult] = await Promise.all([
+          supabase
+            .from('promo_codes')
+            .select('discount_type, discount_value, scope, applicable_product_ids')
+            .eq('is_active', true)
+            .lte('valid_from', now)
+            .gte('valid_until', now),
+          supabase
+            .from('discount_products')
+            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
+            .eq('is_active', true)
+            .eq('discounts.is_active', true)
+            .lte('discounts.start_date', now)
+            .gte('discounts.end_date', now)
+            .in('product_id', productIds)
+        ])
+
+        if (discountsResult.data && discountsResult.data.length > 0) {
+          const discMap = new Map<string, any>()
+          discountsResult.data.forEach((d: any) => {
+            const key = d.variant_id ? `${d.product_id}-${d.variant_id}` : d.product_id
+            if (!discMap.has(key) || d.discounted_price < discMap.get(key).discounted_price) {
+              discMap.set(key, d)
+            }
+          })
+          setActiveDiscounts(discMap)
+        }
+
+        const activeVouchers = vouchersResult.data
         if (activeVouchers && activeVouchers.length > 0) {
           const discountMap = new Map<string, number>()
           data.forEach((item: any) => {
@@ -228,6 +252,18 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     }
   }
 
+  // Get discounted price for a cart item
+  const getItemDiscountedPrice = (item: CartItem) => {
+    const variantName = (item as any).variant_name
+    if (variantName) {
+      const variantKey = `${item.product_id}-${variantName}`
+      const d = activeDiscounts.get(variantKey)
+      if (d) return d.discounted_price
+    }
+    const d = activeDiscounts.get(item.product_id)
+    return d ? d.discounted_price : null
+  }
+
   const subtotal = cartItems.reduce((sum, item) => {
     let basePrice = region?.code === 'ID' && (item.product as any).price_idr 
       ? (item.product as any).price_idr 
@@ -241,7 +277,9 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
       }
     }
     
-    const itemTotal = basePrice * item.quantity
+    // Apply campaign discount if available
+    const discounted = getItemDiscountedPrice(item)
+    const itemTotal = (discounted !== null ? discounted : basePrice) * item.quantity
     return sum + itemTotal
   }, 0)
   
@@ -375,31 +413,37 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
                           {/* Price */}
                           <div className="flex flex-col items-end gap-1">
-                            <p className="text-sm font-medium text-black">
-                              {region ? (() => {
-                                let price = 0
-                                // If variant is selected, find variant price
-                                if (item.variant_sku && item.product.variants) {
-                                  const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
-                                  if (variant) {
-                                    price = region.code === 'ID' ? variant.price_idr : variant.price_usd
-                                  }
-                                } else {
-                                  // Use product price
-                                  price = region.code === 'ID' && (item.product as any).price_idr 
-                                    ? (item.product as any).price_idr 
-                                    : (item.product as any).price_usd || 0
-                                }
-                                const itemTotal = price * item.quantity
-                                // Show original price (before voucher discount)
-                                return formatPrice(itemTotal, region)
-                              })() : '...'}
-                            </p>
-                            {voucherDiscounts.has(item.id) && voucherDiscounts.get(item.id)! > 0 && (
-                              <span className="text-[10px] text-orange-600 font-medium">
-                                Voucher: -{region ? formatPrice(voucherDiscounts.get(item.id)!, region) : ''}
-                              </span>
-                            )}
+                            {region ? (() => {
+                              let basePrice = 0
+                              if (item.variant_sku && item.product.variants) {
+                                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                                if (variant) basePrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                              } else {
+                                basePrice = region.code === 'ID' && (item.product as any).price_idr 
+                                  ? (item.product as any).price_idr 
+                                  : (item.product as any).price_usd || 0
+                              }
+                              const discounted = getItemDiscountedPrice(item)
+                              const displayPrice = discounted !== null ? discounted : basePrice
+                              const voucherDiscount = voucherDiscounts.get(item.id) || 0
+                              return (
+                                <>
+                                  {discounted !== null && discounted < basePrice && (
+                                    <span className="text-xs text-gray-400 line-through">
+                                      {formatPrice(basePrice * item.quantity, region)}
+                                    </span>
+                                  )}
+                                  <p className="text-sm font-medium text-black">
+                                    {formatPrice((displayPrice * item.quantity) - voucherDiscount, region)}
+                                  </p>
+                                  {voucherDiscount > 0 && (
+                                    <span className="text-[10px] text-orange-600 font-medium">
+                                      Voucher: -{formatPrice(voucherDiscount, region)}
+                                    </span>
+                                  )}
+                                </>
+                              )
+                            })() : '...'}
                           </div>
                         </div>
 

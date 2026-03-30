@@ -42,6 +42,7 @@ interface ProductVariantModalProps {
     discount_type: 'percentage' | 'fixed'
     discount_value: number
   } | null
+  activeDiscounts?: Map<string, any> | null
   onAddToCart: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
   onBuyNow?: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
   onAddToWishlist?: (selectedVariants?: Record<string, string>) => Promise<void>
@@ -53,6 +54,7 @@ export function ProductVariantModal({
   onClose,
   product,
   voucher,
+  activeDiscounts = null,
   onAddToCart,
   onBuyNow,
   onAddToWishlist,
@@ -88,18 +90,42 @@ export function ProductVariantModal({
     ? product.sale_price
     : basePrice
 
-  // Calculate price range from variants
+  // Get variant price, applying discount if available
+  const getVariantPrice = (variant: ProductVariant) => {
+    const basePrice = isIDR ? variant.price_idr : variant.price_usd
+    const discount = activeDiscounts?.get(variant.name)
+    return discount?.discounted_price ?? basePrice
+  }
+
+  const getVariantOriginalPrice = (variant: ProductVariant) => {
+    return isIDR ? variant.price_idr : variant.price_usd
+  }
+
+  // Calculate price range from variants (with discounts applied)
   const getPriceRange = () => {
     if (!hasVariants || !product.variants || product.variants.length === 0) {
       return null
     }
-    const prices = product.variants.map(v => isIDR ? v.price_idr : v.price_usd)
+    const prices = product.variants.map(v => getVariantPrice(v))
+    const minPrice = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    return minPrice === maxPrice ? null : { min: minPrice, max: maxPrice }
+  }
+
+  // Calculate original price range (before discounts, for strikethrough)
+  const getOriginalPriceRange = () => {
+    if (!hasVariants || !product.variants || product.variants.length === 0) {
+      return null
+    }
+    const prices = product.variants.map(v => getVariantOriginalPrice(v))
     const minPrice = Math.min(...prices)
     const maxPrice = Math.max(...prices)
     return minPrice === maxPrice ? null : { min: minPrice, max: maxPrice }
   }
 
   const priceRange = getPriceRange()
+  const originalPriceRange = getOriginalPriceRange()
+  const hasDiscountedVariants = activeDiscounts && activeDiscounts.size > 0
 
   const handleVariantToggle = (variant: ProductVariant) => {
     setSelectedVariants(prev => {
@@ -300,6 +326,12 @@ export function ProductVariantModal({
 
               {/* Price */}
               <div className="mb-2 md:mb-4">
+                {/* Strikethrough original price range when discounts active */}
+                {hasDiscountedVariants && priceRange && originalPriceRange && (
+                  <div className="text-base text-gray-400 line-through">
+                    {formatPrice(originalPriceRange.min, currencyCode)} - {formatPrice(originalPriceRange.max, currencyCode)}
+                  </div>
+                )}
                 <div className="flex items-baseline gap-2">
                   <span className="text-lg md:text-3xl font-bold text-luxury-navy">
                     {(() => {
@@ -418,23 +450,33 @@ export function ProductVariantModal({
                                 </div>
                               </div>
                               <div className="flex flex-col items-end gap-1">
-                                <div className="font-semibold text-luxury-navy">
+                                <div className="font-semibold text-[#EE4D2D]">
                                   {(() => {
-                                    const variantPrice = (isIDR ? variant.price_idr : variant.price_usd) * (isSelected && selectedItem ? selectedItem.quantity : 1)
+                                    const qty = isSelected && selectedItem ? selectedItem.quantity : 1
+                                    const discountedPrice = getVariantPrice(variant) * qty
                                     const voucherDiscount = voucher ? (
                                       voucher.discount_type === 'percentage' 
-                                        ? (variantPrice * voucher.discount_value / 100)
+                                        ? (discountedPrice * voucher.discount_value / 100)
                                         : voucher.discount_value
                                     ) : 0
-                                    return formatPrice(variantPrice - voucherDiscount, currencyCode)
+                                    return formatPrice(discountedPrice - voucherDiscount, currencyCode)
                                   })()}
                                 </div>
-                                {!voucher && ((isIDR && variant.compare_at_price_idr && variant.compare_at_price_idr > variant.price_idr) ||
-                                  (!isIDR && variant.compare_at_price_usd && variant.compare_at_price_usd > variant.price_usd)) && (
-                                  <div className="text-sm text-gray-400 line-through">
-                                    {formatPrice((isIDR ? variant.compare_at_price_idr : variant.compare_at_price_usd)! * (isSelected && selectedItem ? selectedItem.quantity : 1), currencyCode)}
-                                  </div>
-                                )}
+                                {/* Show original price strikethrough if discount or compare-at exists */}
+                                {!voucher && (() => {
+                                  const qty = isSelected && selectedItem ? selectedItem.quantity : 1
+                                  const originalPrice = getVariantOriginalPrice(variant)
+                                  const discountedPrice = getVariantPrice(variant)
+                                  const hasDiscount = activeDiscounts?.get(variant.name) && discountedPrice < originalPrice
+                                  const compareAt = isIDR ? variant.compare_at_price_idr : variant.compare_at_price_usd
+                                  const hasCompareAt = compareAt && compareAt > originalPrice
+                                  if (hasDiscount) {
+                                    return <div className="text-sm text-gray-400 line-through">{formatPrice(originalPrice * qty, currencyCode)}</div>
+                                  } else if (hasCompareAt) {
+                                    return <div className="text-sm text-gray-400 line-through">{formatPrice(compareAt! * qty, currencyCode)}</div>
+                                  }
+                                  return null
+                                })()}
                               </div>
                             </div>
                           </button>

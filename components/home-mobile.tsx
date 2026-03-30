@@ -27,6 +27,7 @@ interface HomeMobileProps {
   newArrivals: Product[]
   bestSelling: Product[]
   vouchers: any[]
+  activeDiscounts?: Map<string, any>
   isLoading?: boolean
 }
 
@@ -53,7 +54,7 @@ function CarouselSkeletonMobile({ bg, titleBg }: { bg: string; titleBg: string }
   )
 }
 
-export function HomeMobile({ products, collections, newArrivals, bestSelling, vouchers, isLoading }: HomeMobileProps) {
+export function HomeMobile({ products, collections, newArrivals, bestSelling, vouchers, activeDiscounts, isLoading }: HomeMobileProps) {
   const { t } = useLanguage()
 
   return (
@@ -71,6 +72,7 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling, vo
             titleColor="text-[#1C2E4A]"
             variant="new"
             vouchers={vouchers}
+            activeDiscounts={activeDiscounts}
           />
         </section>
       ) : null}
@@ -86,6 +88,7 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling, vo
             titleColor="text-[#C2A36B]"
             variant="popular"
             vouchers={vouchers}
+            activeDiscounts={activeDiscounts}
           />
         </section>
       ) : null}
@@ -101,6 +104,7 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling, vo
             titleColor="text-[#1C2E4A]"
             variant="bestselling"
             vouchers={vouchers}
+            activeDiscounts={activeDiscounts}
           />
         </section>
       ) : null}

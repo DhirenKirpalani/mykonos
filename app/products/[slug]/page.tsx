@@ -63,6 +63,7 @@ export default function ProductDetailPage({
   const [loading, setLoading] = useState(true)
   const [voucher, setVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string } | null>(null)
   const [relatedVouchers, setRelatedVouchers] = useState<any[]>([])
+  const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
 
   const handleVoucherExpire = () => {
     setVoucher(null)
@@ -78,6 +79,41 @@ export default function ProductDetailPage({
       const fragranceFamily = productData.fragrance_family || 'Uncategorized'
       const related = await getRelatedProducts(fragranceFamily, productData.id)
       setRelatedProducts(related)
+      
+      // Fetch active discount campaigns for this product (all variants)
+      try {
+        const now = new Date().toISOString()
+        const { data: discountData, error: discountError } = await supabase
+          .from('discount_products')
+          .select(`
+            *,
+            discounts!inner(
+              id,
+              name,
+              start_date,
+              end_date,
+              is_active
+            )
+          `)
+          .eq('product_id', productData.id)
+          .eq('is_active', true)
+          .eq('discounts.is_active', true)
+          .lte('discounts.start_date', now)
+          .gte('discounts.end_date', now)
+
+        if (!discountError && discountData && discountData.length > 0) {
+          // Create a map of variant_id -> discount data
+          const discountMap = new Map()
+          discountData.forEach(discount => {
+            const key = discount.variant_id || 'no-variant'
+            discountMap.set(key, discount)
+          })
+          setActiveDiscounts(discountMap)
+          console.log('🎯 Active discounts loaded:', discountData.length, 'variants')
+        }
+      } catch (error) {
+        console.error('Error fetching discount:', error)
+      }
       
       // Fetch active vouchers for this product and related products
       try {
@@ -173,6 +209,7 @@ export default function ProductDetailPage({
                   product={product}
                   showRange={true}
                   voucher={voucher}
+                  activeDiscounts={activeDiscounts}
                 />
                 {/* Voucher Discount Badge */}
                 {voucher && (
@@ -254,6 +291,7 @@ export default function ProductDetailPage({
               salePrice={product.sale_price}
               compareAtPrice={(product as any).compare_at_price}
               voucher={voucher}
+              activeDiscounts={activeDiscounts}
               productData={{
                 id: product.id,
                 name: product.name,

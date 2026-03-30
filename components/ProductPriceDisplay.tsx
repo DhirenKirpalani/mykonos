@@ -12,21 +12,36 @@ interface ProductPriceDisplayProps {
     discount_type: 'percentage' | 'fixed'
     discount_value: number
   } | null
+  activeDiscounts?: Map<string, any> | null
 }
 
-export function ProductPriceDisplay({ product, quantity = 1, showRange = false, voucher = null }: ProductPriceDisplayProps) {
+export function ProductPriceDisplay({ product, quantity = 1, showRange = false, voucher = null, activeDiscounts = null }: ProductPriceDisplayProps) {
   const { region } = useRegion()
   const [showBreakdown, setShowBreakdown] = useState(false)
   
   // Check if product has variants with different prices
   const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
-  const variantPrices = hasVariants ? product.variants.map((v: any) => 
-    region?.code === 'ID' ? (v.price_idr || 0) : (v.price_usd || 0)
-  ).filter((p: number) => p > 0) : []
+  
+  // Get variant prices, applying discounts if available
+  const variantPrices = hasVariants ? product.variants.map((v: any) => {
+    const basePrice = region?.code === 'ID' ? (v.price_idr || 0) : (v.price_usd || 0)
+    // Check if this variant has an active discount
+    const discount = activeDiscounts?.get(v.name)
+    return discount?.discounted_price || basePrice
+  }).filter((p: number) => p > 0) : []
   
   const minVariantPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0
   const maxVariantPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0
   const hasPriceRange = showRange && hasVariants && minVariantPrice > 0 && maxVariantPrice > minVariantPrice
+  
+  // Get original variant prices (before discount) for strikethrough
+  const originalVariantPrices = hasVariants ? product.variants.map((v: any) => 
+    region?.code === 'ID' ? (v.price_idr || 0) : (v.price_usd || 0)
+  ).filter((p: number) => p > 0) : []
+  
+  const minOriginalVariantPrice = originalVariantPrices.length > 0 ? Math.min(...originalVariantPrices) : 0
+  const maxOriginalVariantPrice = originalVariantPrices.length > 0 ? Math.max(...originalVariantPrices) : 0
+  const hasVariantDiscount = activeDiscounts && activeDiscounts.size > 0
   
   // Get compare-at prices for variants
   const variantCompareAtPrices = hasVariants ? product.variants.map((v: any) => 
@@ -53,10 +68,20 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
     return product.sale_price
   }
 
-  const unitPrice = getPrice()
+  let unitPrice = getPrice()
+  let originalPrice = unitPrice
+  
+  // Apply discount campaign price if active (for non-variant products)
+  const noVariantDiscount = activeDiscounts?.get('no-variant')
+  if (noVariantDiscount && noVariantDiscount.discounted_price) {
+    originalPrice = unitPrice
+    unitPrice = noVariantDiscount.discounted_price
+  }
+  
   const totalPrice = unitPrice * quantity
+  const originalTotalPrice = originalPrice * quantity
   const salePrice = getSalePrice()
-  const hasDiscount = salePrice && salePrice < unitPrice
+  const hasDiscount = (noVariantDiscount && noVariantDiscount.discounted_price < originalPrice) || (salePrice && salePrice < unitPrice)
   const currencyCode = region?.currency_code || 'USD'
 
   // Calculate voucher discount
@@ -69,6 +94,17 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
 
   return (
     <div className="flex flex-col gap-1">
+      {/* Show strikethrough for original prices if discounts are active */}
+      {hasVariantDiscount && hasPriceRange && (
+        <div className="text-lg text-gray-500 line-through">
+          {formatPrice(minOriginalVariantPrice * quantity, currencyCode)} - {formatPrice(maxOriginalVariantPrice * quantity, currencyCode)}
+        </div>
+      )}
+      {noVariantDiscount && noVariantDiscount.discounted_price < originalPrice && (
+        <div className="text-lg text-gray-500 line-through">
+          {formatPrice(originalTotalPrice, currencyCode)}
+        </div>
+      )}
       <div className="flex items-baseline gap-3 flex-wrap">
         <div className="text-3xl font-medium text-[#EE4D2D]">
           {hasPriceRange ? (

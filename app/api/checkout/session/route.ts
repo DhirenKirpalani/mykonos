@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     console.log('🔵 [API] POST /api/checkout/session - Creating checkout session')
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
-    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0 } = body
+    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0, item_discounts = [] } = body
     
     console.log('📥 [API] Request body:', { user_id, session_id, items_count: items?.length, currency_code, region_code })
 
@@ -92,15 +92,23 @@ export async function POST(request: Request) {
         variant_sku?: string | null
       }>
 
-      cartSnapshot = typedCartItems.map(item => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price: item.price_at_add,
-        variant_name: item.variant_name || null,
-        variant_sku: item.variant_sku || null,
-      }))
+      cartSnapshot = typedCartItems.map(item => {
+        // Use campaign-discounted price if provided, otherwise fall back to price_at_add
+        const discountEntry = (item_discounts as Array<{ product_id: string; variant_name: string | null; discounted_price: number }>)
+          .find(d =>
+            d.product_id === item.product_id &&
+            (d.variant_name === item.variant_name || (!d.variant_name && !item.variant_name))
+          )
+        return {
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: discountEntry?.discounted_price ?? item.price_at_add,
+          variant_name: item.variant_name || null,
+          variant_sku: item.variant_sku || null,
+        }
+      })
 
-      subtotal = typedCartItems.reduce((sum, item) => sum + ((item.price_at_add || 0) * item.quantity), 0)
+      subtotal = cartSnapshot.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0)
       console.log('💰 [API] Calculated subtotal from cart:', subtotal)
     }
 

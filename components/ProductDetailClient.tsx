@@ -28,6 +28,7 @@ interface ProductDetailClientProps {
     discount_type: 'percentage' | 'fixed'
     discount_value: number
   } | null
+  activeDiscounts?: Map<string, any> | null
   productData?: {
     id: string
     name: string
@@ -42,7 +43,7 @@ interface ProductDetailClientProps {
   }
 }
 
-export function ProductDetailClient({ productId, productName, productSlug, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, voucher, productData, product }: ProductDetailClientProps) {
+export function ProductDetailClient({ productId, productName, productSlug, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, voucher, activeDiscounts = null, productData, product }: ProductDetailClientProps) {
   const { t } = useTranslation()
   const router = useRouter()
   const [quantity, setQuantity] = useState(minQuantity)
@@ -457,6 +458,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         onClose={() => setShowVariantModal(false)}
         product={productData}
         voucher={voucher}
+        activeDiscounts={activeDiscounts}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
         onAddToWishlist={handleAddToWishlist}
