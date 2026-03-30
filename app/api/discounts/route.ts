@@ -16,7 +16,16 @@ export async function GET() {
       .from('discounts')
       .select(`
         *,
-        discount_products(count)
+        discount_products(
+          id,
+          product_id,
+          variant_id,
+          products(
+            id,
+            name,
+            image_urls
+          )
+        )
       `)
       .order('created_at', { ascending: false })
 
@@ -35,10 +44,24 @@ export async function GET() {
         status = 'expired'
       }
 
+      // Get unique products with their details
+      const uniqueProducts = new Map()
+      discount.discount_products?.forEach((dp: any) => {
+        if (dp.products && !uniqueProducts.has(dp.product_id)) {
+          uniqueProducts.set(dp.product_id, {
+            id: dp.products.id,
+            name: dp.products.name,
+            image_url: dp.products.image_urls?.[0]
+          })
+        }
+      })
+
       return {
         ...discount,
         status,
-        product_count: discount.discount_products?.[0]?.count || 0
+        is_active: discount.is_active ?? true,
+        product_count: discount.discount_products?.length || 0,
+        products: Array.from(uniqueProducts.values())
       }
     }) || []
 
@@ -62,8 +85,15 @@ export async function POST(request: Request) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const body = await request.json()
+    
+    console.log('🔵 API: Received discount creation request:', {
+      name: body.name,
+      start_date: body.start_date,
+      end_date: body.end_date,
+      total_products: body.products?.length || 0
+    })
 
-    // Create discount
+    // Create discount (dates already in UTC from frontend)
     const { data: discount, error } = await supabase
       .from('discounts')
       .insert({
@@ -75,27 +105,57 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ API: Failed to create discount:', error)
+      throw error
+    }
+    
+    console.log('✅ API: Discount created successfully:', {
+      discount_id: discount.id,
+      name: discount.name
+    })
 
     // Create discount products
     if (body.products && body.products.length > 0) {
-      const discountProducts = body.products.map((product: any) => ({
-        discount_id: discount.id,
-        product_id: product.product_id,
-        variant_id: product.variant_id,
-        discount_type: product.discount_type,
-        discount_value: product.discount_value,
-        discounted_price: product.discounted_price,
-        promo_stock: product.promo_stock,
-        min_purchase: product.min_purchase,
-        is_active: product.is_active
-      }))
+      console.log('🔵 API: Creating discount products:', body.products.length)
+      
+      const discountProducts = body.products.map((product: any, index: number) => {
+        const dp = {
+          discount_id: discount.id,
+          product_id: product.product_id,
+          variant_id: product.variant_id || null,
+          discount_type: product.discount_type,
+          discount_value: product.discount_value,
+          discounted_price: product.discounted_price,
+          promo_stock: product.promo_stock || null,
+          min_purchase: product.min_purchase || null,
+          is_active: product.is_active ?? true
+        }
+        
+        console.log(`  📦 Product ${index + 1}:`, {
+          product_id: dp.product_id,
+          variant_id: dp.variant_id,
+          original_price: product.original_price,
+          discounted_price: dp.discounted_price,
+          discount_value: dp.discount_value,
+          discount_type: dp.discount_type,
+          discount_percent: product.original_price > 0 ? Math.round(((product.original_price - dp.discounted_price) / product.original_price) * 100) : 0
+        })
+        
+        return dp
+      })
 
-      const { error: productsError } = await supabase
+      const { data: insertedProducts, error: productsError } = await supabase
         .from('discount_products')
         .insert(discountProducts)
+        .select()
 
-      if (productsError) throw productsError
+      if (productsError) {
+        console.error('❌ API: Failed to create discount products:', productsError)
+        throw productsError
+      }
+      
+      console.log('✅ API: Discount products created successfully:', insertedProducts?.length || 0)
     }
 
     return NextResponse.json(discount)

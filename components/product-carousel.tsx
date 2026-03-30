@@ -15,6 +15,7 @@ interface ProductCarouselProps {
   titleColor?: string
   variant?: 'new' | 'popular' | 'bestselling'
   vouchers?: any[]
+  activeDiscounts?: Map<string, any>
 }
 
 export function ProductCarousel({ 
@@ -23,7 +24,8 @@ export function ProductCarousel({
   backgroundColor = 'bg-gradient-to-b from-[#C2A36B] to-[#B8945E]',
   titleColor = 'text-[#1C2E4A]',
   variant = 'new',
-  vouchers = []
+  vouchers = [],
+  activeDiscounts
 }: ProductCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -226,7 +228,7 @@ export function ProductCarousel({
                     xl:w-[320px]
                   "
                 >
-                  <ProductCard product={product} voucher={voucherData} className={getCardClasses()} />
+                  <ProductCard product={product} voucher={voucherData} activeDiscount={activeDiscounts?.get(product.id) || null} className={getCardClasses()} />
                 </motion.div>
               )
             })}

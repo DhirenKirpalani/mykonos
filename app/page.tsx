@@ -49,6 +49,7 @@ export default function HomePage() {
   const [newArrivals, setNewArrivals] = useState<Product[]>([])
   const [bestSelling, setBestSelling] = useState<Product[]>([])
   const [vouchers, setVouchers] = useState<any[]>([])
+  const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
   
   useEffect(() => {
     // Check if user has visited before
@@ -68,7 +69,7 @@ export default function HomePage() {
   const fetchData = async () => {
     try {
       // Fetch all data in parallel for better performance
-      const [productsResult, collectionsResult, newArrivalsResult, bestSellingResult, vouchersResult] = await Promise.all([
+      const [productsResult, collectionsResult, newArrivalsResult, bestSellingResult, vouchersResult, discountsResult] = await Promise.all([
         supabase
           .from('products')
           .select('*')
@@ -117,7 +118,24 @@ export default function HomePage() {
           .select('discount_type, discount_value, scope, applicable_product_ids, valid_until')
           .eq('is_active', true)
           .lte('valid_from', new Date().toISOString())
-          .gte('valid_until', new Date().toISOString())
+          .gte('valid_until', new Date().toISOString()),
+        supabase
+          .from('discount_products')
+          .select(`
+            product_id,
+            variant_id,
+            discounted_price,
+            discounts!inner(
+              id,
+              start_date,
+              end_date,
+              is_active
+            )
+          `)
+          .eq('is_active', true)
+          .eq('discounts.is_active', true)
+          .lte('discounts.start_date', new Date().toISOString())
+          .gte('discounts.end_date', new Date().toISOString())
       ])
 
       setProducts((productsResult.data || []) as unknown as Product[])
@@ -125,6 +143,21 @@ export default function HomePage() {
       setNewArrivals((newArrivalsResult.data || []) as unknown as Product[])
       setBestSelling((bestSellingResult.data || []) as unknown as Product[])
       setVouchers(vouchersResult.data || [])
+      
+      // Build discount map by product_id -> lowest discounted price
+      if (discountsResult.data && discountsResult.data.length > 0) {
+        const productGroups = new Map<string, any[]>()
+        discountsResult.data.forEach((d: any) => {
+          if (!productGroups.has(d.product_id)) productGroups.set(d.product_id, [])
+          productGroups.get(d.product_id)!.push(d)
+        })
+        const discountMap = new Map<string, any>()
+        productGroups.forEach((discounts, productId) => {
+          const min = discounts.reduce((a: any, b: any) => b.discounted_price < a.discounted_price ? b : a)
+          discountMap.set(productId, min)
+        })
+        setActiveDiscounts(discountMap)
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -143,6 +176,7 @@ export default function HomePage() {
       newArrivals={newArrivals}
       bestSelling={bestSelling}
       vouchers={vouchers}
+      activeDiscounts={activeDiscounts}
       isLoading={isLoading}
     />
   )

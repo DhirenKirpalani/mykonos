@@ -24,6 +24,7 @@ function ProductsContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [mounted, setMounted] = useState(false)
   const [productVouchers, setProductVouchers] = useState<Map<string, { discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string }>>(new Map())
+  const [productDiscounts, setProductDiscounts] = useState<Map<string, any>>(new Map())
 
   useEffect(() => {
     setMounted(true)
@@ -43,7 +44,6 @@ function ProductsContent() {
           const voucherMap = new Map()
           vouchers.forEach(voucher => {
             if (voucher.scope === 'all') {
-              // Apply to all products - we'll handle this when rendering
               voucherMap.set('__all__', {
                 discount_type: voucher.discount_type,
                 discount_value: voucher.discount_value,
@@ -66,8 +66,58 @@ function ProductsContent() {
       }
     }
 
+    async function fetchActiveDiscounts() {
+      try {
+        const now = new Date().toISOString()
+        const { data: discounts, error } = await supabase
+          .from('discount_products')
+          .select(`
+            product_id,
+            variant_id,
+            discounted_price,
+            discounts!inner(
+              id,
+              start_date,
+              end_date,
+              is_active
+            )
+          `)
+          .eq('is_active', true)
+          .eq('discounts.is_active', true)
+          .lte('discounts.start_date', now)
+          .gte('discounts.end_date', now)
+
+        if (!error && discounts) {
+          const discountMap = new Map()
+          // Group discounts by product_id and get the minimum discounted price
+          const productGroups = new Map()
+          
+          discounts.forEach(discount => {
+            if (!productGroups.has(discount.product_id)) {
+              productGroups.set(discount.product_id, [])
+            }
+            productGroups.get(discount.product_id).push(discount)
+          })
+          
+          // For each product, store the discount with minimum price
+          productGroups.forEach((productDiscounts, productId) => {
+            const minDiscount = productDiscounts.reduce((min: any, current: any) => 
+              current.discounted_price < min.discounted_price ? current : min
+            )
+            discountMap.set(productId, minDiscount)
+          })
+          
+          setProductDiscounts(discountMap)
+          console.log('📊 Loaded discounts for', discountMap.size, 'products')
+        }
+      } catch (error) {
+        console.error('Error fetching discounts:', error)
+      }
+    }
+
     if (mounted) {
       fetchActiveVouchers()
+      fetchActiveDiscounts()
     }
   }, [mounted])
 
@@ -285,11 +335,13 @@ function ProductsContent() {
                 <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
                   {products.map((product: Product) => {
                     const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
+                    const discount = productDiscounts.get(product.id)
                     return (
                       <ProductCard 
                         key={product.id} 
                         product={product}
                         voucher={voucher || null}
+                        activeDiscount={discount || null}
                       />
                     )
                   })}

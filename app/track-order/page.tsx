@@ -14,8 +14,10 @@ import Link from 'next/link'
 
 type OrderItem = {
   id: string
+  product_id: string
   quantity: number
   price_at_purchase: number
+  variant_name?: string | null
   product: {
     name: string
     image_urls: string[]
@@ -67,6 +69,7 @@ export default function TrackOrderPage() {
   const [timeRemaining, setTimeRemaining] = useState<string>('')
   const [notFound, setNotFound] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [activeDiscounts, setActiveDiscounts] = useState<Map<string, number>>(new Map())
 
   // Helper function to translate order status
   const getTranslatedStatus = (status: string) => {
@@ -78,6 +81,58 @@ export default function TrackOrderPage() {
   const [sessionOrders, setSessionOrders] = useState<Order[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+
+  // Fetch active discounts whenever order changes
+  useEffect(() => {
+    if (!order?.order_items?.length) return
+    const fetchDiscounts = async () => {
+      const productIds = (order.order_items as any[]).map((i: any) => i.product_id).filter(Boolean)
+      if (!productIds.length) return
+      const now = new Date().toISOString()
+      const { data } = await supabase
+        .from('discount_products')
+        .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
+        .eq('is_active', true)
+        .eq('discounts.is_active', true)
+        .lte('discounts.start_date', now)
+        .gte('discounts.end_date', now)
+        .in('product_id', productIds)
+      if (data && data.length > 0) {
+        const discMap = new Map<string, number>()
+
+        // Build variant_id -> variant_name lookup from order items' product variants JSONB
+        const variantIdToName = new Map<string, string>()
+        ;(order.order_items as any[]).forEach((item: any) => {
+          const variants: any[] = item.product?.variants || []
+          variants.forEach((v: any) => {
+            if (v.id && v.name) variantIdToName.set(v.id, v.name)
+          })
+        })
+
+        data.forEach((d: any) => {
+          if (!d.variant_id) {
+            if (!discMap.has(d.product_id) || d.discounted_price < discMap.get(d.product_id)!) {
+              discMap.set(d.product_id, d.discounted_price)
+            }
+          } else {
+            const variantName = variantIdToName.get(d.variant_id)
+            if (variantName) {
+              const variantNameKey = `${d.product_id}-${variantName}`
+              if (!discMap.has(variantNameKey) || d.discounted_price < discMap.get(variantNameKey)!) {
+                discMap.set(variantNameKey, d.discounted_price)
+              }
+            }
+            // Product-level fallback (lowest variant discount)
+            if (!discMap.has(d.product_id) || d.discounted_price < discMap.get(d.product_id)!) {
+              discMap.set(d.product_id, d.discounted_price)
+            }
+          }
+        })
+        setActiveDiscounts(discMap)
+      }
+    }
+    fetchDiscounts()
+  }, [order?.id])
 
   // Pre-fill email for authenticated (non-anonymous) users and lock the field
   useEffect(() => {
@@ -117,11 +172,14 @@ export default function TrackOrderPage() {
               *,
               order_items (
                 id,
+                product_id,
                 quantity,
                 price_at_purchase,
+                variant_name,
                 product:products (
                   name,
-                  image_urls
+                  image_urls,
+                  variants
                 )
               )
             `)
@@ -168,11 +226,14 @@ export default function TrackOrderPage() {
                 *,
                 order_items (
                   id,
+                  product_id,
                   quantity,
                   price_at_purchase,
+                  variant_name,
                   product:products (
                     name,
-                    image_urls
+                    image_urls,
+                    variants
                   )
                 )
               `)
@@ -1021,9 +1082,24 @@ export default function TrackOrderPage() {
                           <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-gray-900">
-                            {formatPrice(item.price_at_purchase * item.quantity, order.currency_code as any)}
-                          </p>
+                          {(() => {
+                            const discKey = item.variant_name ? `${item.product_id}-${item.variant_name}` : item.product_id
+                            const discounted = activeDiscounts.get(discKey) ?? activeDiscounts.get(item.product_id)
+                            const displayPrice = discounted ?? item.price_at_purchase
+                            const hasDiscount = discounted !== undefined && discounted < item.price_at_purchase
+                            return (
+                              <>
+                                {hasDiscount && (
+                                  <p className="text-xs text-gray-400 line-through">
+                                    {formatPrice(item.price_at_purchase * item.quantity, order.currency_code as any)}
+                                  </p>
+                                )}
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {formatPrice(displayPrice * item.quantity, order.currency_code as any)}
+                                </p>
+                              </>
+                            )
+                          })()}
                         </div>
                       </div>
                     ))}

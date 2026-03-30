@@ -45,11 +45,14 @@ export async function GET(request: Request) {
         shipped_at,
         order_items (
           id,
+          product_id,
           quantity,
           price_at_purchase,
+          variant_name,
           product:products (
             name,
-            image_urls
+            image_urls,
+            variants
           )
         )
       `)

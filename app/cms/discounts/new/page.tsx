@@ -60,6 +60,22 @@ export default function NewDiscountPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const [bulkDiscount, setBulkDiscount] = useState({ type: 'percentage' as 'percentage' | 'fixed', value: 0, promo_stock: '', min_purchase: '' })
 
+  // Debug: Log discount products state changes
+  useEffect(() => {
+    if (discountProducts.length > 0) {
+      console.log('📊 Current Discount Products State:', discountProducts.map((p, idx) => ({
+        index: idx,
+        product_id: p.product_id,
+        variant_id: p.variant_id,
+        variant_name: p.variant_name,
+        original_price: p.original_price,
+        discounted_price: p.discounted_price,
+        discount_value: p.discount_value,
+        discount_percent: p.original_price > 0 ? Math.round(((p.original_price - p.discounted_price) / p.original_price) * 100) : 0
+      })))
+    }
+  }, [discountProducts])
+
   useEffect(() => {
     fetchProducts()
   }, [])
@@ -94,10 +110,10 @@ export default function NewDiscountPage() {
 
     // If product has variants, add all variants
     if (product.variants && product.variants.length > 0) {
-      const variantProducts: DiscountProduct[] = product.variants.map(variant => ({
+      const variantProducts: DiscountProduct[] = product.variants.map((variant, variantIndex) => ({
         product_id: product.id,
         product_name: product.name,
-        variant_id: variant.id,
+        variant_id: variant.name, // Use variant name as ID since variants don't have separate IDs
         variant_name: variant.name,
         original_price: variant.price_idr,
         discount_type: 'percentage',
@@ -217,6 +233,31 @@ export default function NewDiscountPage() {
         return
       }
 
+      // Convert local datetime to UTC for storage
+      const startDateUTC = new Date(formData.start_date).toISOString()
+      const endDateUTC = new Date(formData.end_date).toISOString()
+
+      console.log('📤 Submitting Discount Campaign:', {
+        name: formData.name,
+        start_date: startDateUTC,
+        end_date: endDateUTC,
+        total_products: discountProducts.length,
+        products: discountProducts.map((p, idx) => ({
+          index: idx,
+          product_id: p.product_id,
+          variant_id: p.variant_id,
+          variant_name: p.variant_name,
+          original_price: p.original_price,
+          discounted_price: p.discounted_price,
+          discount_value: p.discount_value,
+          discount_type: p.discount_type,
+          discount_percent: Math.round(((p.original_price - p.discounted_price) / p.original_price) * 100),
+          promo_stock: p.promo_stock,
+          min_purchase: p.min_purchase,
+          is_active: p.is_active
+        }))
+      })
+
       const response = await fetch('/api/discounts', {
         method: 'POST',
         headers: { 
@@ -224,7 +265,9 @@ export default function NewDiscountPage() {
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          start_date: startDateUTC,
+          end_date: endDateUTC,
           products: discountProducts,
         })
       })
@@ -397,26 +440,17 @@ export default function NewDiscountPage() {
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Diskon</label>
-                  <div className="flex gap-1">
-                    <input
-                      type="number"
-                      value={bulkDiscount.value}
-                      onChange={(e) => setBulkDiscount(prev => ({ ...prev, value: parseFloat(e.target.value) || 0 }))}
-                      className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
-                      min="0"
-                    />
-                    <select
-                      value={bulkDiscount.type}
-                      onChange={(e) => setBulkDiscount(prev => ({ ...prev, type: e.target.value as 'percentage' | 'fixed' }))}
-                      className="rounded border border-gray-300 px-2 py-1 text-sm"
-                    >
-                      <option value="percentage">%DISKON</option>
-                      <option value="fixed">IDR</option>
-                    </select>
-                  </div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Harga Diskon (Rp)</label>
+                  <input
+                    type="number"
+                    value={bulkDiscount.value}
+                    onChange={(e) => setBulkDiscount(prev => ({ ...prev, value: parseFloat(e.target.value) || 0, type: 'fixed' }))}
+                    placeholder="Masukkan harga diskon"
+                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                    min="0"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Stok Promosi</label>
@@ -424,19 +458,9 @@ export default function NewDiscountPage() {
                     type="number"
                     value={bulkDiscount.promo_stock}
                     onChange={(e) => setBulkDiscount(prev => ({ ...prev, promo_stock: e.target.value }))}
-                    placeholder="Tidak ad..."
+                    placeholder="Tidak ada"
                     className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                     min="0"
-                  />
-                </div>
-                <div>
-                  <input
-                    type="number"
-                    value={bulkDiscount.min_purchase}
-                    onChange={(e) => setBulkDiscount(prev => ({ ...prev, min_purchase: e.target.value }))}
-                    placeholder="Tidak ad..."
-                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                    min="1"
                   />
                 </div>
               </div>
@@ -470,7 +494,7 @@ export default function NewDiscountPage() {
                 <div className="col-span-1">Nama Produk</div>
                 <div className="col-span-1">Harga Awal</div>
                 <div className="col-span-2 text-center">Harga Diskon</div>
-                <div className="col-span-2 text-center">Diskon</div>
+                <div className="col-span-1 text-center">% Diskon</div>
                 <div className="col-span-1 text-center">Stok</div>
                 <div className="col-span-1 text-center">Stok Promosi</div>
                 <div className="col-span-1 text-center">Batas Pembelian</div>
@@ -523,32 +547,6 @@ export default function NewDiscountPage() {
                           <span className="text-sm font-medium text-gray-900">{items[0].product_name}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-gray-600">Batas Pembelian:</label>
-                            <select 
-                              value={items[0].min_purchase?.toString() || ''}
-                              onChange={(e) => {
-                                // Update min_purchase for all variants of this product
-                                const newValue = e.target.value ? parseInt(e.target.value) : undefined
-                                items.forEach(item => {
-                                  const idx = discountProducts.findIndex(p => 
-                                    p.product_id === item.product_id && 
-                                    (item.variant_id ? p.variant_id === item.variant_id : !p.variant_id)
-                                  )
-                                  if (idx !== -1) {
-                                    updateDiscountProduct(idx, 'min_purchase', newValue)
-                                  }
-                                })
-                              }}
-                              className="rounded border border-gray-300 px-2 py-1 text-xs"
-                            >
-                              <option value="">Tidak T...</option>
-                              <option value="1">1</option>
-                              <option value="2">2</option>
-                              <option value="3">3</option>
-                              <option value="5">5</option>
-                            </select>
-                          </div>
                           <button
                             type="button"
                             onClick={() => {
@@ -564,13 +562,21 @@ export default function NewDiscountPage() {
                       {/* Variant / Product Rows - Always expanded */}
                       <div className="divide-y divide-gray-100">
                         {items.map((item, idx) => {
-                          const globalIndex = discountProducts.findIndex(p =>
-                            p.product_id === item.product_id &&
-                            (item.variant_id ? p.variant_id === item.variant_id : !p.variant_id)
-                          )
+                          const globalIndex = discountProducts.findIndex(p => {
+                            const matches = p.product_id === item.product_id &&
+                              (item.variant_id ? p.variant_id === item.variant_id : !p.variant_id)
+                            console.log(`🔍 Finding index for ${item.variant_name}:`, {
+                              searching_for: { product_id: item.product_id, variant_id: item.variant_id },
+                              comparing_with: { product_id: p.product_id, variant_id: p.variant_id },
+                              matches
+                            })
+                            return matches
+                          })
+                          console.log(`📍 GlobalIndex for ${item.variant_name}: ${globalIndex}`)
                           const itemKey = item.variant_id ? `${item.product_id}-${item.variant_id}` : item.product_id
                           const isSelected = selectedProducts.has(itemKey)
-                          const discountPercent = item.discount_type === 'percentage' ? item.discount_value : (item.original_price > 0 ? Math.round(((item.original_price - item.discounted_price) / item.original_price) * 100) : 0)
+                          // Calculate % discount as: ((original_price - discounted_price) / original_price) * 100
+                          const discountPercent = item.original_price > 0 ? Math.round(((item.original_price - item.discounted_price) / item.original_price) * 100) : 0
                           return (
                             <div key={idx} className="grid grid-cols-12 gap-2 items-center px-4 py-3 bg-white hover:bg-gray-50">
                               {/* Empty space for alignment (no checkbox on variants) */}
@@ -578,52 +584,68 @@ export default function NewDiscountPage() {
                               </div>
                               {/* Variant Name */}
                               <div className="col-span-1">
-                                <span className="text-sm text-gray-900 truncate block">{item.variant_name || '-'}</span>
+                                <span className="text-sm text-gray-900">{item.variant_name || '-'}</span>
                                 {item.stock === 0 && <span className="text-xs text-red-500">Habis</span>}
                               </div>
                               {/* Original Price */}
                               <div className="col-span-1 text-sm text-gray-700">
                                 Rp{item.original_price.toLocaleString('id-ID')}
                               </div>
-                              {/* Discount Price (Rp input with spinner) */}
+                              {/* Discount Price (Rp input) */}
                               <div className="col-span-2">
                                 <div className="flex items-center gap-1">
                                   <span className="text-xs text-gray-500">Rp</span>
                                   <input
-                                    type="number"
-                                    value={Math.round(item.discounted_price)}
+                                    key={`discount-${globalIndex}-${item.product_id}-${item.variant_id || 'no-variant'}`}
+                                    type="text"
+                                    defaultValue={Math.round(item.discounted_price).toLocaleString('id-ID')}
                                     onChange={(e) => {
-                                      const val = parseFloat(e.target.value) || 0
+                                      const rawValue = e.target.value.replace(/\./g, '')
+                                      const val = parseFloat(rawValue) || 0
                                       const currentOriginalPrice = item.original_price
                                       const newDiscountedPrice = Math.max(0, Math.min(val, currentOriginalPrice))
                                       
+                                      console.log('🔄 Discount Input Change:', {
+                                        globalIndex,
+                                        product_id: item.product_id,
+                                        variant_id: item.variant_id,
+                                        variant_name: item.variant_name,
+                                        original_price: currentOriginalPrice,
+                                        input_value: val,
+                                        new_discounted_price: newDiscountedPrice,
+                                        discount_value: currentOriginalPrice - newDiscountedPrice,
+                                        discount_percent: Math.round(((currentOriginalPrice - newDiscountedPrice) / currentOriginalPrice) * 100)
+                                      })
+                                      
                                       setDiscountProducts(prev => {
                                         const updated = [...prev]
-                                        const currentItem = updated[globalIndex]
+                                        const oldItem = updated[globalIndex]
                                         updated[globalIndex] = {
-                                          ...currentItem,
+                                          ...oldItem,
                                           discounted_price: newDiscountedPrice,
-                                          discount_value: currentItem.original_price - newDiscountedPrice,
+                                          discount_value: oldItem.original_price - newDiscountedPrice,
                                           discount_type: 'fixed'
                                         }
+                                        console.log('✅ Updated discount product:', updated[globalIndex])
                                         return updated
                                       })
                                     }}
+                                    onBlur={(e) => {
+                                      // Format on blur
+                                      const rawValue = e.target.value.replace(/\./g, '')
+                                      const val = parseFloat(rawValue) || 0
+                                      e.target.value = Math.round(val).toLocaleString('id-ID')
+                                    }}
                                     className="w-28 rounded border border-blue-400 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    min="0"
-                                    max={item.original_price}
-                                    step="1000"
                                   />
                                 </div>
                               </div>
                               {/* Discount % (auto-calculated, read-only display) */}
-                              <div className="col-span-2">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-gray-400">OR</span>
-                                  <div className="w-12 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-center text-gray-600">
-                                    {discountPercent}
+                              <div className="col-span-1">
+                                <div className="flex items-center justify-center gap-1">
+                                  <div className="rounded border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-center text-gray-700 font-medium">
+                                    {discountPercent}%
                                   </div>
-                                  <span className="text-xs text-gray-500">%DISKON</span>
                                 </div>
                               </div>
                               {/* Stock */}
@@ -635,16 +657,26 @@ export default function NewDiscountPage() {
                                   onChange={(e) => updateDiscountProduct(globalIndex, 'promo_stock', e.target.value ? parseInt(e.target.value) : undefined)}
                                   className="w-full rounded border border-gray-300 px-1 py-1 text-xs"
                                 >
-                                  <option value="">Tidak T...</option>
+                                  <option value="">Tidak ada</option>
                                   <option value="10">10</option>
                                   <option value="25">25</option>
                                   <option value="50">50</option>
                                   <option value="100">100</option>
                                 </select>
                               </div>
-                              {/* Min Purchase - Empty (now at product level) */}
-                              <div className="col-span-1 text-center text-xs text-gray-400">
-                                -
+                              {/* Batas Pembelian */}
+                              <div className="col-span-1">
+                                <select
+                                  value={item.min_purchase?.toString() || ''}
+                                  onChange={(e) => updateDiscountProduct(globalIndex, 'min_purchase', e.target.value ? parseInt(e.target.value) : undefined)}
+                                  className="w-full rounded border border-gray-300 px-1 py-1 text-xs"
+                                >
+                                  <option value="">Tidak ada</option>
+                                  <option value="1">1</option>
+                                  <option value="2">2</option>
+                                  <option value="3">3</option>
+                                  <option value="5">5</option>
+                                </select>
                               </div>
                               {/* Active/Inactive Toggle */}
                               <div className="col-span-1 flex justify-center">

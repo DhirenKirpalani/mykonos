@@ -74,9 +74,13 @@ interface ProductCardProps {
     discount_value: number
     valid_until: string
   } | null
+  activeDiscount?: {
+    discounted_price: number
+    variant_id?: string
+  } | null
 }
 
-export function ProductCard({ product, className, voucher }: ProductCardProps) {
+export function ProductCard({ product, className, voucher, activeDiscount }: ProductCardProps) {
   const { region } = useRegion()
   const { t, locale } = useLanguage()
   const [mounted, setMounted] = useState(false)
@@ -95,11 +99,12 @@ export function ProductCard({ product, className, voucher }: ProductCardProps) {
       const difference = endDate.getTime() - nowJakarta.getTime()
 
       if (difference > 0) {
-        const hours = Math.floor(difference / (1000 * 60 * 60))
-        const minutes = Math.floor((difference / 1000 / 60) % 60)
+        const totalMinutes = Math.floor(difference / (1000 * 60))
+        const hours = Math.floor(totalMinutes / 60)
+        const minutes = totalMinutes % 60
         
         if (hours > 0) {
-          return `Sisa ${hours} jam`
+          return `Sisa ${hours} jam ${minutes} menit`
         } else if (minutes > 0) {
           return `Sisa ${minutes} menit`
         } else {
@@ -157,6 +162,26 @@ export function ProductCard({ product, className, voucher }: ProductCardProps) {
       return (product as any).price_idr
     }
     return (product as any).price_usd || 0
+  }
+  
+  // Apply discount campaign price if active
+  let originalPrice = getPrice()
+  let displayPrice = hasPriceRange ? minVariantPrice : originalPrice
+  let hasActiveDiscount = false
+  
+  // For products with variants, we need to find the original price of the discounted variant
+  if (activeDiscount && activeDiscount.discounted_price) {
+    displayPrice = activeDiscount.discounted_price
+    
+    // Find the original price of the variant that has this discount
+    if (hasVariants && activeDiscount.variant_id) {
+      const discountedVariant = (product as any).variants?.find((v: any) => v.name === activeDiscount.variant_id)
+      if (discountedVariant) {
+        originalPrice = region?.code === 'ID' ? (discountedVariant.price_idr || 0) : (discountedVariant.price_usd || 0)
+      }
+    }
+    
+    hasActiveDiscount = activeDiscount.discounted_price < originalPrice
   }
   
   // Check if first media is a video
@@ -272,17 +297,24 @@ export function ProductCard({ product, className, voucher }: ProductCardProps) {
 
         {/* Voucher Discount Banner - Shopee Style */}
         {voucher && (
-          <div className="bg-[#EE4D2D] px-2 py-1.5 flex items-center gap-1.5">
-            {/* Ticket icon */}
-            <div className="bg-white/20 rounded-sm px-1 py-0.5 flex items-center justify-center">
-              <Ticket className="h-3 w-3 text-white" />
+          <div className="bg-[#EE4D2D] px-2 py-1.5 flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5">
+              {/* Ticket icon */}
+              <div className="bg-white/20 rounded-sm px-1 py-0.5 flex items-center justify-center">
+                <Ticket className="h-3 w-3 text-white" />
+              </div>
+              <span className="text-white text-[10px] md:text-xs font-bold">
+                Diskon Rp.{voucher.discount_type === 'percentage' 
+                  ? `${(voucher.discount_value * 1000).toLocaleString('id-ID')}`
+                  : `${voucher.discount_value.toLocaleString('id-ID')}`
+                }RB
+              </span>
             </div>
-            <span className="text-white text-[10px] md:text-xs font-bold">
-              Diskon Rp.{voucher.discount_type === 'percentage' 
-                ? `${(voucher.discount_value * 1000).toLocaleString('id-ID')}`
-                : `${voucher.discount_value.toLocaleString('id-ID')}`
-              }RB
-            </span>
+            {mounted && timeRemaining && (
+              <span className="text-white text-[10px] md:text-xs font-bold">
+                {timeRemaining}
+              </span>
+            )}
           </div>
         )}
 
@@ -305,53 +337,63 @@ export function ProductCard({ product, className, voucher }: ProductCardProps) {
 
           {/* Price with discount */}
           {(() => {
-            // Always show just the min/base price
-            const displayPrice = region
-              ? (hasVariants && minVariantPrice > 0 ? minVariantPrice : getPrice())
-              : 0
+            // Determine base display price
+            let basePrice = hasPriceRange ? minVariantPrice : originalPrice
+            
+            // Apply discount campaign price if active
+            if (hasActiveDiscount) {
+              basePrice = displayPrice
+            }
 
             // Apply voucher discount
             const voucherDiscount = voucher ? (
               voucher.discount_type === 'percentage' 
-                ? (displayPrice * voucher.discount_value / 100)
+                ? (basePrice * voucher.discount_value / 100)
                 : voucher.discount_value
             ) : 0
-            const netPrice = displayPrice - voucherDiscount
+            const netPrice = basePrice - voucherDiscount
 
             // Compute discount percent from compare-at
             let discountPct = 0
             if (hasVariants && minVariantCompareAtPrice > 0 && minVariantCompareAtPrice > minVariantPrice) {
               discountPct = Math.round((minVariantCompareAtPrice - minVariantPrice) / minVariantCompareAtPrice * 100)
-            } else if (!hasVariants && product.sale_price && product.sale_price < getPrice()) {
-              discountPct = Math.round((getPrice() - product.sale_price) / getPrice() * 100)
+            } else if (!hasVariants && product.sale_price && product.sale_price < originalPrice) {
+              discountPct = Math.round((originalPrice - product.sale_price) / originalPrice * 100)
             } else if (!hasVariants && region) {
               const compareAt = region.code === 'ID' ? (product as any).compare_at_price_idr : (product as any).compare_at_price_usd
-              if (compareAt && compareAt > getPrice()) {
-                discountPct = Math.round((compareAt - getPrice()) / compareAt * 100)
+              if (compareAt && compareAt > originalPrice) {
+                discountPct = Math.round((compareAt - originalPrice) / compareAt * 100)
               }
             }
 
             return (
-              <div className="flex items-center gap-1.5 mb-1.5 flex-nowrap">
-                <p className="text-sm md:text-base text-[#EE4D2D] font-bold">
-                  {region ? formatPrice(voucher ? netPrice : displayPrice, region.currency_code) : '...'}
-                </p>
-                {discountPct > 0 && !voucher && (
-                  <span className="text-[10px] md:text-xs text-gray-500 font-medium">
-                    -{discountPct}%
-                  </span>
-                )}
-                {voucher && (
-                  <div className="relative">
-                    <svg className="h-4 w-4 md:h-5 md:w-5 text-[#EE4D2D]" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 12 7.4l3.38 4.6L17 10.83 14.92 8H20v6z"/>
-                    </svg>
-                    <svg className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 md:h-3 md:w-3 bg-white rounded-full" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="11" fill="#EE4D2D"/>
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
-                    </svg>
+              <div className="flex flex-col gap-0.5">
+                {hasActiveDiscount && (
+                  <div className="text-xs text-gray-500 line-through">
+                    {region ? formatPrice(originalPrice, region.currency_code) : '...'}
                   </div>
                 )}
+                <div className="flex items-center gap-1.5 mb-1.5 flex-nowrap">
+                  <p className="text-sm md:text-base text-[#EE4D2D] font-bold">
+                    {region ? formatPrice(voucher ? netPrice : basePrice, region.currency_code) : '...'}
+                  </p>
+                  {(discountPct > 0 || hasActiveDiscount) && !voucher && (
+                    <span className="text-[10px] md:text-xs text-gray-500 font-medium">
+                      -{hasActiveDiscount ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : discountPct}%
+                    </span>
+                  )}
+                  {voucher && (
+                    <div className="relative bg-white rounded-full p-1">
+                      <svg className="h-4 w-4 md:h-5 md:w-5 text-[#EE4D2D]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
+                      </svg>
+                      <svg className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 md:h-3 md:w-3 bg-white rounded-full" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="11" fill="#EE4D2D"/>
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })()}

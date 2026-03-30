@@ -46,10 +46,14 @@ export default function EditDiscountPage() {
       const response = await fetch(`/api/discounts/${discountId}`)
       if (response.ok) {
         const data = await response.json()
+        // Convert UTC to local timezone for display in datetime-local input
+        const startDate = data.start_date ? new Date(data.start_date) : null
+        const endDate = data.end_date ? new Date(data.end_date) : null
+        
         setFormData({
           name: data.name,
-          start_date: data.start_date ? new Date(data.start_date).toISOString().slice(0, 16) : '',
-          end_date: data.end_date ? new Date(data.end_date).toISOString().slice(0, 16) : '',
+          start_date: startDate ? new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
+          end_date: endDate ? new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
           is_active: data.is_active ?? true
         })
         setDiscountProducts(data.discount_products || [])

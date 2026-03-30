@@ -54,6 +54,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
   const [addedToCart, setAddedToCart] = useState<Set<string>>(new Set())
   const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
+  const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
 
   const isVideo = (url: string) => {
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
@@ -103,16 +104,39 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
       const items = (data as any) || []
       setWishlistItems(items)
       
-      // Fetch active vouchers for wishlist items
+      // Fetch active vouchers AND discounts for wishlist items in parallel
       if (items && items.length > 0) {
         const productIds = items.map((item: any) => item.product_id)
-        const { data: activeVouchers } = await supabase
-          .from('promo_codes')
-          .select('discount_type, discount_value, scope, applicable_product_ids')
-          .eq('is_active', true)
-          .lte('valid_from', new Date().toISOString())
-          .gte('valid_until', new Date().toISOString())
-        
+        const now = new Date().toISOString()
+        const [vouchersResult, discountsResult] = await Promise.all([
+          supabase
+            .from('promo_codes')
+            .select('discount_type, discount_value, scope, applicable_product_ids')
+            .eq('is_active', true)
+            .lte('valid_from', now)
+            .gte('valid_until', now),
+          supabase
+            .from('discount_products')
+            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
+            .eq('is_active', true)
+            .eq('discounts.is_active', true)
+            .lte('discounts.start_date', now)
+            .gte('discounts.end_date', now)
+            .in('product_id', productIds)
+        ])
+
+        if (discountsResult.data && discountsResult.data.length > 0) {
+          const discMap = new Map<string, any>()
+          discountsResult.data.forEach((d: any) => {
+            const key = d.variant_id ? `${d.product_id}-${d.variant_id}` : d.product_id
+            if (!discMap.has(key) || d.discounted_price < discMap.get(key).discounted_price) {
+              discMap.set(key, d)
+            }
+          })
+          setActiveDiscounts(discMap)
+        }
+
+        const activeVouchers = vouchersResult.data
         if (activeVouchers && activeVouchers.length > 0) {
           const discountMap = new Map<string, number>()
           items.forEach((item: any) => {
@@ -380,54 +404,44 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                             </p>
                           )}
                           
-                          {/* Pre-order Shipping Info */}
-                          <div className="mt-2 flex items-start gap-1.5">
-                            <svg className="mt-0.5 h-3 w-3 text-[#26AA99] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <p className="text-[10px] text-gray-600">
-                              {(() => {
-                                const preOrderDays = (item.product as any).pre_order_duration_days || 30
-                                const today = new Date()
-                                const estimateStart = new Date(today)
-                                estimateStart.setDate(today.getDate() + preOrderDays + 3)
-                                const estimateEnd = new Date(today)
-                                estimateEnd.setDate(today.getDate() + preOrderDays + 5)
-                                const formatDate = (date: Date) => {
-                                  const day = date.getDate()
-                                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-                                  return `${day} ${months[date.getMonth()]}`
-                                }
-                                return `Pre-order (dikirim dalam ${preOrderDays} hari). Estimasi tiba ${formatDate(estimateStart)} - ${formatDate(estimateEnd)}`
-                              })()}
-                            </p>
-                          </div>
-                          
                           <div className="mt-2 flex flex-col gap-1">
-                            <p className="text-sm font-medium tracking-wide">
-                              {region ? (() => {
-                                // Get variant-specific price if variant exists
-                                let basePrice = region.code === 'ID' && (item.product as any).price_idr 
-                                  ? (item.product as any).price_idr 
-                                  : (item.product as any).price_usd || 0
-                                
-                                if ((item as any).variant_sku && item.product.variants) {
-                                  const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
-                                  if (variant) {
-                                    basePrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
-                                  }
-                                }
-                                
-                                const itemTotal = basePrice * (quantities[item.id] || 1)
-                                const voucherDiscount = voucherDiscounts.get(item.id) || 0
-                                return formatPrice(itemTotal - voucherDiscount, region)
-                              })() : '...'}
-                            </p>
-                            {voucherDiscounts.has(item.id) && voucherDiscounts.get(item.id)! > 0 && (
-                              <span className="text-[10px] text-orange-600 font-medium">
-                                Voucher: -{region ? formatPrice(voucherDiscounts.get(item.id)!, region) : ''}
-                              </span>
-                            )}
+                            {region ? (() => {
+                              let basePrice = region.code === 'ID' && (item.product as any).price_idr 
+                                ? (item.product as any).price_idr 
+                                : (item.product as any).price_usd || 0
+                              
+                              if ((item as any).variant_sku && item.product.variants) {
+                                const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
+                                if (variant) basePrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                              }
+
+                              // Apply campaign discount
+                              const variantName = (item as any).variant_name
+                              const discountKey = variantName ? `${item.product_id}-${variantName}` : item.product_id
+                              const campaignDiscount = activeDiscounts.get(discountKey) || activeDiscounts.get(item.product_id)
+                              const discounted = campaignDiscount?.discounted_price ?? null
+                              const displayPrice = discounted !== null && discounted < basePrice ? discounted : basePrice
+                              const qty = quantities[item.id] || 1
+                              const voucherDiscount = voucherDiscounts.get(item.id) || 0
+
+                              return (
+                                <>
+                                  {discounted !== null && discounted < basePrice && (
+                                    <span className="text-xs text-gray-400 line-through">
+                                      {formatPrice(basePrice * qty, region)}
+                                    </span>
+                                  )}
+                                  <p className="text-sm font-medium tracking-wide">
+                                    {formatPrice((displayPrice * qty) - voucherDiscount, region)}
+                                  </p>
+                                  {voucherDiscount > 0 && (
+                                    <span className="text-[10px] text-orange-600 font-medium">
+                                      Voucher: -{formatPrice(voucherDiscount, region)}
+                                    </span>
+                                  )}
+                                </>
+                              )
+                            })() : '...'}
                           </div>
                         </div>
 
