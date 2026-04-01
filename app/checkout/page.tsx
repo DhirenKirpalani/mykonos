@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -57,6 +57,7 @@ export default function CheckoutPage() {
   const { currency } = useCurrency()
   const { region } = useRegion()
   const { t } = useLanguage()
+  const wasAlreadySignedIn = useRef(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
   const [cartItems, setCartItems] = useState<CartItem[]>([])
@@ -134,37 +135,15 @@ export default function CheckoutPage() {
     window.addEventListener('cart-updated', handleCartUpdate)
     console.log('👂 [CHECKOUT] Event listener registered for cart-updated')
 
-    // Listen for page visibility changes to refetch cart when navigating back
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('👁️ [CHECKOUT] Page became visible, refetching cart...')
-        const urlParams = new URLSearchParams(window.location.search)
-        const isBuyNowFlow = urlParams.get('buyNow') === 'true'
-        const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
-        if (!isBuyNowFlow && !isOrderAgainFlow) {
-          initializeCheckout()
-        }
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    // Listen for focus events (when user returns to the tab/window)
-    const handleFocus = () => {
-      console.log('🎯 [CHECKOUT] Window focused, refetching cart...')
-      const urlParams = new URLSearchParams(window.location.search)
-      const isBuyNowFlow = urlParams.get('buyNow') === 'true'
-      const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
-      if (!isBuyNowFlow && !isOrderAgainFlow) {
-        initializeCheckout()
-      }
-    }
-    window.addEventListener('focus', handleFocus)
-
     // Listen for auth state changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔐 [CHECKOUT] Auth state changed:', event, session?.user?.id)
       
       if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
+        // Skip if user was already signed in (Supabase fires SIGNED_IN on session
+        // refresh/desktop switch — not a real new login)
+        if (wasAlreadySignedIn.current) return
+
         // Check if page is about to reload (flag set by CheckoutModal)
         const isReloading = sessionStorage.getItem('checkout_reloading')
         if (isReloading) {
@@ -192,8 +171,6 @@ export default function CheckoutPage() {
         snapScript.parentNode.removeChild(snapScript)
       }
       window.removeEventListener('cart-updated', handleCartUpdate)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleFocus)
       subscription.unsubscribe()
     }
   }, [])
@@ -212,6 +189,7 @@ export default function CheckoutPage() {
       // Check if guest or logged-in user
       const guestUser = !session || session.user.is_anonymous === true
       setIsGuest(guestUser)
+      if (!guestUser) wasAlreadySignedIn.current = true
 
       // Check for Buy Now items in sessionStorage
       const buyNowItemsStr = sessionStorage.getItem('buyNowItems')

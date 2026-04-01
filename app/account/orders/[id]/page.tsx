@@ -384,39 +384,40 @@ export default function OrderDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-4 sm:py-8 md:py-12">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-5 sm:mb-8">
             <Link
               href="/account/orders"
-              className="text-gray-600 hover:text-gray-900 mb-6 inline-flex items-center gap-2 text-sm font-medium transition-colors"
+              className="text-gray-600 hover:text-gray-900 mb-4 inline-flex items-center gap-2 text-sm font-medium transition-colors"
             >
               ← {t.account.backToOrders}
             </Link>
-            <h1 className="text-4xl font-serif mb-2">{t.account.orderDetails}</h1>
-            <p className="text-gray-500 text-lg">Order #{order.order_number}</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif mb-1">{t.account.orderDetails}</h1>
+            <p className="text-gray-500 text-sm sm:text-base">Order #{order.order_number}</p>
           </div>
 
           {/* Payment Status Alert for Pending Orders */}
           {order.payment_status === 'pending' && (
-            <div className="mb-8 bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
-              <div className="flex items-start justify-between gap-4">
+            <div className="mb-5 sm:mb-8 bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                  <h3 className="text-base sm:text-lg font-semibold text-yellow-900 mb-1">
                     ⏳ {t.account.waitingForPayment}
                   </h3>
-                  <p className="text-sm text-yellow-800 mb-1">
+                  <p className="text-xs sm:text-sm text-yellow-800 mb-1">
                     {t.account.orderNotComplete}
                   </p>
                   {order.expiry_time && (
                     <p className="text-xs text-yellow-700">
-                      {t.account.completeBefore}: {new Date(order.expiry_time).toLocaleString('en-US', {
+                      {t.account.completeBefore}: {new Date(order.expiry_time).toLocaleString('id-ID', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
+                        timeZone: 'Asia/Jakarta',
                       })}
                     </p>
                   )}
@@ -424,7 +425,7 @@ export default function OrderDetailsPage() {
                 <button
                   onClick={handleContinuePayment}
                   disabled={isProcessingPayment || (order.expiry_time ? new Date(order.expiry_time) < new Date() : false)}
-                  className="px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition-colors"
+                  className="w-full sm:w-auto px-5 py-3 bg-luxury-gold text-luxury-navy rounded-xl hover:bg-luxury-gold-light disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold text-sm transition-colors"
                 >
                   {isProcessingPayment ? t.common.loading : t.account.continuePayment}
                 </button>
@@ -434,19 +435,19 @@ export default function OrderDetailsPage() {
 
           {/* Expired Order Alert */}
           {order.payment_status === 'expired' && (
-            <div className="mb-8 bg-gray-50 border-2 border-gray-200 rounded-lg p-6">
-              <div className="flex items-start justify-between gap-4">
+            <div className="mb-5 sm:mb-8 bg-gray-50 border-2 border-gray-200 rounded-xl p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
                     ⏰ {t.account.paymentLinkExpired}
                   </h3>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-xs sm:text-sm text-gray-700">
                     {t.account.paymentLinkExpiredMessage}
                   </p>
                 </div>
                 <button
                   onClick={handleOrderAgain}
-                  className="px-6 py-3 bg-luxury-navy text-white rounded-lg hover:bg-luxury-navy-light font-semibold transition-colors"
+                  className="w-full sm:w-auto px-5 py-3 bg-luxury-navy text-white rounded-xl hover:bg-luxury-navy/80 font-semibold text-sm transition-colors"
                 >
                   {t.account.orderAgain}
                 </button>
@@ -473,12 +474,12 @@ export default function OrderDetailsPage() {
           </div>
 
           {/* Order Details Grid - Same as Track Order Page */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 mb-8">
-            <div className="px-8 py-6 border-b border-gray-100">
-              <h2 className="text-2xl font-serif">Detail Pesanan</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
+            <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-serif">Detail Pesanan</h2>
             </div>
-            <div className="p-8">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="p-4 sm:p-8">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div>
                   <p className="text-gray-600 text-xs mb-1">Nomor Pesanan</p>
                   <p className="font-mono font-semibold text-gray-900 text-sm">{order.order_number}</p>
@@ -509,6 +510,32 @@ export default function OrderDetailsPage() {
                 <div>
                   <p className="text-gray-600 text-xs mb-1">Status Pesanan</p>
                   <p className="font-semibold text-gray-900 text-sm">{getStatusLabel(order.status)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-xs mb-1">Status Pembayaran</p>
+                  <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    order.payment_status === 'completed'          ? 'bg-green-100 text-green-700' :
+                    order.payment_status === 'pending'            ? 'bg-yellow-100 text-yellow-700' :
+                    order.payment_status === 'authorized'         ? 'bg-blue-100 text-blue-700' :
+                    order.payment_status === 'under_review'       ? 'bg-orange-100 text-orange-700' :
+                    order.payment_status === 'refunded'           ? 'bg-teal-100 text-teal-700' :
+                    order.payment_status === 'partially_refunded' ? 'bg-teal-50 text-teal-600' :
+                    order.payment_status === 'chargeback'         ? 'bg-purple-100 text-purple-700' :
+                    order.payment_status === 'expired'            ? 'bg-gray-100 text-gray-500' :
+                    order.payment_status === 'failed'             ? 'bg-red-100 text-red-600' :
+                    'bg-gray-100 text-gray-500'
+                  }`}>
+                    {order.payment_status === 'completed'          ? t.account.paymentCompleted :
+                     order.payment_status === 'pending'            ? t.account.pendingPayment :
+                     order.payment_status === 'authorized'         ? t.account.paymentAuthorized :
+                     order.payment_status === 'under_review'       ? t.account.paymentUnderReview :
+                     order.payment_status === 'refunded'           ? t.account.paymentRefunded :
+                     order.payment_status === 'partially_refunded' ? t.account.paymentPartiallyRefunded :
+                     order.payment_status === 'chargeback'         ? t.account.paymentChargeback :
+                     order.payment_status === 'expired'            ? t.account.paymentExpired :
+                     order.payment_status === 'failed'             ? t.account.paymentFailed :
+                     order.payment_status}
+                  </span>
                 </div>
                 {(order.payment_metadata?.payment_type || order.payment_method_type || order.payment_method) && (
                   <div>
@@ -555,26 +582,27 @@ export default function OrderDetailsPage() {
           </div>
 
         {/* Order Items */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 mb-8">
-          <div className="px-8 py-6 border-b border-gray-100">
-            <h2 className="text-2xl font-serif">Produk Pesanan</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
+          <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
+            <h2 className="text-xl sm:text-2xl font-serif">Produk Pesanan</h2>
           </div>
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             {order.order_items.map((item) => (
-              <div key={item.id} className="flex gap-6 mb-6 pb-6 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+              <div key={item.id} className="flex gap-3 sm:gap-6 mb-4 pb-4 sm:mb-6 sm:pb-6 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
                 <img
                   src={item.product.image_urls[0] || '/placeholder.png'}
                   alt={item.product.name}
-                  className="w-24 h-24 object-cover rounded-lg"
+                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
                 />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-1">{item.product.name}</h3>
-                  {item.variant_name && (
-                    <p className="text-sm text-[#C2A36B] font-medium mb-0.5">{item.variant_name}</p>
+                <div className="flex-1 min-w-0">
+                  {item.variant_name ? (
+                    <h3 className="font-semibold text-sm sm:text-base leading-snug mb-0.5 truncate">{item.variant_name}</h3>
+                  ) : (
+                    <h3 className="font-semibold text-sm sm:text-base leading-snug mb-0.5">{item.product.name}</h3>
                   )}
-                  <p className="text-sm text-gray-500">Jumlah: {item.quantity}</p>
+                  <p className="text-xs text-gray-500">Jumlah: {item.quantity}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-shrink-0">
                   {(() => {
                     const discKey = item.variant_name ? `${item.product_id}-${item.variant_name}` : item.product_id
                     const discounted = activeDiscounts.get(discKey) ?? activeDiscounts.get(item.product_id)
@@ -583,10 +611,10 @@ export default function OrderDetailsPage() {
                     return (
                       <>
                         {hasDiscount && (
-                          <p className="text-sm text-gray-400 line-through">{formatPrice(item.price_at_purchase * item.quantity, order.currency_code)}</p>
+                          <p className="text-xs text-gray-400 line-through">{formatPrice(item.price_at_purchase * item.quantity, order.currency_code)}</p>
                         )}
-                        <p className="font-semibold text-lg">{formatPrice(displayPrice * item.quantity, order.currency_code)}</p>
-                        <p className="text-sm text-gray-500">{formatPrice(displayPrice, order.currency_code)} each</p>
+                        <p className="font-semibold text-sm sm:text-base">{formatPrice(displayPrice * item.quantity, order.currency_code)}</p>
+                        <p className="text-xs text-gray-500">{formatPrice(displayPrice, order.currency_code)} each</p>
                       </>
                     )
                   })()}
@@ -596,15 +624,15 @@ export default function OrderDetailsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
           {/* Shipping Address */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100">
-            <div className="px-8 py-6 border-b border-gray-100">
-              <h2 className="text-2xl font-serif">Alamat Pengiriman</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-serif">Alamat Pengiriman</h2>
             </div>
-            <div className="p-8">
-              <p className="font-semibold text-lg mb-1">{order.shipping_address.full_name}</p>
-              <p className="text-gray-600 mb-4">{order.shipping_address.phone}</p>
+            <div className="p-4 sm:p-8">
+              <p className="font-semibold text-base mb-0.5">{order.shipping_address.full_name}</p>
+              <p className="text-gray-600 text-sm mb-3">{order.shipping_address.phone}</p>
               <div className="text-gray-700 space-y-1">
                 <p>{order.shipping_address.address_line1}</p>
                 {order.shipping_address.address_line2 && (
@@ -619,11 +647,11 @@ export default function OrderDetailsPage() {
           </div>
 
           {/* Order Summary */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100">
-            <div className="px-8 py-6 border-b border-gray-100">
-              <h2 className="text-2xl font-serif">Ringkasan Pesanan</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-serif">Ringkasan Pesanan</h2>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-700">
                   <span>Subtotal</span>

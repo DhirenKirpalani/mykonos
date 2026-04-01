@@ -165,27 +165,13 @@ export default function TrackOrderPage() {
             }
           }
           
-          // Fetch orders for authenticated user's email only
+          // Fetch summary only — full detail loaded on-demand when user clicks
           const { data, error } = await supabase
             .from('orders')
-            .select(`
-              *,
-              order_items (
-                id,
-                product_id,
-                quantity,
-                price_at_purchase,
-                variant_name,
-                product:products (
-                  name,
-                  image_urls,
-                  variants
-                )
-              )
-            `)
+            .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, expiry_time, payment_metadata')
             .eq('customer_email', authenticatedEmail)
             .order('created_at', { ascending: false })
-            .limit(20)
+            .limit(5)
           
           if (error) {
             console.error('Error fetching orders:', error)
@@ -220,26 +206,13 @@ export default function TrackOrderPage() {
           if (mostRecentEmail) {
             console.log('📚 [ORDER HISTORY] Fetching guest orders for:', mostRecentEmail)
             
+            // Fetch summary only — full detail loaded on-demand when user clicks
             const { data, error } = await supabase
               .from('orders')
-              .select(`
-                *,
-                order_items (
-                  id,
-                  product_id,
-                  quantity,
-                  price_at_purchase,
-                  variant_name,
-                  product:products (
-                    name,
-                    image_urls,
-                    variants
-                  )
-                )
-              `)
+              .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, expiry_time, payment_metadata')
               .eq('customer_email', mostRecentEmail)
               .order('created_at', { ascending: false })
-              .limit(20)
+              .limit(5)
             
             if (error) {
               console.error('Error fetching orders:', error)
@@ -714,14 +687,27 @@ export default function TrackOrderPage() {
                       ? 'bg-luxury-navy/5 border-2 border-luxury-navy'
                       : 'bg-white border border-gray-200'
                   }`}
-                  onClick={() => {
+                  onClick={async () => {
                     setSelectedOrderId(sessionOrder.id)
-                    setOrder(sessionOrder)
                     setEmail(sessionOrder.customer_email)
                     setOrderNumber(sessionOrder.order_number)
                     setNotFound(false)
-                    if (!user) {
-                      setShowCreateAccount(true)
+                    setIsSearching(true)
+                    try {
+                      const res = await fetch(
+                        `/api/orders/track?email=${encodeURIComponent(sessionOrder.customer_email)}&order_number=${encodeURIComponent(sessionOrder.order_number)}`
+                      )
+                      const json = await res.json()
+                      if (res.ok && json.order) {
+                        setOrder(json.order as Order)
+                        if (!user) setShowCreateAccount(true)
+                      } else {
+                        setNotFound(true)
+                      }
+                    } catch {
+                      setNotFound(true)
+                    } finally {
+                      setIsSearching(false)
                     }
                   }}
                 >
@@ -769,10 +755,18 @@ export default function TrackOrderPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
-              <p className="text-xs sm:text-sm text-gray-600 text-center">
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 flex items-center justify-between gap-3">
+              <p className="text-xs sm:text-sm text-gray-500">
                 {t('trackOrder.orSearchDifferent')}
               </p>
+              {user && !user.is_anonymous && (
+                <Link
+                  href="/account/orders"
+                  className="text-xs sm:text-sm font-semibold text-luxury-gold hover:text-luxury-gold/80 transition-colors whitespace-nowrap flex items-center gap-1"
+                >
+                  {t('trackOrder.viewAllOrders')} →
+                </Link>
+              )}
             </div>
           </div>
         )}
