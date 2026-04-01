@@ -3,10 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, X } from 'lucide-react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { useRegion } from '@/contexts/RegionContext'
-import { formatPrice } from '@/lib/utils/region'
+import { ProductCard } from '@/components/product-card'
 
 type Product = {
   id: string
@@ -23,16 +20,11 @@ type SearchModalProps = {
 }
 
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
-  const { region } = useRegion()
   const [searchQuery, setSearchQuery] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [topProducts, setTopProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const isVideo = (url: string) => {
-    return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
-  }
 
   useEffect(() => {
     if (isOpen) {
@@ -146,44 +138,13 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 <div className="overflow-x-auto -mx-6 px-6 lg:-mx-8 lg:px-8">
                   <div className="flex gap-4 pb-4 min-w-max">
                     {displayProducts.map((product) => (
-                      <Link
+                      <div
                         key={product.id}
-                        href={`/products/${product.slug}`}
+                        className="flex-shrink-0 w-[160px] sm:w-[180px] lg:w-[200px]"
                         onClick={onClose}
-                        className="group block flex-shrink-0 w-[160px] sm:w-[180px] lg:w-[200px]"
                       >
-                        <div className="bg-white/50 backdrop-blur-sm rounded-sm p-3 sm:p-4 transition-all duration-300 hover:bg-white hover:shadow-lg border border-luxury-gold/10 h-full">
-                          <div className="relative aspect-square mb-3 overflow-hidden bg-white/80 rounded">
-                            {isVideo(product.image_urls[0]) ? (
-                              <video
-                                src={product.image_urls[0]}
-                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                muted
-                                playsInline
-                                loop
-                                autoPlay
-                              />
-                            ) : (
-                              <Image
-                                src={product.image_urls[0]}
-                                alt={product.name}
-                                fill
-                                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                              />
-                            )}
-                          </div>
-                          <h4 className="mb-2 font-medium text-xs sm:text-sm text-luxury-navy line-clamp-2 uppercase tracking-wider">
-                            {product.name}
-                          </h4>
-                          <p className="text-[10px] sm:text-xs text-luxury-navy/60 mb-1">{product.size}</p>
-                          <p className="text-xs sm:text-sm font-semibold text-luxury-gold">{region ? formatPrice(
-                            region.code === 'ID' && (product as any).price_idr 
-                              ? (product as any).price_idr 
-                              : (product as any).price_usd || 0, 
-                            region
-                          ) : '...'}</p>
-                        </div>
-                      </Link>
+                        <ProductCard product={product as any} />
+                      </div>
                     ))}
                   </div>
                 </div>
