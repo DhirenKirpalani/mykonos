@@ -190,57 +190,60 @@ export default function ProductsPage() {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-          <p className="mt-2 text-gray-600">Manage your product catalog</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Products</h1>
+          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Manage your product catalog</p>
         </div>
-        <div className="flex gap-3">
-          <Link href="/cms/products/bulk-upload-media">
-            <Button variant="outline" className="border-luxury-gold text-luxury-gold hover:bg-luxury-gold/10">
-              <Upload className="mr-2 h-4 w-4" />
-              Bulk Upload
+        <div className="flex gap-2 sm:gap-3">
+          <Link href="/cms/products/bulk-upload-media" className="flex-1 sm:flex-none">
+            <Button variant="outline" className="w-full sm:w-auto border-luxury-gold text-luxury-gold hover:bg-luxury-gold/10 text-xs sm:text-sm">
+              <Upload className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Bulk Upload</span>
+              <span className="sm:hidden">Upload</span>
             </Button>
           </Link>
-          <Link href="/cms/products/new">
-            <Button className="bg-luxury-gold text-luxury-navy hover:bg-luxury-gold/90">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
+          <Link href="/cms/products/new" className="flex-1 sm:flex-none">
+            <Button className="w-full sm:w-auto bg-luxury-gold text-luxury-navy hover:bg-luxury-gold/90 text-xs sm:text-sm">
+              <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Add Product</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </Link>
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-        <div className="mb-6">
+      <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
+        <div className="mb-4 sm:mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+              className="w-full rounded-lg border border-gray-300 py-2 pl-9 sm:pl-10 pr-4 text-sm sm:text-base focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 text-left text-sm font-medium text-gray-500">
-                <th className="pb-3">Product</th>
-                <th className="pb-3">Price (USD)</th>
-                <th className="pb-3">Price (IDR)</th>
-                <th className="pb-3">Stock</th>
-                <th className="pb-3">Status</th>
-                <th className="pb-3">Audit</th>
-                <th className="pb-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? <SkeletonRows /> : filteredProducts.map((product) => {
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <div className="inline-block min-w-full align-middle">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-gray-200 text-left text-xs sm:text-sm font-medium text-gray-500">
+                  <th className="pb-2 sm:pb-3 pl-4 sm:pl-0 whitespace-nowrap">Product</th>
+                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Price (USD)</th>
+                  <th className="pb-2 sm:pb-3 whitespace-nowrap hidden sm:table-cell">Price (IDR)</th>
+                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Stock</th>
+                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Status</th>
+                  <th className="pb-2 sm:pb-3 whitespace-nowrap hidden lg:table-cell">Audit</th>
+                  <th className="pb-2 sm:pb-3 pr-4 sm:pr-0 whitespace-nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? <SkeletonRows /> : filteredProducts.map((product) => {
                 const productImages = product.image_urls || (product.image_url ? [product.image_url] : [])
                 const imageUrls = productImages.filter(url => {
                   const ext = url.toLowerCase().split('.').pop()
@@ -251,9 +254,9 @@ export default function ProductsPage() {
                 
                 return (
                 <>
-                <tr key={product.id} className="text-sm hover:bg-gray-50">
-                  <td className="py-4">
-                    <div className="flex items-center gap-3">
+                  <tr key={product.id} className="text-xs sm:text-sm hover:bg-gray-50">
+                    <td className="py-3 sm:py-4 pl-4 sm:pl-0">
+                      <div className="flex items-center gap-2 sm:gap-3">
                       {hasVariants && (
                         <button
                           onClick={() => toggleRow(product.id)}
@@ -269,11 +272,11 @@ export default function ProductsPage() {
                         <img
                           src={imageUrls[0]}
                           alt={product.name}
-                          className="h-16 w-16 rounded-lg object-cover border border-gray-200"
+                          className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg object-cover border border-gray-200"
                         />
                       ) : (
-                        <div className="h-16 w-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                          <Package className="h-8 w-8 text-gray-400" />
+                        <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                          <Package className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                         </div>
                       )}
                       <div className="flex flex-col gap-1">
@@ -291,31 +294,26 @@ export default function ProductsPage() {
                   <td className="py-4">
                     <button
                       onClick={() => handleStockClick(product)}
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-all hover:ring-2 hover:ring-offset-1 ${
-                        product.stock_quantity > 10
-                          ? 'bg-green-100 text-green-800 hover:ring-green-300'
-                          : product.stock_quantity > 0
-                          ? 'bg-yellow-100 text-yellow-800 hover:ring-yellow-300'
-                          : 'bg-red-100 text-red-800 hover:ring-red-300'
-                      }`}
-                      title="Click to edit stock"
+                      className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 sm:py-1 text-xs font-medium text-blue-800 hover:bg-blue-200 transition-colors cursor-pointer whitespace-nowrap"
                     >
                       <Package className="h-3 w-3" />
-                      {product.stock_quantity} units
+                      {product.stock_quantity}
                     </button>
                   </td>
-                  <td className="py-4">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                  <td className="py-3 sm:py-4"> 
+                    <button
+                      onClick={() => toggleVisibility(product.id, product.is_visible)}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:py-1 text-xs font-medium transition-colors whitespace-nowrap ${
                         product.is_visible
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                       }`}
                     >
-                      {product.is_visible ? 'Visible' : 'Hidden'}
-                    </span>
+                      {product.is_visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                      <span className="hidden sm:inline">{product.is_visible ? 'Visible' : 'Hidden'}</span>
+                    </button>
                   </td>
-                  <td className="py-4">
+                  <td className="py-3 sm:py-4 hidden lg:table-cell">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -323,44 +321,25 @@ export default function ProductsPage() {
                         setAuditProduct(product)
                         setAuditLogOpen(true)
                       }}
-                      className="text-luxury-gold hover:text-luxury-gold/80"
+                      className="text-luxury-gold hover:text-luxury-gold/80 h-7 w-7 sm:h-8 sm:w-8 p-0"
                     >
-                      <Clock className="h-4 w-4" />
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </td>
-                  <td className="py-4">
-                    <div className="flex items-center gap-2">
+                  <td className="py-3 sm:py-4 pr-4 sm:pr-0">
+                    <div className="flex gap-1 sm:gap-2">
                       <Link href={`/cms/products/${product.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </Link>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleVisibility(product.id, product.is_visible)}
+                        onClick={() => deleteProduct(product.id, product.name)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 sm:h-8 sm:w-8 p-0"
                       >
-                        {product.is_visible ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          toast.error(`Delete "${product.name}"?`, {
-                            description: 'This action cannot be undone.',
-                            action: {
-                              label: 'Delete',
-                              onClick: () => deleteProduct(product.id, product.name),
-                            },
-                          })
-                        }}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </td>
@@ -373,9 +352,9 @@ export default function ProductsPage() {
                         <div className="grid gap-2">
                           {product.variants.map((variant, idx) => (
                             <div key={idx} className="flex items-center justify-between bg-white rounded-lg p-3 border border-gray-200">
-                              <div className="flex items-center gap-3">
-                                <div className="text-sm font-medium text-gray-900">{variant.name}</div>
-                                <div className="text-xs text-gray-500">{variant.sku}</div>
+                              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                                <div className="font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{variant.name}</div>
+                                <div className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-none">{variant.sku}</div>
                               </div>
                               <div className="flex items-center gap-4">
                                 {variant.price_usd && (
@@ -385,7 +364,7 @@ export default function ProductsPage() {
                                   <div className="text-sm text-gray-700">Rp{variant.price_idr.toLocaleString('id-ID')}</div>
                                 )}
                                 <div className="text-sm">
-                                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:py-1 text-xs font-medium ${
                                     variant.stock_quantity > 10
                                       ? 'bg-green-100 text-green-800'
                                       : variant.stock_quantity > 0
@@ -404,9 +383,11 @@ export default function ProductsPage() {
                   </tr>
                 )}
                 </>
-              )})}
-            </tbody>
-          </table>
+                )
+              })}
+              </tbody>
+            </table>
+          </div>
           {!loading && filteredProducts.length === 0 && (
             <div className="py-12 text-center text-gray-500">
               No products found. Create your first product to get started.

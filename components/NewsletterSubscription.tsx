@@ -78,7 +78,7 @@ export default function NewsletterSubscription() {
   }
 
   return (
-    <div className="bg-luxury-gray-light border-t border-gray-200 py-8 sm:py-12">
+    <div className="bg-luxury-gray-light border-t border-gray-200 py-8 sm:py-12" style={{ minHeight: '320px' }}>
       <div className="max-w-4xl mx-auto text-center px-4">
         <div className="flex justify-center mb-3 sm:mb-4">
           <div className="bg-luxury-gold/10 p-2 sm:p-3 rounded-full">

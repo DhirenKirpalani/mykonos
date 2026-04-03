@@ -36,6 +36,11 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     )
   }
 
+  // Don't render layout for unauthenticated users
+  if (!user || user.is_anonymous) {
+    return null
+  }
+
   const getBreadcrumbs = () => {
     if (pathname.startsWith('/account/orders')) return [
       { label: t.account.account, href: '/account' },

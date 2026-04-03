@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Package, ChevronRight } from 'lucide-react'
+import Image from 'next/image'
+import { Package, ChevronRight, ChevronLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
@@ -26,17 +27,37 @@ type Order = {
   }>
 }
 
+const ORDERS_PER_PAGE = 10
+
 export default function OrdersPage() {
   const { user, isLoading: authLoading } = useAuth()
   const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(true)
   const [orders, setOrders] = useState<Order[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalOrders, setTotalOrders] = useState(0)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   useEffect(() => {
     if (authLoading) return
     if (!user || user.is_anonymous) return
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (page = 1, append = false) => {
+      if (append) setIsLoadingMore(true)
+      else setIsLoading(true)
+
+      const from = (page - 1) * ORDERS_PER_PAGE
+      const to = from + ORDERS_PER_PAGE - 1
+
+      // Get total count
+      const { count } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+      if (count !== null) setTotalOrders(count)
+
+      // Get paginated data
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -53,16 +74,22 @@ export default function OrdersPage() {
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
+        .range(from, to)
 
       if (error) {
         console.error('Error fetching orders:', error)
       } else if (data) {
-        setOrders(data as Order[])
+        if (append) {
+          setOrders(prev => [...prev, ...(data as Order[])])
+        } else {
+          setOrders(data as Order[])
+        }
       }
       setIsLoading(false)
+      setIsLoadingMore(false)
     }
 
-    fetchOrders()
+    fetchOrders(currentPage)
 
     const channel = supabase
       .channel('user-orders')
@@ -71,11 +98,18 @@ export default function OrdersPage() {
         schema: 'public',
         table: 'orders',
         filter: `user_id=eq.${user.id}`,
-      }, () => { fetchOrders() })
+      }, () => { fetchOrders(currentPage) })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [user, authLoading])
+  }, [user, authLoading, currentPage])
+
+  const totalPages = Math.ceil(totalOrders / ORDERS_PER_PAGE)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   if (!user) return null
 
@@ -126,6 +160,11 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-4">
+      {isLoadingMore && (
+        <div className="flex items-center justify-center py-4">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-luxury-gold/30 border-t-luxury-gold" />
+        </div>
+      )}
       {orders.map((order) => {
         const firstItem = order.order_items?.[0]
         const firstProduct = firstItem?.product
@@ -140,11 +179,14 @@ export default function OrdersPage() {
           >
             <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
               {firstProduct && (
-                <div className="flex-shrink-0">
-                  <img
+                <div className="flex-shrink-0 relative w-16 h-16 sm:w-20 sm:h-20">
+                  <Image
                     src={firstProduct.image_urls?.[0] || '/placeholder.png'}
                     alt={firstProduct.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg"
+                    fill
+                    sizes="(max-width: 640px) 64px, 80px"
+                    className="object-cover rounded-lg"
+                    loading="lazy"
                   />
                 </div>
               )}
@@ -190,6 +232,68 @@ export default function OrdersPage() {
           </Link>
         )
       })}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-6 pb-2">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center gap-1 px-3 py-2 rounded-md border border-border/40 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-luxury-gray-light transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="text-sm hidden sm:inline">{t.common?.previous || 'Previous'}</span>
+          </button>
+
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(page => {
+                // Show first, last, current, and adjacent pages
+                return page === 1 || 
+                       page === totalPages || 
+                       Math.abs(page - currentPage) <= 1
+              })
+              .map((page, idx, arr) => {
+                // Add ellipsis
+                const prevPage = arr[idx - 1]
+                const showEllipsis = prevPage && page - prevPage > 1
+                
+                return (
+                  <div key={page} className="flex items-center gap-1">
+                    {showEllipsis && <span className="px-2 text-gray-400">...</span>}
+                    <button
+                      onClick={() => handlePageChange(page)}
+                      className={cn(
+                        'w-8 h-8 sm:w-10 sm:h-10 rounded-md text-sm font-medium transition-colors',
+                        page === currentPage
+                          ? 'bg-luxury-gold text-white'
+                          : 'border border-border/40 hover:bg-luxury-gray-light'
+                      )}
+                    >
+                      {page}
+                    </button>
+                  </div>
+                )
+              })}
+          </div>
+
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center gap-1 px-3 py-2 rounded-md border border-border/40 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-luxury-gray-light transition-colors"
+          >
+            <span className="text-sm hidden sm:inline">{t.common?.next || 'Next'}</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Page info */}
+      {totalOrders > 0 && (
+        <p className="text-center text-sm text-muted-foreground pb-4">
+          {t.common?.showing || 'Showing'} {((currentPage - 1) * ORDERS_PER_PAGE) + 1}-{Math.min(currentPage * ORDERS_PER_PAGE, totalOrders)} {t.common?.of || 'of'} {totalOrders} {totalOrders === 1 ? t.account.order || 'order' : t.account.orders || 'orders'}
+        </p>
+      )}
     </div>
   )
 }

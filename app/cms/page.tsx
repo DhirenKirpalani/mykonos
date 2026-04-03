@@ -153,12 +153,13 @@ export default function CMSPage() {
   ]
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-gray-600">Welcome back! Here's what's happening with your store.</p>
-        </div>
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="mt-1 text-xs sm:text-sm text-gray-600">Welcome to your CMS dashboard</p>
+      </div>
+
+      <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <select
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
@@ -176,27 +177,27 @@ export default function CMSPage() {
           <Link
             key={stat.name}
             href={stat.href}
-            className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-shadow hover:shadow-md"
+            className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md"
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600">{stat.name}</p>
-                <p className="mt-2 text-3xl font-semibold text-gray-900">{stat.value}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">{stat.name}</p>
+                <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-semibold text-gray-900">{stat.value}</p>
                 {stat.change && (
                   <p className="mt-1 text-xs text-gray-500">{stat.change}</p>
                 )}
               </div>
-              <div className="rounded-full bg-luxury-gold/10 p-3">
-                <stat.icon className="h-6 w-6 text-luxury-gold" />
+              <div className="rounded-full bg-luxury-gold/10 p-2 sm:p-3">
+                <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-luxury-gold" />
               </div>
             </div>
           </Link>
         ))}
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Quick Actions</h2>
+        <div className="mt-3 sm:mt-4 grid gap-2 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => (
             <Link key={action.name} href={action.href}>
               <Button
@@ -213,28 +214,28 @@ export default function CMSPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Top Selling Products</h2>
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Top Selling Products</h2>
           <div className="mt-4 space-y-4">
             {topProducts.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No products found</p>
             ) : (
               topProducts.map((product, index) => (
-                <div key={product.id} className={`flex items-center justify-between ${index < topProducts.length - 1 ? 'border-b border-gray-100 pb-4' : ''}`}>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">{product.products_sold || 0} sold · Stock: {product.stock_quantity || 0}</p>
+                <div key={product.id} className={`flex items-center justify-between ${index < topProducts.length - 1 ? 'border-b border-gray-100 pb-3 sm:pb-4' : ''}`}>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{product.name}</p>
+                    <p className="text-xs sm:text-sm text-gray-500">{product.products_sold || 0} sold · Stock: {product.stock_quantity || 0}</p>
                   </div>
-                  <p className="font-semibold text-gray-900">${product.price_usd}</p>
+                  <p className="font-semibold text-gray-900 text-sm sm:text-base whitespace-nowrap">${product.price_usd}</p>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Recent Orders</h2>
+        <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Recent Orders</h2>
           <div className="mt-4 space-y-4">
             {recentOrders.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No orders found</p>
@@ -270,9 +271,9 @@ export default function CMSPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Order Status Breakdown</h2>
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Order Status Breakdown</h2>
           <div className="mt-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

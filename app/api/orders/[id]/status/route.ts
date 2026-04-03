@@ -12,17 +12,8 @@ export async function PATCH(
 ) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { id } = params
     const body = await request.json()
@@ -42,6 +33,29 @@ export async function PATCH(
         { error: 'Invalid status' },
         { status: 400 }
       )
+    }
+
+    // Server-side validation: Can only ship orders that are packed
+    if (status === 'shipped') {
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select('status')
+        .eq('id', id)
+        .single()
+
+      if (orderError) {
+        return NextResponse.json(
+          { error: 'Order not found' },
+          { status: 404 }
+        )
+      }
+
+      if (order.status !== 'packed') {
+        return NextResponse.json(
+          { error: 'Order must be marked as packed before it can be shipped' },
+          { status: 400 }
+        )
+      }
     }
 
     // Use database function to update status
