@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
 import { Instagram } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FaTiktok } from 'react-icons/fa'
@@ -13,30 +12,6 @@ import { PaymentMethods } from '@/components/PaymentMethods'
 export function Footer() {
   const pathname = usePathname()
   const { t } = useLanguage()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Prevent hydration mismatch by using default English until mounted
-  if (!mounted) {
-    return (
-      <footer className="bg-luxury-navy text-white overflow-hidden">
-        <div className="container mx-auto px-4 py-8 sm:py-12 lg:px-8 max-w-full">
-          <div className="flex flex-col gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 break-words">
-            <div className="overflow-hidden">
-              <Link href="/" className="inline-block">
-                <span className="font-serif text-2xl font-medium tracking-[0.25em] text-luxury-gold">
-                  MYKONOS
-                </span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
-    )
-  }
 
   const footerLinks = {
     about: [
@@ -59,9 +34,9 @@ export function Footer() {
   }
 
   return (
-    <footer className="bg-luxury-navy text-white overflow-hidden mt-12 sm:mt-16">
+    <footer className="bg-luxury-navy text-white overflow-hidden mt-12 sm:mt-16" style={{ minHeight: '400px' }}>
       <div className="container mx-auto px-4 py-6 sm:py-8 lg:py-12 lg:px-8 max-w-full">
-        <div className="flex flex-col gap-6 sm:gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 break-words">
+        <div className="flex flex-col gap-6 sm:gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 break-words" style={{ minHeight: '280px' }}>
           {/* Brand Column */}
           <div className="overflow-hidden">
             <Link href="/" className="inline-block">

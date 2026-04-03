@@ -36,7 +36,6 @@ export default function CMSLayout({
   const router = useRouter()
   const { role, isLoading: roleLoading } = useUserRole()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const { prefetchProducts, prefetchOrders, prefetchCustomers } = usePrefetchCMSData()
@@ -75,41 +74,6 @@ export default function CMSLayout({
       router.push('/?error=unauthorized')
     }
   }, [role, roleLoading, isAuthenticated, router])
-
-  // Fetch unread message count
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      if (role !== 'admin') return
-      
-      try {
-        const response = await fetch('/api/chat/unread-count', {
-          credentials: 'include'
-        })
-        if (response.ok) {
-          const { count } = await response.json()
-          console.log(`[CMS Layout] Unread count fetched: ${count}`)
-          setUnreadCount(count)
-        }
-      } catch (error) {
-        console.error('Failed to fetch unread count:', error)
-      }
-    }
-
-    fetchUnreadCount()
-    const interval = setInterval(fetchUnreadCount, 3000) // Update every 3 seconds
-
-    // Listen for messages being read
-    const handleMessagesRead = () => {
-      console.log('[CMS Layout] chat-messages-read event received, fetching unread count')
-      fetchUnreadCount()
-    }
-    window.addEventListener('chat-messages-read', handleMessagesRead)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('chat-messages-read', handleMessagesRead)
-    }
-  }, [role])
 
   const navigation = [
     { 
@@ -169,12 +133,6 @@ export default function CMSLayout({
       name: 'Newsletter', 
       href: '/cms/newsletter', 
       icon: Mail,
-      show: role === 'admin'
-    },
-    { 
-      name: 'Chat', 
-      href: '/cms/chat', 
-      icon: MessageCircle,
       show: role === 'admin'
     },
     { 
@@ -278,11 +236,6 @@ export default function CMSLayout({
                   >
                     <item.icon className="h-5 w-5" />
                     {item.name}
-                    {item.name === 'Chat' && unreadCount > 0 && (
-                      <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
-                        {unreadCount}
-                      </span>
-                    )}
                   </Link>
                 )
               })}

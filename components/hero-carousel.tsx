@@ -95,108 +95,96 @@ export function HeroCarousel() {
 
   return (
     <div
-      className="relative h-[35vh] sm:h-[40vh] md:h-[60vh] lg:h-[75vh] overflow-hidden bg-black"
+      className="relative h-[35vh] sm:h-[40vh] md:h-[60vh] lg:h-[75vh] overflow-hidden bg-luxury-gray-light"
       role="region"
       aria-label="Hero banner"
     >
-      {/* Media Background with transition - clickable if link exists */}
-      {currentItem?.link_url ? (
-        <Link href={currentItem.link_url} className="absolute inset-0 block">
-          <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-            {isVideo ? (
+      {/* Media Background with crossfade transition */}
+      {heroItems.map((item, index) => {
+        const itemDesktopUrl = item.media_url
+        const itemMobileUrl = item.mobile_media_url || itemDesktopUrl
+        const itemIsVideo = item.media_type === 'video'
+        const itemOverlayOpacity = item.overlay_opacity ?? 30
+        const isActive = index === currentIndex
+        
+        const mediaContent = (
+          <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+            {itemIsVideo ? (
               <>
-                {/* Desktop Video */}
                 <video
-                  key={`${currentItem.id}-desktop-video`}
+                  key={`${item.id}-desktop-video`}
                   autoPlay
                   loop
                   muted
                   playsInline
-                  className="hidden md:block h-full w-full object-cover object-center pointer-events-none"
+                  className="hidden md:block h-full w-full object-cover object-center"
                 >
-                  <source src={desktopMediaUrl} type="video/mp4" />
+                  <source src={itemDesktopUrl} type="video/mp4" />
                 </video>
-
-                {/* Mobile Video */}
                 <video
-                  key={`${currentItem.id}-mobile-video`}
+                  key={`${item.id}-mobile-video`}
                   autoPlay
                   loop
                   muted
                   playsInline
-                  className="block md:hidden h-full w-full object-cover object-center pointer-events-none"
+                  className="block md:hidden h-full w-full object-cover object-center"
                 >
-                  <source src={mobileMediaUrl} type="video/mp4" />
+                  <source src={itemMobileUrl} type="video/mp4" />
                 </video>
               </>
             ) : (
               <>
                 <img
-                  key={`${currentItem.id}-desktop-image`}
-                  src={desktopMediaUrl}
-                  alt={currentItem?.title || "Hero"}
+                  key={`${item.id}-desktop-image`}
+                  src={itemDesktopUrl}
+                  alt={item.title || "Hero"}
                   className="hidden md:block h-full w-full object-cover object-center"
                 />
                 <img
-                  key={`${currentItem.id}-mobile-image`}
-                  src={mobileMediaUrl}
-                  alt={currentItem?.title || "Hero"}
+                  key={`${item.id}-mobile-image`}
+                  src={itemMobileUrl}
+                  alt={item.title || "Hero"}
                   className="block md:hidden h-full w-full object-cover object-center"
                 />
               </>
             )}
-
-            {/* Dynamic overlay for readability */}
-            <div className="absolute inset-0 bg-black" style={{ opacity: overlayOpacity / 100 }} />
+            <div className="absolute inset-0 bg-black" style={{ opacity: itemOverlayOpacity / 100 }} />
           </div>
-        </Link>
-      ) : (
-        <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-          {isVideo ? (
-            <>
-              {/* Desktop Video */}
-              <video
-                key={`${currentItem?.id || 'default'}-desktop-video`}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="hidden md:block h-full w-full object-cover object-center"
-              >
-                <source src={desktopMediaUrl} type="video/mp4" />
-              </video>
+        )
 
-              {/* Mobile Video */}
-              <video
-                key={`${currentItem?.id || 'default'}-mobile-video`}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="block md:hidden h-full w-full object-cover object-center"
-              >
-                <source src={mobileMediaUrl} type="video/mp4" />
-              </video>
-            </>
-          ) : (
-            <>
-              <img
-                key={`${currentItem?.id || 'default'}-desktop-image`}
-                src={desktopMediaUrl}
-                alt={currentItem?.title || "Hero"}
-                className="hidden md:block h-full w-full object-cover object-center"
-              />
-              <img
-                key={`${currentItem?.id || 'default'}-mobile-image`}
-                src={mobileMediaUrl}
-                alt={currentItem?.title || "Hero"}
-                className="block md:hidden h-full w-full object-cover object-center"
-              />
-            </>
-          )}
-
-          {/* Dynamic overlay for readability */}
-          <div className="absolute inset-0 bg-black" style={{ opacity: overlayOpacity / 100 }} />
+        return item.link_url ? (
+          <Link key={item.id} href={item.link_url} className="absolute inset-0 block" style={{ pointerEvents: isActive ? 'auto' : 'none' }}>
+            {mediaContent}
+          </Link>
+        ) : (
+          <div key={item.id}>
+            {mediaContent}
+          </div>
+        )
+      })}
+      
+      {/* Fallback for when no hero items exist */}
+      {heroItems.length === 0 && (
+        <div className="absolute inset-0">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="hidden md:block h-full w-full object-cover object-center"
+          >
+            <source src={defaultVideoUrl} type="video/mp4" />
+          </video>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="block md:hidden h-full w-full object-cover object-center"
+          >
+            <source src={defaultVideoUrl} type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-black" style={{ opacity: 0.3 }} />
         </div>
       )}
 

@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { LanguageSwitcher } from '@/components/LanguageSwitcher'
-import { Lock, Globe, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react'
+import { Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { supabase } from '@/lib/supabase/client'
 
@@ -132,20 +131,6 @@ export default function SettingsPage() {
                 </div>
               </form>
             )}
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-border/40 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Globe className="h-5 w-5 text-luxury-gold" />
-          <h2 className="font-serif text-xl font-bold">{t.account.languagePreferences}</h2>
-        </div>
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium mb-1">{t.account.language}</h3>
-            <p className="text-sm text-muted-foreground mb-3">{t.account.languageDesc}</p>
-            <LanguageSwitcher />
           </div>
         </div>
       </div>

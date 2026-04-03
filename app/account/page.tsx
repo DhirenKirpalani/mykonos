@@ -64,6 +64,12 @@ export default function AccountPage() {
     loadUserProfile()
   }, [user, authLoading])
 
+  useEffect(() => {
+    if (!authLoading && (!user || user.is_anonymous)) {
+      router.push('/login')
+    }
+  }, [user, authLoading, router])
+
   if (authLoading || isLoading) {
     return (
       <div className="flex items-center justify-center py-24">

@@ -48,7 +48,7 @@ export default function NewDiscountPage() {
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [showProductSelector, setShowProductSelector] = useState(false)
+  const [tempSelectedProducts, setTempSelectedProducts] = useState<Set<string>>(new Set())
   
   const [formData, setFormData] = useState({
     name: '',
@@ -80,6 +80,55 @@ export default function NewDiscountPage() {
     fetchProducts()
   }, [])
 
+  // Initialize all products with variants into discountProducts on load
+  useEffect(() => {
+    if (products.length > 0 && discountProducts.length === 0) {
+      const allProducts: DiscountProduct[] = []
+      
+      products.forEach(product => {
+        if (product.variants && product.variants.length > 0) {
+          // Add all variants
+          product.variants.forEach(variant => {
+            allProducts.push({
+              product_id: product.id,
+              product_name: product.name,
+              variant_id: variant.name,
+              variant_name: variant.name,
+              original_price: variant.price_idr,
+              discount_type: 'percentage',
+              discount_value: 0,
+              discounted_price: variant.price_idr,
+              promo_stock: variant.stock_quantity,
+              stock: variant.stock_quantity,
+              min_purchase: 1,
+              is_active: true,
+              image_url: product.image_urls?.[0] || product.image_url,
+            })
+          })
+        } else {
+          // Add product without variants
+          allProducts.push({
+            product_id: product.id,
+            product_name: product.name,
+            variant_id: undefined,
+            variant_name: undefined,
+            original_price: product.price_idr,
+            discount_type: 'percentage',
+            discount_value: 0,
+            discounted_price: product.price_idr,
+            promo_stock: product.stock_quantity,
+            stock: product.stock_quantity,
+            min_purchase: 1,
+            is_active: true,
+            image_url: product.image_urls?.[0] || product.image_url,
+          })
+        }
+      })
+      
+      setDiscountProducts(allProducts)
+    }
+  }, [products])
+
   const fetchProducts = async () => {
     try {
       const response = await fetch('/api/products/admin')
@@ -100,52 +149,64 @@ export default function NewDiscountPage() {
     }))
   }
 
-  const addProduct = (product: Product) => {
-    // Check for duplicates
-    const isDuplicate = discountProducts.some(dp => dp.product_id === product.id)
-    if (isDuplicate) {
-      toast.error('Product already added')
-      return
+  const addSelectedProducts = () => {
+    const selected = Array.from(tempSelectedProducts)
+    if (selected.length === 0) {
+      return // Silently return if nothing selected
     }
 
-    // If product has variants, add all variants
-    if (product.variants && product.variants.length > 0) {
-      const variantProducts: DiscountProduct[] = product.variants.map((variant, variantIndex) => ({
-        product_id: product.id,
-        product_name: product.name,
-        variant_id: variant.name, // Use variant name as ID since variants don't have separate IDs
-        variant_name: variant.name,
-        original_price: variant.price_idr,
-        discount_type: 'percentage',
-        discount_value: 0,
-        discounted_price: variant.price_idr,
-        promo_stock: variant.stock_quantity,
-        stock: variant.stock_quantity,
-        min_purchase: 1,
-        is_active: true,
-        image_url: product.image_urls?.[0] || product.image_url,
-      }))
-      setDiscountProducts(prev => [...prev, ...variantProducts])
-    } else {
-      // Add product without variants
-      const newProduct: DiscountProduct = {
-        product_id: product.id,
-        product_name: product.name,
-        variant_id: undefined,
-        variant_name: undefined,
-        original_price: product.price_idr,
-        discount_type: 'percentage',
-        discount_value: 0,
-        discounted_price: product.price_idr,
-        promo_stock: product.stock_quantity,
-        stock: product.stock_quantity,
-        min_purchase: 1,
-        is_active: true,
-        image_url: product.image_urls?.[0] || product.image_url,
+    const newProducts: DiscountProduct[] = []
+    
+    selected.forEach(productId => {
+      const product = products.find(p => p.id === productId)
+      if (!product) return
+
+      // Check for duplicates
+      const isDuplicate = discountProducts.some(dp => dp.product_id === product.id)
+      if (isDuplicate) return
+
+      // If product has variants, add all variants
+      if (product.variants && product.variants.length > 0) {
+        const variantProducts: DiscountProduct[] = product.variants.map((variant) => ({
+          product_id: product.id,
+          product_name: product.name,
+          variant_id: variant.name,
+          variant_name: variant.name,
+          original_price: variant.price_idr,
+          discount_type: 'percentage',
+          discount_value: 0,
+          discounted_price: variant.price_idr,
+          promo_stock: variant.stock_quantity,
+          stock: variant.stock_quantity,
+          min_purchase: 1,
+          is_active: true,
+          image_url: product.image_urls?.[0] || product.image_url,
+        }))
+        newProducts.push(...variantProducts)
+      } else {
+        // Add product without variants
+        const newProduct: DiscountProduct = {
+          product_id: product.id,
+          product_name: product.name,
+          variant_id: undefined,
+          variant_name: undefined,
+          original_price: product.price_idr,
+          discount_type: 'percentage',
+          discount_value: 0,
+          discounted_price: product.price_idr,
+          promo_stock: product.stock_quantity,
+          stock: product.stock_quantity,
+          min_purchase: 1,
+          is_active: true,
+          image_url: product.image_urls?.[0] || product.image_url,
+        }
+        newProducts.push(newProduct)
       }
-      setDiscountProducts(prev => [...prev, newProduct])
-    }
-    setShowProductSelector(false)
+    })
+
+    setDiscountProducts(prev => [...prev, ...newProducts])
+    setTempSelectedProducts(new Set())
+    toast.success(`Added ${selected.length} products`)
   }
 
   const removeProduct = (index: number) => {
@@ -366,61 +427,7 @@ export default function NewDiscountPage() {
         <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Produk dalam Promo Toko</h2>
-            <Button
-              type="button"
-              onClick={() => setShowProductSelector(!showProductSelector)}
-              variant="outline"
-              className="border-luxury-gold text-luxury-gold hover:bg-luxury-gold/10"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Tambah Produk
-            </Button>
           </div>
-
-          {showProductSelector && (
-            <div className="mb-6 rounded-lg border border-gray-200 p-4">
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                  />
-                </div>
-              </div>
-              <div className="max-h-96 overflow-y-auto space-y-2">
-                {filteredProducts.map((product) => (
-                  <div key={product.id} className="border border-gray-200 rounded-lg p-3 hover:border-luxury-gold transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        {product.image_urls && product.image_urls.length > 0 && (
-                          <img src={product.image_urls[0]} alt={product.name} className="h-12 w-12 rounded object-cover" />
-                        )}
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-600">Rp{product.price_idr.toLocaleString('id-ID')}</div>
-                          {product.variants && product.variants.length > 0 && (
-                            <div className="text-xs text-gray-500 mt-1">{product.variants.length} variants</div>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => addProduct(product)}
-                        className="bg-luxury-gold hover:bg-luxury-gold/90"
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="text-sm text-gray-600 mb-4">
             {new Set(discountProducts.map(p => p.product_id)).size} total produk
