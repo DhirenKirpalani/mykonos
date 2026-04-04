@@ -80,12 +80,37 @@ export async function POST(request: Request) {
 
     const body = await request.json()
 
-    // Validate required currency fields
-    if (!body.price_usd || !body.price_idr) {
+    // Calculate prices and stock from variants if variants are provided
+    let priceUSD = body.price_usd
+    let priceIDR = body.price_idr
+    let stockQuantity = body.stock_quantity || 0
+
+    if (body.variants && Array.isArray(body.variants) && body.variants.length > 0) {
+      priceUSD = body.variants.reduce((sum: number, v: any) => {
+        return sum + (parseFloat(v.price_usd) || 0)
+      }, 0)
+      priceIDR = body.variants.reduce((sum: number, v: any) => {
+        return sum + (parseFloat(v.price_idr) || 0)
+      }, 0)
+      stockQuantity = body.variants.reduce((sum: number, v: any) => {
+        return sum + (parseInt(v.stock_quantity) || 0)
+      }, 0)
+    }
+
+    // Validate required currency fields - only if no variants provided
+    if ((!priceUSD || !priceIDR) && (!body.variants || body.variants.length === 0)) {
       return NextResponse.json(
-        { error: 'Both USD and IDR prices are required' },
+        { error: 'Both USD and IDR prices are required when no variants are provided' },
         { status: 400 }
       )
+    }
+    
+    // If variants exist but no base prices, set to 0 (will be calculated from variants)
+    if (!priceUSD && body.variants && body.variants.length > 0) {
+      priceUSD = 0
+    }
+    if (!priceIDR && body.variants && body.variants.length > 0) {
+      priceIDR = 0
     }
 
     // Prepare product data with all new fields
@@ -93,9 +118,9 @@ export async function POST(request: Request) {
       name: body.name,
       slug: body.slug,
       description: body.description || '',
-      price_usd: body.price_usd,
-      price_idr: body.price_idr,
-      stock_quantity: body.stock_quantity || 0,
+      price_usd: priceUSD,
+      price_idr: priceIDR,
+      stock_quantity: stockQuantity,
       collection: body.collection || '',
       in_stock: body.in_stock !== undefined ? body.in_stock : true,
       volume_ml: body.volume_ml || null,
@@ -117,6 +142,45 @@ export async function POST(request: Request) {
       is_popular: body.is_popular === true,
       is_best_selling: body.is_best_selling === true,
       new_product_duration_days: body.new_product_duration_days || 30,
+      variants: body.variants || [],
+      sku: body.sku || null,
+      brand: body.brand || null,
+      cost_price: body.cost_price || null,
+      cost_price_idr: body.cost_price_idr || null,
+      compare_at_price: body.compare_at_price || null,
+      compare_at_price_idr: body.compare_at_price_idr || null,
+      low_stock_threshold: body.low_stock_threshold || null,
+      allow_backorder: body.allow_backorder || false,
+      weight_grams: body.weight_grams || null,
+      shipping_weight_grams: body.shipping_weight_grams || null,
+      package_length_cm: body.package_length_cm || null,
+      package_width_cm: body.package_width_cm || null,
+      package_height_cm: body.package_height_cm || null,
+      fragrance_family: body.fragrance_family || null,
+      country_of_origin: body.country_of_origin || null,
+      top_notes: body.top_notes || null,
+      middle_notes: body.middle_notes || null,
+      base_notes: body.base_notes || null,
+      halal_certified: body.halal_certified || false,
+      manufacturing_date: body.manufacturing_date || null,
+      expiration_date: body.expiration_date || null,
+      status: body.status || 'draft',
+      is_featured: body.is_featured || false,
+      is_visible: body.is_visible !== undefined ? body.is_visible : true,
+      min_purchase_quantity: body.min_purchase_quantity || 1,
+      max_purchase_quantity: body.max_purchase_quantity || null,
+      is_pre_order: body.is_pre_order || false,
+      pre_order_duration_days: body.pre_order_duration_days || null,
+      pre_order_release_date: body.pre_order_release_date || null,
+      scheduled_publish_date: body.scheduled_publish_date || null,
+      meta_title: body.meta_title || null,
+      meta_description: body.meta_description || null,
+      meta_keywords: body.meta_keywords || null,
+      tags: body.tags || null,
+      image_alt_texts: body.image_alt_texts || [],
+      bulk_discounts: body.bulk_discounts || [],
+      video_urls: body.video_urls || null,
+      tax_enabled: body.tax_enabled !== undefined ? body.tax_enabled : true,
     }
 
     // Insert product

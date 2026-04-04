@@ -96,13 +96,35 @@ export async function GET(
       })
     )
 
+    // Extract discount and voucher info from pricing_snapshot if available
+    let discountInfo = null
+    let voucherInfo = null
+    
+    if ((order as any).pricing_snapshot) {
+      const snapshot = (order as any).pricing_snapshot
+      if (snapshot.discount && snapshot.discount > 0) {
+        discountInfo = {
+          amount: snapshot.discount,
+          type: snapshot.discount_type || 'unknown'
+        }
+      }
+      if (snapshot.voucher_discount && snapshot.voucher_discount > 0) {
+        voucherInfo = {
+          amount: snapshot.voucher_discount,
+          code: snapshot.voucher_code || 'N/A'
+        }
+      }
+    }
+
     console.log('🎉 [API ORDER DETAILS] Returning response with', transformedItems.length, 'items')
     return NextResponse.json({
       order: {
         ...order,
         user: userData
       },
-      items: transformedItems
+      items: transformedItems,
+      discount: discountInfo,
+      voucher: voucherInfo
     })
   } catch (error) {
     console.error('💥 [API ORDER DETAILS] Exception:', error)

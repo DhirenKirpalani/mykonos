@@ -18,6 +18,8 @@ interface Order {
   customer_email?: string
   shipping_address?: any
   payment_status?: string
+  first_product_name?: string
+  items_count?: number
   user?: {
     first_name: string
     last_name: string
@@ -37,10 +39,19 @@ interface OrderItem {
 interface OrderDetails {
   order: Order
   items: OrderItem[]
+  discount?: {
+    amount: number
+    type: string
+  } | null
+  voucher?: {
+    amount: number
+    code: string
+  } | null
 }
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
+  const [allOrders, setAllOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -55,8 +66,32 @@ export default function OrdersPage() {
   const [ordersPerPage] = useState(10)
 
   useEffect(() => {
+    // Reset page to 1 when status filter changes
+    setCurrentPage(1)
+    // Clear order details cache
+    setOrderDetails(new Map())
+    // Clear selected orders
+    setSelectedOrders(new Set())
+    // Fetch new orders
     fetchOrders()
   }, [statusFilter])
+
+  // Fetch all orders once for status counts
+  useEffect(() => {
+    fetchAllOrders()
+  }, [])
+
+  const fetchAllOrders = async () => {
+    try {
+      const response = await fetch('/api/orders/admin')
+      if (response.ok) {
+        const data = await response.json()
+        setAllOrders(data)
+      }
+    } catch (error) {
+      console.error('Error fetching all orders:', error)
+    }
+  }
 
   const fetchOrders = async () => {
     console.log('🔄 [ORDERS] Starting to fetch orders...')
@@ -79,6 +114,9 @@ export default function OrdersPage() {
           allData: data
         })
         setOrders(data)
+        
+        // Clear order details when fetching new orders
+        setOrderDetails(new Map())
       } else {
         const errorText = await response.text()
         console.error('❌ [ORDERS] Failed to fetch orders:', {
@@ -297,17 +335,34 @@ export default function OrdersPage() {
     return <Icon className="h-4 w-4" />
   }
 
-  const filteredOrders = orders.filter(order =>
-    order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (order.customer_email?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (order.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
+  const filteredOrders = orders.filter(order => {
+    const query = searchQuery.toLowerCase()
+    const details = orderDetails.get(order.id)
+    const productNames = details?.items?.map(item => item.product_name.toLowerCase()).join(' ') || ''
+    
+    return order.order_number.toLowerCase().includes(query) ||
+      (order.customer_name?.toLowerCase().includes(query)) ||
+      (order.customer_email?.toLowerCase().includes(query)) ||
+      (order.user?.email?.toLowerCase().includes(query)) ||
+      productNames.includes(query)
+  })
 
   // Get all processing and packed orders across all pages for bulk selection
   const allProcessingOrders = filteredOrders.filter(order => order.status === 'processing')
   const allPackedOrders = filteredOrders.filter(order => order.status === 'packed')
   const allSelectableOrders = filteredOrders.filter(order => order.status === 'processing' || order.status === 'packed')
+
+  // Count orders by status from ALL orders, not filtered
+  const statusCounts = {
+    all: allOrders.length,
+    pending_payment: allOrders.filter(o => o.status === 'pending_payment').length,
+    pending: allOrders.filter(o => o.status === 'pending').length,
+    processing: allOrders.filter(o => o.status === 'processing').length,
+    packed: allOrders.filter(o => o.status === 'packed').length,
+    shipped: allOrders.filter(o => o.status === 'shipped').length,
+    delivered: allOrders.filter(o => o.status === 'delivered').length,
+    cancelled: allOrders.filter(o => o.status === 'cancelled').length,
+  }
 
   // Pagination
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage)
@@ -318,6 +373,17 @@ export default function OrdersPage() {
   const processingOrders = paginatedOrders.filter(order => order.status === 'processing')
   const packedOrders = paginatedOrders.filter(order => order.status === 'packed')
   const selectableOrders = paginatedOrders.filter(order => order.status === 'processing' || order.status === 'packed')
+
+  // Fetch details for paginated orders
+  useEffect(() => {
+    if (!loading && paginatedOrders.length > 0) {
+      paginatedOrders.forEach(order => {
+        if (!orderDetails.has(order.id) && !loadingDetails.has(order.id)) {
+          fetchOrderDetails(order.id)
+        }
+      })
+    }
+  }, [paginatedOrders.map(o => o.id).join(','), loading])
 
   const SkeletonRows = () => (
     <>
@@ -353,7 +419,7 @@ export default function OrdersPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search orders..."
+              placeholder="Search by order ID, customer, email, or product name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-gray-300 py-2 pl-9 sm:pl-10 pr-4 text-sm sm:text-base focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
@@ -373,6 +439,82 @@ export default function OrdersPage() {
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
           </select>
+        </div>
+
+        {/* Status Count Badges */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setStatusFilter('all')}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              statusFilter === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            All <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.all}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('pending_payment')}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              statusFilter === 'pending_payment' ? 'bg-orange-600 text-white' : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+            }`}
+          >
+            Pending Payment <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.pending_payment}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('pending')}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              statusFilter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+            }`}
+          >
+            Pending <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.pending}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('processing')}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              statusFilter === 'processing' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+            }`}
+          >
+            Processing <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.processing}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('packed')}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              statusFilter === 'packed' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+            }`}
+          >
+            Packed <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.packed}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('shipped')}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              statusFilter === 'shipped' ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'
+            }`}
+          >
+            Shipped <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.shipped}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('delivered')}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              statusFilter === 'delivered' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800 hover:bg-green-200'
+            }`}
+          >
+            Delivered <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.delivered}</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('cancelled')}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              statusFilter === 'cancelled' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-800 hover:bg-red-200'
+            }`}
+          >
+            Cancelled <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.cancelled}</span>
+          </button>
         </div>
 
         {/* Bulk Actions */}
@@ -427,7 +569,8 @@ export default function OrdersPage() {
                       />
                     )}
                   </th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Order</th>
+                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Order ID</th>
+                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Product Name</th>
                   <th className="pb-2 sm:pb-3 whitespace-nowrap">Customer</th>
                   <th className="pb-2 sm:pb-3 whitespace-nowrap">Created At</th>
                   <th className="pb-2 sm:pb-3 whitespace-nowrap">Updated At</th>
@@ -473,6 +616,14 @@ export default function OrdersPage() {
                       <div className="font-medium text-gray-900 whitespace-nowrap">{order.order_number}</div>
                     </td>
                     <td className="py-3 sm:py-4">
+                      <div className="text-gray-900 text-sm max-w-[200px] truncate">
+                        {order.first_product_name || 'N/A'}
+                        {order.items_count && order.items_count > 1 && (
+                          <span className="text-gray-500 ml-1">+{order.items_count - 1} more</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 sm:py-4">
                       <div className="text-gray-900 max-w-[150px] sm:max-w-none truncate">
                         {order.customer_name || `${order.user?.first_name || ''} ${order.user?.last_name || ''}`.trim() || 'N/A'}
                       </div>
@@ -509,7 +660,7 @@ export default function OrdersPage() {
                   </tr>
                   {isExpanded && (
                     <tr key={`${order.id}-details`} className="bg-gray-50">
-                      <td colSpan={9} className="px-4 py-4">
+                      <td colSpan={10} className="px-4 py-4">
                         {isLoadingDetails ? (
                           <div className="flex items-center justify-center py-8">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -517,7 +668,7 @@ export default function OrdersPage() {
                         ) : details ? (
                           <div className="bg-white rounded-lg p-4 space-y-4">
                             {/* Summary Info */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                               <div>
                                 <p className="text-gray-500 mb-1">Customer</p>
                                 <p className="font-medium">{order.customer_name || `${order.user?.first_name || ''} ${order.user?.last_name || ''}`.trim()}</p>
@@ -544,25 +695,77 @@ export default function OrdersPage() {
                                   {order.payment_status || 'pending'}
                                 </p>
                               </div>
+                              <div>
+                                <p className="text-gray-500 mb-1">Discounts</p>
+                                {details.discount && (
+                                  <p className="text-green-600 font-medium">
+                                    Discount: -Rp{details.discount.amount.toLocaleString('id-ID')}
+                                  </p>
+                                )}
+                                {details.voucher && (
+                                  <p className="text-blue-600 font-medium">
+                                    Voucher ({details.voucher.code}): -Rp{details.voucher.amount.toLocaleString('id-ID')}
+                                  </p>
+                                )}
+                                {!details.discount && !details.voucher && (
+                                  <p className="text-gray-500">No discounts</p>
+                                )}
+                              </div>
                             </div>
 
                             {/* Order Items */}
                             <div>
                               <p className="text-gray-500 text-sm mb-2">Items ({details.items.length})</p>
                               <div className="space-y-2">
-                                {details.items.map((item) => (
-                                  <div key={item.id} className="flex items-center gap-3 text-sm">
-                                    {item.image_url && (
-                                      <img src={item.image_url} alt={item.product_name} className="h-12 w-12 rounded object-cover" />
-                                    )}
-                                    <div className="flex-1">
-                                      <p className="font-medium text-gray-900">{item.product_name}</p>
-                                      {item.variant_name && <p className="text-gray-500">{item.variant_name}</p>}
-                                    </div>
-                                    <p className="text-gray-600">×{item.quantity}</p>
-                                    <p className="font-medium">Rp{(item.price * item.quantity).toLocaleString('id-ID')}</p>
-                                  </div>
-                                ))}
+                                {(() => {
+                                  // Group items by product name
+                                  const grouped = details.items.reduce((acc: any, item) => {
+                                    if (!acc[item.product_name]) {
+                                      acc[item.product_name] = []
+                                    }
+                                    acc[item.product_name].push(item)
+                                    return acc
+                                  }, {})
+
+                                  return Object.entries(grouped).map(([productName, items]: [string, any]) => {
+                                    const hasVariants = items.some((i: any) => i.variant_name)
+                                    
+                                    if (hasVariants) {
+                                      // Show product name once, then list variants
+                                      return (
+                                        <div key={productName} className="space-y-1">
+                                          <p className="font-medium text-gray-900 text-sm">{productName}</p>
+                                          {items.map((item: any) => (
+                                            <div key={item.id} className="flex items-center gap-3 text-sm pl-4">
+                                              {item.image_url && (
+                                                <img src={item.image_url} alt={item.variant_name || productName} className="h-10 w-10 rounded object-cover" />
+                                              )}
+                                              <div className="flex-1">
+                                                <p className="text-gray-700">{item.variant_name}</p>
+                                              </div>
+                                              <p className="text-gray-600">×{item.quantity}</p>
+                                              <p className="font-medium">Rp{(item.price * item.quantity).toLocaleString('id-ID')}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )
+                                    } else {
+                                      // Show product name with quantity and price
+                                      return items.map((item: any) => (
+                                        <div key={item.id} className="flex items-center gap-3 text-sm">
+                                          {item.image_url && (
+                                            <img src={item.image_url} alt={item.product_name} className="h-12 w-12 rounded object-cover" />
+                                          )}
+                                          <div className="flex-1">
+                                            <p className="font-medium text-gray-900">{item.product_name}</p>
+                                          </div>
+                                          <p className="text-gray-600">×{item.quantity}</p>
+                                          <p className="font-medium">Rp{(item.price * item.quantity).toLocaleString('id-ID')}</p>
+                                        </div>
+                                      ))
+                                    }
+                                  })
+                                })()}
                               </div>
                             </div>
                           </div>

@@ -39,19 +39,63 @@ export function StockEditModal({ isOpen, onClose, product, onUpdate }: StockEdit
     setVariants(newVariants)
   }
 
-  const handleApplyToAll = () => {
+  const handleApplyToAll = async () => {
     const bulkValue = parseInt(stockQuantity)
     if (isNaN(bulkValue) || bulkValue < 0) {
       toast.error('Please enter a valid stock quantity')
       return
     }
     
-    const newVariants = variants.map(v => ({
-      ...v,
-      stock_quantity: bulkValue
-    }))
-    setVariants(newVariants)
-    toast.success('Applied to all variants')
+    setLoading(true)
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        toast.error('Authentication required')
+        return
+      }
+
+      // Update variants with bulk value
+      const updatedVariants = variants.map(v => ({
+        ...v,
+        stock_quantity: bulkValue
+      }))
+
+      const updateData: any = {
+        stock_quantity: bulkValue,
+        variants: updatedVariants,
+        in_stock: bulkValue > 0
+      }
+
+      const response = await fetch(`/api/products/admin/${product.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(updateData),
+      })
+
+      if (response.ok) {
+        setVariants(updatedVariants)
+        toast.success('Applied to all variants and saved')
+        onUpdate()
+        onClose()
+      } else {
+        const errorData = await response.json()
+        toast.error('Failed to update stock', {
+          description: errorData.error || 'Unknown error occurred'
+        })
+      }
+    } catch (error: any) {
+      console.error('Error updating stock:', error)
+      toast.error('An error occurred', {
+        description: error.message || 'Please try again'
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,6 +116,8 @@ export function StockEditModal({ isOpen, onClose, product, onUpdate }: StockEdit
       // Update main product stock if no variants or bulk tab
       if (!hasVariants || activeTab === 'bulk') {
         updateData.stock_quantity = parseInt(stockQuantity)
+        // Set in_stock to false if stock is 0
+        updateData.in_stock = parseInt(stockQuantity) > 0
       }
       
       // Update variant stocks if variants exist
@@ -81,6 +127,12 @@ export function StockEditModal({ isOpen, onClose, product, onUpdate }: StockEdit
           sku: v.sku,
           stock_quantity: v.stock_quantity
         }))
+        
+        // Calculate total stock from variants and update product stock_quantity
+        const totalVariantStock = variants.reduce((sum, v) => sum + v.stock_quantity, 0)
+        updateData.stock_quantity = totalVariantStock
+        // Set in_stock to false if all variants are out of stock
+        updateData.in_stock = totalVariantStock > 0
       }
 
       const response = await fetch(`/api/products/admin/${product.id}`, {
@@ -127,7 +179,7 @@ export function StockEditModal({ isOpen, onClose, product, onUpdate }: StockEdit
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Atur Stok</h2>
           <p className="text-sm text-gray-600 mb-6">{product.name}</p>
 
-          {/* Tabs */}
+          {/* Tabs - only show if product has variants */}
           {hasVariants && (
             <div className="flex gap-2 mb-6 border-b border-gray-200">
               <button
@@ -156,8 +208,8 @@ export function StockEditModal({ isOpen, onClose, product, onUpdate }: StockEdit
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Bulk Update Tab */}
-            {activeTab === 'bulk' && (
+            {/* Simple stock input for products without variants */}
+            {!hasVariants && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -173,16 +225,26 @@ export function StockEditModal({ isOpen, onClose, product, onUpdate }: StockEdit
                     autoFocus
                   />
                 </div>
-                {hasVariants && (
-                  <Button
-                    type="button"
-                    onClick={handleApplyToAll}
-                    variant="outline"
-                    className="w-full border-luxury-gold text-luxury-gold hover:bg-luxury-gold/10"
-                  >
-                    Terapkan Ke Semua
-                  </Button>
-                )}
+              </div>
+            )}
+
+            {/* Bulk Update Tab - only for products with variants */}
+            {hasVariants && activeTab === 'bulk' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stock Quantity
+                  </label>
+                  <input
+                    type="number"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    min="0"
+                    required
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+                    autoFocus
+                  />
+                </div>
               </div>
             )}
 
@@ -223,13 +285,24 @@ export function StockEditModal({ isOpen, onClose, product, onUpdate }: StockEdit
               >
                 Batal
               </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="flex-1 bg-luxury-gold text-luxury-navy hover:bg-luxury-gold/90"
-              >
-                {loading ? 'Updating...' : 'Update'}
-              </Button>
+              {hasVariants && activeTab === 'bulk' ? (
+                <Button
+                  type="button"
+                  onClick={handleApplyToAll}
+                  disabled={loading}
+                  className="flex-1 bg-luxury-gold text-luxury-navy hover:bg-luxury-gold/90"
+                >
+                  {loading ? 'Updating...' : 'Terapkan Ke Semua'}
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-luxury-gold text-luxury-navy hover:bg-luxury-gold/90"
+                >
+                  {loading ? 'Updating...' : 'Update'}
+                </Button>
+              )}
             </div>
           </form>
         </div>

@@ -16,6 +16,7 @@ interface Product {
   price_usd: number
   price_idr: number
   stock_quantity: number
+  low_stock_threshold?: number
   is_visible: boolean
   created_at: string
   image_url?: string
@@ -25,10 +26,13 @@ interface Product {
     name: string
     sku: string
     stock_quantity: number
+    low_stock_threshold?: number
     price_usd?: number
     price_idr?: number
   }>
 }
+
+type StockFilter = 'all' | 'low_stock' | 'out_of_stock'
 
 interface ExpandedRows {
   [key: string]: boolean
@@ -38,6 +42,9 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [stockFilter, setStockFilter] = useState<StockFilter>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [stockModalOpen, setStockModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [auditLogOpen, setAuditLogOpen] = useState(false)
@@ -145,10 +152,59 @@ export default function ProductsPage() {
     }
   }
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.slug.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Helper function to check if product or any variant is low stock
+  const isLowStock = (product: Product): boolean => {
+    // If product has variants, check each variant
+    if (product.variants && product.variants.length > 0) {
+      return product.variants.some(variant => {
+        const threshold = variant.low_stock_threshold || 10
+        return variant.stock_quantity > 0 && variant.stock_quantity <= threshold
+      })
+    }
+    // Otherwise check product-level stock
+    const threshold = product.low_stock_threshold || 10
+    return product.stock_quantity > 0 && product.stock_quantity <= threshold
+  }
+  
+  // Helper function to check if product or any variant is out of stock
+  const isOutOfStock = (product: Product): boolean => {
+    // If product has variants, check if any variant is out of stock
+    if (product.variants && product.variants.length > 0) {
+      return product.variants.some(variant => variant.stock_quantity === 0)
+    }
+    // Otherwise check product-level stock
+    return product.stock_quantity === 0
+  }
+
+  const filteredProducts = products.filter(product => {
+    // Search filter
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.slug.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    if (!matchesSearch) return false
+    
+    // Stock filter
+    if (stockFilter === 'all') return true
+    if (stockFilter === 'out_of_stock') return isOutOfStock(product)
+    if (stockFilter === 'low_stock') return isLowStock(product)
+    
+    return true
+  })
+  
+  // Calculate counts for each filter
+  const lowStockCount = products.filter(p => isLowStock(p)).length
+  const outOfStockCount = products.filter(p => isOutOfStock(p)).length
+  
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex)
+  
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, stockFilter])
 
   const handleStockClick = (product: Product) => {
     setSelectedProduct(product)
@@ -215,6 +271,56 @@ export default function ProductsPage() {
       </div>
 
       <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
+        {/* Stock Filter Tabs */}
+        <div className="mb-4 sm:mb-6 border-b border-gray-200">
+          <div className="flex gap-2 sm:gap-4 overflow-x-auto">
+            <button
+              onClick={() => setStockFilter('all')}
+              className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                stockFilter === 'all'
+                  ? 'border-luxury-gold text-luxury-gold'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              All Products
+              <span className="ml-1.5 sm:ml-2 inline-flex items-center justify-center px-1.5 sm:px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
+                {products.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setStockFilter('low_stock')}
+              className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                stockFilter === 'low_stock'
+                  ? 'border-luxury-gold text-luxury-gold'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Low Stock
+              {lowStockCount > 0 && (
+                <span className="ml-1.5 sm:ml-2 inline-flex items-center justify-center px-1.5 sm:px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                  {lowStockCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setStockFilter('out_of_stock')}
+              className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                stockFilter === 'out_of_stock'
+                  ? 'border-luxury-gold text-luxury-gold'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Out of Stock
+              {outOfStockCount > 0 && (
+                <span className="ml-1.5 sm:ml-2 inline-flex items-center justify-center px-1.5 sm:px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                  {outOfStockCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar */}
         <div className="mb-4 sm:mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
@@ -243,7 +349,7 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loading ? <SkeletonRows /> : filteredProducts.map((product) => {
+                {loading ? <SkeletonRows /> : paginatedProducts.map((product) => {
                 const productImages = product.image_urls || (product.image_url ? [product.image_url] : [])
                 const imageUrls = productImages.filter(url => {
                   const ext = url.toLowerCase().split('.').pop()
@@ -294,10 +400,16 @@ export default function ProductsPage() {
                   <td className="py-4">
                     <button
                       onClick={() => handleStockClick(product)}
-                      className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 sm:py-1 text-xs font-medium text-blue-800 hover:bg-blue-200 transition-colors cursor-pointer whitespace-nowrap"
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:py-1 text-xs font-medium hover:opacity-80 transition-colors cursor-pointer whitespace-nowrap ${
+                        product.stock_quantity === 0
+                          ? 'bg-red-100 text-red-800'
+                          : product.stock_quantity <= (product.low_stock_threshold || 10)
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}
                     >
                       <Package className="h-3 w-3" />
-                      {product.stock_quantity}
+                      {product.stock_quantity} units
                     </button>
                   </td>
                   <td className="py-3 sm:py-4"> 
@@ -394,6 +506,79 @@ export default function ProductsPage() {
             </div>
           )}
         </div>
+        
+        {/* Pagination Controls */}
+        {!loading && filteredProducts.length > 0 && (
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 pt-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Show</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
+                className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>per page</span>
+              <span className="ml-2 text-gray-500">
+                Showing {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-luxury-gold text-luxury-navy'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedProduct && (

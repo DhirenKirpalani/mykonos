@@ -70,17 +70,24 @@ export async function GET(request: Request) {
         )
       }
 
-      // Merge user data into orders
-      const ordersWithUsers = (orders as any[]).map((order: any) => ({
-        ...order,
-        user: order.user_id ? usersMap.get(order.user_id) || null : null,
-        customer_name: order.user_id 
-          ? `${usersMap.get(order.user_id)?.first_name || ''} ${usersMap.get(order.user_id)?.last_name || ''}`.trim() || 'User'
-          : 'Guest',
-        customer_email: order.user_id 
-          ? usersMap.get(order.user_id)?.email || order.customer_email
-          : order.customer_email
-      }))
+      // Merge user data into orders and add first product name
+      const ordersWithUsers = (orders as any[]).map((order: any) => {
+        const firstProduct = order.order_items?.[0]?.product?.name || null
+        const itemCount = order.order_items?.length || 0
+        
+        return {
+          ...order,
+          user: order.user_id ? usersMap.get(order.user_id) || null : null,
+          customer_name: order.user_id 
+            ? `${usersMap.get(order.user_id)?.first_name || ''} ${usersMap.get(order.user_id)?.last_name || ''}`.trim() || 'User'
+            : 'Guest',
+          customer_email: order.user_id 
+            ? usersMap.get(order.user_id)?.email || order.customer_email
+            : order.customer_email,
+          first_product_name: firstProduct,
+          items_count: itemCount
+        }
+      })
 
       return NextResponse.json(ordersWithUsers)
     }

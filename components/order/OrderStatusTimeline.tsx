@@ -43,6 +43,19 @@ export function OrderStatusTimeline({
 }: OrderStatusTimelineProps) {
   const { t } = useLanguage()
   
+  console.log('🔍 [TIMELINE COMPONENT] Received props:', {
+    currentStatus,
+    paymentStatus,
+    createdAt,
+    paidAt,
+    packedAt,
+    shippedAt,
+    deliveredAt,
+    cancelledAt,
+    trackingNumber,
+    carrier
+  })
+  
   const getSteps = (): TimelineStep[] => {
     // If order is cancelled, show simplified timeline
     if (currentStatus === 'cancelled') {
@@ -105,6 +118,13 @@ export function OrderStatusTimeline({
       },
     ]
 
+    console.log('📊 [TIMELINE STEPS] Generated steps:', steps.map(s => ({
+      id: s.id,
+      status: s.status,
+      timestamp: s.timestamp,
+      hasTimestamp: !!s.timestamp
+    })))
+
     return steps
   }
 
@@ -112,9 +132,12 @@ export function OrderStatusTimeline({
   const currentStepIndex = steps.findIndex(step => step.status === 'current')
 
   const formatTimestamp = (timestamp?: string | null) => {
-    if (!timestamp) return null
+    if (!timestamp) {
+      console.log('⚠️ [TIMESTAMP FORMAT] No timestamp provided')
+      return null
+    }
     const date = new Date(timestamp)
-    return date.toLocaleString('id-ID', {
+    const formatted = date.toLocaleString('id-ID', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -122,6 +145,8 @@ export function OrderStatusTimeline({
       minute: '2-digit',
       timeZone: 'Asia/Jakarta'
     })
+    console.log('✅ [TIMESTAMP FORMAT] Formatted:', { input: timestamp, output: formatted })
+    return formatted
   }
 
   const getStatusMessage = () => {

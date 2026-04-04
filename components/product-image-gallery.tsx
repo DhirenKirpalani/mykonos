@@ -14,9 +14,11 @@ interface ProductImageGalleryProps {
     valid_until: string
   } | null
   onVoucherExpire?: () => void
+  isOutOfStock?: boolean
+  locale?: string
 }
 
-export function ProductImageGallery({ images, productName, voucher, onVoucherExpire }: ProductImageGalleryProps) {
+export function ProductImageGallery({ images, productName, voucher, onVoucherExpire, isOutOfStock = false, locale = 'id' }: ProductImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   const isVideo = (url: string | undefined) => {
@@ -35,6 +37,16 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
     <div className="flex flex-col items-center space-y-4">
       {/* Main Image/Video Display */}
       <div className="relative w-full max-w-[450px] aspect-square overflow-hidden rounded-xl bg-white border border-gray-200">
+        {/* Out of Stock Overlay - Circular Badge */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center">
+            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-black/70 flex items-center justify-center">
+              <span className="text-white text-base md:text-lg font-bold">
+                {locale === 'id' ? 'Habis' : 'Sold Out'}
+              </span>
+            </div>
+          </div>
+        )}
         {isVideo(selectedMedia) ? (
           <video
             src={selectedMedia}
