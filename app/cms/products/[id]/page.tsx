@@ -48,7 +48,6 @@ export default function EditProductPage() {
     shelf_life_months: '',
     formulation: '',
     gender: '',
-    edition_type: '',
     country_of_origin: '',
     top_notes: '',
     middle_notes: '',
@@ -142,7 +141,6 @@ export default function EditProductPage() {
           shelf_life_months: product.shelf_life_months?.toString() || '',
           formulation: product.formulation || '',
           gender: product.gender || '',
-          edition_type: product.edition_type || '',
           country_of_origin: product.country_of_origin || '',
           top_notes: product.top_notes || '',
           middle_notes: product.middle_notes || '',
@@ -462,14 +460,13 @@ export default function EditProductPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Product SKU *
+                Product SKU
               </label>
               <input
                 type="text"
                 name="sku"
                 value={formData.sku}
                 onChange={handleChange}
-                required
                 placeholder="e.g., MYK-OUD-001"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
               />
