@@ -143,6 +143,24 @@ export async function PATCH(
       }
     })
 
+    // If variants are provided, calculate total prices and stock from variants
+    if (body.variants && Array.isArray(body.variants) && body.variants.length > 0) {
+      const totalPriceUSD = body.variants.reduce((sum: number, v: any) => {
+        return sum + (parseFloat(v.price_usd) || 0)
+      }, 0)
+      const totalPriceIDR = body.variants.reduce((sum: number, v: any) => {
+        return sum + (parseFloat(v.price_idr) || 0)
+      }, 0)
+      const totalStock = body.variants.reduce((sum: number, v: any) => {
+        return sum + (parseInt(v.stock_quantity) || 0)
+      }, 0)
+      
+      // Always update product-level prices and stock to match variant totals
+      updateData.price_usd = totalPriceUSD
+      updateData.price_idr = totalPriceIDR
+      updateData.stock_quantity = totalStock
+    }
+
     const query = supabase.from('products')
     const { data: product, error } = await (query.update as any)(updateData)
       .eq('id', id)

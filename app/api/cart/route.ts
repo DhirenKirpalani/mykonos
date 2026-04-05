@@ -145,6 +145,14 @@ export async function POST(request: Request) {
       }
     }
 
+    // Check if product/variant is out of stock
+    if (variantStock === 0) {
+      return NextResponse.json(
+        { error: 'This product is out of stock' },
+        { status: 400 }
+      )
+    }
+
     // Validate quantity constraints
     const minQty = typedProduct.min_purchase_quantity || 1
     const maxQty = typedProduct.max_purchase_quantity

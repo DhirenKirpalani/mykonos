@@ -139,6 +139,17 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   
   // Check if product has variants with different prices
   const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
+  
+  // Check if product is out of stock
+  const isOutOfStock = useMemo(() => {
+    if (hasVariants) {
+      // If has variants, check if ALL variants are out of stock
+      return (product as any).variants.every((v: any) => v.stock_quantity === 0)
+    }
+    // Otherwise check product-level stock
+    return product.stock_quantity === 0
+  }, [hasVariants, product])
+  
   const variantPrices = hasVariants ? (product as any).variants.map((v: any) => 
     region?.code === 'ID' ? (v.price_idr || 0) : (v.price_usd || 0)
   ).filter((p: number) => p > 0) : []
@@ -259,6 +270,16 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
       <Link href={`/products/${product.slug}`} className="flex flex-col" aria-label={`View ${product.name}`}>
         {/* Image Frame - Fixed aspect ratio */}
         <div className="relative aspect-square bg-[#F1F4F8] overflow-hidden">
+          {/* Out of Stock Overlay - Circular Badge */}
+          {isOutOfStock && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-black/70 flex items-center justify-center">
+                <span className="text-white text-sm md:text-base font-bold">
+                  {locale === 'id' ? 'Habis' : 'Sold Out'}
+                </span>
+              </div>
+            </div>
+          )}
           {thumbnailUrl ? (
             isVideo(thumbnailUrl) ? (
               <video

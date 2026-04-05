@@ -54,6 +54,16 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   const [variantModalMode, setVariantModalMode] = useState<'add-to-cart' | 'buy-now' | 'wishlist'>('add-to-cart')
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [pendingVariantName, setPendingVariantName] = useState<string | null>(null)
+  
+  // Check if product is out of stock
+  const isOutOfStock = (() => {
+    if (productData?.variants && Array.isArray(productData.variants) && productData.variants.length > 0) {
+      // If has variants, check if ALL variants are out of stock
+      return productData.variants.every((v: any) => v.stock_quantity === 0)
+    }
+    // Otherwise check product-level stock
+    return stockQuantity === 0
+  })()
 
   // Restore quantity from sessionStorage if user navigates back from checkout
   useEffect(() => {
@@ -90,6 +100,12 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   }
 
   const handleAddToCart = async (productIdOverride?: string, quantity: number = 1, selectedVariants?: Record<string, string>) => {
+    // Check if out of stock
+    if (isOutOfStock) {
+      toast.error('This product is out of stock')
+      return
+    }
+    
     // Always show modal for confirmation (bottom sheet)
     if (!selectedVariants && productData) {
       setVariantModalMode('add-to-cart')
@@ -168,6 +184,12 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   }
 
   const handleAddToWishlist = async (selectedVariants?: Record<string, string>) => {
+    // Check if out of stock
+    if (isOutOfStock) {
+      toast.error('This product is out of stock')
+      return
+    }
+    
     // Always show modal for confirmation (bottom sheet)
     if (!selectedVariants && productData) {
       setVariantModalMode('wishlist')
@@ -221,6 +243,12 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   }
 
   const handleBuyNow = async (productIdOverride?: string, quantity: number = 1, selectedVariants?: Record<string, string> | Array<{variant_name: string, variant_sku: string, quantity: number}>) => {
+    // Check if out of stock
+    if (isOutOfStock) {
+      toast.error('This product is out of stock')
+      return
+    }
+    
     // Always show modal for confirmation (bottom sheet)
     if (!selectedVariants && productData) {
       setVariantModalMode('buy-now')
@@ -370,7 +398,8 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-3 text-base transition-all duration-300 border-0"
           size="lg" 
           onClick={() => handleBuyNow(undefined, quantity)}
-          disabled={isBuyingNow}
+          disabled={isBuyingNow || isOutOfStock}
+          style={isOutOfStock ? { pointerEvents: 'none' } : {}}
         >
           {isBuyingNow ? t('common.loading') : t('product.buyNow')}
         </Button>
@@ -378,7 +407,8 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 text-base transition-all duration-300"
           size="lg" 
           onClick={() => handleAddToCart(undefined, quantity)}
-          disabled={isAddingToCart}
+          disabled={isAddingToCart || isOutOfStock}
+          style={isOutOfStock ? { pointerEvents: 'none' } : {}}
         >
           <ShoppingBag className="mr-2 h-5 w-5" />
           {isAddingToCart ? t('common.loading') : t('product.addToCart')}
@@ -388,7 +418,8 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           size="lg" 
           className="w-full"
           onClick={() => handleAddToWishlist()}
-          disabled={isAddingToWishlist}
+          disabled={isAddingToWishlist || isOutOfStock}
+          style={isOutOfStock ? { pointerEvents: 'none' } : {}}
         >
           <Heart className="mr-2 h-5 w-5" />
           {isAddingToWishlist ? t('common.loading') : t('product.addToWishlist')}
@@ -401,8 +432,9 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         {/* Wishlist Icon */}
         <button 
           onClick={() => handleAddToWishlist()}
-          disabled={isAddingToWishlist}
-          className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50"
+          disabled={isAddingToWishlist || isOutOfStock}
+          style={isOutOfStock ? { pointerEvents: 'none' } : {}}
+          className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
         >
           <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
         </button>
@@ -413,8 +445,9 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         {/* Cart Icon */}
         <button 
           onClick={() => handleAddToCart(undefined, quantity)}
-          disabled={isAddingToCart}
-          className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50"
+          disabled={isAddingToCart || isOutOfStock}
+          style={isOutOfStock ? { pointerEvents: 'none' } : {}}
+          className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
         >
           <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
         </button>
@@ -422,8 +455,9 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         {/* Buy Now Button */}
         <button 
           onClick={() => handleBuyNow(undefined, quantity)}
-          disabled={isBuyingNow}
-          className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-2 px-3 sm:py-3 sm:px-4 rounded disabled:opacity-50 text-sm sm:text-base"
+          disabled={isBuyingNow || isOutOfStock}
+          style={isOutOfStock ? { pointerEvents: 'none' } : {}}
+          className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-2 px-3 sm:py-3 sm:px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 text-sm sm:text-base"
         >
           {isBuyingNow ? t('common.loading') : (() => {
             if (voucher && productData) {

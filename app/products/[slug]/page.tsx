@@ -183,7 +183,23 @@ export default function ProductDetailPage({
         <div className="grid gap-4 lg:grid-cols-2">
           {/* Image Gallery */}
           <div className="w-full">
-            <ProductImageGallery images={product.image_urls} productName={product.name} voucher={voucher} onVoucherExpire={handleVoucherExpire} />
+            <ProductImageGallery 
+              images={product.image_urls} 
+              productName={product.name} 
+              voucher={voucher} 
+              onVoucherExpire={handleVoucherExpire}
+              isOutOfStock={(() => {
+                // Check if product has variants
+                const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
+                if (hasVariants) {
+                  // If has variants, check if ALL variants are out of stock
+                  return (product as any).variants.every((v: any) => v.stock_quantity === 0)
+                }
+                // Otherwise check product-level stock
+                return product.stock_quantity === 0
+              })()}
+              locale={locale}
+            />
           </div>
 
           {/* Product Details */}
@@ -195,11 +211,20 @@ export default function ProductDetailPage({
                   <span>{productTranslations.flashSale}</span>
                 </div>
               )}
-              {(product as any).in_stock && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {productTranslations.inStock}
-                </span>
-              )}
+              {(() => {
+                // Check if product is out of stock
+                const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
+                const isOutOfStock = hasVariants 
+                  ? (product as any).variants.every((v: any) => v.stock_quantity === 0)
+                  : product.stock_quantity === 0
+                
+                // Only show In Stock badge if product has stock
+                return !isOutOfStock && (product as any).in_stock && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {productTranslations.inStock}
+                  </span>
+                )
+              })()}
             </div>
 
             {/* Price Display - Above Title */}

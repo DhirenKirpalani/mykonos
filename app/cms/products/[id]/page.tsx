@@ -554,7 +554,7 @@ export default function EditProductPage() {
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Base Price (USD) *
+                  Base Price (USD)
                 </label>
                 <input
                   type="number"
@@ -563,14 +563,14 @@ export default function EditProductPage() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  required
+                  placeholder="Auto-calculated from variants if not set"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Base Price (IDR) *
+                  Base Price (IDR)
                 </label>
                 <input
                   type="number"
@@ -579,8 +579,7 @@ export default function EditProductPage() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  required
-                  placeholder="Indonesian Rupiah"
+                  placeholder="Auto-calculated from variants if not set"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 />
               </div>

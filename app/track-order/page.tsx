@@ -11,6 +11,7 @@ import { formatPrice } from '@/lib/utils/currency'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
+import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 
 type OrderItem = {
   id: string
@@ -44,6 +45,9 @@ type Order = {
   currency_code: string
   created_at: string
   completed_at: string | null
+  packed_at?: string | null
+  shipped_at?: string | null
+  delivered_at?: string | null
   carrier_code?: string
   tracking_number?: string
   estimated_delivery_date?: string
@@ -596,6 +600,17 @@ export default function TrackOrderPage() {
         total_amount: data.total_amount
       })
 
+      console.log('📅 [TIMESTAMP DEBUG] Order timestamps:', {
+        created_at: data.created_at,
+        packed_at: data.packed_at,
+        shipped_at: data.shipped_at,
+        delivered_at: data.delivered_at,
+        payment_time: data.payment_metadata?.transaction_time,
+        has_packed_at: !!data.packed_at,
+        has_shipped_at: !!data.shipped_at,
+        has_delivered_at: !!data.delivered_at
+      })
+
       // 🔒 SECURITY CHECK: If user is authenticated, verify email matches
       if (user && !user.is_anonymous) {
         const authenticatedEmail = user.email
@@ -901,6 +916,37 @@ export default function TrackOrderPage() {
                   })()}
                 </span>
               </div>
+
+              {/* Order Status Timeline */}
+              {(() => {
+                console.log('🎯 [TIMELINE RENDER] Rendering OrderStatusTimeline with props:', {
+                  currentStatus: order.status,
+                  paymentStatus: order.payment_status,
+                  createdAt: order.created_at,
+                  paidAt: order.payment_metadata?.transaction_time || null,
+                  packedAt: order.packed_at || null,
+                  shippedAt: order.shipped_at || null,
+                  deliveredAt: order.delivered_at || null,
+                  trackingNumber: order.tracking_number || null,
+                  carrier: order.carrier_code || null
+                })
+                return (
+                  <OrderStatusTimeline
+                    currentStatus={order.status}
+                    paymentStatus={order.payment_status}
+                    createdAt={order.created_at}
+                    paidAt={order.payment_metadata?.transaction_time || null}
+                    packedAt={order.packed_at || null}
+                    shippedAt={order.shipped_at || null}
+                    deliveredAt={order.delivered_at || null}
+                    cancelledAt={null}
+                    expiryTime={order.expiry_time || null}
+                    trackingNumber={order.tracking_number || null}
+                    carrier={order.carrier_code || null}
+                    paymentMetadata={order.payment_metadata}
+                  />
+                )
+              })()}
 
               {/* Success Payment Alert */}
               {(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && (

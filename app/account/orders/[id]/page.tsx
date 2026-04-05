@@ -190,6 +190,12 @@ export default function OrderDetailsPage() {
 
       if (error) throw error
       const orderData = data as any
+      console.log('📦 [ORDER DETAILS] Order data:', orderData)
+      console.log('📦 [ORDER DETAILS] Order items:', orderData?.order_items)
+      if (orderData?.order_items?.[0]) {
+        console.log('📦 [ORDER DETAILS] First item product:', orderData.order_items[0].product)
+        console.log('📦 [ORDER DETAILS] First item image_urls:', orderData.order_items[0].product?.image_urls)
+      }
       setOrder(orderData)
 
       // Fetch active discounts for order items
@@ -589,11 +595,32 @@ export default function OrderDetailsPage() {
           <div className="p-4 sm:p-8">
             {order.order_items.map((item) => (
               <div key={item.id} className="flex gap-3 sm:gap-6 mb-4 pb-4 sm:mb-6 sm:pb-6 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
-                <img
-                  src={item.product.image_urls[0] || '/placeholder.png'}
-                  alt={item.product.name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
-                />
+                {item.product.image_urls?.[0] ? (
+                  <img
+                    src={item.product.image_urls[0]}
+                    alt={item.product.name}
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
+                    onLoad={() => {
+                      console.log('✅ Image loaded successfully:', item.product.image_urls[0])
+                    }}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      console.error('❌ Image failed to load:', item.product.image_urls[0])
+                      console.error('Error event:', e)
+                      target.style.display = 'none';
+                      const placeholder = document.createElement('div');
+                      placeholder.className = 'w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex-shrink-0 bg-gray-100 flex items-center justify-center';
+                      placeholder.innerHTML = '<svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>';
+                      target.parentNode?.insertBefore(placeholder, target);
+                    }}
+                  />
+                ) : (
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex-shrink-0 bg-gray-100 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   {item.variant_name ? (
                     <h3 className="font-semibold text-sm sm:text-base leading-snug mb-0.5 truncate">{item.variant_name}</h3>
