@@ -253,7 +253,7 @@ export default function ProductsPage() {
           <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Manage your product catalog</p>
         </div>
         <div className="flex gap-2 sm:gap-3">
-          <Link href="/cms/products/bulk-upload-media" className="flex-1 sm:flex-none">
+          <Link href="/cms/products/bulk-upload" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full sm:w-auto border-luxury-gold text-luxury-gold hover:bg-luxury-gold/10 text-xs sm:text-sm">
               <Upload className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Bulk Upload</span>
