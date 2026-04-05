@@ -738,7 +738,15 @@ export default function OrdersPage() {
                                           {items.map((item: any) => (
                                             <div key={item.id} className="flex items-center gap-3 text-sm pl-4">
                                               {item.image_url && (
-                                                <img src={item.image_url} alt={item.variant_name || productName} className="h-10 w-10 rounded object-cover" />
+                                                <img 
+                                                  src={item.image_url} 
+                                                  alt={item.variant_name || productName} 
+                                                  className="h-10 w-10 rounded object-cover"
+                                                  onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                  }}
+                                                />
                                               )}
                                               <div className="flex-1">
                                                 <p className="text-gray-700">{item.variant_name}</p>
@@ -754,7 +762,15 @@ export default function OrdersPage() {
                                       return items.map((item: any) => (
                                         <div key={item.id} className="flex items-center gap-3 text-sm">
                                           {item.image_url && (
-                                            <img src={item.image_url} alt={item.product_name} className="h-12 w-12 rounded object-cover" />
+                                            <img 
+                                              src={item.image_url} 
+                                              alt={item.product_name} 
+                                              className="h-12 w-12 rounded object-cover"
+                                              onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.style.display = 'none';
+                                              }}
+                                            />
                                           )}
                                           <div className="flex-1">
                                             <p className="font-medium text-gray-900">{item.product_name}</p>

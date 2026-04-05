@@ -379,6 +379,13 @@ export default function ProductsPage() {
                           src={imageUrls[0]}
                           alt={product.name}
                           className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg object-cover border border-gray-200"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            if (target.nextElementSibling) {
+                              (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                            }
+                          }}
                         />
                       ) : (
                         <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
