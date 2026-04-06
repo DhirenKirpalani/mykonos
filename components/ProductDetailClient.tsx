@@ -22,7 +22,6 @@ interface ProductDetailClientProps {
   stockQuantity?: number
   price?: number
   priceIdr?: number
-  salePrice?: number | null
   compareAtPrice?: number | null
   voucher?: {
     discount_type: 'percentage' | 'fixed'
@@ -35,7 +34,6 @@ interface ProductDetailClientProps {
     image_urls: string[]
     price: number
     price_idr?: number
-    sale_price?: number | null
     stock_quantity: number
     min_purchase_quantity?: number | null
     max_purchase_quantity?: number | null
@@ -43,7 +41,7 @@ interface ProductDetailClientProps {
   }
 }
 
-export function ProductDetailClient({ productId, productName, productSlug, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, salePrice, compareAtPrice, voucher, activeDiscounts = null, productData, product }: ProductDetailClientProps) {
+export function ProductDetailClient({ productId, productName, productSlug, minQuantity = 1, maxQuantity, stockQuantity = 0, price = 0, priceIdr, compareAtPrice, voucher, activeDiscounts = null, productData, product }: ProductDetailClientProps) {
   const { t } = useTranslation()
   const router = useRouter()
   const [quantity, setQuantity] = useState(minQuantity)
@@ -462,7 +460,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           {isBuyingNow ? t('common.loading') : (() => {
             if (voucher && productData) {
               const basePrice = priceIdr || price
-              const effectivePrice = salePrice && salePrice < basePrice ? salePrice : basePrice
+              const effectivePrice = basePrice
               const itemTotal = effectivePrice * quantity
               const voucherDiscount = voucher.discount_type === 'percentage'
                 ? (itemTotal * voucher.discount_value / 100)

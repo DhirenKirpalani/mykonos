@@ -134,7 +134,6 @@ export async function POST(request: Request) {
       size: body.volume_ml ? `${body.volume_ml}ml` : '',
       category: body.collection || '', // Use collection as category for backward compatibility
       is_new: false,
-      sale_price: body.sale_price || null,
       pilih_lokal: body.pilih_lokal === true,
       rating: body.rating || 0,
       products_sold: body.products_sold || 0,

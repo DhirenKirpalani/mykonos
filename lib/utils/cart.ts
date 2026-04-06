@@ -37,7 +37,7 @@ export function clearSessionId(): void {
  */
 export function calculateCartSubtotal(items: CartItemWithProduct[]): number {
   return items.reduce((total, item) => {
-    const price = getEffectivePrice((item.product as any).price_usd || 0, item.product.sale_price)
+    const price = getEffectivePrice((item.product as any).price_usd || 0, null)
     return total + (price * item.quantity)
   }, 0)
 }
@@ -74,7 +74,7 @@ export function getItemsWithIssues(summary: CartSummary): CartItemWithProduct[] 
  */
 export function hasPriceChanged(item: CartItemWithProduct): boolean {
   if (!item.price_at_add) return false
-  const currentPrice = getEffectivePrice((item.product as any).price_usd || 0, item.product.sale_price)
+  const currentPrice = getEffectivePrice((item.product as any).price_usd || 0, null)
   return Math.abs(currentPrice - item.price_at_add) > 0.01
 }
 
@@ -83,7 +83,7 @@ export function hasPriceChanged(item: CartItemWithProduct): boolean {
  */
 export function getPriceChange(item: CartItemWithProduct): number {
   if (!item.price_at_add) return 0
-  const currentPrice = getEffectivePrice((item.product as any).price_usd || 0, item.product.sale_price)
+  const currentPrice = getEffectivePrice((item.product as any).price_usd || 0, null)
   return currentPrice - item.price_at_add
 }
 

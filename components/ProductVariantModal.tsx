@@ -31,7 +31,6 @@ interface ProductVariantModalProps {
     name: string
     image_urls: string[]
     price: number
-    sale_price?: number | null
     variants?: ProductVariant[]
     stock_quantity: number
     min_purchase_quantity?: number | null
@@ -86,9 +85,7 @@ export function ProductVariantModal({
   }
 
   const basePrice = getRegionPrice()
-  const effectivePrice = product.sale_price && product.sale_price < basePrice
-    ? product.sale_price
-    : basePrice
+  const effectivePrice = basePrice
 
   // Get variant price, applying discount if available
   const getVariantPrice = (variant: ProductVariant) => {
@@ -276,17 +273,19 @@ export function ProductVariantModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
             {/* Product Image - hidden on very small screens to save space */}
             <div className="relative hidden xs:block sm:block aspect-square max-h-32 sm:max-h-40 md:max-h-none rounded-lg overflow-hidden bg-gray-100">
-              {product.image_urls && product.image_urls[0] && (
+              {product.image_urls && product.image_urls.length > 0 && product.image_urls[0] ? (
                 <img
                   src={product.image_urls[0]}
                   alt={product.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                  }}
                 />
-              )}
-              {product.sale_price && product.sale_price < product.price && (
-                <span className="absolute top-3 left-3 rounded-full bg-red-600 px-3 py-1 text-xs font-medium text-white">
-                  Sale
-                </span>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <span className="text-sm">No image</span>
+                </div>
               )}
             </div>
 
@@ -353,11 +352,6 @@ export function ProductVariantModal({
                       }
                     })()}
                   </span>
-                  {!priceRange && product.sale_price && product.sale_price < basePrice && !voucher && (
-                    <span className="text-lg text-gray-400 line-through">
-                      {formatPrice(basePrice * (!hasVariants ? quantity : 1), currencyCode)}
-                    </span>
-                  )}
                 </div>
                 {voucher && (
                   <div className="mt-2 inline-flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded px-2 py-1">
