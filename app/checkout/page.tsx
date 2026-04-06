@@ -2060,20 +2060,24 @@ export default function CheckoutPage() {
                   <div className="flex gap-3 sm:gap-4">
                     {/* Product Image */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                      {item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? (
-                        <img
-                          src={item.product.image_urls[0]}
-                          alt={item.product.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                          No image
-                        </div>
-                      )}
+                      {(() => {
+                        const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
+                        const firstUrl = validUrls[0]
+                        return firstUrl ? (
+                          <img
+                            src={firstUrl}
+                            alt={item.product.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                            No image
+                          </div>
+                        )
+                      })()}
                     </div>
 
                     {/* Product Details & Controls */}

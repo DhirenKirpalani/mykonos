@@ -15,12 +15,10 @@ const fragranceFamilies = [
   'Powdery Elegance',
   'Gourmand Galore',
 ]
-const sortOptions = [
+const filterOptions = [
   { value: 'popular', label: 'Popular' },
   { value: 'newest', label: 'Newest' },
   { value: 'best-selling', label: 'Best Selling' },
-  { value: 'price-asc', label: 'Price ↑' },
-  { value: 'price-desc', label: 'Price ↓' },
 ]
 
 export function ProductFilters() {
@@ -241,12 +239,12 @@ export function ProductFilters() {
       <div className="hidden space-y-6 lg:block">
         {/* Sort Section */}
         <div>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">{t.productsPage.sort.popular.split(' ')[0]}</h3>
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">FILTER</h3>
           <div className="space-y-2">
             <button
-              onClick={() => updateFilter('sort', 'popular')}
+              onClick={() => updateFilter('filter', 'popular')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentSort === 'popular'
+                searchParams.get('filter') === 'popular'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -254,9 +252,9 @@ export function ProductFilters() {
               {t.productsPage.sort.popular}
             </button>
             <button
-              onClick={() => updateFilter('sort', 'newest')}
+              onClick={() => updateFilter('filter', 'newest')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentSort === 'newest'
+                searchParams.get('filter') === 'newest'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -264,9 +262,9 @@ export function ProductFilters() {
               {t.productsPage.sort.newest}
             </button>
             <button
-              onClick={() => updateFilter('sort', 'best-selling')}
+              onClick={() => updateFilter('filter', 'best-selling')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentSort === 'best-selling'
+                searchParams.get('filter') === 'best-selling'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -275,20 +273,20 @@ export function ProductFilters() {
             </button>
             <button
               onClick={() => {
-                const currentPrice = currentSort?.startsWith('price-') ? currentSort : null
-                if (currentPrice === 'price-asc') {
+                const currentSort = searchParams.get('sort')
+                if (currentSort === 'price-asc') {
                   updateFilter('sort', 'price-desc')
                 } else {
                   updateFilter('sort', 'price-asc')
                 }
               }}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentSort?.startsWith('price-')
+                searchParams.get('sort')?.startsWith('price-')
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              {t.productsPage.price} {currentSort === 'price-desc' ? '↓' : '↑'}
+              {t.productsPage.price} {searchParams.get('sort') === 'price-desc' ? '↓' : '↑'}
             </button>
           </div>
         </div>

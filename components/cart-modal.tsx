@@ -339,29 +339,33 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex gap-6 py-8">
                       <div className="relative h-24 w-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
-                        {item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? (
-                          isVideo(item.product.image_urls[0]) ? (
-                            <video
-                              src={item.product.image_urls[0]}
-                              className="h-full w-full object-cover"
-                              muted
-                              playsInline
-                              loop
-                            />
+                        {(() => {
+                          const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
+                          const firstUrl = validUrls[0]
+                          return firstUrl ? (
+                            isVideo(firstUrl) ? (
+                              <video
+                                src={firstUrl}
+                                className="h-full w-full object-cover"
+                                muted
+                                playsInline
+                                loop
+                              />
+                            ) : (
+                              <Image
+                                src={firstUrl}
+                                alt={item.product.name}
+                                fill
+                                sizes="80px"
+                                className="object-cover"
+                              />
+                            )
                           ) : (
-                            <Image
-                              src={item.product.image_urls[0]}
-                              alt={item.product.name}
-                              fill
-                              sizes="80px"
-                              className="object-cover"
-                            />
+                            <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
+                              No image
+                            </div>
                           )
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
-                            No image
-                          </div>
-                        )}
+                        })()}
                       </div>
 
                       <div className="flex flex-1 flex-col justify-between">

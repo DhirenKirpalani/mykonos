@@ -273,20 +273,24 @@ export function ProductVariantModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
             {/* Product Image - hidden on very small screens to save space */}
             <div className="relative hidden xs:block sm:block aspect-square max-h-32 sm:max-h-40 md:max-h-none rounded-lg overflow-hidden bg-gray-100">
-              {product.image_urls && product.image_urls.length > 0 && product.image_urls[0] ? (
-                <img
-                  src={product.image_urls[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <span className="text-sm">No image</span>
-                </div>
-              )}
+              {(() => {
+                const validUrls = product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
+                const firstUrl = validUrls[0]
+                return firstUrl ? (
+                  <img
+                    src={firstUrl}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <span className="text-sm">No image</span>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Product Details */}

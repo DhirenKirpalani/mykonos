@@ -463,6 +463,32 @@ export async function POST(request: NextRequest) {
         }
         console.log(`   🎥 Total videos matched: ${videoUrls.length}`)
 
+        // Check if product already exists by name or slug
+        console.log(`   🔍 Checking for existing product...`)
+        const generatedSlug = product.slug || (product.name ? generateSimplifiedSlug(product.name) : null)
+        
+        const { data: existingProduct, error: checkError } = await supabase
+          .from('products')
+          .select('id, name, slug')
+          .or(`name.eq.${product.name},slug.eq.${generatedSlug}`)
+          .maybeSingle()
+        
+        if (checkError) {
+          console.error(`   ⚠️  Error checking for duplicates: ${checkError.message}`)
+        }
+        
+        if (existingProduct) {
+          console.log(`   ⚠️  Product already exists: "${existingProduct.name}" (ID: ${existingProduct.id})`)
+          errors.push({
+            product: product.name,
+            error: 'Duplicate product',
+            message: `Product "${product.name}" already exists in the database. Skipping to avoid duplicates.`,
+            existingId: existingProduct.id
+          })
+          errorCount++
+          continue
+        }
+
         // Create product in database
         console.log(`   💾 Inserting product into database...`)
         const { data: insertedProduct, error: insertError } = await supabase
@@ -521,7 +547,7 @@ export async function POST(request: NextRequest) {
             meta_description: product.meta_description || null,
             meta_keywords: product.meta_keywords || null,
             tags: product.tags || null,
-            image_urls: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400?text=No+Image'],
+            image_urls: imageUrls.length > 0 ? imageUrls : [],
             video_urls: videoUrls,
           })
           .select()

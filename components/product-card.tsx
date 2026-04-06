@@ -196,17 +196,22 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   }
   
   // Check if first media is a video
-  const isVideo = (url: string | undefined) => {
+  const isVideo = (url: string) => {
     if (!url) return false
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
   }
   
-  const firstMedia = product.image_urls?.[0]
+  // Filter out invalid placeholder URLs
+  const validImageUrls = product.image_urls?.filter(url => 
+    url && !url.includes('placehold.co')
+  ) || []
+  
+  const firstMedia = validImageUrls[0]
   const isFirstMediaVideo = firstMedia ? isVideo(firstMedia) : false
   
   // If first media is video, try to find first image for thumbnail
-  const thumbnailUrl = isFirstMediaVideo && product.image_urls && product.image_urls.length > 1
-    ? product.image_urls.find(url => url && !isVideo(url)) || firstMedia
+  const thumbnailUrl = isFirstMediaVideo && validImageUrls.length > 1
+    ? validImageUrls.find(url => url && !isVideo(url)) || firstMedia
     : firstMedia
 
   return (
@@ -304,7 +309,11 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                   group-hover:scale-[1.04]
                 "
                 quality={90}
-                priority
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                }}
               />
             )
           ) : (
