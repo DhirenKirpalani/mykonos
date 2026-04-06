@@ -378,8 +378,6 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
             let discountPct = 0
             if (hasVariants && minVariantCompareAtPrice > 0 && minVariantCompareAtPrice > minVariantPrice) {
               discountPct = Math.round((minVariantCompareAtPrice - minVariantPrice) / minVariantCompareAtPrice * 100)
-            } else if (!hasVariants && product.sale_price && product.sale_price < originalPrice) {
-              discountPct = Math.round((originalPrice - product.sale_price) / originalPrice * 100)
             } else if (!hasVariants && region) {
               const compareAt = region.code === 'ID' ? (product as any).compare_at_price_idr : (product as any).compare_at_price_usd
               if (compareAt && compareAt > originalPrice) {

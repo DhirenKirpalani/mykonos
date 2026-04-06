@@ -65,7 +65,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
       // If there's a compare_at_price, use it as the sale reference
       return product.compare_at_price ? product.compare_at_price : null
     }
-    return product.sale_price
+    return null
   }
 
   let unitPrice = getPrice()

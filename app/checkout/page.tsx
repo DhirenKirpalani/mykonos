@@ -32,10 +32,10 @@ type CartItem = {
     image_urls: string[]
     price_usd: number
     price_idr: number
-    sale_price: number | null
     stock_quantity?: number
     min_purchase_quantity?: number | null
     max_purchase_quantity?: number | null
+    variants?: any
   }
 }
 
@@ -236,7 +236,7 @@ export default function CheckoutPage() {
         // Fetch all products
         const { data: products, error: productsError } = await supabase
           .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
+          .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
           .in('id', productIds)
 
         if (productsError || !products || products.length === 0) {
@@ -267,7 +267,6 @@ export default function CheckoutPage() {
                 image_urls: product.image_urls,
                 price_usd: product.price_usd,
                 price_idr: product.price_idr,
-                sale_price: product.sale_price,
                 stock_quantity: product.stock_quantity,
                 variants: product.variants
               }
@@ -327,7 +326,7 @@ export default function CheckoutPage() {
               const basePrice = region?.code === 'ID' && item.product.price_idr 
                 ? item.product.price_idr 
                 : item.product.price_usd || 0
-              const price = getEffectivePrice(basePrice, item.product.sale_price)
+              const price = getEffectivePrice(basePrice, null)
               const itemTotal = price * item.quantity
               
               const voucherDiscount = applicableVoucher.discount_type === 'percentage'
@@ -357,7 +356,7 @@ export default function CheckoutPage() {
         
         const { data: product, error: productError } = await supabase
           .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
+          .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
           .eq('id', productId)
           .single()
 
@@ -384,7 +383,6 @@ export default function CheckoutPage() {
             image_urls: typedProduct.image_urls,
             price_usd: typedProduct.price_usd,
             price_idr: typedProduct.price_idr,
-            sale_price: typedProduct.sale_price,
             variants: typedProduct.variants
           }
         }))
@@ -437,7 +435,7 @@ export default function CheckoutPage() {
               const basePrice = region?.code === 'ID' && item.product.price_idr 
                 ? item.product.price_idr 
                 : item.product.price_usd || 0
-              const price = getEffectivePrice(basePrice, item.product.sale_price)
+              const price = getEffectivePrice(basePrice, null)
               const itemTotal = price * item.quantity
               
               const voucherDiscount = applicableVoucher.discount_type === 'percentage'
@@ -464,7 +462,7 @@ export default function CheckoutPage() {
             .from('cart_items')
             .select(`
               *,
-              product:products(name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants)
+              product:products(name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants)
             `)
             .eq('user_id', session.user.id)
           console.log('🔍 [CHECKOUT INIT] Cart query completed, processing results...')
@@ -557,7 +555,7 @@ export default function CheckoutPage() {
                 const basePrice = region?.code === 'ID' && item.product.price_idr 
                   ? item.product.price_idr 
                   : item.product.price_usd || 0
-                const price = getEffectivePrice(basePrice, item.product.sale_price)
+                const price = getEffectivePrice(basePrice, null)
                 const itemTotal = price * item.quantity
                 
                 const voucherDiscount = applicableVoucher.discount_type === 'percentage'
@@ -610,7 +608,7 @@ export default function CheckoutPage() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity')
+        .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity')
         .gt('stock_quantity', 0)
         .limit(3)
         .order('created_at', { ascending: false })
@@ -628,7 +626,7 @@ export default function CheckoutPage() {
       // Fetch product details
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('id, name, slug, image_urls, price_usd, price_idr, sale_price, stock_quantity, min_purchase_quantity, max_purchase_quantity')
+        .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity')
         .eq('id', productId)
         .single()
 
@@ -645,7 +643,6 @@ export default function CheckoutPage() {
         image_urls: string[]
         price_usd: number
         price_idr: number
-        sale_price: number | null
       }
 
       // Check if already added to quick items
@@ -668,7 +665,6 @@ export default function CheckoutPage() {
             image_urls: typedProduct.image_urls,
             price_usd: typedProduct.price_usd,
             price_idr: typedProduct.price_idr,
-            sale_price: typedProduct.sale_price
           }
         }
         setQuickAddedItems([...quickAddedItems, newItem])
@@ -772,7 +768,7 @@ export default function CheckoutPage() {
         const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
           ? (item.product as any).price_idr 
           : (item.product as any).price_usd || 0
-        const price = getEffectivePrice(basePrice, item.product.sale_price)
+        const price = getEffectivePrice(basePrice, null)
         return total + (price * item.quantity)
       }, 0)
 
@@ -891,7 +887,7 @@ export default function CheckoutPage() {
           
           // Apply campaign discount first, then fall back to sale price
           const campaignDiscounted = getDiscountedPrice(product, item.product_id, itemWithVariant.variant_name)
-          const price = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, product.sale_price)
+          const price = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
           const quantity = item.quantity || 1
           const itemTotal = price * quantity
           
@@ -1037,7 +1033,7 @@ export default function CheckoutPage() {
           
           // Apply campaign discount first, then sale price, then voucher
           const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, itemWithVariant.variant_name)
-          const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, item.product.sale_price)
+          const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
           const voucherDiscount = voucherDiscounts.get(item.id) || 0
           // Voucher discount is total for all units, so divide by quantity to get per-unit price
           const totalItemPrice = effectivePrice * item.quantity
@@ -1333,7 +1329,7 @@ export default function CheckoutPage() {
           return {
             product_id: item.product_id,
             quantity: item.quantity,
-            price: campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, item.product.sale_price)
+            price: campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
           }
         })
         sessionPayload.items = itemsToCheckout
@@ -1345,7 +1341,7 @@ export default function CheckoutPage() {
           ? (item.product as any).price_idr 
           : (item.product as any).price_usd || 0
         const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
-        const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, item.product.sale_price)
+        const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
         
         return {
           product_id: item.product_id,
@@ -1503,7 +1499,7 @@ export default function CheckoutPage() {
           const itemName = (item as any).variant_name || item.product.name
           // Apply campaign discount first, then sale price, then voucher
           const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
-          const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, item.product.sale_price)
+          const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
           const voucherDiscount = voucherDiscounts.get(item.id) || 0
           // Voucher discount is total for all units, so divide by quantity to get per-unit price
           const totalItemPrice = effectivePrice * item.quantity
@@ -1919,7 +1915,7 @@ export default function CheckoutPage() {
   
   const subtotal = allItems.reduce((total, item) => {
     const basePrice = getBasePrice(item.product, (item as any).variant_sku)
-    const salePrice = getEffectivePrice(basePrice, item.product.sale_price)
+    const salePrice = getEffectivePrice(basePrice, null)
     // Apply campaign discount if available (takes priority over sale price)
     const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
     const price = discounted !== null ? discounted : salePrice
@@ -2054,7 +2050,7 @@ export default function CheckoutPage() {
             {/* Cart Items */}
             {allItems.map((item) => {
               const basePrice = getBasePrice(item.product, (item as any).variant_sku)
-              const salePrice = getEffectivePrice(basePrice, item.product.sale_price)
+              const salePrice = getEffectivePrice(basePrice, null)
               const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
               const price = campaignDiscounted !== null ? campaignDiscounted : salePrice
               const hasCampaignDiscount = campaignDiscounted !== null && campaignDiscounted < basePrice
@@ -2064,11 +2060,20 @@ export default function CheckoutPage() {
                   <div className="flex gap-3 sm:gap-4">
                     {/* Product Image */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                      <img
-                        src={item.product.image_urls[0]}
-                        alt={item.product.name}
-                        className="w-full h-full object-cover"
-                      />
+                      {item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? (
+                        <img
+                          src={item.product.image_urls[0]}
+                          alt={item.product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                          No image
+                        </div>
+                      )}
                     </div>
 
                     {/* Product Details & Controls */}

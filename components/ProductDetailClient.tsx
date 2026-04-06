@@ -35,7 +35,6 @@ interface ProductDetailClientProps {
     image_urls: string[]
     price: number
     price_idr?: number
-    sale_price?: number | null
     stock_quantity: number
     min_purchase_quantity?: number | null
     max_purchase_quantity?: number | null

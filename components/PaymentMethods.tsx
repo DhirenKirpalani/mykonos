@@ -63,6 +63,7 @@ export function PaymentMethods({ className = '', showTitle = false, size = 'medi
               height={logoHeight}
               className="w-auto object-contain"
               style={{
+                width: 'auto',
                 height: `${logoHeight}px`,
                 maxWidth: '100%',
                 transform: `scale(${method.scale})`,

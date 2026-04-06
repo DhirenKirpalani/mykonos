@@ -95,7 +95,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
         .from('wishlist_items')
         .select(`
           *,
-          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, sale_price, min_purchase_quantity, max_purchase_quantity, variants)
+          product:products(id, name, slug, image_urls, size, stock_quantity, price_usd, price_idr, min_purchase_quantity, max_purchase_quantity, variants)
         `)
         .eq('user_id', session.user.id)
 
@@ -146,12 +146,9 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
             )
             
             if (applicableVoucher) {
-              const basePrice = region?.code === 'ID' && item.product.price_idr 
+              const price = region?.code === 'ID' && item.product.price_idr 
                 ? item.product.price_idr 
                 : item.product.price_usd || 0
-              const price = item.product.sale_price && item.product.sale_price < basePrice 
-                ? item.product.sale_price 
-                : basePrice
               
               const voucherDiscount = applicableVoucher.discount_type === 'percentage'
                 ? (price * applicableVoucher.discount_value / 100)
@@ -373,23 +370,29 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                 <div className="divide-y divide-black/5">
                   {wishlistItems.map((item) => (
                     <div key={item.id} className="flex gap-6 py-8">
-                      <div className="relative h-24 w-20 flex-shrink-0">
-                        {isVideo(item.product.image_urls[0]) ? (
-                          <video
-                            src={item.product.image_urls[0]}
-                            className="h-full w-full object-cover"
-                            muted
-                            playsInline
-                            loop
-                          />
+                      <div className="relative h-24 w-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                        {item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? (
+                          isVideo(item.product.image_urls[0]) ? (
+                            <video
+                              src={item.product.image_urls[0]}
+                              className="h-full w-full object-cover"
+                              muted
+                              playsInline
+                              loop
+                            />
+                          ) : (
+                            <Image
+                              src={item.product.image_urls[0]}
+                              alt={item.product.name}
+                              fill
+                              sizes="80px"
+                              className="object-cover"
+                            />
+                          )
                         ) : (
-                          <Image
-                            src={item.product.image_urls[0]}
-                            alt={item.product.name}
-                            fill
-                            sizes="80px"
-                            className="object-cover"
-                          />
+                          <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
+                            No image
+                          </div>
                         )}
                       </div>
 

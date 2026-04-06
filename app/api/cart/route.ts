@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       
       const price = getEffectivePrice(
         basePrice,
-        item.product.sale_price
+        null
       )
       return total + (price * item.quantity)
     }, 0)
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const priceAtAdd = getEffectivePrice(basePrice, typedProduct.sale_price)
+    const priceAtAdd = getEffectivePrice(basePrice, null)
 
     // Check if item already in cart (same product AND same variant)
     let query = supabase

@@ -1113,9 +1113,12 @@ export default function TrackOrderPage() {
                     {order.order_items.map((item) => (
                       <div key={item.id} className="flex gap-3">
                         <img
-                          src={item.product.image_urls[0] || '/placeholder.png'}
+                          src={item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? item.product.image_urls[0] : '/placeholder.png'}
                           alt={item.product.name}
                           className="w-16 h-16 object-cover rounded-lg"
+                          onError={(e) => {
+                            e.currentTarget.src = '/placeholder.png'
+                          }}
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p>

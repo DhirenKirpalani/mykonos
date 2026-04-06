@@ -178,7 +178,6 @@ export default function OrderDetailsPage() {
               image_urls,
               price_usd,
               price_idr,
-              sale_price,
               stock_quantity,
               variants
             )

@@ -53,7 +53,6 @@ export async function POST(request: Request) {
             name,
             price_usd,
             price_idr,
-            sale_price,
             stock_quantity,
             variants
           )
@@ -95,8 +94,7 @@ export async function POST(request: Request) {
         const subtotal = cartItems.reduce((sum, item) => {
           const product = item.products as any
           const price = region_code === 'ID' ? product.price_idr : product.price_usd
-          const effectivePrice = product.sale_price || price
-          return sum + (effectivePrice * item.quantity)
+          return sum + (price * item.quantity)
         }, 0)
 
         pricing_snapshot = {
