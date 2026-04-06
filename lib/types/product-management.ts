@@ -35,7 +35,6 @@ export interface ProductFormData {
   slug: string
   description: string
   price: number
-  sale_price?: number | null
   size: string
   category: string
   collection: string

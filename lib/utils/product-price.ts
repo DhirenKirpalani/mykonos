@@ -5,7 +5,6 @@
 export interface ProductWithPrices {
   price_usd?: number | null
   price_idr?: number | null
-  sale_price?: number | null
   compare_at_price?: number | null
 }
 
@@ -34,11 +33,6 @@ export function getEffectiveProductPrice(
   // For IDR region, use compare_at_price if available and lower than base price
   if (regionCode === 'ID' && product.compare_at_price && product.compare_at_price < basePrice) {
     return product.compare_at_price
-  }
-  
-  // For other regions, use sale_price if available and lower than base price
-  if (product.sale_price && product.sale_price < basePrice) {
-    return product.sale_price
   }
   
   return basePrice
