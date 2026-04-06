@@ -313,7 +313,6 @@ export default function ProductDetailPage({
               stockQuantity={product.stock_quantity || 0}
               price={(product as any).price_usd}
               priceIdr={(product as any).price_idr}
-              salePrice={product.sale_price}
               compareAtPrice={(product as any).compare_at_price}
               voucher={voucher}
               activeDiscounts={activeDiscounts}
@@ -323,7 +322,6 @@ export default function ProductDetailPage({
                 image_urls: (product as any).image_urls || [],
                 price: (product as any).price_usd || 0,
                 price_idr: (product as any).price_idr,
-                sale_price: product.sale_price,
                 stock_quantity: product.stock_quantity || 0,
                 min_purchase_quantity: (product as any).min_purchase_quantity,
                 max_purchase_quantity: (product as any).max_purchase_quantity,
