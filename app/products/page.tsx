@@ -124,7 +124,8 @@ function ProductsContent() {
   const category = searchParams.get('category') || undefined
   const collection = searchParams.get('collection') || undefined
   const isNew = searchParams.get('new') || undefined
-  const sort = searchParams.get('sort') || 'best-selling'
+  const filter = searchParams.get('filter') || undefined
+  const sort = searchParams.get('sort') || undefined
   const page = searchParams.get('page') || '1'
   
   const currentPage = parseInt(page)
@@ -136,7 +137,42 @@ function ProductsContent() {
       const from = (currentPage - 1) * ITEMS_PER_PAGE
       const to = from + ITEMS_PER_PAGE - 1
 
+      let productIds: string[] | null = null
+
+      // For newest filter, use products_new_status view like homepage
+      if (filter === 'newest') {
+        const { data: newProducts } = await supabase
+          .from('products_new_status')
+          .select('id')
+          .eq('is_new_final', true)
+        
+        if (newProducts && newProducts.length > 0) {
+          productIds = newProducts.map(p => p.id)
+        } else {
+          productIds = [] // No new products
+        }
+      }
+
       let query = supabase.from('products').select('*', { count: 'exact' })
+        .eq('is_visible', true)
+        .eq('is_archived', false)
+        .eq('status', 'active')
+
+      // Apply filter (like homepage)
+      if (filter === 'popular') {
+        query = query.eq('is_popular', true)
+      } else if (filter === 'best-selling') {
+        query = query.eq('is_best_selling', true)
+      } else if (filter === 'newest' && productIds) {
+        if (productIds.length === 0) {
+          // No new products, return empty
+          setProducts([])
+          setTotalCount(0)
+          setIsLoading(false)
+          return
+        }
+        query = query.in('id', productIds)
+      }
 
       if (category) {
         query = query.eq('fragrance_family', category)
@@ -154,21 +190,14 @@ function ProductsContent() {
         query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
       }
 
-      switch (sort) {
-        case 'popular':
-          query = query.order('rating', { ascending: false }).order('products_sold', { ascending: false })
-          break
-        case 'best-selling':
-          query = query.order('products_sold', { ascending: false })
-          break
-        case 'price-asc':
-          query = query.order('price_idr', { ascending: true })
-          break
-        case 'price-desc':
-          query = query.order('price_idr', { ascending: false })
-          break
-        default:
-          query = query.order('created_at', { ascending: false })
+      // Apply sorting
+      if (sort === 'price-asc') {
+        query = query.order('price_idr', { ascending: true, nullsFirst: false })
+      } else if (sort === 'price-desc') {
+        query = query.order('price_idr', { ascending: false, nullsFirst: false })
+      } else {
+        // Default sort by creation date (newest first)
+        query = query.order('created_at', { ascending: false })
       }
 
       query = query.range(from, to)
@@ -187,7 +216,7 @@ function ProductsContent() {
     }
 
     fetchProducts()
-  }, [category, collection, isNew, sort, currentPage, searchQuery])
+  }, [category, collection, isNew, filter, sort, currentPage, searchQuery])
 
   // Prevent hydration mismatch - render loading state until mounted
   if (!mounted) {
@@ -254,17 +283,17 @@ function ProductsContent() {
           />
         </div>
 
-        {/* Sort Controls - Sticky (Mobile Only) */}
+        {/* Filter Controls - Sticky (Mobile Only) */}
         <div className="sticky top-0 z-10 bg-white py-2 mb-3 border-b border-gray-100 lg:hidden">
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
-                params.set('sort', 'popular')
+                params.set('filter', 'popular')
                 router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                sort === 'popular'
+                filter === 'popular'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -274,11 +303,11 @@ function ProductsContent() {
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
-                params.set('sort', 'newest')
+                params.set('filter', 'newest')
                 router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                sort === 'newest'
+                filter === 'newest'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -288,11 +317,11 @@ function ProductsContent() {
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
-                params.set('sort', 'best-selling')
+                params.set('filter', 'best-selling')
                 router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                sort === 'best-selling'
+                filter === 'best-selling'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -302,8 +331,7 @@ function ProductsContent() {
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
-                const currentPrice = sort?.startsWith('price-') ? sort : null
-                if (currentPrice === 'price-asc') {
+                if (sort === 'price-asc') {
                   params.set('sort', 'price-desc')
                 } else {
                   params.set('sort', 'price-asc')

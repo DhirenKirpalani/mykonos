@@ -84,6 +84,10 @@ export default function NewProductPage() {
     min_purchase_quantity: string
     max_purchase_quantity: string
     image_url: string
+    image_file?: File | null
+    video_file?: File | null
+    image_preview?: string
+    video_preview?: string
   }>>([])
   const [variantStockModalOpen, setVariantStockModalOpen] = useState(false)
   const [savedProductId, setSavedProductId] = useState<string | null>(null)
@@ -159,6 +163,45 @@ export default function NewProductPage() {
     }
   }
 
+  const uploadVariantMedia = async (session: any, productName: string, variantName: string, imageFile?: File | null, videoFile?: File | null) => {
+    const files = []
+    if (imageFile) files.push(imageFile)
+    if (videoFile) files.push(videoFile)
+    
+    if (files.length === 0) return { imageUrl: '', videoUrl: '' }
+
+    try {
+      const formData = new FormData()
+      files.forEach(file => {
+        formData.append('files', file)
+      })
+      formData.append('productName', `${productName}-${variantName}`)
+
+      const response = await fetch('/api/upload/product-media', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to upload variant media')
+      }
+
+      const data = await response.json()
+      const urls = data.urls || []
+      
+      return {
+        imageUrl: imageFile ? urls[0] || '' : '',
+        videoUrl: videoFile ? (imageFile ? urls[1] || '' : urls[0] || '') : ''
+      }
+    } catch (error) {
+      console.error('Error uploading variant media:', error)
+      return { imageUrl: '', videoUrl: '' }
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -176,6 +219,38 @@ export default function NewProductPage() {
 
       // Upload media files first (pass product name for folder)
       const mediaUrls = await uploadMedia(session, formData.name)
+
+      // Upload variant media files
+      const variantsWithMedia = await Promise.all(
+        variants.filter(v => v.name).map(async (v) => {
+          let imageUrl = v.image_url || ''
+          
+          // If there's a new image file to upload
+          if (v.image_file) {
+            const { imageUrl: uploadedImageUrl } = await uploadVariantMedia(
+              session,
+              formData.name,
+              v.name,
+              v.image_file,
+              v.video_file
+            )
+            imageUrl = uploadedImageUrl
+          }
+          
+          return {
+            name: v.name,
+            sku: v.sku,
+            price_usd: parseFloat(v.price_usd) || 0,
+            price_idr: parseFloat(v.price_idr) || 0,
+            stock_quantity: parseInt(v.stock_quantity) || 0,
+            low_stock_threshold: v.low_stock_threshold ? parseInt(v.low_stock_threshold) : null,
+            in_stock: v.in_stock !== undefined ? v.in_stock : true,
+            min_purchase_quantity: v.min_purchase_quantity ? parseInt(v.min_purchase_quantity) : 1,
+            max_purchase_quantity: v.max_purchase_quantity ? parseInt(v.max_purchase_quantity) : null,
+            image_url: imageUrl
+          }
+        })
+      )
 
       const response = await fetch('/api/products/admin', {
         method: 'POST',
@@ -217,18 +292,7 @@ export default function NewProductPage() {
           new_product_duration_days: formData.new_product_duration_days ? parseInt(formData.new_product_duration_days.toString()) : 30,
           image_urls: mediaUrls,
           image_alt_texts: imageAltTexts,
-          variants: variants.filter(v => v.name).map(v => ({
-            name: v.name,
-            sku: v.sku,
-            price_usd: parseFloat(v.price_usd) || 0,
-            price_idr: parseFloat(v.price_idr) || 0,
-            stock_quantity: parseInt(v.stock_quantity) || 0,
-            low_stock_threshold: v.low_stock_threshold ? parseInt(v.low_stock_threshold) : null,
-            in_stock: v.in_stock !== undefined ? v.in_stock : true,
-            min_purchase_quantity: v.min_purchase_quantity ? parseInt(v.min_purchase_quantity) : 1,
-            max_purchase_quantity: v.max_purchase_quantity ? parseInt(v.max_purchase_quantity) : null,
-            image_url: v.image_url
-          })),
+          variants: variantsWithMedia,
         })
       })
 
@@ -459,12 +523,20 @@ export default function NewProductPage() {
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
+                  id="tax_enabled"
                   name="tax_enabled"
                   checked={formData.tax_enabled}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tax_enabled: e.target.checked }))}
+                  onChange={(e) => {
+                    console.log('Tax enabled checkbox changed:', e.target.checked)
+                    setFormData(prev => {
+                      const updated = { ...prev, tax_enabled: e.target.checked }
+                      console.log('Updated formData.tax_enabled:', updated.tax_enabled)
+                      return updated
+                    })
+                  }}
                   className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
                 />
-                <label className="text-sm font-medium text-gray-700">
+                <label htmlFor="tax_enabled" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Include Tax in Pricing
                 </label>
               </div>
@@ -1147,19 +1219,100 @@ export default function NewProductPage() {
                       className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Image URL</label>
-                    <input
-                      type="text"
-                      value={variant.image_url}
-                      onChange={(e) => {
-                        const newVariants = [...variants]
-                        newVariants[index].image_url = e.target.value
-                        setVariants(newVariants)
-                      }}
-                      placeholder="Optional variant image"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                    />
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Variant Media</label>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {/* Variant Image Upload */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Image</label>
+                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-4 py-6 transition-colors hover:border-luxury-gold">
+                          <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="mt-1 text-xs text-gray-600">Upload Image</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                const reader = new FileReader()
+                                reader.onloadend = () => {
+                                  const newVariants = [...variants]
+                                  newVariants[index].image_file = file
+                                  newVariants[index].image_preview = reader.result as string
+                                  setVariants(newVariants)
+                                }
+                                reader.readAsDataURL(file)
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        {variant.image_preview && (
+                          <div className="mt-2 relative">
+                            <img src={variant.image_preview} alt="Variant preview" className="h-20 w-20 rounded-lg object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newVariants = [...variants]
+                                newVariants[index].image_file = null
+                                newVariants[index].image_preview = undefined
+                                setVariants(newVariants)
+                              }}
+                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Variant Video Upload */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Video</label>
+                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-4 py-6 transition-colors hover:border-luxury-gold">
+                          <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span className="mt-1 text-xs text-gray-600">Upload Video</span>
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                const reader = new FileReader()
+                                reader.onloadend = () => {
+                                  const newVariants = [...variants]
+                                  newVariants[index].video_file = file
+                                  newVariants[index].video_preview = reader.result as string
+                                  setVariants(newVariants)
+                                }
+                                reader.readAsDataURL(file)
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        {variant.video_preview && (
+                          <div className="mt-2 relative">
+                            <video src={variant.video_preview} className="h-20 w-full rounded-lg object-cover" controls />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newVariants = [...variants]
+                                newVariants[index].video_file = null
+                                newVariants[index].video_preview = undefined
+                                setVariants(newVariants)
+                              }}
+                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

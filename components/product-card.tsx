@@ -196,17 +196,34 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   }
   
   // Check if first media is a video
-  const isVideo = (url: string | undefined) => {
+  const isVideo = (url: string) => {
     if (!url) return false
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
   }
   
-  const firstMedia = product.image_urls?.[0]
+  // Check if product has variants with images
+  const variantImages = hasVariants 
+    ? (product as any).variants
+        .map((v: any) => v.image_url)
+        .filter((url: string) => url && !url.includes('placehold.co'))
+    : []
+  
+  // Filter out invalid placeholder URLs from product images
+  const validImageUrls = product.image_urls?.filter(url => 
+    url && !url.includes('placehold.co')
+  ) || []
+  
+  // Prioritize variant images over product images for thumbnail
+  const allMediaUrls = variantImages.length > 0 
+    ? [...variantImages, ...validImageUrls]
+    : validImageUrls
+  
+  const firstMedia = allMediaUrls[0]
   const isFirstMediaVideo = firstMedia ? isVideo(firstMedia) : false
   
   // If first media is video, try to find first image for thumbnail
-  const thumbnailUrl = isFirstMediaVideo && product.image_urls && product.image_urls.length > 1
-    ? product.image_urls.find(url => url && !isVideo(url)) || firstMedia
+  const thumbnailUrl = isFirstMediaVideo && allMediaUrls.length > 1
+    ? allMediaUrls.find(url => url && !isVideo(url)) || firstMedia
     : firstMedia
 
   return (
@@ -304,7 +321,11 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                   group-hover:scale-[1.04]
                 "
                 quality={90}
-                priority
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                }}
               />
             )
           ) : (

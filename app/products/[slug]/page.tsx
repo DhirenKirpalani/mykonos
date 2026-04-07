@@ -184,7 +184,22 @@ export default function ProductDetailPage({
           {/* Image Gallery */}
           <div className="w-full">
             <ProductImageGallery 
-              images={product.image_urls} 
+              images={(() => {
+                // Get variant images if available
+                const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
+                const variantImages = hasVariants 
+                  ? (product as any).variants
+                      .map((v: any) => v.image_url)
+                      .filter((url: string) => url && url.trim() !== '')
+                  : []
+                
+                // Combine variant images with product images
+                const allImages = variantImages.length > 0 
+                  ? [...variantImages, ...product.image_urls]
+                  : product.image_urls
+                
+                return allImages
+              })()} 
               productName={product.name} 
               voucher={voucher} 
               onVoucherExpire={handleVoucherExpire}

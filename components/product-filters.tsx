@@ -15,12 +15,10 @@ const fragranceFamilies = [
   'Powdery Elegance',
   'Gourmand Galore',
 ]
-const sortOptions = [
+const filterOptions = [
   { value: 'popular', label: 'Popular' },
   { value: 'newest', label: 'Newest' },
   { value: 'best-selling', label: 'Best Selling' },
-  { value: 'price-asc', label: 'Price ↑' },
-  { value: 'price-desc', label: 'Price ↓' },
 ]
 
 export function ProductFilters() {
@@ -45,55 +43,95 @@ export function ProductFilters() {
   }
 
   const clearFilters = () => {
-    router.push('/products')
+    router.push('/products?filter=all')
   }
 
   const currentCategory = searchParams.get('category')
-  const currentSort = searchParams.get('sort') || 'best-selling'
+  const currentFilter = searchParams.get('filter') || undefined
+  const currentSort = searchParams.get('sort')
 
   // Fetch product counts for each category
   useEffect(() => {
     async function fetchCategoryCounts() {
       try {
-        console.log('🔍 [CATEGORY COUNTS] Starting to fetch category counts...')
+        console.log('🔍 [CATEGORY COUNTS] Starting to fetch category counts with filter:', currentFilter)
         
-        // Get total count of visible products
-        const { count: total, error: totalError } = await supabase
+        // Build base query with filter applied
+        let baseQuery = supabase
           .from('products')
           .select('*', { count: 'exact', head: true })
           .eq('is_visible', true)
+          .eq('is_archived', false)
+          .eq('status', 'active')
         
-        console.log('📊 [CATEGORY COUNTS] Total visible products:', total)
+        // Apply the current filter to base query (skip if 'all')
+        if (currentFilter === 'popular') {
+          baseQuery = baseQuery.eq('is_popular', true)
+        } else if (currentFilter === 'best-selling') {
+          baseQuery = baseQuery.eq('is_best_selling', true)
+        } else if (currentFilter === 'newest') {
+          // For newest, we need to get IDs from products_new_status view
+          const { data: newProducts } = await supabase
+            .from('products_new_status')
+            .select('id')
+            .eq('is_new_final', true)
+          
+          if (newProducts && newProducts.length > 0) {
+            const productIds = newProducts.map(p => p.id)
+            baseQuery = baseQuery.in('id', productIds)
+          } else {
+            // No new products
+            setTotalCount(0)
+            setCategoryCounts({})
+            setIsLoadingCounts(false)
+            return
+          }
+        }
+        
+        const { count: total, error: totalError } = await baseQuery
+        
+        console.log('📊 [CATEGORY COUNTS] Total filtered products:', total)
         if (totalError) console.error('❌ [CATEGORY COUNTS] Error fetching total:', totalError)
         
         setTotalCount(total || 0)
 
-        // First, let's check what fragrance_family values actually exist
-        const { data: allProducts, error: allError } = await supabase
-          .from('products')
-          .select('fragrance_family, is_visible')
-          .eq('is_visible', true)
-        
-        console.log('📦 [CATEGORY COUNTS] All visible products fragrance_family values:', 
-          allProducts?.map(p => p.fragrance_family))
-        if (allError) console.error('❌ [CATEGORY COUNTS] Error fetching all products:', allError)
-
-        // Get counts for each fragrance family (only visible products)
+        // Get counts for each fragrance family with the same filter applied
         const counts: Record<string, number> = {}
         console.log('🏷️ [CATEGORY COUNTS] Checking counts for families:', fragranceFamilies)
         
         for (const family of fragranceFamilies) {
-          const { count, error, data } = await supabase
+          let familyQuery = supabase
             .from('products')
-            .select('id, name, fragrance_family, is_visible', { count: 'exact' })
+            .select('id, name, fragrance_family', { count: 'exact' })
             .eq('fragrance_family', family)
             .eq('is_visible', true)
+            .eq('is_archived', false)
+            .eq('status', 'active')
+          
+          // Apply the current filter (skip if 'all')
+          if (currentFilter === 'popular') {
+            familyQuery = familyQuery.eq('is_popular', true)
+          } else if (currentFilter === 'best-selling') {
+            familyQuery = familyQuery.eq('is_best_selling', true)
+          } else if (currentFilter === 'newest') {
+            const { data: newProducts } = await supabase
+              .from('products_new_status')
+              .select('id')
+              .eq('is_new_final', true)
+            
+            if (newProducts && newProducts.length > 0) {
+              const productIds = newProducts.map(p => p.id)
+              familyQuery = familyQuery.in('id', productIds)
+            } else {
+              counts[family] = 0
+              continue
+            }
+          }
+          
+          const { count, error } = await familyQuery
           
           counts[family] = count || 0
           console.log(`   ${family}: ${count || 0} products`, error ? `(Error: ${error.message})` : '')
-          if (data && data.length > 0) {
-            console.log(`      Sample products:`, data.slice(0, 3).map(p => p.name))
-          }
         }
         
         console.log('✅ [CATEGORY COUNTS] Final counts:', counts)
@@ -106,7 +144,7 @@ export function ProductFilters() {
       }
     }
     fetchCategoryCounts()
-  }, [])
+  }, [currentFilter])
 
   // Initialize temp category when modal opens
   const handleOpenModal = () => {
@@ -241,12 +279,12 @@ export function ProductFilters() {
       <div className="hidden space-y-6 lg:block">
         {/* Sort Section */}
         <div>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">{t.productsPage.sort.popular.split(' ')[0]}</h3>
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">FILTER</h3>
           <div className="space-y-2">
             <button
-              onClick={() => updateFilter('sort', 'popular')}
+              onClick={() => updateFilter('filter', 'popular')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentSort === 'popular'
+                currentFilter === 'popular'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -254,9 +292,9 @@ export function ProductFilters() {
               {t.productsPage.sort.popular}
             </button>
             <button
-              onClick={() => updateFilter('sort', 'newest')}
+              onClick={() => updateFilter('filter', 'newest')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentSort === 'newest'
+                currentFilter === 'newest'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -264,9 +302,9 @@ export function ProductFilters() {
               {t.productsPage.sort.newest}
             </button>
             <button
-              onClick={() => updateFilter('sort', 'best-selling')}
+              onClick={() => updateFilter('filter', 'best-selling')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentSort === 'best-selling'
+                currentFilter === 'best-selling'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
@@ -275,23 +313,29 @@ export function ProductFilters() {
             </button>
             <button
               onClick={() => {
-                const currentPrice = currentSort?.startsWith('price-') ? currentSort : null
-                if (currentPrice === 'price-asc') {
+                const currentSort = searchParams.get('sort')
+                if (currentSort === 'price-asc') {
                   updateFilter('sort', 'price-desc')
                 } else {
                   updateFilter('sort', 'price-asc')
                 }
               }}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
-                currentSort?.startsWith('price-')
+                searchParams.get('sort')?.startsWith('price-')
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              {t.productsPage.price} {currentSort === 'price-desc' ? '↓' : '↑'}
+              {t.productsPage.price} {searchParams.get('sort') === 'price-desc' ? '↓' : '↑'}
             </button>
           </div>
         </div>
+
+        {(currentCategory || currentFilter !== 'all' || currentSort) && (
+          <Button variant="outline" onClick={clearFilters} className="w-full">
+            {t.productsPage.clearFilters}
+          </Button>
+        )}
 
         {/* Fragrance Family Section */}
         <div>
@@ -323,12 +367,6 @@ export function ProductFilters() {
             ))}
           </div>
         </div>
-
-        {currentCategory && (
-          <Button variant="outline" onClick={clearFilters} className="w-full">
-            {t.productsPage.clearFilters}
-          </Button>
-        )}
       </div>
     </>
   )

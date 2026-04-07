@@ -27,6 +27,8 @@ export async function GET(request: Request) {
     const priceMax = searchParams.get('price_max')
     const inStock = searchParams.get('in_stock')
     const search = searchParams.get('search')
+    const filter = searchParams.get('filter')
+    const limit = searchParams.get('limit')
     
     // Sorting
     const sort = searchParams.get('sort') || 'editorial' // editorial, price-asc, price-desc, new-arrivals
@@ -35,6 +37,34 @@ export async function GET(request: Request) {
     let query = supabase
       .from('products')
       .select('*', { count: 'exact' })
+      .eq('is_visible', true)
+      .eq('is_archived', false)
+      .eq('status', 'active')
+
+    // Apply filter (best-selling, popular, newest)
+    if (filter === 'best-selling') {
+      query = query.eq('is_best_selling', true)
+    } else if (filter === 'popular') {
+      query = query.eq('is_popular', true)
+    } else if (filter === 'newest') {
+      const { data: newProducts } = await supabase
+        .from('products_new_status')
+        .select('id')
+        .eq('is_new_final', true)
+      
+      if (newProducts && newProducts.length > 0) {
+        const productIds = newProducts.map(p => p.id)
+        query = query.in('id', productIds)
+      } else {
+        return NextResponse.json({
+          products: [],
+          total: 0,
+          page,
+          per_page: perPage,
+          total_pages: 0,
+        })
+      }
+    }
 
     // Apply filters
     if (collection) {
@@ -64,17 +94,17 @@ export async function GET(request: Request) {
     // Apply sorting
     switch (sort) {
       case 'price-asc':
-        query = query.order('price', { ascending: true })
+        query = query.order('price_usd', { ascending: true })
         break
       case 'price-desc':
-        query = query.order('price', { ascending: false })
+        query = query.order('price_usd', { ascending: false })
         break
       case 'new-arrivals':
         query = query.order('created_at', { ascending: false })
         break
       case 'editorial':
       default:
-        query = query.order('editorial_priority', { ascending: false })
+        query = query.order('created_at', { ascending: false })
         break
     }
 

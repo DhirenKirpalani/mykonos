@@ -85,6 +85,7 @@ export default function BulkUploadWithMediaPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadComplete, setUploadComplete] = useState(false)
   const [stats, setStats] = useState<any>(null)
+  const [uploadErrors, setUploadErrors] = useState<any[]>([])
   const [showPreview, setShowPreview] = useState(false)
   const [parsedProducts, setParsedProducts] = useState<ParsedProduct[]>([])
   const [previewData, setPreviewData] = useState<{ csvFile: File | null, mediaFiles: File[] }>({ csvFile: null, mediaFiles: [] })
@@ -437,12 +438,21 @@ export default function BulkUploadWithMediaPage() {
 
       if (response.ok) {
         setStats(result.stats)
+        setUploadErrors(result.errors || [])
         setUploadComplete(true)
-        toast.success(`Successfully uploaded ${result.stats.successful} products!`)
+        
+        if (result.stats.failed > 0) {
+          toast.warning(`Uploaded ${result.stats.successful} products. ${result.stats.failed} failed (see details below)`)
+        } else {
+          toast.success(`Successfully uploaded ${result.stats.successful} products!`)
+        }
         // Refresh audit logs
         fetchAuditLogs()
       } else {
         toast.error(result.error || 'Upload failed')
+        if (result.errors) {
+          setUploadErrors(result.errors)
+        }
       }
     } catch (error: any) {
       console.error('Upload error:', error)
@@ -794,20 +804,73 @@ export default function BulkUploadWithMediaPage() {
 
       {/* Results */}
       {uploadComplete && stats && (
-        <div className="rounded-lg bg-green-50 p-6 border border-green-200">
-          <div className="flex items-start gap-4">
-            <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
-            <div>
-              <h3 className="font-semibold text-green-900">Upload Complete!</h3>
-              <div className="mt-2 space-y-1 text-sm text-green-800">
-                <p>✓ Uploaded {stats.mediaUploaded} media files</p>
-                <p>✓ Created {stats.successful} products</p>
-                {stats.failed > 0 && (
-                  <p className="text-red-600">✗ {stats.failed} products failed</p>
-                )}
+        <div className="space-y-4">
+          <div className={`rounded-lg p-6 border ${stats.failed > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+            <div className="flex items-start gap-4">
+              {stats.failed > 0 ? (
+                <AlertCircle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-1" />
+              ) : (
+                <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+              )}
+              <div className="flex-1">
+                <h3 className={`font-semibold ${stats.failed > 0 ? 'text-yellow-900' : 'text-green-900'}`}>
+                  {stats.failed > 0 ? 'Upload Completed with Warnings' : 'Upload Complete!'}
+                </h3>
+                <div className="mt-2 space-y-1 text-sm">
+                  <p className="text-green-800">✓ Uploaded {stats.mediaUploaded} media files</p>
+                  <p className="text-green-800">✓ Created {stats.successful} products</p>
+                  {stats.failed > 0 && (
+                    <p className="text-red-600 font-medium">✗ {stats.failed} products failed or skipped</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Error Details */}
+          {uploadErrors.length > 0 && (
+            <div className="rounded-lg bg-red-50 p-6 border border-red-200">
+              <div className="flex items-start gap-4">
+                <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900 mb-3">Upload Errors & Warnings</h3>
+                  <div className="space-y-3">
+                    {uploadErrors.map((error, idx) => (
+                      <div key={idx} className="bg-white rounded-lg p-4 border border-red-200">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 mt-0.5">
+                            {error.error === 'Duplicate product' ? (
+                              <AlertCircle className="h-5 w-5 text-yellow-600" />
+                            ) : (
+                              <AlertCircle className="h-5 w-5 text-red-600" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-gray-900">{error.product}</span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                error.error === 'Duplicate product' 
+                                  ? 'bg-yellow-100 text-yellow-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {error.error}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700">{error.message}</p>
+                            {error.existingId && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Existing product ID: <code className="bg-gray-100 px-1 rounded">{error.existingId}</code>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

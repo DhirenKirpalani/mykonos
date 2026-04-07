@@ -19,9 +19,15 @@ type OrderItem = {
   quantity: number
   price_at_purchase: number
   variant_name?: string | null
+  variant_sku?: string | null
   product: {
     name: string
     image_urls: string[]
+    variants?: Array<{
+      name: string
+      sku: string
+      image_url?: string
+    }>
   }
 }
 
@@ -1113,15 +1119,25 @@ export default function TrackOrderPage() {
                     {order.order_items.map((item) => (
                       <div key={item.id} className="flex gap-3">
                         <img
-                          src={item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? item.product.image_urls[0] : '/placeholder.png'}
-                          alt={item.product.name}
+                          src={(() => {
+                            // Get variant image if item has variant
+                            if (item.variant_name && item.product.variants) {
+                              const variant = item.product.variants.find(v => v.name === item.variant_name)
+                              if (variant?.image_url) {
+                                return variant.image_url
+                              }
+                            }
+                            // Fallback to product image
+                            return item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? item.product.image_urls[0] : '/placeholder.png'
+                          })()}
+                          alt={item.variant_name || item.product.name}
                           className="w-16 h-16 object-cover rounded-lg"
                           onError={(e) => {
                             e.currentTarget.src = '/placeholder.png'
                           }}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
+                          <p className="text-sm font-medium text-gray-900 truncate">{item.variant_name || item.product.name}</p>
                           <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                         </div>
                         <div className="text-right">

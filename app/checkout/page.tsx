@@ -356,7 +356,7 @@ export default function CheckoutPage() {
         
         const { data: product, error: productError } = await supabase
           .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
+          .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled')
           .eq('id', productId)
           .single()
 
@@ -383,7 +383,8 @@ export default function CheckoutPage() {
             image_urls: typedProduct.image_urls,
             price_usd: typedProduct.price_usd,
             price_idr: typedProduct.price_idr,
-            variants: typedProduct.variants
+            variants: typedProduct.variants,
+            tax_enabled: typedProduct.tax_enabled
           }
         }))
 
@@ -462,7 +463,7 @@ export default function CheckoutPage() {
             .from('cart_items')
             .select(`
               *,
-              product:products(name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants)
+              product:products(name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled)
             `)
             .eq('user_id', session.user.id)
           console.log('🔍 [CHECKOUT INIT] Cart query completed, processing results...')
@@ -902,11 +903,33 @@ export default function CheckoutPage() {
             quantity: quantity,
             price: price - (itemVoucherDiscount / quantity), // Net price per unit
             variant_name: itemWithVariant.variant_name,
-            variant_sku: itemWithVariant.variant_sku
+            variant_sku: itemWithVariant.variant_sku,
+            tax_enabled: (product as any).tax_enabled || false
           }
         })
         
         console.log('📝 [ORDER] Creating manual checkout session...')
+        console.log('📦 [BUY NOW] Cart snapshot:', cartSnapshot)
+        
+        // Calculate tax only for taxable items in manual checkout
+        const manualTaxableAmount = cartSnapshot.reduce((total: number, item: any) => {
+          console.log(`🔍 [BUY NOW] Tax check for product ${item.product_id}:`, {
+            tax_enabled: item.tax_enabled,
+            price: item.price,
+            quantity: item.quantity
+          })
+          if (item.tax_enabled) {
+            const itemAmount = item.price * item.quantity
+            console.log(`  ✅ [BUY NOW] Adding to taxable amount: ${itemAmount}`)
+            return total + itemAmount
+          }
+          console.log(`  ❌ [BUY NOW] Tax disabled, skipping`)
+          return total
+        }, 0)
+        const manualTax = manualTaxableAmount * 0.1
+        console.log(`💰 [BUY NOW] Taxable amount: ${manualTaxableAmount}, Tax (10%): ${manualTax}`)
+        const manualShipping = subtotal >= 100 ? 0 : 15
+        
         const sessionResponse = await fetch('/api/checkout/session/manual', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -916,9 +939,9 @@ export default function CheckoutPage() {
             pricing_snapshot: {
               subtotal: subtotal + voucherDiscountTotal, // Original subtotal before discount
               discount: voucherDiscountTotal,
-              shipping: subtotal >= 100 ? 0 : 15,
-              tax: subtotal * 0.1,
-              total: subtotal + (subtotal >= 100 ? 0 : 15) + (subtotal * 0.1),
+              shipping: manualShipping,
+              tax: manualTax,
+              total: subtotal + manualShipping + manualTax,
               currency_code: region?.currency_code || 'USD'
             }
           }),
@@ -1053,13 +1076,13 @@ export default function CheckoutPage() {
           price: convertToIDR(shipping),
           quantity: 1,
         },
-        // Add tax as a line item
-        {
+        // Add tax as a line item only if tax > 0
+        ...(tax > 0 ? [{
           id: 'tax',
           name: 'Tax (10%)',
           price: convertToIDR(tax),
           quantity: 1,
-        }
+        }] : [])
       ]
 
       // ⭐ STEP 1: Create order FIRST (before token generation)
@@ -1518,12 +1541,13 @@ export default function CheckoutPage() {
           price: convertToIDR(shipping),
           quantity: 1,
         },
-        {
+        // Add tax as a line item only if tax > 0
+        ...(tax > 0 ? [{
           id: 'tax',
           name: 'Tax (10%)',
           price: convertToIDR(tax),
           quantity: 1,
-        }
+        }] : [])
       ]
 
       console.log('📤 [GUEST TOKEN DEBUG] Calling Midtrans API...', {
@@ -1928,7 +1952,29 @@ export default function CheckoutPage() {
   // Calculate net amount after voucher discount for tax calculation
   const netAmount = subtotal - totalVoucherDiscount
   const shipping = netAmount >= 100 ? 0 : shippingCost
-  const tax = netAmount * 0.1
+  
+  // Calculate tax only for products with tax_enabled = true
+  const taxableAmount = cartItems.reduce((total, item) => {
+    const product = item.product as any
+    console.log(`🔍 Tax calculation for ${product.name}:`, {
+      tax_enabled: product.tax_enabled,
+      product_id: item.product_id
+    })
+    if (product.tax_enabled) {
+      const salePrice = region?.code === 'ID' ? product.price_idr : product.price_usd
+      const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
+      const price = discounted !== null ? discounted : salePrice
+      const voucherDiscount = voucherDiscounts.get(item.product_id) || 0
+      const itemTaxableAmount = (price * item.quantity) - voucherDiscount
+      console.log(`  ✅ Taxable amount: ${itemTaxableAmount}`)
+      return total + itemTaxableAmount
+    }
+    console.log(`  ❌ Tax disabled for this product`)
+    return total
+  }, 0)
+  
+  const tax = taxableAmount * 0.1
+  console.log(`💰 Total taxable amount: ${taxableAmount}, Tax (10%): ${tax}`)
   const total = netAmount + shipping + tax - discount
 
   if (isLoading) {
@@ -2060,20 +2106,24 @@ export default function CheckoutPage() {
                   <div className="flex gap-3 sm:gap-4">
                     {/* Product Image */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                      {item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? (
-                        <img
-                          src={item.product.image_urls[0]}
-                          alt={item.product.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                          No image
-                        </div>
-                      )}
+                      {(() => {
+                        const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
+                        const firstUrl = validUrls[0]
+                        return firstUrl ? (
+                          <img
+                            src={firstUrl}
+                            alt={item.product.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                            No image
+                          </div>
+                        )
+                      })()}
                     </div>
 
                     {/* Product Details & Controls */}

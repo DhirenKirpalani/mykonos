@@ -273,20 +273,32 @@ export function ProductVariantModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
             {/* Product Image - hidden on very small screens to save space */}
             <div className="relative hidden xs:block sm:block aspect-square max-h-32 sm:max-h-40 md:max-h-none rounded-lg overflow-hidden bg-gray-100">
-              {product.image_urls && product.image_urls.length > 0 && product.image_urls[0] ? (
-                <img
-                  src={product.image_urls[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <span className="text-sm">No image</span>
-                </div>
-              )}
+              {(() => {
+                // Get selected variant image if available
+                const selectedVariantArray = Array.from(selectedVariants.values())
+                const selectedVariantImage = selectedVariantArray.length > 0 && selectedVariantArray[0].variant.image_url
+                  ? selectedVariantArray[0].variant.image_url
+                  : null
+                
+                // Fallback to product images
+                const validUrls = product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
+                const displayUrl = selectedVariantImage || validUrls[0]
+                
+                return displayUrl ? (
+                  <img
+                    src={displayUrl}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <span className="text-sm">No image</span>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Product Details */}
