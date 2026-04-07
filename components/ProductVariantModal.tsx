@@ -274,11 +274,19 @@ export function ProductVariantModal({
             {/* Product Image - hidden on very small screens to save space */}
             <div className="relative hidden xs:block sm:block aspect-square max-h-32 sm:max-h-40 md:max-h-none rounded-lg overflow-hidden bg-gray-100">
               {(() => {
+                // Get selected variant image if available
+                const selectedVariantArray = Array.from(selectedVariants.values())
+                const selectedVariantImage = selectedVariantArray.length > 0 && selectedVariantArray[0].variant.image_url
+                  ? selectedVariantArray[0].variant.image_url
+                  : null
+                
+                // Fallback to product images
                 const validUrls = product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
-                const firstUrl = validUrls[0]
-                return firstUrl ? (
+                const displayUrl = selectedVariantImage || validUrls[0]
+                
+                return displayUrl ? (
                   <img
-                    src={firstUrl}
+                    src={displayUrl}
                     alt={product.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {

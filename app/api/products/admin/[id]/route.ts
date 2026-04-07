@@ -133,7 +133,7 @@ export async function PATCH(
       'image_urls', 'video_urls', 'image_alt_texts', 'bulk_discounts', 'variants',
       'collection', 'size', 'category',
       'pilih_lokal', 'rating', 'products_sold', 'is_popular', 'is_best_selling',
-      'new_product_duration_days'
+      'new_product_duration_days', 'tax_enabled', 'shipping_period_days'
     ]
     
     // Only include allowed fields that are present in the body

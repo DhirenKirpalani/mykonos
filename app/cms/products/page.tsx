@@ -29,6 +29,7 @@ interface Product {
     low_stock_threshold?: number
     price_usd?: number
     price_idr?: number
+    image_url?: string
   }>
 }
 
@@ -350,12 +351,26 @@ export default function ProductsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading ? <SkeletonRows /> : paginatedProducts.map((product) => {
+                const hasVariants = product.variants && product.variants.length > 0
+                
+                // Get variant images if available
+                const variantImages = hasVariants && product.variants
+                  ? product.variants
+                      .map(v => v.image_url)
+                      .filter(url => url && url.trim() !== '')
+                  : []
+                
+                // Get product images
                 const productImages = product.image_urls || (product.image_url ? [product.image_url] : [])
-                const imageUrls = productImages.filter(url => {
+                
+                // Prioritize variant images over product images
+                const allImages = variantImages.length > 0 ? [...variantImages, ...productImages] : productImages
+                
+                const imageUrls = allImages.filter(url => {
+                  if (!url) return false
                   const ext = url.toLowerCase().split('.').pop()
                   return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')
                 })
-                const hasVariants = product.variants && product.variants.length > 0
                 const isExpanded = expandedRows[product.id]
                 
                 return (
@@ -471,9 +486,22 @@ export default function ProductsPage() {
                         <div className="grid gap-2">
                           {product.variants.map((variant, idx) => (
                             <div key={idx} className="flex items-center justify-between bg-white rounded-lg p-3 border border-gray-200">
-                              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
-                                <div className="font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{variant.name}</div>
-                                <div className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-none">{variant.sku}</div>
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                {variant.image_url && (
+                                  <img
+                                    src={variant.image_url}
+                                    alt={variant.name}
+                                    className="h-12 w-12 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                    }}
+                                  />
+                                )}
+                                <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                                  <div className="font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{variant.name}</div>
+                                  <div className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-none">{variant.sku}</div>
+                                </div>
                               </div>
                               <div className="flex items-center gap-4">
                                 {variant.price_usd && (

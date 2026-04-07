@@ -34,6 +34,7 @@ type WishlistItem = {
       price_usd: number
       price_idr: number
       stock_quantity: number
+      image_url?: string
     }>
   }
 }
@@ -372,12 +373,25 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                     <div key={item.id} className="flex gap-6 py-8">
                       <div className="relative h-24 w-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
                         {(() => {
-                          const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
-                          const firstUrl = validUrls[0]
-                          return firstUrl ? (
-                            isVideo(firstUrl) ? (
+                          // Get variant image if item has variant
+                          let displayUrl = null
+                          if (item.variant_name && item.product.variants) {
+                            const variant = item.product.variants.find((v: any) => v.name === item.variant_name)
+                            if (variant?.image_url) {
+                              displayUrl = variant.image_url
+                            }
+                          }
+                          
+                          // Fallback to product images
+                          if (!displayUrl) {
+                            const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
+                            displayUrl = validUrls[0]
+                          }
+                          
+                          return displayUrl ? (
+                            isVideo(displayUrl) ? (
                               <video
-                                src={firstUrl}
+                                src={displayUrl}
                                 className="h-full w-full object-cover"
                                 muted
                                 playsInline
@@ -385,7 +399,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                               />
                             ) : (
                               <Image
-                                src={firstUrl}
+                                src={displayUrl}
                                 alt={item.product.name}
                                 fill
                                 sizes="80px"

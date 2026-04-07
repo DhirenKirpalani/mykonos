@@ -201,17 +201,29 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
   }
   
-  // Filter out invalid placeholder URLs
+  // Check if product has variants with images
+  const variantImages = hasVariants 
+    ? (product as any).variants
+        .map((v: any) => v.image_url)
+        .filter((url: string) => url && !url.includes('placehold.co'))
+    : []
+  
+  // Filter out invalid placeholder URLs from product images
   const validImageUrls = product.image_urls?.filter(url => 
     url && !url.includes('placehold.co')
   ) || []
   
-  const firstMedia = validImageUrls[0]
+  // Prioritize variant images over product images for thumbnail
+  const allMediaUrls = variantImages.length > 0 
+    ? [...variantImages, ...validImageUrls]
+    : validImageUrls
+  
+  const firstMedia = allMediaUrls[0]
   const isFirstMediaVideo = firstMedia ? isVideo(firstMedia) : false
   
   // If first media is video, try to find first image for thumbnail
-  const thumbnailUrl = isFirstMediaVideo && validImageUrls.length > 1
-    ? validImageUrls.find(url => url && !isVideo(url)) || firstMedia
+  const thumbnailUrl = isFirstMediaVideo && allMediaUrls.length > 1
+    ? allMediaUrls.find(url => url && !isVideo(url)) || firstMedia
     : firstMedia
 
   return (

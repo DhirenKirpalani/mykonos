@@ -28,6 +28,8 @@ export default function EditProductPage() {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
+    slug: '',
+    brand: '',
     description: '',
     price_usd: '',
     price_idr: '',
@@ -63,6 +65,7 @@ export default function EditProductPage() {
     max_purchase_quantity: '',
     is_pre_order: true,
     pre_order_duration_days: '30',
+    pre_order_release_date: '',
     scheduled_publish_date: '',
     meta_title: '',
     meta_description: '',
@@ -88,6 +91,10 @@ export default function EditProductPage() {
     min_purchase_quantity: string
     max_purchase_quantity: string
     image_url: string
+    image_file?: File | null
+    video_file?: File | null
+    image_preview?: string
+    video_preview?: string
   }>>([])
   const [variantStockModalOpen, setVariantStockModalOpen] = useState(false)
 
@@ -121,6 +128,8 @@ export default function EditProductPage() {
         setFormData({
           name: product.name || '',
           sku: product.sku || '',
+          slug: product.slug || '',
+          brand: product.brand || '',
           description: product.description || '',
           price_usd: product.price_usd?.toString() || '',
           price_idr: product.price_idr?.toString() || '',
@@ -156,6 +165,7 @@ export default function EditProductPage() {
           max_purchase_quantity: product.max_purchase_quantity?.toString() || '',
           is_pre_order: product.is_pre_order ?? true,
           pre_order_duration_days: product.pre_order_duration_days?.toString() || '30',
+          pre_order_release_date: product.pre_order_release_date || '',
           scheduled_publish_date: product.scheduled_publish_date || '',
           meta_title: product.meta_title || '',
           meta_description: product.meta_description || '',
@@ -311,6 +321,45 @@ export default function EditProductPage() {
     }
   }
 
+  const uploadVariantMedia = async (session: any, productName: string, variantName: string, imageFile?: File | null, videoFile?: File | null) => {
+    const files = []
+    if (imageFile) files.push(imageFile)
+    if (videoFile) files.push(videoFile)
+    
+    if (files.length === 0) return { imageUrl: '', videoUrl: '' }
+
+    try {
+      const formData = new FormData()
+      files.forEach(file => {
+        formData.append('files', file)
+      })
+      formData.append('productName', `${productName}-${variantName}`)
+
+      const response = await fetch('/api/upload/product-media', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to upload variant media')
+      }
+
+      const data = await response.json()
+      const urls = data.urls || []
+      
+      return {
+        imageUrl: imageFile ? urls[0] || '' : '',
+        videoUrl: videoFile ? (imageFile ? urls[1] || '' : urls[0] || '') : ''
+      }
+    } catch (error) {
+      console.error('Error uploading variant media:', error)
+      return { imageUrl: '', videoUrl: '' }
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -334,47 +383,24 @@ export default function EditProductPage() {
       const existingVideoUrls = videoPreviews.filter(url => !url.startsWith('data:'))
       const allMediaUrls = [...existingImageUrls, ...existingVideoUrls, ...newMediaUrls]
 
-      const response = await fetch(`/api/products/admin/${productId}`, {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          ...formData,
-          price_usd: formData.price_usd ? parseFloat(formData.price_usd) : null,
-          price_idr: formData.price_idr ? parseFloat(formData.price_idr) : null,
-          cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
-          cost_price_idr: formData.cost_price_idr ? parseFloat(formData.cost_price_idr) : null,
-          stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
-          low_stock_threshold: formData.low_stock_threshold ? parseInt(formData.low_stock_threshold) : null,
-          volume_ml: formData.volume_ml ? parseInt(formData.volume_ml) : null,
-          weight_grams: formData.weight_grams ? parseFloat(formData.weight_grams) : null,
-          shipping_weight_grams: formData.shipping_weight_grams ? parseFloat(formData.shipping_weight_grams) : null,
-          package_length_cm: formData.package_length_cm ? parseFloat(formData.package_length_cm) : null,
-          package_width_cm: formData.package_width_cm ? parseFloat(formData.package_width_cm) : null,
-          package_height_cm: formData.package_height_cm ? parseFloat(formData.package_height_cm) : null,
-          shelf_life_months: formData.shelf_life_months ? parseInt(formData.shelf_life_months) : null,
-          min_purchase_quantity: formData.min_purchase_quantity ? parseInt(formData.min_purchase_quantity) : 1,
-          max_purchase_quantity: formData.max_purchase_quantity ? parseInt(formData.max_purchase_quantity) : null,
-          pre_order_duration_days: formData.pre_order_duration_days ? parseInt(formData.pre_order_duration_days) : null,
-          scheduled_publish_date: formData.scheduled_publish_date || null,
-          manufacturing_date: formData.manufacturing_date || null,
-          expiration_date: formData.expiration_date || null,
-          allow_backorder: Boolean(formData.allow_backorder),
-          in_stock: Boolean(formData.in_stock),
-          is_featured: Boolean(formData.is_featured),
-          is_pre_order: Boolean(formData.is_pre_order),
-          tax_enabled: Boolean(formData.tax_enabled),
-          pilih_lokal: Boolean(formData.pilih_lokal),
-          is_popular: Boolean(formData.is_popular),
-          is_best_selling: Boolean(formData.is_best_selling),
-          rating: formData.rating ? parseFloat(formData.rating) : null,
-          products_sold: formData.products_sold ? parseInt(formData.products_sold) : null,
-          new_product_duration_days: formData.new_product_duration_days ? parseInt(formData.new_product_duration_days.toString()) : 30,
-          image_urls: allMediaUrls,
-          image_alt_texts: imageAltTexts,
-          variants: variants.filter(v => v.name).map(v => ({
+      // Upload variant media files
+      const variantsWithMedia = await Promise.all(
+        variants.filter(v => v.name).map(async (v) => {
+          let imageUrl = v.image_url || ''
+          
+          // If there's a new image file to upload
+          if (v.image_file) {
+            const { imageUrl: uploadedImageUrl } = await uploadVariantMedia(
+              session,
+              formData.name,
+              v.name,
+              v.image_file,
+              v.video_file
+            )
+            imageUrl = uploadedImageUrl
+          }
+          
+          return {
             name: v.name,
             sku: v.sku,
             price_usd: parseFloat(v.price_usd) || 0,
@@ -384,9 +410,88 @@ export default function EditProductPage() {
             in_stock: v.in_stock !== undefined ? v.in_stock : true,
             min_purchase_quantity: v.min_purchase_quantity ? parseInt(v.min_purchase_quantity) : 1,
             max_purchase_quantity: v.max_purchase_quantity ? parseInt(v.max_purchase_quantity) : null,
-            image_url: v.image_url
-          })),
+            image_url: imageUrl
+          }
         })
+      )
+
+      const requestBody = {
+        // Text fields
+        name: formData.name,
+        sku: formData.sku,
+        slug: formData.slug,
+        description: formData.description,
+        brand: formData.brand || null,
+        fragrance_family: formData.fragrance_family || null,
+        collection: formData.collection || null,
+        gender: formData.gender || null,
+        formulation: formData.formulation || null,
+        country_of_origin: formData.country_of_origin || null,
+        top_notes: formData.top_notes || null,
+        middle_notes: formData.middle_notes || null,
+        base_notes: formData.base_notes || null,
+        bpom_number: formData.bpom_number || null,
+        ships_from: formData.ships_from || null,
+        status: formData.status,
+        meta_title: formData.meta_title || null,
+        meta_description: formData.meta_description || null,
+        meta_keywords: formData.meta_keywords || null,
+        tags: formData.tags || null,
+        
+        // Numeric fields - convert empty strings to null
+        price_usd: formData.price_usd ? parseFloat(formData.price_usd) : null,
+        price_idr: formData.price_idr ? parseFloat(formData.price_idr) : null,
+        cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        cost_price_idr: formData.cost_price_idr ? parseFloat(formData.cost_price_idr) : null,
+        stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
+        low_stock_threshold: formData.low_stock_threshold ? parseInt(formData.low_stock_threshold) : null,
+        volume_ml: formData.volume_ml ? parseInt(formData.volume_ml) : null,
+        weight_grams: formData.weight_grams ? parseFloat(formData.weight_grams) : null,
+        shipping_weight_grams: formData.shipping_weight_grams ? parseFloat(formData.shipping_weight_grams) : null,
+        package_length_cm: formData.package_length_cm ? parseFloat(formData.package_length_cm) : null,
+        package_width_cm: formData.package_width_cm ? parseFloat(formData.package_width_cm) : null,
+        package_height_cm: formData.package_height_cm ? parseFloat(formData.package_height_cm) : null,
+        shelf_life_months: formData.shelf_life_months ? parseInt(formData.shelf_life_months) : null,
+        min_purchase_quantity: formData.min_purchase_quantity ? parseInt(formData.min_purchase_quantity) : 1,
+        max_purchase_quantity: formData.max_purchase_quantity ? parseInt(formData.max_purchase_quantity) : null,
+        pre_order_duration_days: formData.pre_order_duration_days ? parseInt(formData.pre_order_duration_days) : null,
+        rating: formData.rating ? parseFloat(formData.rating) : null,
+        products_sold: formData.products_sold ? parseInt(formData.products_sold) : null,
+        new_product_duration_days: formData.new_product_duration_days ? parseInt(formData.new_product_duration_days.toString()) : 30,
+        shipping_period_days: formData.shipping_period_days ? parseInt(formData.shipping_period_days) : null,
+        
+        // Date fields
+        scheduled_publish_date: formData.scheduled_publish_date || null,
+        manufacturing_date: formData.manufacturing_date || null,
+        expiration_date: formData.expiration_date || null,
+        pre_order_release_date: formData.pre_order_release_date || null,
+        
+        // Boolean fields
+        allow_backorder: Boolean(formData.allow_backorder),
+        in_stock: Boolean(formData.in_stock),
+        is_featured: Boolean(formData.is_featured),
+        is_pre_order: Boolean(formData.is_pre_order),
+        tax_enabled: Boolean(formData.tax_enabled),
+        pilih_lokal: Boolean(formData.pilih_lokal),
+        is_popular: Boolean(formData.is_popular),
+        is_best_selling: Boolean(formData.is_best_selling),
+        
+        // Array/Object fields
+        image_urls: allMediaUrls,
+        image_alt_texts: imageAltTexts,
+        variants: variantsWithMedia,
+      }
+
+      console.log('🔍 Sending to API - tax_enabled value:', requestBody.tax_enabled)
+      console.log('🔍 formData.tax_enabled before Boolean():', formData.tax_enabled)
+
+      const response = await fetch(`/api/products/admin/${productId}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(requestBody)
       })
 
       if (response.ok) {
@@ -620,12 +725,20 @@ export default function EditProductPage() {
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
+                  id="tax_enabled"
                   name="tax_enabled"
                   checked={formData.tax_enabled}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tax_enabled: e.target.checked }))}
+                  onChange={(e) => {
+                    console.log('Tax enabled checkbox changed:', e.target.checked)
+                    setFormData(prev => {
+                      const updated = { ...prev, tax_enabled: e.target.checked }
+                      console.log('Updated formData.tax_enabled:', updated.tax_enabled)
+                      return updated
+                    })
+                  }}
                   className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
                 />
-                <label className="text-sm font-medium text-gray-700">
+                <label htmlFor="tax_enabled" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Include Tax in Pricing
                 </label>
               </div>
@@ -1324,21 +1437,101 @@ export default function EditProductPage() {
                       className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Image URL
-                    </label>
-                    <input
-                      type="text"
-                      value={variant.image_url}
-                      onChange={(e) => {
-                        const newVariants = [...variants]
-                        newVariants[index].image_url = e.target.value
-                        setVariants(newVariants)
-                      }}
-                      placeholder="https://..."
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                    />
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Variant Media</label>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {/* Variant Image Upload */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Image</label>
+                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-4 py-6 transition-colors hover:border-luxury-gold">
+                          <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="mt-1 text-xs text-gray-600">Upload Image</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                const reader = new FileReader()
+                                reader.onloadend = () => {
+                                  const newVariants = [...variants]
+                                  newVariants[index].image_file = file
+                                  newVariants[index].image_preview = reader.result as string
+                                  setVariants(newVariants)
+                                }
+                                reader.readAsDataURL(file)
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        {(variant.image_preview || variant.image_url) && (
+                          <div className="mt-2 relative">
+                            <img src={variant.image_preview || variant.image_url} alt="Variant preview" className="h-20 w-20 rounded-lg object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newVariants = [...variants]
+                                newVariants[index].image_file = null
+                                newVariants[index].image_preview = undefined
+                                newVariants[index].image_url = ''
+                                setVariants(newVariants)
+                              }}
+                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Variant Video Upload */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Video</label>
+                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-4 py-6 transition-colors hover:border-luxury-gold">
+                          <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span className="mt-1 text-xs text-gray-600">Upload Video</span>
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                const reader = new FileReader()
+                                reader.onloadend = () => {
+                                  const newVariants = [...variants]
+                                  newVariants[index].video_file = file
+                                  newVariants[index].video_preview = reader.result as string
+                                  setVariants(newVariants)
+                                }
+                                reader.readAsDataURL(file)
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        {variant.video_preview && (
+                          <div className="mt-2 relative">
+                            <video src={variant.video_preview} className="h-20 w-full rounded-lg object-cover" controls />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newVariants = [...variants]
+                                newVariants[index].video_file = null
+                                newVariants[index].video_preview = undefined
+                                setVariants(newVariants)
+                              }}
+                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
