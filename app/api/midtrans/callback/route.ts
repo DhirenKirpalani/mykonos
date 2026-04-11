@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       
       const { data: fullOrder, error: fetchError } = await supabase
         .from('orders')
-        .select('id, order_number, customer_email, user_id, shipping_address, payment_status')
+        .select('id, order_number, customer_email, user_id, shipping_address, payment_status, email_thread_id')
         .eq('id', order.id)
         .single()
       
@@ -87,8 +87,15 @@ export async function GET(request: NextRequest) {
         found: !!fullOrder, 
         error: fetchError?.message,
         order_number: fullOrder?.order_number,
-        customer_email: fullOrder?.customer_email 
+        customer_email: fullOrder?.customer_email,
+        email_thread_id: fullOrder?.email_thread_id || 'NONE'
       })
+      
+      if (fullOrder?.email_thread_id) {
+        console.log('🔗 [CALLBACK] Found existing email thread ID - will thread with pending payment email')
+      } else {
+        console.log('⚠️ [CALLBACK] No email thread ID found - this will create a new thread')
+      }
       
       if (fullOrder) {
         const typedOrder = fullOrder as any
