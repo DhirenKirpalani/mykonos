@@ -72,9 +72,12 @@ export default function OrdersPage() {
     setOrderDetails(new Map())
     // Clear selected orders
     setSelectedOrders(new Set())
-    // Fetch new orders
-    fetchOrders()
   }, [statusFilter])
+
+  useEffect(() => {
+    // Fetch orders when page or status changes
+    fetchOrders()
+  }, [currentPage, statusFilter])
 
   // Fetch all orders once for status counts
   useEffect(() => {
@@ -83,10 +86,10 @@ export default function OrdersPage() {
 
   const fetchAllOrders = async () => {
     try {
-      const response = await fetch('/api/orders/admin')
+      const response = await fetch('/api/orders/admin?limit=1000')
       if (response.ok) {
         const data = await response.json()
-        setAllOrders(data)
+        setAllOrders(data.orders || [])
       }
     } catch (error) {
       console.error('Error fetching all orders:', error)
@@ -98,9 +101,16 @@ export default function OrdersPage() {
     console.log('🔍 [ORDERS] Status filter:', statusFilter)
     setLoading(true)
     try {
-      const url = statusFilter === 'all' 
-        ? '/api/orders/admin'
-        : `/api/orders/admin?status=${statusFilter}`
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: ordersPerPage.toString()
+      })
+      
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter)
+      }
+      
+      const url = `/api/orders/admin?${params.toString()}`
       
       console.log('📡 [ORDERS] Fetching from URL:', url)
       const response = await fetch(url)
@@ -109,11 +119,12 @@ export default function OrdersPage() {
       if (response.ok) {
         const data = await response.json()
         console.log('✅ [ORDERS] Data received:', {
-          count: data?.length || 0,
-          sample: data?.[0] || null,
-          allData: data
+          count: data?.orders?.length || 0,
+          total: data?.total || 0,
+          page: data?.page || 1,
+          totalPages: data?.totalPages || 0
         })
-        setOrders(data)
+        setOrders(data.orders || [])
         
         // Clear order details when fetching new orders
         setOrderDetails(new Map())

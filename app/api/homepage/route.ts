@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
+
 export const dynamic = 'force-dynamic'
+export const revalidate = 300 // Cache for 5 minutes
 
 /**
- * Get homepage content (banners, featured collections, featured products)
+ * Optimized homepage content API with caching
+ * Fetches banners, featured collections, and featured products
  */
 export async function GET() {
   try {
