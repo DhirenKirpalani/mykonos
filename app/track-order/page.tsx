@@ -425,52 +425,53 @@ export default function TrackOrderPage() {
     return () => clearInterval(interval)
   }, [order?.payment_metadata?.expiry_time, order?.expiry_time])
 
-  const handleContinuePayment = async () => {
+  const handleContinuePayment = async (orderToUse?: Order) => {
+    const currentOrder = orderToUse || order
+    
     console.log('🔵 [PAYMENT DEBUG] handleContinuePayment called')
     console.log('📦 [PAYMENT DEBUG] Order data:', {
-      order_id: order?.id,
-      order_number: order?.order_number,
-      payment_status: order?.payment_status,
-      has_snap_token: !!order?.snap_token,
-      snap_token_length: order?.snap_token?.length || 0,
-      expiry_time: order?.expiry_time,
-      created_at: order?.created_at
+      order_id: currentOrder?.id,
+      order_number: currentOrder?.order_number,
+      payment_status: currentOrder?.payment_status,
+      snap_token: currentOrder?.snap_token ? 'exists' : 'missing',
+      expiry_time: currentOrder?.expiry_time,
+      has_payment_metadata: !!currentOrder?.payment_metadata
     })
 
-    if (!order) {
+    if (!currentOrder) {
       console.error('❌ [PAYMENT DEBUG] No order found')
       toast.error('Unable to continue payment. Please contact support.')
       return
     }
 
     // Validate snap_token exists
-    if (!order.snap_token) {
+    if (!currentOrder.snap_token) {
       console.error('❌ [PAYMENT DEBUG] snap_token is missing!', {
-        order_id: order.id,
-        order_number: order.order_number,
-        payment_status: order.payment_status,
-        created_at: order.created_at,
-        time_since_creation: order.created_at ? 
-          `${Math.round((new Date().getTime() - new Date(order.created_at).getTime()) / 1000 / 60)} minutes` : 
+        order_id: currentOrder.id,
+        order_number: currentOrder.order_number,
+        payment_status: currentOrder.payment_status,
+        created_at: currentOrder.created_at,
+        time_since_creation: currentOrder.created_at ? 
+          `${Math.round((new Date().getTime() - new Date(currentOrder.created_at).getTime()) / 1000 / 60)} minutes` : 
           'unknown'
       })
       toast.error('Payment token is missing. Please contact support to generate a new payment link.')
       return
     }
 
-    console.log('✅ [PAYMENT DEBUG] snap_token exists:', order.snap_token.substring(0, 20) + '...')
+    console.log('✅ [PAYMENT DEBUG] snap_token exists:', currentOrder.snap_token.substring(0, 20) + '...')
 
     // Check if token is expired
-    if (order.expiry_time && new Date(order.expiry_time) < new Date()) {
-      const expiryDate = new Date(order.expiry_time)
+    if (currentOrder.expiry_time && new Date(currentOrder.expiry_time) < new Date()) {
+      const expiryDate = new Date(currentOrder.expiry_time)
       const now = new Date()
       const hoursExpired = Math.round((now.getTime() - expiryDate.getTime()) / 1000 / 60 / 60)
       
       console.error('❌ [PAYMENT DEBUG] Token expired!', {
-        expiry_time: order.expiry_time,
+        expiry_time: currentOrder.expiry_time,
         current_time: now.toISOString(),
         hours_expired: hoursExpired,
-        order_id: order.id
+        order_id: currentOrder.id
       })
       toast.error('Payment link has expired. Please contact support to generate a new payment link.')
       return
@@ -506,9 +507,9 @@ export default function TrackOrderPage() {
 
       // Open Snap modal
       if (typeof window !== 'undefined' && (window as any).snap) {
-        console.log('🚀 [PAYMENT DEBUG] Opening payment modal with token:', order.snap_token.substring(0, 20) + '...')
+        console.log('🚀 [PAYMENT DEBUG] Opening payment modal with token:', currentOrder.snap_token.substring(0, 20) + '...')
         const snapPay = (window as any).snap.pay as Function
-        snapPay(order.snap_token, {
+        snapPay(currentOrder.snap_token, {
           onSuccess: (result: any) => {
             console.log('✅ [PAYMENT DEBUG] Payment successful!', result)
             console.log('📊 [PAYMENT DEBUG] Success details:', {
@@ -518,9 +519,13 @@ export default function TrackOrderPage() {
               transaction_status: result.transaction_status
             })
             toast.success('Payment successful! Your order is being processed.')
-            // Refresh order status
-            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
-            handleSearch(fakeEvent)
+            // Set state and refresh order status
+            setEmail(currentOrder.customer_email)
+            setOrderNumber(currentOrder.order_number)
+            setTimeout(() => {
+              const fakeEvent = { preventDefault: () => {} } as React.FormEvent
+              handleSearch(fakeEvent)
+            }, 100)
           },
           onPending: (result: any) => {
             console.log('⏳ [PAYMENT DEBUG] Payment pending', result)
@@ -529,8 +534,13 @@ export default function TrackOrderPage() {
               transaction_status: result.transaction_status
             })
             toast.info('Payment is pending. We will notify you once confirmed.')
-            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
-            handleSearch(fakeEvent)
+            // Set state and refresh order status
+            setEmail(currentOrder.customer_email)
+            setOrderNumber(currentOrder.order_number)
+            setTimeout(() => {
+              const fakeEvent = { preventDefault: () => {} } as React.FormEvent
+              handleSearch(fakeEvent)
+            }, 100)
           },
           onError: (result: any) => {
             console.error('❌ [PAYMENT DEBUG] Payment error', result)
@@ -762,10 +772,19 @@ export default function TrackOrderPage() {
                           className="bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy text-[10px] sm:text-xs px-3 py-1.5 h-auto whitespace-nowrap"
                           onClick={(e) => {
                             e.stopPropagation()
+                            console.log('🔵 [PAY NOW] Clicked from recent orders')
+                            console.log('📦 [PAY NOW] Session Order:', {
+                              id: sessionOrder.id,
+                              order_number: sessionOrder.order_number,
+                              has_snap_token: !!sessionOrder.snap_token,
+                              snap_token_preview: sessionOrder.snap_token?.substring(0, 20),
+                              payment_status: sessionOrder.payment_status,
+                              expiry_time: sessionOrder.expiry_time
+                            })
                             setOrder(sessionOrder)
                             setEmail(sessionOrder.customer_email)
                             setOrderNumber(sessionOrder.order_number)
-                            handleContinuePayment()
+                            handleContinuePayment(sessionOrder)
                           }}
                         >
                           {t('trackOrder.payNow')}
@@ -980,7 +999,7 @@ export default function TrackOrderPage() {
                         Selesaikan pembayaran sebelum waktu habis untuk memproses pesanan Anda.
                       </p>
                       <Button
-                        onClick={handleContinuePayment}
+                        onClick={() => handleContinuePayment()}
                         disabled={isProcessingPayment}
                         className="bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy"
                       >
@@ -1240,25 +1259,41 @@ export default function TrackOrderPage() {
               </div>
 
               {/* Shipping Address - Inside Main Card */}
-              <div className="pt-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-luxury-navy" />
-                  Alamat Pengiriman
-                </h3>
-                <div className="text-gray-700 space-y-1 text-sm">
-                  <p className="font-semibold">{order.shipping_address.full_name}</p>
-                  <p>{order.shipping_address.address_line1}</p>
-                  {order.shipping_address.address_line2 && (
-                    <p>{order.shipping_address.address_line2}</p>
-                  )}
-                  <p>
-                    {order.shipping_address.city}, {order.shipping_address.state_province}{' '}
-                    {order.shipping_address.postal_code}
-                  </p>
-                  <p>{order.shipping_address.country}</p>
-                  <p className="pt-2 text-gray-600">Telepon: {order.shipping_address.phone}</p>
+              {order.shipping_address && (
+                <div className="pt-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-luxury-navy" />
+                    Alamat Pengiriman
+                  </h3>
+                  <div className="text-gray-700 space-y-1 text-sm">
+                    {(() => {
+                      const addr = order.shipping_address as any
+                      return (
+                        <>
+                          <p className="font-semibold">
+                            {order.shipping_address?.full_name || 
+                             addr?.name || 
+                             order.customer_email?.split('@')[0] || 
+                             'Customer'}
+                          </p>
+                          <p>{order.shipping_address?.address_line1 || addr?.address || 'N/A'}</p>
+                          {order.shipping_address?.address_line2 && (
+                            <p>{order.shipping_address.address_line2}</p>
+                          )}
+                          <p>
+                            {order.shipping_address?.city || 'N/A'}, {order.shipping_address?.state_province || addr?.province || ''}{' '}
+                            {order.shipping_address?.postal_code || ''}
+                          </p>
+                          <p>{order.shipping_address?.country || 'Indonesia'}</p>
+                          <p className="pt-2 text-gray-600">
+                            Telepon: {order.shipping_address?.phone || addr?.phone_number || 'N/A'}
+                          </p>
+                        </>
+                      )
+                    })()}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Simpan Pesanan Anda Card */}

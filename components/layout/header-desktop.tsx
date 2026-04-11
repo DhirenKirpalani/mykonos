@@ -37,19 +37,108 @@ export function HeaderDesktop() {
     setMounted(true)
   }, [])
 
-  // Sample notifications - replace with actual data from your backend
+  // Fetch notifications from database
   const [notifications, setNotifications] = useState<Notification[]>([])
+  
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase/client')
+        
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        
+        // Fetch notifications
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20)
+        
+        if (error) {
+          console.error('Error fetching notifications:', error)
+          return
+        }
+        
+        if (data) {
+          const formattedNotifications = data.map((notif: any) => ({
+            id: notif.id,
+            title: notif.title,
+            message: notif.message,
+            type: notif.type as 'order' | 'promotion' | 'general',
+            read: notif.read,
+            timestamp: new Date(notif.created_at),
+            link: notif.link
+          }))
+          setNotifications(formattedNotifications)
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error)
+      }
+    }
+    
+    if (mounted) {
+      fetchNotifications()
+      
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [mounted])
 
   const unreadCount = notifications.filter(n => !n.read).length
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    )
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      
+      // Update in database
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id)
+      
+      if (error) {
+        console.error('Error marking notification as read:', error)
+        return
+      }
+      
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: true } : n))
+      )
+    } catch (error) {
+      console.error('Error marking notification as read:', error)
+    }
   }
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  const handleMarkAllAsRead = async () => {
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      
+      // Update all unread notifications in database
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false)
+      
+      if (error) {
+        console.error('Error marking all notifications as read:', error)
+        return
+      }
+      
+      // Update local state
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error)
+    }
   }
 
   const navItems = [

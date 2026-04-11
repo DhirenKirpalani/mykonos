@@ -258,7 +258,7 @@ export default function CMSPage() {
                       <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">${order.total_amount.toFixed(2)}</p>
+                      <p className="font-semibold text-gray-900">Rp{order.total_amount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                       <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(order.status)}`}>
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </span>

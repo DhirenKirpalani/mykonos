@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
+import { sendOrderConfirmationEmail } from '@/lib/email/order-emails'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,13 +14,17 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔵 [CALLBACK] Midtrans callback received')
+    console.log('\n\n=== 🔵 [CALLBACK] MIDTRANS CALLBACK RECEIVED ===')
+    console.log('🔵 [CALLBACK] Timestamp:', new Date().toISOString())
+    console.log('🔵 [CALLBACK] Full URL:', request.url)
+    
     const searchParams = request.nextUrl.searchParams
     const orderId = searchParams.get('order_id') // This is the checkout_session_id
     const statusCode = searchParams.get('status_code')
     const transactionStatus = searchParams.get('transaction_status')
     
     console.log('📥 [CALLBACK] Callback params:', { orderId, statusCode, transactionStatus })
+    console.log('📥 [CALLBACK] All params:', Object.fromEntries(searchParams.entries()))
 
     if (!orderId) {
       console.error('❌ [CALLBACK] Missing order_id parameter')
@@ -66,6 +71,96 @@ export async function GET(request: NextRequest) {
       }
       
       console.log('✅ [CALLBACK] Order payment completed successfully')
+      
+      // ✅ Send email + notification immediately (do NOT rely only on webhook)
+      console.log('\n=== 📧 [CALLBACK] EMAIL SENDING START ===')
+      console.log('📧 [CALLBACK] Fetching order details for email...')
+      console.log('📧 [CALLBACK] Order ID:', order.id)
+      
+      const { data: fullOrder, error: fetchError } = await supabase
+        .from('orders')
+        .select('id, order_number, customer_email, user_id, shipping_address, payment_status')
+        .eq('id', order.id)
+        .single()
+      
+      console.log('📧 [CALLBACK] Order fetch result:', { 
+        found: !!fullOrder, 
+        error: fetchError?.message,
+        order_number: fullOrder?.order_number,
+        customer_email: fullOrder?.customer_email 
+      })
+      
+      if (fullOrder) {
+        const typedOrder = fullOrder as any
+        
+        // Get customer name
+        console.log('👤 [CALLBACK] Fetching customer name for user_id:', typedOrder.user_id)
+        let customerName = 'Customer'
+        if (typedOrder.user_id) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('first_name, last_name')
+            .eq('id', typedOrder.user_id)
+            .single()
+          
+          if (userData && (userData.first_name || userData.last_name)) {
+            customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
+            console.log('✅ [CALLBACK] Customer name from users table:', customerName)
+          }
+        }
+        if (customerName === 'Customer') {
+          const addr = typedOrder.shipping_address || {}
+          customerName = addr.full_name || typedOrder.customer_email?.split('@')[0] || 'Customer'
+          console.log('⚠️ [CALLBACK] Using fallback customer name:', customerName)
+        }
+        
+        // Send email immediately (BLOCKING to ensure it completes)
+        if (!typedOrder.customer_email) {
+          console.error('❌ [CALLBACK] NO CUSTOMER EMAIL - Cannot send email!')
+          console.error('❌ [CALLBACK] Order data:', typedOrder)
+        } else {
+          console.log('\n📧 [CALLBACK] SENDING PAYMENT SUCCESS EMAIL')
+          console.log('📧 [CALLBACK] To:', typedOrder.customer_email)
+          console.log('📧 [CALLBACK] Name:', customerName)
+          console.log('📧 [CALLBACK] Order:', typedOrder.order_number)
+          console.log('📧 [CALLBACK] Order ID:', typedOrder.id)
+          
+          try {
+            const emailResult = await sendOrderConfirmationEmail({
+              orderId: typedOrder.id,
+              orderNumber: typedOrder.order_number,
+              customerEmail: typedOrder.customer_email,
+              customerName: customerName
+            })
+            
+            console.log('✅✅✅ [CALLBACK] PAYMENT SUCCESS EMAIL SENT!')
+            console.log('✅ [CALLBACK] Email result:', emailResult)
+            console.log('=== 📧 [CALLBACK] EMAIL SENDING END (SUCCESS) ===\n')
+          } catch (err: any) {
+            console.error('\n❌❌❌ [CALLBACK] EMAIL SEND FAILED!')
+            console.error('❌ [CALLBACK] Error:', err)
+            console.error('❌ [CALLBACK] Error message:', err?.message)
+            console.error('❌ [CALLBACK] Error stack:', err?.stack)
+            console.error('=== 📧 [CALLBACK] EMAIL SENDING END (FAILED) ===\n')
+          }
+        }
+        
+        // Create notification immediately
+        if (typedOrder.user_id) {
+          console.log('🔔 [CALLBACK] Creating payment success notification...')
+          supabase.from('notifications').insert({
+            user_id: typedOrder.user_id,
+            title: 'Payment Successful! 🎉',
+            message: `Your payment for order #${typedOrder.order_number} has been confirmed. Your order is now being processed.`,
+            type: 'payment',
+            link: `/account/orders/${typedOrder.id}`,
+            read: false
+          } as any).then(({ error }) => {
+            if (error) console.error('❌ [CALLBACK] Failed to create notification:', error)
+            else console.log('✅ [CALLBACK] Notification created successfully')
+          })
+        }
+      }
 
       // Redirect to track order page (works for both guest and authenticated users)
       console.log('🔄 [CALLBACK] Redirecting to track order page')

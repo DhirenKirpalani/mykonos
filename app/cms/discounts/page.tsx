@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Edit, Trash2, Calendar } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Calendar, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
@@ -89,6 +89,26 @@ export default function DiscountsPage() {
       }
     } catch (error) {
       console.error('Error deleting discount:', error)
+      toast.error('An error occurred')
+    }
+  }
+
+  const duplicateDiscount = async (discountId: string, discountName: string) => {
+    try {
+      const response = await fetch(`/api/discounts/${discountId}/duplicate`, {
+        method: 'POST',
+      })
+      
+      if (response.ok) {
+        toast.success('Discount duplicated', {
+          description: `"${discountName}" has been copied`
+        })
+        fetchDiscounts()
+      } else {
+        toast.error('Failed to duplicate discount')
+      }
+    } catch (error) {
+      console.error('Error duplicating discount:', error)
       toast.error('An error occurred')
     }
   }
@@ -231,7 +251,19 @@ export default function DiscountsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            duplicateDiscount(discount.id, discount.name)
+                          }}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
                             toast.error(`Delete "${discount.name}"?`, {
                               description: 'This action cannot be undone.',
                               action: {

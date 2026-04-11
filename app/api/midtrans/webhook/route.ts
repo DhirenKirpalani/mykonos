@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 import crypto from 'crypto'
+import { sendPaymentStatusUpdateEmail, sendOrderStatusUpdateEmail } from '@/lib/email/order-emails'
 
 export async function POST(request: NextRequest) {
   try {
@@ -211,10 +212,10 @@ export async function POST(request: NextRequest) {
       .update(metadataUpdate)
       .eq('id', orderId)
 
-    // Get updated order data
+    // Get updated order data with shipping address
     const { data: order, error: orderFetchError } = await supabase
       .from('orders')
-      .select('id, user_id, payment_status, status, order_number')
+      .select('id, user_id, payment_status, status, order_number, customer_email, shipping_address')
       .eq('id', orderId)
       .single()
     
@@ -231,6 +232,77 @@ export async function POST(request: NextRequest) {
 
     if (order) {
       const typedOrder = order as any
+      
+      // Get customer name from user profile or shipping address
+      let customerName = 'Customer'
+      
+      if (typedOrder.user_id) {
+        console.log('👤 [WEBHOOK] Fetching user data for user_id:', typedOrder.user_id)
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', typedOrder.user_id)
+          .single()
+        
+        if (userData && (userData.first_name || userData.last_name)) {
+          customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
+          console.log('✅ [WEBHOOK] Customer name from users table:', customerName)
+        }
+      }
+      
+      // Fallback to shipping address name or email username
+      if (customerName === 'Customer') {
+        const shippingAddress = typedOrder.shipping_address || {}
+        customerName = shippingAddress.full_name || typedOrder.customer_email?.split('@')[0] || 'Customer'
+        console.log('⚠️ [WEBHOOK] Using fallback customer name:', customerName)
+      }
+      
+      // Send email notification for payment status update
+      console.log('\n🔍 [WEBHOOK EMAIL DEBUG] Starting email check...')
+      console.log('🔍 [WEBHOOK EMAIL DEBUG] Customer Email:', typedOrder.customer_email)
+      console.log('🔍 [WEBHOOK EMAIL DEBUG] Customer Name:', customerName)
+      console.log('🔍 [WEBHOOK EMAIL DEBUG] Transaction Status:', transaction_status)
+      console.log('🔍 [WEBHOOK EMAIL DEBUG] Payment Status:', typedOrder.payment_status)
+      
+      if (!typedOrder.customer_email) {
+        console.error('❌ [WEBHOOK EMAIL DEBUG] NO CUSTOMER EMAIL - Cannot send email!')
+      } else {
+        const criticalEmailStates = ['capture', 'settlement', 'deny', 'cancel', 'expire']
+        console.log('🔍 [WEBHOOK EMAIL DEBUG] Critical email states:', criticalEmailStates)
+        console.log('🔍 [WEBHOOK EMAIL DEBUG] Is transaction_status in critical states?', criticalEmailStates.includes(transaction_status))
+        
+        if (criticalEmailStates.includes(transaction_status)) {
+          console.log('\n✅ [WEBHOOK EMAIL DEBUG] TRIGGERING EMAIL SEND!')
+          console.log('📧 [WEBHOOK] Sending payment status email...')
+          console.log('📧 [WEBHOOK] Email data:', {
+            orderId: typedOrder.id,
+            orderNumber: typedOrder.order_number,
+            customerEmail: typedOrder.customer_email,
+            customerName: customerName,
+            paymentStatus: typedOrder.payment_status,
+            transactionStatus: transaction_status
+          })
+          
+          const emailPromise = sendPaymentStatusUpdateEmail({
+            orderId: typedOrder.id,
+            orderNumber: typedOrder.order_number,
+            customerEmail: typedOrder.customer_email,
+            customerName: customerName,
+            paymentStatus: typedOrder.payment_status,
+            transactionStatus: transaction_status
+          })
+          
+          emailPromise.then((result) => {
+            console.log('✅ [WEBHOOK EMAIL DEBUG] Email send completed:', result)
+          }).catch(error => {
+            console.error('❌ [WEBHOOK EMAIL DEBUG] Email send FAILED:', error)
+            console.error('❌ [WEBHOOK EMAIL DEBUG] Error details:', error.message)
+            console.error('❌ [WEBHOOK EMAIL DEBUG] Error stack:', error.stack)
+          })
+        } else {
+          console.log(`⏭️ [WEBHOOK EMAIL DEBUG] Skipping email - transaction_status "${transaction_status}" not in critical states`)
+        }
+      }
       
       // ✅ IMPROVEMENT 6: Only notify on critical states (avoid spam)
       const criticalStates = ['capture', 'settlement', 'refund', 'partial_refund', 'chargeback', 'reversal', 'deny', 'cancel', 'expire']
@@ -307,14 +379,46 @@ export async function POST(request: NextRequest) {
           break
       }
 
-        if (notificationTitle) {
-          await supabase.from('notifications').insert({
+        console.log('\n🔍 [WEBHOOK NOTIFICATION DEBUG] Starting notification check...')
+        console.log('🔍 [WEBHOOK NOTIFICATION DEBUG] Notification Title:', notificationTitle)
+        console.log('🔍 [WEBHOOK NOTIFICATION DEBUG] Notification Message:', notificationMessage)
+        console.log('🔍 [WEBHOOK NOTIFICATION DEBUG] User ID:', typedOrder.user_id)
+        
+        if (!notificationTitle) {
+          console.error('❌ [WEBHOOK NOTIFICATION DEBUG] NO NOTIFICATION TITLE - Skipping notification creation')
+        } else if (!typedOrder.user_id) {
+          console.error('❌ [WEBHOOK NOTIFICATION DEBUG] NO USER ID - Cannot create notification!')
+        } else {
+          console.log('\n✅ [WEBHOOK NOTIFICATION DEBUG] CREATING NOTIFICATION!')
+          console.log('🔔 [WEBHOOK] Creating notification for payment status update...')
+          console.log('🔔 [WEBHOOK] Notification data:', {
             user_id: typedOrder.user_id,
             title: notificationTitle,
             message: notificationMessage,
             type: notificationType,
-            read: false,
+            link: `/account/orders/${typedOrder.id}`,
+            read: false
+          })
+          
+          const { data: notifData, error: notifError } = await supabase.from('notifications').insert({
+            user_id: typedOrder.user_id,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: notificationType,
+            link: `/account/orders/${typedOrder.id}`,
+            read: false
           } as any)
+          
+          if (notifError) {
+            console.error('❌ [WEBHOOK NOTIFICATION DEBUG] Notification creation FAILED!')
+            console.error('❌ [WEBHOOK NOTIFICATION DEBUG] Error:', notifError)
+            console.error('❌ [WEBHOOK NOTIFICATION DEBUG] Error message:', notifError.message)
+            console.error('❌ [WEBHOOK NOTIFICATION DEBUG] Error details:', notifError.details)
+            console.error('❌ [WEBHOOK NOTIFICATION DEBUG] Error hint:', notifError.hint)
+          } else {
+            console.log('✅ [WEBHOOK NOTIFICATION DEBUG] Notification created successfully!')
+            console.log('✅ [WEBHOOK NOTIFICATION DEBUG] Notification data:', notifData)
+          }
         }
       }
     }

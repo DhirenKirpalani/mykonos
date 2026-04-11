@@ -1192,6 +1192,36 @@ export default function CheckoutPage() {
       // ⭐ STEP 2: Generate Midtrans token using order_number
       console.log('💳 [ORDER] Creating Midtrans payment token...')
       console.log('💰 [ORDER] Total amount (IDR):', convertToIDR(total))
+      console.log('📋 [ORDER] Selected Address:', selectedAddress)
+      console.log('📋 [ORDER] Full Name:', selectedAddress.full_name)
+      console.log('📋 [ORDER] Phone:', selectedAddress.phone)
+      console.log('📋 [ORDER] Email:', session.user.email)
+      
+      // Safely extract customer details with fallbacks
+      const addressData = selectedAddress as any // Cast to any for fallback checks
+      const fullName = selectedAddress.full_name || addressData.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Customer'
+      const firstName = fullName.split(' ')[0] || 'Customer'
+      const lastName = fullName.split(' ').slice(1).join(' ') || ''
+      const phone = selectedAddress.phone || addressData.phone_number || session.user.user_metadata?.phone || '0000000000'
+      
+      console.log('📋 [ORDER] Extracted - First Name:', firstName)
+      console.log('📋 [ORDER] Extracted - Last Name:', lastName)
+      console.log('📋 [ORDER] Extracted - Phone:', phone)
+      console.log('📦 [ORDER] Items for Midtrans:', itemsForMidtrans)
+      console.log('📦 [ORDER] Items count:', itemsForMidtrans?.length || 0)
+      
+      // Ensure items is always an array
+      const safeItems = Array.isArray(itemsForMidtrans) && itemsForMidtrans.length > 0 
+        ? itemsForMidtrans 
+        : [{
+            id: 'default',
+            name: 'Order Items',
+            price: convertToIDR(total),
+            quantity: 1
+          }]
+      
+      console.log('📦 [ORDER] Safe Items:', safeItems)
+      
       const midtransResponse = await fetch('/api/midtrans/create-token', {
         method: 'POST',
         headers: { 
@@ -1202,17 +1232,17 @@ export default function CheckoutPage() {
           orderId: orderData.order_number, // Use order_number, not session_id
           amount: convertToIDR(total),
           customerDetails: {
-            firstName: selectedAddress.full_name.split(' ')[0],
-            lastName: selectedAddress.full_name.split(' ').slice(1).join(' '),
+            firstName: firstName,
+            lastName: lastName,
             email: session.user.email,
-            phone: selectedAddress.phone,
+            phone: phone,
           },
-          items: itemsForMidtrans,
+          items: safeItems,
           shippingAddress: {
-            firstName: selectedAddress.full_name.split(' ')[0],
-            lastName: selectedAddress.full_name.split(' ').slice(1).join(' '),
+            firstName: firstName,
+            lastName: lastName,
             email: session.user.email,
-            phone: selectedAddress.phone,
+            phone: phone,
             address: `${selectedAddress.address_line1}${selectedAddress.address_line2 ? ', ' + selectedAddress.address_line2 : ''}`,
             city: selectedAddress.city,
             postalCode: selectedAddress.postal_code,
