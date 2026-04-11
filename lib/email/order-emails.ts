@@ -115,6 +115,13 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
     const locale = userLanguage === 'id' ? 'id' : 'en'
     const t = translations[locale]
     
+    console.log('✅ [EMAIL] Order fetched successfully')
+    console.log('📊 [EMAIL] Order Status:', typedOrder.status)
+    console.log('💳 [EMAIL] Payment Status:', typedOrder.payment_status)
+    console.log('🔗 [EMAIL] Email Thread ID:', typedOrder.email_thread_id || 'NONE - This is first email')
+    console.log('📊 [EMAIL] Order Status:', typedOrder.status)
+    console.log('🌐 [EMAIL] User Language:', locale)
+    
     console.log('📦 [EMAIL] Order Items Count:', items.length)
     console.log('💰 [EMAIL] Total Amount:', typedOrder.total_amount)
     console.log('📍 [EMAIL] Payment Status:', typedOrder.payment_status)
