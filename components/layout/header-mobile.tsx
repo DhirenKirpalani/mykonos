@@ -45,19 +45,117 @@ export function HeaderMobile() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
+        console.log('🔔 [NOTIFICATIONS-MOBILE] Starting fetch...')
         const { supabase } = await import('@/lib/supabase/client')
         
         // Get current user
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        console.log('👤 [NOTIFICATIONS-MOBILE] User:', user ? {
+          id: user.id,
+          email: user.email,
+          is_anonymous: user.is_anonymous
+        } : 'No user')
         
-        // Fetch notifications
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(20)
+        let data = null
+        let error = null
+        
+        if (user && !user.is_anonymous) {
+          // Authenticated user - fetch by user_id
+          console.log('✅ [NOTIFICATIONS-MOBILE] Fetching for authenticated user:', user.id)
+          const result = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(20)
+          
+          data = result.data
+          error = result.error
+          console.log('📊 [NOTIFICATIONS-MOBILE] Authenticated query result:', {
+            count: data?.length || 0,
+            error: error?.message
+          })
+        } else {
+          // Guest user - fetch notifications for recent orders from localStorage
+          console.log('👤 [NOTIFICATIONS-MOBILE] Guest user detected, checking localStorage...')
+          const orderHistory = localStorage.getItem('orderHistory')
+          console.log('📦 [NOTIFICATIONS-MOBILE] orderHistory from localStorage:', orderHistory ? 'Found' : 'Not found')
+          
+          if (orderHistory) {
+            try {
+              const orders = JSON.parse(orderHistory)
+              console.log('📋 [NOTIFICATIONS-MOBILE] Parsed orders:', {
+                count: orders.length,
+                orders: orders.map((o: any) => ({
+                  id: o.id,
+                  order_number: o.order_number,
+                  customer_email: o.customer_email
+                }))
+              })
+              
+              if (orders.length > 0) {
+                const mostRecentEmail = orders[0].customer_email
+                
+                // First, get order IDs from order_numbers (localStorage may not have IDs)
+                const orderNumbers = orders.map((o: any) => o.order_number).filter(Boolean)
+                
+                console.log('🔍 [NOTIFICATIONS-MOBILE] Fetching order IDs from order_numbers:', {
+                  email: mostRecentEmail,
+                  orderNumbers: orderNumbers,
+                  orderCount: orderNumbers.length
+                })
+                
+                if (orderNumbers.length > 0) {
+                  // First fetch the order IDs from order_numbers
+                  const { data: orderData } = await supabase
+                    .from('orders')
+                    .select('id, order_number')
+                    .in('order_number', orderNumbers)
+                    .eq('customer_email', mostRecentEmail)
+                  
+                  const orderIds = (orderData || []).map((o: any) => o.id).filter(Boolean)
+                  
+                  console.log('📦 [NOTIFICATIONS-MOBILE] Fetched order IDs:', {
+                    orderIds: orderIds,
+                    count: orderIds.length
+                  })
+                  
+                  if (orderIds.length > 0) {
+                    // Fetch notifications for guest orders
+                    console.log('📡 [NOTIFICATIONS-MOBILE] Fetching guest notifications...')
+                    const result = await supabase
+                      .from('notifications')
+                      .select('*')
+                      .is('user_id', null)
+                      .in('order_id', orderIds)
+                      .eq('customer_email', mostRecentEmail)
+                      .order('created_at', { ascending: false })
+                      .limit(20)
+                    
+                    data = result.data
+                    error = result.error
+                    
+                    console.log('📊 [NOTIFICATIONS-MOBILE] Guest query result:', {
+                      count: data?.length || 0,
+                      error: error?.message,
+                      data: data
+                    })
+                  } else {
+                    console.log('⚠️ [NOTIFICATIONS-MOBILE] No valid order IDs found after fetching')
+                  }
+                } else {
+                  console.log('⚠️ [NOTIFICATIONS-MOBILE] No valid order numbers found')
+                }
+              } else {
+                console.log('⚠️ [NOTIFICATIONS-MOBILE] orderHistory is empty')
+              }
+            } catch (e) {
+              console.error('❌ [NOTIFICATIONS-MOBILE] Error parsing order history:', e)
+            }
+          } else {
+            console.log('⚠️ [NOTIFICATIONS-MOBILE] No orderHistory in localStorage')
+          }
+        }
         
         if (error) {
           console.error('Error fetching notifications:', error)
@@ -74,10 +172,16 @@ export function HeaderMobile() {
             timestamp: new Date(notif.created_at),
             link: notif.link
           }))
+          console.log('✅ [NOTIFICATIONS-MOBILE] Successfully formatted notifications:', {
+            count: formattedNotifications.length,
+            notifications: formattedNotifications
+          })
           setNotifications(formattedNotifications)
+        } else {
+          console.log('⚠️ [NOTIFICATIONS-MOBILE] No data to format')
         }
       } catch (error) {
-        console.error('Error fetching notifications:', error)
+        console.error('❌ [NOTIFICATIONS-MOBILE] Error fetching notifications:', error)
       }
     }
     
@@ -94,52 +198,69 @@ export function HeaderMobile() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
+      console.log('📝 [NOTIFICATIONS-MOBILE] Marking notification as read:', id)
       const { supabase } = await import('@/lib/supabase/client')
       
       // Update in database
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('notifications')
         .update({ read: true })
         .eq('id', id)
+        .select()
       
       if (error) {
-        console.error('Error marking notification as read:', error)
+        console.error('❌ [NOTIFICATIONS-MOBILE] Error marking notification as read:', error)
         return
       }
+      
+      console.log('✅ [NOTIFICATIONS-MOBILE] Notification marked as read in database:', data)
       
       // Update local state
       setNotifications(prev =>
         prev.map(n => (n.id === id ? { ...n, read: true } : n))
       )
+      
+      console.log('✅ [NOTIFICATIONS-MOBILE] Local state updated')
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+      console.error('❌ [NOTIFICATIONS-MOBILE] Error marking notification as read:', error)
     }
   }
 
   const handleMarkAllAsRead = async () => {
     try {
+      console.log('📝 [NOTIFICATIONS-MOBILE] Marking all notifications as read')
       const { supabase } = await import('@/lib/supabase/client')
       
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      // Get IDs of unread notifications
+      const unreadIds = notifications.filter(n => !n.read).map(n => n.id)
       
-      // Update all unread notifications in database
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user.id)
-        .eq('read', false)
-      
-      if (error) {
-        console.error('Error marking all notifications as read:', error)
+      if (unreadIds.length === 0) {
+        console.log('⚠️ [NOTIFICATIONS-MOBILE] No unread notifications to mark')
         return
       }
       
+      console.log('📋 [NOTIFICATIONS-MOBILE] Marking as read:', unreadIds)
+      
+      // Update all unread notifications in database
+      const { error, data } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .in('id', unreadIds)
+        .select()
+      
+      if (error) {
+        console.error('❌ [NOTIFICATIONS-MOBILE] Error marking all notifications as read:', error)
+        return
+      }
+      
+      console.log('✅ [NOTIFICATIONS-MOBILE] All notifications marked as read in database:', data)
+      
       // Update local state
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+      
+      console.log('✅ [NOTIFICATIONS-MOBILE] Local state updated')
     } catch (error) {
-      console.error('Error marking all notifications as read:', error)
+      console.error('❌ [NOTIFICATIONS-MOBILE] Error marking all notifications as read:', error)
     }
   }
 

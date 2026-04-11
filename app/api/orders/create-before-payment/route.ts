@@ -302,23 +302,32 @@ export async function POST(request: Request) {
         console.error('❌ [API] Failed to send email (non-blocking):', error)
       })
       
-      // Create notification for order placement
+      // Create notification for order placement (for both authenticated and guest users)
+      console.log('🔔 [API] Creating notification for order placement...')
+      const notificationData: any = {
+        title: 'Order Placed Successfully',
+        message: `Your order #${orderNumber} has been placed. Please complete payment to process your order.`,
+        type: 'order',
+        link: typedOrder.user_id ? `/account/orders/${orderId}` : `/track-order`,
+        read: false
+      }
+      
+      // Add user_id for authenticated users, order_id and email for guests
       if (typedOrder.user_id) {
-        console.log('🔔 [API] Creating notification for order placement...')
-        const { error: notifError } = await supabase.from('notifications').insert({
-          user_id: typedOrder.user_id,
-          title: 'Order Placed Successfully',
-          message: `Your order #${orderNumber} has been placed. Please complete payment to process your order.`,
-          type: 'order',
-          link: `/account/orders/${orderId}`,
-          read: false
-        })
-        
-        if (notifError) {
-          console.error('❌ [API] Failed to create notification (non-blocking):', notifError)
-        } else {
-          console.log('✅ [API] Notification created successfully')
-        }
+        notificationData.user_id = typedOrder.user_id
+        console.log('🔔 [API] Creating notification for authenticated user:', typedOrder.user_id)
+      } else {
+        notificationData.order_id = orderId
+        notificationData.customer_email = typedOrder.customer_email
+        console.log('🔔 [API] Creating notification for guest user:', typedOrder.customer_email)
+      }
+      
+      const { error: notifError } = await supabase.from('notifications').insert(notificationData)
+      
+      if (notifError) {
+        console.error('❌ [API] Failed to create notification (non-blocking):', notifError)
+      } else {
+        console.log('✅ [API] Notification created successfully')
       }
     } else {
       console.warn('⚠️ [API] Cannot send email - missing customer_email or order_number')

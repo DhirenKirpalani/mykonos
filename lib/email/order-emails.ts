@@ -310,11 +310,13 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
       console.log('✅ [EMAIL] Email logged to database')
     }
     
-    // Send notification to admin (separate thread - NOT in customer thread)
-    console.log('\n📤 [EMAIL] Sending admin notification...')
-    console.log('📧 [EMAIL] Admin Email:', ADMIN_EMAIL)
-    
-    const adminEmailData = await resend.emails.send({
+    // Send notification to admin ONLY on first order creation (not on status updates)
+    // Only send if this is the first email (no thread ID exists yet)
+    if (!typedOrder.email_thread_id) {
+      console.log('\n📤 [EMAIL] Sending admin notification (first order email)...')
+      console.log('📧 [EMAIL] Admin Email:', ADMIN_EMAIL)
+      
+      const adminEmailData = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `[New Order] ${data.orderNumber} — ${data.customerName}`,
@@ -339,8 +341,11 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
         recipientEmail: ADMIN_EMAIL,
         subject: `[New Order] ${data.orderNumber} — ${data.customerName}`
       })
-    } else if (adminEmailData.error) {
-      console.error('⚠️ [EMAIL] Admin notification failed:', adminEmailData.error)
+      } else if (adminEmailData.error) {
+        console.error('⚠️ [EMAIL] Admin notification failed:', adminEmailData.error)
+      }
+    } else {
+      console.log('ℹ️ [EMAIL] Skipping admin notification (not first email)')
     }
     
     console.log('=== 📧 EMAIL CONFIRMATION END (SUCCESS) ===\n')
