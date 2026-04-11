@@ -75,6 +75,7 @@ export default function HomePage() {
           .select('*')
           .eq('is_visible', true)
           .eq('is_popular', true)
+          .gt('stock_quantity', 0)
           .limit(8),
         supabase
           .from('collections')
@@ -104,6 +105,7 @@ export default function HomePage() {
                 .select('*')
                 .in('id', productIds)
                 .eq('is_visible', true)
+                .gt('stock_quantity', 0)
             }
             return result
           }),
@@ -112,6 +114,7 @@ export default function HomePage() {
           .select('*')
           .eq('is_visible', true)
           .eq('is_best_selling', true)
+          .gt('stock_quantity', 0)
           .limit(8),
         supabase
           .from('promo_codes')

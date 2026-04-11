@@ -303,6 +303,8 @@ export const translations = {
       clearFilters: "Clear Filters",
       applyFilters: "Apply Filters",
       price: "Price",
+      soldOut: "Sold Out",
+      soldOutDescription: "These products are currently out of stock",
       sort: {
         popular: "Popular",
         newest: "Newest",
@@ -569,6 +571,34 @@ export const translations = {
       errorEmail: "Please enter your email address",
       errorConsent: "Please accept the terms to subscribe",
       errorGeneric: "Failed to subscribe. Please try again."
+    },
+    email: {
+      orderConfirmed: 'Order Confirmed',
+      thankYou: 'Thank you for choosing Mykonos.',
+      journeyBegins: 'Your fragrance journey begins with us.',
+      dear: 'Dear',
+      orderReceived: 'Your order has been received and is being prepared with care. We\'re excited to share our luxury fragrances with you.',
+      orderNumber: 'Order Number',
+      orderDate: 'Order Date',
+      totalPayment: 'Total Payment',
+      status: 'Status',
+      order: 'Order',
+      payment: 'Payment',
+      payBefore: 'Pay Before',
+      orderItems: 'Order Items',
+      qty: 'Qty',
+      subtotal: 'Subtotal',
+      shipping: 'Shipping',
+      discount: 'Discount',
+      total: 'Total',
+      shippingAddress: 'Shipping Address',
+      paymentPending: 'Payment Pending',
+      secureOrder: 'Please complete your payment to secure your order.',
+      fragrancePrepared: 'Your fragrance will be prepared once payment is confirmed.',
+      orderExpire: 'This order will expire if payment is not completed in time.',
+      secureYourOrder: 'Secure Your Order',
+      contactUs: 'If you have any questions, please contact us at:',
+      copyright: '© 2026 Mykonos Modern & Vibrant Perfumery. All rights reserved.'
     }
   },
   id: {
@@ -875,6 +905,8 @@ export const translations = {
       clearFilters: "Hapus Filter",
       applyFilters: "Terapkan Filter",
       price: "Harga",
+      soldOut: "Stok Habis",
+      soldOutDescription: "Produk-produk ini sedang tidak tersedia",
       sort: {
         popular: "Populer",
         newest: "Terbaru",
@@ -1141,6 +1173,34 @@ export const translations = {
       errorEmail: "Mohon masukkan alamat email Anda",
       errorConsent: "Mohon setujui persyaratan untuk berlangganan",
       errorGeneric: "Gagal berlangganan. Silakan coba lagi."
+    },
+    email: {
+      orderConfirmed: 'Pesanan Dikonfirmasi',
+      thankYou: 'Terima kasih telah memilih Mykonos.',
+      journeyBegins: 'Perjalanan wewangian Anda dimulai bersama kami.',
+      dear: 'Kepada',
+      orderReceived: 'Pesanan Anda telah diterima dan sedang disiapkan dengan hati-hati. Kami sangat senang dapat berbagi wewangian mewah kami dengan Anda.',
+      orderNumber: 'Nomor Pesanan',
+      orderDate: 'Tanggal Pesanan',
+      totalPayment: 'Total Pembayaran',
+      status: 'Status',
+      order: 'Pesanan',
+      payment: 'Pembayaran',
+      payBefore: 'Bayar Sebelum',
+      orderItems: 'Item Pesanan',
+      qty: 'Jml',
+      subtotal: 'Subtotal',
+      shipping: 'Pengiriman',
+      discount: 'Diskon',
+      total: 'Total',
+      shippingAddress: 'Alamat Pengiriman',
+      paymentPending: 'Menunggu Pembayaran',
+      secureOrder: 'Silakan selesaikan pembayaran Anda untuk mengamankan pesanan Anda.',
+      fragrancePrepared: 'Wewangian Anda akan disiapkan setelah pembayaran dikonfirmasi.',
+      orderExpire: 'Pesanan ini akan kedaluwarsa jika pembayaran tidak diselesaikan tepat waktu.',
+      secureYourOrder: 'Amankan Pesanan Anda',
+      contactUs: 'Jika Anda memiliki pertanyaan, silakan hubungi kami di:',
+      copyright: '© 2026 Mykonos Modern & Vibrant Perfumery. Hak cipta dilindungi.'
     }
   }
 } as const;

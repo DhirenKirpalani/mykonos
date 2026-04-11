@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
+import { sendOrderConfirmationEmail } from '@/lib/email/order-emails'
 
 export const dynamic = 'force-dynamic'
 
@@ -99,6 +100,81 @@ export async function POST(request: Request) {
             // Continue to create new order
           } else {
             console.log('✅ [API] Reusing existing order to prevent inventory abuse')
+            
+            // Send email for reused order if not sent before
+            const { data: orderDetails } = await supabase
+              .from('orders')
+              .select('customer_email, order_number, user_id, shipping_address')
+              .eq('id', typedOrder.id)
+              .single()
+            
+            const orderData = orderDetails as any
+            console.log('📋 [API] Order details for email:', orderData)
+            
+            if (orderData?.customer_email && orderData?.order_number) {
+              // Get customer name from user profile or shipping address
+              let customerName = 'Customer'
+              
+              // Try to get name from users table first
+              if (orderData.user_id) {
+                console.log('👤 [API] Fetching user data for user_id:', orderData.user_id)
+                const { data: userData, error: userError } = await supabase
+                  .from('users')
+                  .select('first_name, last_name')
+                  .eq('id', orderData.user_id)
+                  .single()
+                
+                console.log('👤 [API] User data:', userData)
+                console.log('👤 [API] User error:', userError)
+                
+                if (userData && (userData.first_name || userData.last_name)) {
+                  customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
+                  console.log('✅ [API] Customer name from users table:', customerName)
+                }
+              }
+              
+              // Fallback to shipping address name or email username
+              if (customerName === 'Customer') {
+                const shippingAddress = orderData.shipping_address || {}
+                console.log('📍 [API] Shipping address:', shippingAddress)
+                customerName = shippingAddress.full_name || orderData.customer_email.split('@')[0] || 'Customer'
+                console.log('⚠️ [API] Using fallback customer name:', customerName)
+              }
+              
+              console.log('📧 [API] Sending order confirmation email for reused order...')
+              console.log('📧 [API] Email to:', orderData.customer_email, 'Name:', customerName)
+              
+              sendOrderConfirmationEmail({
+                orderId: typedOrder.id,
+                orderNumber: orderData.order_number,
+                customerEmail: orderData.customer_email,
+                customerName: customerName
+              }).catch(error => {
+                console.error('❌ [API] Failed to send email (non-blocking):', error)
+              })
+              
+              // Create notification for reused order
+              if (orderData.user_id) {
+                console.log('🔔 [API] Creating notification for reused order...')
+                const { error: notifError } = await supabase.from('notifications').insert({
+                  user_id: orderData.user_id,
+                  title: 'Order Reminder',
+                  message: `Your order #${orderData.order_number} is still pending. Please complete payment to process your order.`,
+                  type: 'order',
+                  link: `/account/orders/${typedOrder.id}`,
+                  read: false
+                })
+                
+                if (notifError) {
+                  console.error('❌ [API] Failed to create notification (non-blocking):', notifError)
+                } else {
+                  console.log('✅ [API] Notification created successfully')
+                }
+              }
+            } else {
+              console.warn('⚠️ [API] Cannot send email - missing customer_email or order_number')
+            }
+            
             return NextResponse.json({
               order_id: typedOrder.id,
               order_number: typedOrder.order_number,
@@ -136,21 +212,122 @@ export async function POST(request: Request) {
     }
     console.log('✅ [API] Order created successfully, ID:', orderId)
 
-    // Get order details
-    console.log('📋 [API] Fetching order details...')
-    const { data: order } = await supabase
+    // Get order details including user_id and shipping_address for customer name
+    console.log('📋 [API] Fetching order details for ID:', orderId)
+    const { data: order, error: fetchError } = await supabase
       .from('orders')
-      .select('order_number, total_amount')
+      .select('order_number, total_amount, customer_email, user_id, shipping_address')
       .eq('id', orderId)
       .single()
 
+    if (fetchError) {
+      console.error('❌ [API] Error fetching order details:', fetchError)
+      throw new Error(`Failed to fetch order: ${fetchError.message}`)
+    }
+
+    if (!order) {
+      console.error('❌ [API] Order not found after creation')
+      throw new Error('Order not found')
+    }
+
     const typedOrder = order as any
+    console.log('📋 [API] Fetched order:', JSON.stringify(typedOrder, null, 2))
     console.log('✅ [API] Order number:', typedOrder?.order_number)
+    
+    // Generate order_number if missing (fallback)
+    let orderNumber = typedOrder.order_number
+    if (!orderNumber) {
+      console.error('⚠️ [API] Order number is missing! Generating fallback...')
+      
+      // Generate order number: MYK-YYYYMMDD-XXXX
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase()
+      orderNumber = `MYK-${date}-${random}`
+      
+      console.log('🔧 [API] Generated order number:', orderNumber)
+      
+      // Update the order with the generated number
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ order_number: orderNumber })
+        .eq('id', orderId)
+      
+      if (updateError) {
+        console.error('❌ [API] Failed to update order_number:', updateError)
+      } else {
+        console.log('✅ [API] Order number updated successfully')
+      }
+    }
+
+    // Send order confirmation email
+    if (typedOrder?.customer_email && orderNumber) {
+      // Get customer name from user profile or shipping address
+      let customerName = 'Customer'
+      
+      // Try to get name from users table first
+      if (typedOrder.user_id) {
+        console.log('👤 [API] Fetching user data for user_id:', typedOrder.user_id)
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', typedOrder.user_id)
+          .single()
+        
+        console.log('👤 [API] User data:', userData)
+        console.log('👤 [API] User error:', userError)
+        
+        if (userData && (userData.first_name || userData.last_name)) {
+          customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
+          console.log('✅ [API] Customer name from users table:', customerName)
+        }
+      }
+      
+      // Fallback to shipping address name or email username
+      if (customerName === 'Customer') {
+        const shippingAddress = typedOrder.shipping_address || {}
+        console.log('📍 [API] Shipping address:', shippingAddress)
+        customerName = shippingAddress.name || typedOrder.customer_email.split('@')[0] || 'Customer'
+        console.log('⚠️ [API] Using fallback customer name:', customerName)
+      }
+      
+      console.log('📧 [API] Sending order confirmation email...')
+      console.log('📧 [API] To:', typedOrder.customer_email, 'Name:', customerName, 'Order:', orderNumber)
+      
+      sendOrderConfirmationEmail({
+        orderId: orderId,
+        orderNumber: orderNumber,
+        customerEmail: typedOrder.customer_email,
+        customerName: customerName
+      }).catch(error => {
+        console.error('❌ [API] Failed to send email (non-blocking):', error)
+      })
+      
+      // Create notification for order placement
+      if (typedOrder.user_id) {
+        console.log('🔔 [API] Creating notification for order placement...')
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: typedOrder.user_id,
+          title: 'Order Placed Successfully',
+          message: `Your order #${orderNumber} has been placed. Please complete payment to process your order.`,
+          type: 'order',
+          link: `/account/orders/${orderId}`,
+          read: false
+        })
+        
+        if (notifError) {
+          console.error('❌ [API] Failed to create notification (non-blocking):', notifError)
+        } else {
+          console.log('✅ [API] Notification created successfully')
+        }
+      }
+    } else {
+      console.warn('⚠️ [API] Cannot send email - missing customer_email or order_number')
+    }
 
     console.log('✅ [API] Order created before payment successfully')
     return NextResponse.json({
       order_id: orderId,
-      order_number: typedOrder?.order_number,
+      order_number: orderNumber,
       snap_token: snap_token,
       snap_redirect_url: snap_redirect_url,
       expiry_time: expiryTime,

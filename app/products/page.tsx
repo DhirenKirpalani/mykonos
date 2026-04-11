@@ -19,8 +19,10 @@ function ProductsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
+  const [soldOutProducts, setSoldOutProducts] = useState<Product[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSoldOutLoading, setIsSoldOutLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [mounted, setMounted] = useState(false)
   const [productVouchers, setProductVouchers] = useState<Map<string, { discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string }>>(new Map())
@@ -157,6 +159,7 @@ function ProductsContent() {
         .eq('is_visible', true)
         .eq('is_archived', false)
         .eq('status', 'active')
+        .gt('stock_quantity', 0)
 
       // Apply filter (like homepage)
       if (filter === 'popular') {
@@ -217,6 +220,44 @@ function ProductsContent() {
 
     fetchProducts()
   }, [category, collection, isNew, filter, sort, currentPage, searchQuery])
+
+  useEffect(() => {
+    async function fetchSoldOutProducts() {
+      setIsSoldOutLoading(true)
+
+      let query = supabase.from('products').select('*')
+        .eq('is_visible', true)
+        .eq('is_archived', false)
+        .eq('status', 'active')
+        .eq('stock_quantity', 0)
+
+      if (category) {
+        query = query.eq('fragrance_family', category)
+      }
+
+      if (collection) {
+        query = query.eq('collection', collection)
+      }
+
+      if (searchQuery.trim()) {
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+      }
+
+      query = query.order('created_at', { ascending: false })
+
+      const { data, error } = await query as { data: Product[] | null; error: any }
+
+      if (error || !data) {
+        console.error('Error fetching sold-out products:', error)
+        setSoldOutProducts([])
+      } else {
+        setSoldOutProducts(data)
+      }
+      setIsSoldOutLoading(false)
+    }
+
+    fetchSoldOutProducts()
+  }, [category, collection, searchQuery])
 
   // Prevent hydration mismatch - render loading state until mounted
   if (!mounted) {
@@ -375,6 +416,40 @@ function ProductsContent() {
                   })}
                 </div>
                 <Pagination currentPage={currentPage} totalPages={totalPages} />
+
+                {/* Sold Out Section */}
+                {soldOutProducts.length > 0 && (
+                  <div className="mt-12 md:mt-16">
+                    <div className="mb-6 border-t border-gray-200 pt-8">
+                      <h2 className="text-xl font-bold uppercase tracking-wider text-luxury-navy md:text-2xl">
+                        {t.productsPage.soldOut}
+                      </h2>
+                      <p className="mt-2 text-sm text-gray-600">
+                        {t.productsPage.soldOutDescription}
+                      </p>
+                    </div>
+                    {isSoldOutLoading ? (
+                      <div className="flex min-h-[200px] items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-luxury-navy"></div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+                        {soldOutProducts.map((product: Product) => {
+                          const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
+                          const discount = productDiscounts.get(product.id)
+                          return (
+                            <ProductCard 
+                              key={product.id} 
+                              product={product}
+                              voucher={voucher || null}
+                              activeDiscount={discount || null}
+                            />
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex min-h-[300px] items-center justify-center md:min-h-[400px]">

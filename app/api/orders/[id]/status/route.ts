@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
+import { sendOrderStatusUpdateEmail } from '@/lib/email/order-emails'
 export const dynamic = 'force-dynamic'
 
 /**
@@ -66,6 +67,105 @@ export async function PATCH(
     } as any)
 
     if (error) throw error
+
+    // Get order details for email notification
+    const { data: order } = await supabase
+      .from('orders')
+      .select('order_number, customer_email, user_id, shipping_address, payment_status, tracking_number')
+      .eq('id', id)
+      .single()
+
+    // Send email notification for status update
+    if (order) {
+      const typedOrder = order as any
+      
+      // Get customer name from user profile or shipping address
+      let customerName = 'Customer'
+      
+      if (typedOrder.user_id) {
+        console.log('👤 [API] Fetching user data for user_id:', typedOrder.user_id)
+        const { data: userData } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', typedOrder.user_id)
+          .single()
+        
+        if (userData && (userData.first_name || userData.last_name)) {
+          customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
+          console.log('✅ [API] Customer name from users table:', customerName)
+        }
+      }
+      
+      // Fallback to shipping address name or email username
+      if (customerName === 'Customer') {
+        const shippingAddress = typedOrder.shipping_address || {}
+        customerName = shippingAddress.full_name || typedOrder.customer_email?.split('@')[0] || 'Customer'
+        console.log('⚠️ [API] Using fallback customer name:', customerName)
+      }
+      
+      if (typedOrder.customer_email) {
+        console.log('📧 [API] Sending order status update email...')
+        sendOrderStatusUpdateEmail({
+          orderId: id,
+          orderNumber: typedOrder.order_number,
+          customerEmail: typedOrder.customer_email,
+          customerName: customerName,
+          orderStatus: status,
+          paymentStatus: typedOrder.payment_status,
+          trackingNumber: typedOrder.tracking_number
+        }).catch(error => {
+          console.error('❌ [API] Failed to send status update email (non-blocking):', error)
+        })
+      }
+      
+      // Create notification for status update
+      if (typedOrder.user_id) {
+        let notificationTitle = ''
+        let notificationMessage = ''
+        
+        switch (status) {
+          case 'processing':
+            notificationTitle = 'Order Processing'
+            notificationMessage = `Your order #${typedOrder.order_number} is now being processed.`
+            break
+          case 'packed':
+            notificationTitle = 'Order Packed 📦'
+            notificationMessage = `Your order #${typedOrder.order_number} has been packed and will ship soon.`
+            break
+          case 'shipped':
+            notificationTitle = 'Order Shipped 🚚'
+            notificationMessage = `Your order #${typedOrder.order_number} has been shipped${typedOrder.tracking_number ? `. Tracking: ${typedOrder.tracking_number}` : ''}.`
+            break
+          case 'out_for_delivery':
+            notificationTitle = 'Out for Delivery 🚛'
+            notificationMessage = `Your order #${typedOrder.order_number} is out for delivery and will arrive soon.`
+            break
+          case 'delivered':
+            notificationTitle = 'Order Delivered ✅'
+            notificationMessage = `Your order #${typedOrder.order_number} has been delivered. Enjoy your fragrance!`
+            break
+          case 'cancelled':
+            notificationTitle = 'Order Cancelled'
+            notificationMessage = `Your order #${typedOrder.order_number} has been cancelled.`
+            break
+        }
+        
+        if (notificationTitle) {
+          console.log('🔔 [API] Creating notification for status update...')
+          supabase.from('notifications').insert({
+            user_id: typedOrder.user_id,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: 'order',
+            link: `/account/orders/${id}`,
+            read: false
+          } as any).then(({ error }) => {
+            if (error) console.error('❌ [API] Failed to create notification:', error)
+            else console.log('✅ [API] Notification created successfully')
+          })
+        }
+      }
+    }
 
     return NextResponse.json({
       message: 'Order status updated successfully',

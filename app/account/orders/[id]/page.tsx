@@ -672,25 +672,38 @@ export default function OrderDetailsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
           {/* Shipping Address */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl sm:text-2xl font-serif">Alamat Pengiriman</h2>
-            </div>
-            <div className="p-4 sm:p-8">
-              <p className="font-semibold text-base mb-0.5">{order.shipping_address.full_name}</p>
-              <p className="text-gray-600 text-sm mb-3">{order.shipping_address.phone}</p>
-              <div className="text-gray-700 space-y-1">
-                <p>{order.shipping_address.address_line1}</p>
-                {order.shipping_address.address_line2 && (
-                  <p>{order.shipping_address.address_line2}</p>
-                )}
-                <p>
-                  {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}
-                </p>
-                <p>{order.shipping_address.country}</p>
+          {order.shipping_address && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
+                <h2 className="text-xl sm:text-2xl font-serif">Alamat Pengiriman</h2>
+              </div>
+              <div className="p-4 sm:p-8">
+                {(() => {
+                  const addr = order.shipping_address as any
+                  return (
+                    <>
+                      <p className="font-semibold text-base mb-0.5">
+                        {order.shipping_address?.full_name || addr?.name || order.customer_email?.split('@')[0] || 'Customer'}
+                      </p>
+                      <p className="text-gray-600 text-sm mb-3">
+                        {order.shipping_address?.phone || addr?.phone_number || 'N/A'}
+                      </p>
+                      <div className="text-gray-700 space-y-1">
+                        <p>{order.shipping_address?.address_line1 || addr?.address || 'N/A'}</p>
+                        {order.shipping_address?.address_line2 && (
+                          <p>{order.shipping_address.address_line2}</p>
+                        )}
+                        <p>
+                          {order.shipping_address?.city || 'N/A'}, {order.shipping_address?.state || addr?.state_province || addr?.province || ''} {order.shipping_address?.postal_code || ''}
+                        </p>
+                        <p>{order.shipping_address?.country || 'Indonesia'}</p>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Order Summary */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">

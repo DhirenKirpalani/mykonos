@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Check, Package, Tag, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export interface Notification {
   id: string
@@ -13,6 +15,7 @@ export interface Notification {
   type: 'order' | 'promotion' | 'general'
   read: boolean
   timestamp: Date
+  link?: string
 }
 
 interface NotificationDialogProps {
@@ -31,7 +34,28 @@ export function NotificationDialog({
   onMarkAllAsRead,
 }: NotificationDialogProps) {
   const { t } = useLanguage()
+  const router = useRouter()
+  const [displayCount, setDisplayCount] = useState(10)
   const unreadCount = notifications.filter(n => !n.read).length
+  
+  const displayedNotifications = notifications.slice(0, displayCount)
+  const hasMore = notifications.length > displayCount
+  
+  const handleLoadMore = () => {
+    setDisplayCount(prev => prev + 10)
+  }
+  
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read
+    if (!notification.read) {
+      onMarkAsRead(notification.id)
+    }
+    // Navigate to link if exists
+    if (notification.link) {
+      router.push(notification.link)
+      onClose()
+    }
+  }
 
   const getIcon = (type: Notification['type']) => {
     switch (type) {
@@ -135,20 +159,23 @@ export function NotificationDialog({
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {notifications.map((notification) => (
+                  {displayedNotifications.map((notification) => (
                     <motion.div
                       key={notification.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       className={cn(
-                        "group relative p-4 transition-colors hover:bg-gray-50",
-                        !notification.read && "bg-luxury-gold/5"
+                        "group relative transition-all",
+                        !notification.read && "bg-luxury-gold/5 border-l-4 border-luxury-gold"
                       )}
                     >
-                      <div className="flex gap-3">
+                      <div 
+                        onClick={() => handleNotificationClick(notification)}
+                        className="flex gap-3 p-4 cursor-pointer hover:bg-gray-50/80 transition-colors"
+                      >
                         {/* Icon */}
                         <div className={cn(
-                          "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full",
+                          "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full transition-transform group-hover:scale-110",
                           getIconColor(notification.type)
                         )}>
                           {getIcon(notification.type)}
@@ -156,31 +183,47 @@ export function NotificationDialog({
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start justify-between gap-2 mb-1">
                             <h3 className={cn(
-                              "text-sm font-medium",
+                              "text-sm font-semibold leading-tight",
                               notification.read ? "text-gray-700" : "text-luxury-navy"
                             )}>
                               {notification.title}
                             </h3>
                             {!notification.read && (
-                              <span className="h-2 w-2 flex-shrink-0 rounded-full bg-luxury-gold" />
+                              <div className="flex items-center gap-1">
+                                <span className="h-2 w-2 flex-shrink-0 rounded-full bg-luxury-gold animate-pulse" />
+                              </div>
                             )}
                           </div>
-                          <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                          <p className={cn(
+                            "text-sm line-clamp-2 leading-relaxed",
+                            notification.read ? "text-gray-500" : "text-gray-700"
+                          )}>
                             {notification.message}
                           </p>
-                          <p className="mt-1 text-xs text-gray-400">
-                            {formatTimestamp(notification.timestamp)}
-                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <p className="text-xs text-gray-400 font-medium">
+                              {formatTimestamp(notification.timestamp)}
+                            </p>
+                            {notification.link && (
+                              <span className="text-xs text-luxury-gold group-hover:underline">
+                                View details →
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Mark as read button */}
                         {!notification.read && (
                           <button
-                            onClick={() => onMarkAsRead(notification.id)}
-                            className="absolute right-4 top-4 rounded-full p-1 opacity-0 transition-all hover:bg-luxury-gold/10 group-hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onMarkAsRead(notification.id)
+                            }}
+                            className="flex-shrink-0 rounded-full p-2 opacity-0 transition-all hover:bg-luxury-gold/20 group-hover:opacity-100 hover:scale-110"
                             aria-label="Mark as read"
+                            title="Mark as read"
                           >
                             <Check className="h-4 w-4 text-luxury-gold" />
                           </button>
@@ -188,21 +231,22 @@ export function NotificationDialog({
                       </div>
                     </motion.div>
                   ))}
+                  
+                  {/* Load More Button */}
+                  {hasMore && (
+                    <div className="p-4 text-center border-t border-gray-100">
+                      <button
+                        onClick={handleLoadMore}
+                        className="w-full rounded-lg py-2.5 px-4 text-sm font-medium text-luxury-navy transition-all hover:bg-luxury-gold/10 hover:text-luxury-gold"
+                      >
+                        Load More ({notifications.length - displayCount} more)
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Footer */}
-            {notifications.length > 0 && (
-              <div className="border-t border-gray-100 p-3">
-                <button
-                  onClick={onClose}
-                  className="w-full rounded-lg py-2 text-sm font-medium text-luxury-navy transition-colors hover:bg-gray-50"
-                >
-                  {t.notifications.viewAll}
-                </button>
-              </div>
-            )}
           </motion.div>
         </>
       )}
