@@ -61,8 +61,22 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
   useEffect(() => {
     if (isOpen) {
+      setLoading(true)
       fetchCart()
     }
+  }, [isOpen])
+
+  // Listen for cart-updated events to refetch cart
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      if (isOpen) {
+        setLoading(true)
+        fetchCart()
+      }
+    }
+    
+    window.addEventListener('cart-updated', handleCartUpdate)
+    return () => window.removeEventListener('cart-updated', handleCartUpdate)
   }, [isOpen])
 
   // Refetch cart when region changes
@@ -73,6 +87,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
   }, [region])
 
   const fetchCart = async () => {
+    const startTime = Date.now()
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
@@ -157,6 +172,12 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     } catch (error) {
       console.error('Failed to fetch cart:', error)
     } finally {
+      // Ensure minimum loading time to prevent flash of empty state
+      const elapsed = Date.now() - startTime
+      const minLoadTime = 300
+      if (elapsed < minLoadTime) {
+        await new Promise(resolve => setTimeout(resolve, minLoadTime - elapsed))
+      }
       setLoading(false)
     }
   }
