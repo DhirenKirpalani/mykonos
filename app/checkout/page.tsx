@@ -1988,15 +1988,17 @@ export default function CheckoutPage() {
     const product = item.product as any
     console.log(`🔍 Tax calculation for ${product.name}:`, {
       tax_enabled: product.tax_enabled,
-      product_id: item.product_id
+      product_id: item.product_id,
+      variant_sku: (item as any).variant_sku
     })
     if (product.tax_enabled) {
-      const salePrice = region?.code === 'ID' ? product.price_idr : product.price_usd
+      // Use getBasePrice to handle variant prices correctly
+      const basePrice = getBasePrice(product, (item as any).variant_sku)
       const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
-      const price = discounted !== null ? discounted : salePrice
+      const price = discounted !== null ? discounted : basePrice
       const voucherDiscount = voucherDiscounts.get(item.product_id) || 0
       const itemTaxableAmount = (price * item.quantity) - voucherDiscount
-      console.log(`  ✅ Taxable amount: ${itemTaxableAmount}`)
+      console.log(`  ✅ Taxable amount: ${itemTaxableAmount} (base: ${basePrice}, discounted: ${discounted}, voucher: ${voucherDiscount})`)
       return total + itemTaxableAmount
     }
     console.log(`  ❌ Tax disabled for this product`)
@@ -2137,12 +2139,25 @@ export default function CheckoutPage() {
                     {/* Product Image */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
                       {(() => {
-                        const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
-                        const firstUrl = validUrls[0]
-                        return firstUrl ? (
+                        // Get variant image if item has variant
+                        let displayImage = null
+                        if ((item as any).variant_name && item.product.variants) {
+                          const variant = item.product.variants.find((v: any) => v.name === (item as any).variant_name)
+                          if (variant?.image_url) {
+                            displayImage = variant.image_url
+                          }
+                        }
+                        
+                        // Fallback to product images
+                        if (!displayImage) {
+                          const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
+                          displayImage = validUrls[0]
+                        }
+                        
+                        return displayImage ? (
                           <img
-                            src={firstUrl}
-                            alt={item.product.name}
+                            src={displayImage}
+                            alt={(item as any).variant_name || item.product.name}
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none'
@@ -2182,7 +2197,7 @@ export default function CheckoutPage() {
                       <div className="flex flex-col gap-1 mt-2">
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm sm:text-base text-gray-600">
-                            Qty: {item.quantity}
+                            {t.trackOrder.qty}: {item.quantity}
                           </span>
                           <div className="flex flex-col items-end">
                             {hasCampaignDiscount && (

@@ -33,7 +33,11 @@ export async function GET(request: Request) {
         created_at,
         updated_at,
         shipping_address:shipping_addresses(full_name),
-        order_items!inner(id)
+        order_items!inner(
+          id,
+          variant_name,
+          product:products(name)
+        )
       `, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
@@ -85,6 +89,15 @@ export async function GET(request: Request) {
         const itemCount = order.order_items?.length || 0
         const shippingName = order.shipping_address?.full_name || ''
         
+        // Get first product name (with variant if applicable)
+        const firstItem = order.order_items?.[0]
+        let firstProductName = null
+        if (firstItem?.product?.name) {
+          firstProductName = firstItem.variant_name 
+            ? `${firstItem.product.name} (${firstItem.variant_name})`
+            : firstItem.product.name
+        }
+        
         return {
           id: order.id,
           order_number: order.order_number,
@@ -100,6 +113,7 @@ export async function GET(request: Request) {
           customer_email: order.user_id 
             ? usersMap.get(order.user_id)?.email || order.customer_email
             : order.customer_email,
+          first_product_name: firstProductName,
           items_count: itemCount
         }
       })

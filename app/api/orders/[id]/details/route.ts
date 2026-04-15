@@ -66,7 +66,7 @@ export async function GET(
         if (item.product_id) {
           const { data: product, error: productError } = await supabase
             .from('products')
-            .select('name, image_urls')
+            .select('name, image_urls, variants')
             .eq('id', item.product_id)
             .single()
           
@@ -76,7 +76,22 @@ export async function GET(
           
           if (product) {
             productName = product.name
-            imageUrl = product.image_urls?.[0] || null
+            
+            // Check for variant image first
+            if (item.variant_name && product.variants) {
+              const variant = product.variants.find((v: any) => v.name === item.variant_name)
+              if (variant?.image_url) {
+                imageUrl = variant.image_url
+                console.log(`✅ [API ORDER DETAILS] Using variant image for:`, item.variant_name)
+              }
+            }
+            
+            // Fallback to product images
+            if (!imageUrl) {
+              const validUrls = product.image_urls?.filter((url: string) => url && !url.includes('placehold.co')) || []
+              imageUrl = validUrls[0] || null
+            }
+            
             console.log(`✅ [API ORDER DETAILS] Product found:`, product.name)
           } else {
             console.warn(`⚠️ [API ORDER DETAILS] Product not found for ID:`, item.product_id)

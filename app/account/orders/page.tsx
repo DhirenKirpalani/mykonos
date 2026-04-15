@@ -23,6 +23,11 @@ type Order = {
     product: {
       name: string
       image_urls: string[]
+      variants?: Array<{
+        name: string
+        sku: string
+        image_url?: string
+      }>
     }
   }>
 }
@@ -68,7 +73,8 @@ export default function OrdersPage() {
             variant_name,
             product:products (
               name,
-              image_urls
+              image_urls,
+              variants
             )
           )
         `)
@@ -180,14 +186,35 @@ export default function OrdersPage() {
             <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
               {firstProduct && (
                 <div className="flex-shrink-0 relative w-16 h-16 sm:w-20 sm:h-20">
-                  <Image
-                    src={firstProduct.image_urls?.[0] || '/placeholder.png'}
-                    alt={firstProduct.name}
-                    fill
-                    sizes="(max-width: 640px) 64px, 80px"
-                    className="object-cover rounded-lg"
-                    loading="lazy"
-                  />
+                  {(() => {
+                    // Get variant image if item has variant
+                    let displayImage = null
+                    if (firstItem?.variant_name && firstProduct.variants) {
+                      const variant = firstProduct.variants.find((v: any) => v.name === firstItem.variant_name)
+                      if (variant?.image_url) {
+                        displayImage = variant.image_url
+                      }
+                    }
+                    // Fallback to product image
+                    if (!displayImage) {
+                      displayImage = firstProduct.image_urls?.[0]
+                    }
+                    
+                    return displayImage ? (
+                      <Image
+                        src={displayImage}
+                        alt={firstItem?.variant_name || firstProduct.name}
+                        fill
+                        sizes="(max-width: 640px) 64px, 80px"
+                        className="object-cover rounded-lg"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
+                        <Package className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
 

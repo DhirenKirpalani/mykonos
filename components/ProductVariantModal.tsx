@@ -385,10 +385,10 @@ export function ProductVariantModal({
                 <div className="mb-4">
                   {product.stock_quantity > 0 ? (
                     <p className="text-sm text-green-600 font-medium">
-                      {product.stock_quantity - quantity} remaining ({quantity} selected)
+                      {product.stock_quantity - quantity} {t('product.remaining')} ({quantity} {t('product.selected')})
                     </p>
                   ) : (
-                    <p className="text-sm text-red-600 font-medium">Out of stock</p>
+                    <p className="text-sm text-red-600 font-medium">{t('product.outOfStock')}</p>
                   )}
                 </div>
               )}
@@ -423,7 +423,7 @@ export function ProductVariantModal({
               {hasVariants && (
                 <div className="space-y-2 mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Variants
+                    {t('product.selectVariants')}
                   </label>
                   <div className="grid grid-cols-1 gap-2">
                     {product.variants!.map((variant, index) => {
@@ -443,19 +443,32 @@ export function ProductVariantModal({
                             disabled={variant.stock_quantity === 0}
                             className="w-full px-3 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
+                            <div className="flex items-center justify-between gap-3">
+                              {/* Variant Image Thumbnail */}
+                              {variant.image_url && (
+                                <div className="relative w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
+                                  <img
+                                    src={variant.image_url}
+                                    alt={variant.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
                                 <div className="font-medium text-gray-900">{variant.name}</div>
                                 <div className="text-sm text-gray-500">
                                   {isSelected && selectedItem 
-                                    ? `${variant.stock_quantity - selectedItem.quantity} remaining (${selectedItem.quantity} selected)`
+                                    ? `${variant.stock_quantity - selectedItem.quantity} ${t('product.remaining')} (${selectedItem.quantity} ${t('product.selected')})`
                                     : variant.stock_quantity > 0 
-                                      ? `${variant.stock_quantity} in stock` 
-                                      : 'Out of stock'
+                                      ? `${variant.stock_quantity} ${t('product.inStock')}` 
+                                      : t('product.outOfStock')
                                   }
                                 </div>
                               </div>
-                              <div className="flex flex-col items-end gap-1">
+                              <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                 <div className="font-semibold text-[#EE4D2D]">
                                   {(() => {
                                     const qty = isSelected && selectedItem ? selectedItem.quantity : 1
@@ -489,7 +502,7 @@ export function ProductVariantModal({
                           {isSelected && selectedItem && mode !== 'wishlist' && (
                             <div className="px-4 pb-3 pt-2 border-t border-gray-200">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700">Quantity:</span>
+                                <span className="text-sm font-medium text-gray-700">{t('product.quantity')}:</span>
                                 <div className="flex items-center gap-2">
                                   <button
                                     onClick={() => handleVariantQuantityChange(variant.sku, -1)}
@@ -582,7 +595,7 @@ export function ProductVariantModal({
                             }
                             return `${t('product.buyNow')} with Voucher ${formatPrice(totalNetAmount, currencyCode)}`
                           }
-                          return `${t('product.buyNow')} ${selectedVariants.size > 0 ? `(${selectedVariants.size} variants)` : ''}`
+                          return `${t('product.buyNow')} ${selectedVariants.size > 0 ? `(${selectedVariants.size} ${selectedVariants.size === 1 ? t('product.variant') : t('product.variants')})` : ''}`
                         })()}
                       </span>
                     )}

@@ -91,7 +91,10 @@ export function HeroCarousel() {
   const isVideo = currentItem?.media_type === 'video' || !currentItem
   const shopNowLink = currentItem?.link_url || '/products'
   const overlayOpacity = currentItem?.overlay_opacity ?? 30
-  const buttonText = currentItem?.button_text || t('home.shopNow')
+  // Use translation if button_text is empty or is the default "Shop Now"/"SHOP NOW"
+  const buttonText = (!currentItem?.button_text || currentItem.button_text.toUpperCase() === 'SHOP NOW') 
+    ? t('home.shopNow') 
+    : currentItem.button_text
 
   return (
     <div
