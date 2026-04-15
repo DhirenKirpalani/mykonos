@@ -173,7 +173,12 @@ export const translations = {
       removeFromWishlist: "Remove from Wishlist",
       outOfStock: "Out of Stock",
       inStock: "In Stock",
-      quantity: "Quantity"
+      quantity: "Quantity",
+      selectVariants: "Select Variants",
+      remaining: "remaining",
+      selected: "selected",
+      variants: "variants",
+      variant: "variant"
     },
     trackOrder: {
       title: "Track Your Order",
@@ -201,6 +206,7 @@ export const translations = {
       orderDate: "Order Date",
       totalAmount: "Total Amount",
       phone: "Phone",
+      qty: "Qty",
       saveYourOrder: "Save Your Order",
       saveYourOrderText: "Create an account to easily track this order and manage future purchases.",
       createAccount: "Create Account",
@@ -775,7 +781,12 @@ export const translations = {
       removeFromWishlist: "Hapus dari Wishlist",
       outOfStock: "Stok Habis",
       inStock: "Tersedia",
-      quantity: "Jumlah"
+      quantity: "Jumlah",
+      selectVariants: "Pilih Varian",
+      remaining: "tersisa",
+      selected: "dipilih",
+      variants: "varian",
+      variant: "varian"
     },
     trackOrder: {
       title: "Lacak Pesanan Anda",
@@ -803,6 +814,7 @@ export const translations = {
       orderDate: "Tanggal Pesanan",
       totalAmount: "Total Pembayaran",
       phone: "Telepon",
+      qty: "Jml",
       saveYourOrder: "Simpan Pesanan Anda",
       saveYourOrderText: "Buat akun untuk melacak pesanan ini dengan mudah dan mengelola pembelian di masa mendatang.",
       createAccount: "Buat Akun",
