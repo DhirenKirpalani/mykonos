@@ -48,10 +48,12 @@ export async function GET() {
       const uniqueProducts = new Map()
       discount.discount_products?.forEach((dp: any) => {
         if (dp.products && !uniqueProducts.has(dp.product_id)) {
+          // Filter out placeholder images
+          const validUrls = dp.products.image_urls?.filter((url: string) => url && !url.includes('placehold.co')) || []
           uniqueProducts.set(dp.product_id, {
             id: dp.products.id,
             name: dp.products.name,
-            image_url: dp.products.image_urls?.[0]
+            image_url: validUrls[0] || null
           })
         }
       })

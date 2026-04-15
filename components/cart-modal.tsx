@@ -66,17 +66,20 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     }
   }, [isOpen])
 
-  // Listen for cart-updated events to refetch cart
+  // Listen for cart-updated events to refetch cart (only for external updates, not quantity changes)
   useEffect(() => {
-    const handleCartUpdate = () => {
+    const handleCartUpdate = (e: Event) => {
+      // Skip refetch if this is a quantity update (we handle it optimistically)
+      const customEvent = e as CustomEvent
+      if (customEvent.detail?.skipRefetch) return
+      
       if (isOpen) {
-        setLoading(true)
         fetchCart()
       }
     }
     
-    window.addEventListener('cart-updated', handleCartUpdate)
-    return () => window.removeEventListener('cart-updated', handleCartUpdate)
+    window.addEventListener('cart-updated', handleCartUpdate as EventListener)
+    return () => window.removeEventListener('cart-updated', handleCartUpdate as EventListener)
   }, [isOpen])
 
   // Refetch cart when region changes
@@ -228,14 +231,28 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
       if (error) throw error
 
       console.log('✅ [CART DRAWER] Database updated successfully')
+      
+      // Update cart items optimistically
       setCartItems(prev =>
         prev.map(item =>
           item.id === itemId ? { ...item, quantity: newQuantity } : item
         )
       )
       
-      console.log('📢 [CART DRAWER] Dispatching cart-updated event...')
-      window.dispatchEvent(new Event('cart-updated'))
+      // Update voucher discounts optimistically
+      if (voucherDiscounts.has(itemId)) {
+        const oldQuantity = item.quantity
+        const quantityRatio = newQuantity / oldQuantity
+        setVoucherDiscounts(prev => {
+          const newMap = new Map(prev)
+          const oldDiscount = prev.get(itemId) || 0
+          newMap.set(itemId, oldDiscount * quantityRatio)
+          return newMap
+        })
+      }
+      
+      console.log('📢 [CART DRAWER] Dispatching cart-updated event with skipRefetch...')
+      window.dispatchEvent(new CustomEvent('cart-updated', { detail: { skipRefetch: true } }))
       console.log('✅ [CART DRAWER] Event dispatched')
     } catch (error) {
       console.error('❌ [CART DRAWER] Failed to update quantity:', error)

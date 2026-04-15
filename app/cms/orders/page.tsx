@@ -64,6 +64,8 @@ export default function OrdersPage() {
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
   const [ordersPerPage] = useState(10)
+  const [totalOrders, setTotalOrders] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
 
   useEffect(() => {
     // Reset page to 1 when status filter changes
@@ -125,6 +127,8 @@ export default function OrdersPage() {
           totalPages: data?.totalPages || 0
         })
         setOrders(data.orders || [])
+        setTotalOrders(data.total || 0)
+        setTotalPages(data.totalPages || 0)
         
         // Clear order details when fetching new orders
         setOrderDetails(new Map())
@@ -375,11 +379,10 @@ export default function OrdersPage() {
     cancelled: allOrders.filter(o => o.status === 'cancelled').length,
   }
 
-  // Pagination
-  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage)
+  // Use server-side paginated orders directly (no client-side pagination)
+  const paginatedOrders = filteredOrders
   const startIndex = (currentPage - 1) * ordersPerPage
-  const endIndex = startIndex + ordersPerPage
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
+  const endIndex = Math.min(startIndex + ordersPerPage, totalOrders)
 
   const processingOrders = paginatedOrders.filter(order => order.status === 'processing')
   const packedOrders = paginatedOrders.filter(order => order.status === 'packed')
@@ -819,7 +822,7 @@ export default function OrdersPage() {
         {!loading && filteredOrders.length > 0 && (
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+              Showing {startIndex + 1} to {endIndex} of {totalOrders} orders
             </p>
             <div className="flex gap-2">
               <Button

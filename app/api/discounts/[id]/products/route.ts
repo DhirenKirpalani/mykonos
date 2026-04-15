@@ -39,6 +39,7 @@ export async function GET(
       const product = dp.products
       let originalPrice = 0
       let stock = 0
+      let productImage = null
 
       // If variant_id exists, find the variant details
       if (dp.variant_id && product.variants) {
@@ -46,6 +47,8 @@ export async function GET(
         if (variant) {
           originalPrice = variant.price_idr || 0
           stock = variant.stock_quantity || 0
+          // Use variant image if available
+          productImage = variant.image_url || null
         }
       } else {
         // No variant, use product price
@@ -53,11 +56,17 @@ export async function GET(
         stock = product.stock_quantity || 0
       }
 
+      // Fallback to product images if no variant image
+      if (!productImage) {
+        const validUrls = product.image_urls?.filter((url: string) => url && !url.includes('placehold.co')) || []
+        productImage = validUrls[0] || null
+      }
+
       return {
         id: dp.id,
         product_id: dp.product_id,
         product_name: product.name,
-        product_image: product.image_urls?.[0] || null,
+        product_image: productImage,
         variant_id: dp.variant_id,
         variant_name: dp.variant_id || null,
         original_price: originalPrice,
