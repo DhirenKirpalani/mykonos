@@ -14,14 +14,12 @@ export function ExpandableSpecifications({ product, fragranceFamily }: Expandabl
   const p = t.products
 
   const specRows = [
-    { label: p.stock, value: product.stock_quantity !== undefined ? String(product.stock_quantity) : null },
     { label: p.size, value: (product as any).volume_ml ? `${(product as any).volume_ml}ml` : null },
     { label: p.collection, value: product.collection || null },
     { label: p.fragranceFamily, value: fragranceFamily || null },
     { label: p.topNotes, value: (product as any).top_notes || null },
     { label: p.middleNotes, value: (product as any).middle_notes || null },
     { label: p.baseNotes, value: (product as any).base_notes || null },
-    { label: p.gender, value: (product as any).gender || null },
     { label: p.shelfLife, value: (product as any).shelf_life || null },
     { label: p.countryOfOrigin, value: (product as any).country_of_origin || null },
     { label: p.shipsFrom, value: (product as any).ships_from || null },

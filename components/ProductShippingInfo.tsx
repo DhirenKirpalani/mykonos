@@ -1,10 +1,14 @@
 'use client'
 
+import { useLanguage } from '@/contexts/LanguageContext'
+
 interface ProductShippingInfoProps {
   product: any
 }
 
 export function ProductShippingInfo({ product }: ProductShippingInfoProps) {
+  const { t } = useLanguage()
+  
   // Use pre_order_duration_days (default 30 days as all products are pre-order)
   const preOrderDays = product.pre_order_duration_days || 30
   
@@ -16,7 +20,7 @@ export function ProductShippingInfo({ product }: ProductShippingInfoProps) {
   const estimateEndDate = new Date(today)
   estimateEndDate.setDate(today.getDate() + preOrderDays + 5)
   
-  // Format dates as "DD MMM" in Indonesian
+  // Format dates as "DD MMM"
   const formatDate = (date: Date) => {
     const day = date.getDate()
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
@@ -31,7 +35,7 @@ export function ProductShippingInfo({ product }: ProductShippingInfoProps) {
       </svg>
       <div className="flex-1">
         <p className="text-sm text-gray-600">
-          Pre-order (dikirim dalam {preOrderDays} hari). Estimasi tiba {formatDate(estimateStartDate)} - {formatDate(estimateEndDate)}
+          {t.products.preOrder} ({t.products.shippedIn} {preOrderDays} {t.products.days}). {t.products.estimatedArrival} {formatDate(estimateStartDate)} - {formatDate(estimateEndDate)}
         </p>
       </div>
     </div>

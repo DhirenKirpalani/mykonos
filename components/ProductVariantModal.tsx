@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useRegion } from '@/contexts/RegionContext'
 import { formatPrice } from '@/lib/utils'
-import { useTranslation } from '@/hooks/useTranslation'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ProductVariant {
   name: string
@@ -59,7 +59,7 @@ export function ProductVariantModal({
   onAddToWishlist,
   mode,
 }: ProductVariantModalProps) {
-  const { t } = useTranslation()
+  const { t } = useLanguage()
   const { region } = useRegion()
   const minQty = product.min_purchase_quantity || 1
   const maxQty = product.max_purchase_quantity || product.stock_quantity
@@ -330,7 +330,7 @@ export function ProductVariantModal({
                       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
                       return `${day} ${months[date.getMonth()]}`
                     }
-                    return `Pre-order (dikirim dalam ${preOrderDays} hari). Estimasi tiba ${formatDate(estimateStart)} - ${formatDate(estimateEnd)}`
+                    return `${t.products.preOrder} (${t.products.shippedIn} ${preOrderDays} ${t.products.days}). ${t.products.estimatedArrival} ${formatDate(estimateStart)} - ${formatDate(estimateEnd)}`
                   })()}
                 </p>
               </div>
@@ -380,24 +380,12 @@ export function ProductVariantModal({
                 )}
               </div>
 
-              {/* Stock Status */}
-              {!hasVariants && (
-                <div className="mb-4">
-                  {product.stock_quantity > 0 ? (
-                    <p className="text-sm text-green-600 font-medium">
-                      {product.stock_quantity - quantity} {t('product.remaining')} ({quantity} {t('product.selected')})
-                    </p>
-                  ) : (
-                    <p className="text-sm text-red-600 font-medium">{t('product.outOfStock')}</p>
-                  )}
-                </div>
-              )}
 
               {/* Quantity Selector for products without variants */}
               {!hasVariants && mode !== 'wishlist' && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('product.quantity')}
+                    {t.product.quantity}
                   </label>
                   <div className="flex items-center gap-3">
                     <button
@@ -423,7 +411,7 @@ export function ProductVariantModal({
               {hasVariants && (
                 <div className="space-y-2 mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('product.selectVariants')}
+                    {t.product.selectVariants}
                   </label>
                   <div className="grid grid-cols-1 gap-2">
                     {product.variants!.map((variant, index) => {
@@ -459,14 +447,6 @@ export function ProductVariantModal({
                               )}
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-gray-900">{variant.name}</div>
-                                <div className="text-sm text-gray-500">
-                                  {isSelected && selectedItem 
-                                    ? `${variant.stock_quantity - selectedItem.quantity} ${t('product.remaining')} (${selectedItem.quantity} ${t('product.selected')})`
-                                    : variant.stock_quantity > 0 
-                                      ? `${variant.stock_quantity} ${t('product.inStock')}` 
-                                      : t('product.outOfStock')
-                                  }
-                                </div>
                               </div>
                               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                 <div className="font-semibold text-[#EE4D2D]">
@@ -502,7 +482,7 @@ export function ProductVariantModal({
                           {isSelected && selectedItem && mode !== 'wishlist' && (
                             <div className="px-4 pb-3 pt-2 border-t border-gray-200">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700">{t('product.quantity')}:</span>
+                                <span className="text-sm font-medium text-gray-700">{t.product.quantity}:</span>
                                 <div className="flex items-center gap-2">
                                   <button
                                     onClick={() => handleVariantQuantityChange(variant.sku, -1)}
@@ -593,9 +573,9 @@ export function ProductVariantModal({
                                 : voucher.discount_value
                               totalNetAmount = itemTotal - voucherDiscount
                             }
-                            return `${t('product.buyNow')} with Voucher ${formatPrice(totalNetAmount, currencyCode)}`
+                            return `${t.product.buyNow} with Voucher ${formatPrice(totalNetAmount, currencyCode)}`
                           }
-                          return `${t('product.buyNow')} ${selectedVariants.size > 0 ? `(${selectedVariants.size} ${selectedVariants.size === 1 ? t('product.variant') : t('product.variants')})` : ''}`
+                          return `${t.product.buyNow} ${selectedVariants.size > 0 ? `(${selectedVariants.size} ${selectedVariants.size === 1 ? t.product.variant : t.product.variants})` : ''}`
                         })()}
                       </span>
                     )}

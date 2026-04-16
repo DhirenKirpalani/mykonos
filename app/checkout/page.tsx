@@ -2119,7 +2119,7 @@ export default function CheckoutPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-xs sm:text-sm text-gray-600">
-                    Pre-order (dikirim dalam {preOrderDays} hari). Estimasi tiba {formatDate(estimateStart)} - {formatDate(estimateEnd)}
+                    {t.products.preOrder} ({t.products.shippedIn} {preOrderDays} {t.products.days}). {t.products.estimatedArrival} {formatDate(estimateStart)} - {formatDate(estimateEnd)}
                   </p>
                 </div>
               )
