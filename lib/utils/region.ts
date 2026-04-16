@@ -24,19 +24,19 @@ export function formatPrice(
       break
     case 'USD':
       locale = 'en-US'
-      decimalPlaces = decimals ?? 0
+      decimalPlaces = decimals ?? 2 // USD always shows 2 decimal places
       break
     case 'EUR':
       locale = 'de-DE'
-      decimalPlaces = decimals ?? 0
+      decimalPlaces = decimals ?? 2 // EUR always shows 2 decimal places
       break
     case 'GBP':
       locale = 'en-GB'
-      decimalPlaces = decimals ?? 0
+      decimalPlaces = decimals ?? 2 // GBP always shows 2 decimal places
       break
     default:
       locale = 'en-US'
-      decimalPlaces = decimals ?? 0
+      decimalPlaces = decimals ?? 2 // Default to 2 decimal places
   }
 
   if (!showCurrency) {

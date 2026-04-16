@@ -93,7 +93,7 @@ export function formatPrice(
   return new Intl.NumberFormat(currencyInfo.locale, {
     style: 'currency',
     currency: currency,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: currency === 'IDR' ? 0 : 2,
     maximumFractionDigits: currency === 'IDR' ? 0 : 2,
     ...options,
   }).format(price)
