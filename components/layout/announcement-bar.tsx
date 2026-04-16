@@ -28,7 +28,6 @@ export function AnnouncementBar() {
           'Discover our redeemable sampler sets. *T&Cs Apply.',
           'Free shipping on orders over $100',
           'Complimentary gift wrapping available',
-          'New arrivals now in stock',
         ])
       }
     } catch (error) {

@@ -471,13 +471,15 @@ export function HeaderMobile() {
                 )}
               </div>
               
-              <div className="flex items-center justify-between rounded-lg px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <Globe className="h-5 w-5 text-white" />
-                  <span className="text-base font-medium text-white">{t.header.region}</span>
-                </div>  
-                <RegionCurrencySelector />
-              </div>
+              {(role === 'admin' || role === 'staff') && (
+                <div className="flex items-center justify-between rounded-lg px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-white" />
+                    <span className="text-base font-medium text-white">{t.header.region}</span>
+                  </div>  
+                  <RegionCurrencySelector />
+                </div>
+              )}
               <div className="flex items-center justify-between rounded-lg px-4 py-4">
                 <div className="flex items-center gap-3">
                   <Globe className="h-5 w-5 text-white" />

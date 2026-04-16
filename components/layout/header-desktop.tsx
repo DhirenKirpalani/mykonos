@@ -320,7 +320,7 @@ export function HeaderDesktop() {
       <nav className="container mx-auto px-8">
         <div className="flex h-20 items-center justify-center">
           <div className="flex items-center gap-5 flex-1">
-            <RegionCurrencySelector />
+            {(role === 'admin' || role === 'staff') && <RegionCurrencySelector />}
             <LanguageSwitcher />
           </div>
           

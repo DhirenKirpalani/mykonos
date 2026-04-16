@@ -468,7 +468,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
               {product.products_sold > 0 && (
                 <span className="text-gray-600">
                   {product.products_sold >= 1000
-                    ? `${Math.floor(product.products_sold / 1000)}RB+`
+                    ? `${Math.floor(product.products_sold / 1000)}k+`
                     : `${product.products_sold}+`} {t.products.sold}
                 </span>
               )}
