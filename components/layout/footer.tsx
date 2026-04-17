@@ -130,7 +130,7 @@ export function Footer() {
 
         {/* Payment Methods Section */}
         <div className="mt-8 sm:mt-10 border-t border-white/10 pt-6 sm:pt-8">
-          <PaymentMethods size="small" showTitle className="opacity-80" />
+          <PaymentMethods size="small" showTitle />
         </div>
 
         {/* Copyright Section */}

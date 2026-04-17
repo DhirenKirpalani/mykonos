@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useRegion } from '@/contexts/RegionContext'
 
 interface PaymentMethodsProps {
   className?: string
@@ -11,8 +12,13 @@ interface PaymentMethodsProps {
 
 export function PaymentMethods({ className = '', showTitle = false, size = 'medium' }: PaymentMethodsProps) {
   const { t } = useLanguage()
-  // Ordered by familiarity: Cards, Banks, E-wallets, Paylater
-  const paymentMethods = [
+  const { region } = useRegion()
+  
+  // Determine if this is ID region
+  const isIDRegion = region?.code === 'ID'
+  
+  // Payment methods for Indonesia (Midtrans)
+  const indonesiaPaymentMethods = [
     // Cards
     { name: 'Visa', src: '/assets/payment-methods/visa.png', scale: 1 },
     { name: 'Mastercard', src: '/assets/payment-methods/mastercard.png', scale: 1 },
@@ -31,6 +37,18 @@ export function PaymentMethods({ className = '', showTitle = false, size = 'medi
     { name: 'Kredivo', src: '/assets/payment-methods/kredivo.svg', scale: 1 },
     { name: 'Akulaku', src: '/assets/payment-methods/akulaku_paylater.svg', scale: 1 },
   ]
+  
+  // Payment methods for International (Stripe)
+  // Stripe accepts all major credit/debit cards
+  const internationalPaymentMethods = [
+    { name: 'Visa', src: '/assets/payment-methods/visa.png', scale: 1 },
+    { name: 'Mastercard', src: '/assets/payment-methods/mastercard.png', scale: 1 },
+    // Note: Stripe also supports Amex, Discover, Diners, JCB, UnionPay, etc.
+    // Showing just the most common ones for cleaner display
+  ]
+  
+  // Use appropriate payment methods based on region
+  const paymentMethods = isIDRegion ? indonesiaPaymentMethods : internationalPaymentMethods
 
   // Consistent sizing
   const logoHeight = size === 'small' ? 20 : size === 'medium' ? 24 : 28
@@ -40,7 +58,7 @@ export function PaymentMethods({ className = '', showTitle = false, size = 'medi
   return (
     <div className={className}>
       {showTitle && (
-        <p className="text-xs text-gray-500 mb-3 text-center">
+        <p className="text-xs text-gray-400 mb-3 text-center">
           {t.home.supportedPaymentMethods}
         </p>
       )}

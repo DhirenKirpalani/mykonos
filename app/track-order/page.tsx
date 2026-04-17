@@ -58,6 +58,8 @@ type Order = {
   tracking_number?: string
   estimated_delivery_date?: string
   snap_token?: string
+  stripe_session_id?: string
+  stripe_payment_intent_id?: string
   expiry_time?: string
   payment_method_type?: string
   order_items?: OrderItem[]
@@ -144,6 +146,16 @@ export default function TrackOrderPage() {
     fetchDiscounts()
   }, [order?.id])
 
+  // Check for payment cancellation from Stripe
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('payment_canceled') === 'true') {
+      toast.info('Payment was canceled. You can continue payment anytime from your order.')
+      // Clean up URL
+      window.history.replaceState({}, '', '/track-order')
+    }
+  }, [])
+
   // Pre-fill email for authenticated (non-anonymous) users and lock the field
   useEffect(() => {
     if (user && !user.is_anonymous && user.email) {
@@ -178,7 +190,7 @@ export default function TrackOrderPage() {
           // Fetch summary only — full detail loaded on-demand when user clicks
           const { data, error } = await supabase
             .from('orders')
-            .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, expiry_time, payment_metadata')
+            .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata')
             .eq('customer_email', authenticatedEmail)
             .order('created_at', { ascending: false })
             .limit(5)
@@ -219,7 +231,7 @@ export default function TrackOrderPage() {
             // Fetch summary only — full detail loaded on-demand when user clicks
             const { data, error } = await supabase
               .from('orders')
-              .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, expiry_time, payment_metadata')
+              .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata')
               .eq('customer_email', mostRecentEmail)
               .order('created_at', { ascending: false })
               .limit(5)
@@ -341,7 +353,7 @@ export default function TrackOrderPage() {
         console.log('🔍 [POLLING] Checking order status...')
         const { data, error } = await supabase
           .from('orders')
-          .select('payment_status, status, snap_token, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, carrier_code')
+          .select('payment_status, status, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, carrier_code')
           .eq('order_number', order.order_number)
           .eq('customer_email', order.customer_email)
           .single()
@@ -434,6 +446,7 @@ export default function TrackOrderPage() {
       order_number: currentOrder?.order_number,
       payment_status: currentOrder?.payment_status,
       snap_token: currentOrder?.snap_token ? 'exists' : 'missing',
+      stripe_session_id: (currentOrder as any)?.stripe_session_id ? 'exists' : 'missing',
       expiry_time: currentOrder?.expiry_time,
       has_payment_metadata: !!currentOrder?.payment_metadata
     })
@@ -444,7 +457,30 @@ export default function TrackOrderPage() {
       return
     }
 
-    // Validate snap_token exists
+    // Check if this is a Stripe order (non-ID region)
+    const stripeSessionId = (currentOrder as any)?.stripe_session_id
+    if (stripeSessionId) {
+      console.log('💳 [STRIPE] Detected Stripe order, redirecting to Stripe checkout...')
+      toast.info('Redirecting to payment...')
+      
+      // Redirect to Stripe checkout
+      try {
+        const response = await fetch(`/api/stripe/checkout-session/${stripeSessionId}`)
+        const data = await response.json()
+        
+        if (data.url) {
+          window.location.href = data.url
+        } else {
+          toast.error('Unable to continue payment. Please contact support.')
+        }
+      } catch (error) {
+        console.error('❌ [STRIPE] Failed to get checkout URL:', error)
+        toast.error('Unable to continue payment. Please contact support.')
+      }
+      return
+    }
+
+    // For Midtrans orders (ID region), validate snap_token exists
     if (!currentOrder.snap_token) {
       console.error('❌ [PAYMENT DEBUG] snap_token is missing!', {
         order_id: currentOrder.id,
@@ -889,7 +925,7 @@ export default function TrackOrderPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
               {/* Status Header */}
               <div className="flex items-center justify-between mb-4 pb-4 border-b">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Status Pesanan</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">{t('trackOrder.orderStatus')}</h2>
                 <span className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 ${
                   (() => {
                     const status = order.payment_metadata?.transaction_status
@@ -996,7 +1032,7 @@ export default function TrackOrderPage() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-yellow-900 mb-1">{t('trackOrder.paymentPending')}</h3>
                       <p className="text-sm text-yellow-700 mb-3">
-                        Selesaikan pembayaran sebelum waktu habis untuk memproses pesanan Anda.
+                        {t('trackOrder.completePaymentMessage')}
                       </p>
                       <Button
                         onClick={() => handleContinuePayment()}
@@ -1133,7 +1169,7 @@ export default function TrackOrderPage() {
               {/* Product Items */}
               {order.order_items && order.order_items.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Produk</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('trackOrder.products')}</h3>
                   <div className="space-y-3">
                     {order.order_items.map((item) => (
                       <div key={item.id} className="flex gap-3">
@@ -1188,11 +1224,11 @@ export default function TrackOrderPage() {
               {/* Order Details Grid */}
               <div className="grid grid-cols-2 gap-3 text-sm mb-4 pb-4 border-b">
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Nomor Pesanan</p>
+                  <p className="text-gray-600 text-xs mb-1">{t('trackOrder.orderNumber')}</p>
                   <p className="font-mono font-semibold text-gray-900 text-xs">{order.order_number}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Tanggal Pesanan</p>
+                  <p className="text-gray-600 text-xs mb-1">{t('trackOrder.orderDate')}</p>
                   <p className="font-semibold text-gray-900 text-xs">
                     {order.payment_metadata?.transaction_time
                       ? new Date(order.payment_metadata.transaction_time).toLocaleString('id-ID', {
@@ -1217,23 +1253,24 @@ export default function TrackOrderPage() {
                   <p className="font-semibold text-gray-900 text-xs truncate">{order.customer_email}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Total Pembayaran</p>
+                  <p className="text-gray-600 text-xs mb-1">{t('trackOrder.totalAmount')}</p>
                   <p className="font-semibold text-gray-900 text-xs">
                     {formatPrice(order.total_amount, order.currency_code as any)}
                   </p>
                 </div>
                 {(order.payment_metadata?.payment_type || order.payment_method_type) && (
                   <div>
-                    <p className="text-gray-600 text-xs mb-1">Metode Pembayaran</p>
+                    <p className="text-gray-600 text-xs mb-1">{t('trackOrder.paymentMethod')}</p>
                     <p className="font-semibold text-gray-900 text-xs capitalize">
                       {(order.payment_metadata?.payment_type || order.payment_method_type || '').replace('_', ' ')}
                     </p>
                   </div>
                 )}
-                {(order.payment_metadata?.expiry_time || order.expiry_time) && (
+                {/* Only show expiry time for Midtrans orders (not Stripe) */}
+                {!order.stripe_session_id && (order.payment_metadata?.expiry_time || order.expiry_time) && (
                   <>
                     <div>
-                      <p className="text-gray-600 text-xs mb-1">Bayar Sebelum</p>
+                      <p className="text-gray-600 text-xs mb-1">{t('trackOrder.payBefore')}</p>
                       <p className="font-semibold text-gray-900 text-xs">
                         {new Date(order.payment_metadata?.expiry_time || order.expiry_time!).toLocaleString('id-ID', {
                           day: 'numeric',
@@ -1248,7 +1285,7 @@ export default function TrackOrderPage() {
                     {/* Only show Waktu Tersisa if payment is not successful */}
                     {!(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && (
                       <div>
-                        <p className="text-gray-600 text-xs mb-1">Waktu Tersisa</p>
+                        <p className="text-gray-600 text-xs mb-1">{t('trackOrder.timeRemaining')}</p>
                         <p className="font-semibold text-gray-900 text-xs">
                           {timeRemaining || 'Menghitung...'}
                         </p>
@@ -1263,20 +1300,52 @@ export default function TrackOrderPage() {
                 <div className="pt-4">
                   <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-luxury-navy" />
-                    Alamat Pengiriman
+                    {t('trackOrder.shippingAddress')}
                   </h3>
                   <div className="text-gray-700 space-y-1 text-sm">
                     {(() => {
                       const addr = order.shipping_address as any
+                      let fullName = order.shipping_address?.full_name || addr?.name || ''
+                      const email = order.customer_email || ''
+                      
+                      // Format name - get actual customer name from shipping address or email
+                      let displayName = fullName
+                      
+                      // Check if name looks like an email username (no spaces, contains numbers, all lowercase)
+                      const looksLikeUsername = fullName && 
+                        !fullName.includes(' ') && 
+                        /[0-9]/.test(fullName) && 
+                        fullName === fullName.toLowerCase()
+                      
+                      // If name looks like email username, try to get better name
+                      if (looksLikeUsername || (fullName && email && fullName === email.split('@')[0])) {
+                        // Try to extract name from email before @ symbol
+                        const emailName = email ? email.split('@')[0] : fullName
+                        // Clean up: remove numbers, replace dots/underscores with spaces, capitalize
+                        const cleaned = emailName
+                          .replace(/[0-9]/g, '')
+                          .replace(/[._-]/g, ' ')
+                          .trim()
+                          .split(' ')
+                          .filter((word: string) => word.length > 0)
+                          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                          .join(' ')
+                        displayName = cleaned || fullName
+                      }
+                      
+                      // Final fallback if still no valid name
+                      if (!displayName || displayName.trim() === '') {
+                        displayName = email ? email.split('@')[0] : 'Customer'
+                      }
+                      
+                      // Format phone
+                      const phone = order.shipping_address?.phone || addr?.phone_number || ''
+                      const displayPhone = phone && phone.trim() ? phone : '-'
+                      
                       return (
                         <>
-                          <p className="font-semibold">
-                            {order.shipping_address?.full_name || 
-                             addr?.name || 
-                             order.customer_email?.split('@')[0] || 
-                             'Customer'}
-                          </p>
-                          <p>{order.shipping_address?.address_line1 || addr?.address || 'N/A'}</p>
+                          <p className="font-semibold">{displayName}</p>
+                          <p>{order.shipping_address?.address_line1 || addr?.address || ''}</p>
                           {order.shipping_address?.address_line2 && (
                             <p>{order.shipping_address.address_line2}</p>
                           )}
@@ -1286,7 +1355,7 @@ export default function TrackOrderPage() {
                           </p>
                           <p>{order.shipping_address?.country || 'Indonesia'}</p>
                           <p className="pt-2 text-gray-600">
-                            Telepon: {order.shipping_address?.phone || addr?.phone_number || 'N/A'}
+                            Telepon: {displayPhone}
                           </p>
                         </>
                       )
@@ -1341,19 +1410,6 @@ export default function TrackOrderPage() {
               </div>
             )}
 
-            {/* Butuh Bantuan Card */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6">
-              <h3 className="font-semibold text-blue-900 mb-2">Butuh Bantuan?</h3>
-              <p className="text-sm text-blue-700 mb-3">
-                Jika Anda memiliki pertanyaan tentang pesanan Anda, tim dukungan kami siap membantu.
-              </p>
-              <a
-                href="/contact"
-                className="text-sm text-luxury-navy hover:underline font-semibold"
-              >
-                Hubungi Customer Support →
-              </a>
-            </div>
           </div>
         )}
       </div>

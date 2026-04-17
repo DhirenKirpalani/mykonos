@@ -75,7 +75,9 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
       {/* Full-width page header */}
       <div className="border-b border-border/40 bg-luxury-gray-light py-6 md:py-10">
         <div className="container mx-auto px-4 lg:px-8">
-          <Breadcrumbs items={getBreadcrumbs()} />
+          <div className="hidden md:block">
+            <Breadcrumbs items={getBreadcrumbs()} />
+          </div>
           <h1 className="mt-3 mb-0 font-serif text-3xl font-bold md:text-4xl lg:text-5xl">
             {getTitle()}
           </h1>

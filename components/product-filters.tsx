@@ -282,7 +282,7 @@ export function ProductFilters() {
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">FILTER</h3>
           <div className="space-y-2">
             <button
-              onClick={() => updateFilter('filter', 'popular')}
+              onClick={() => updateFilter('filter', currentFilter === 'popular' ? '' : 'popular')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
                 currentFilter === 'popular'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
@@ -292,7 +292,7 @@ export function ProductFilters() {
               {t.productsPage.sort.popular}
             </button>
             <button
-              onClick={() => updateFilter('filter', 'newest')}
+              onClick={() => updateFilter('filter', currentFilter === 'newest' ? '' : 'newest')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
                 currentFilter === 'newest'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
@@ -302,7 +302,7 @@ export function ProductFilters() {
               {t.productsPage.sort.newest}
             </button>
             <button
-              onClick={() => updateFilter('filter', 'best-selling')}
+              onClick={() => updateFilter('filter', currentFilter === 'best-selling' ? '' : 'best-selling')}
               className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
                 currentFilter === 'best-selling'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
@@ -355,7 +355,7 @@ export function ProductFilters() {
             {fragranceFamilies.map((family) => (
               <button
                 key={family}
-                onClick={() => updateFilter('category', family)}
+                onClick={() => updateFilter('category', currentCategory === family ? '' : family)}
                 className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
                   currentCategory === family
                     ? 'bg-[#C2A36B] text-white shadow-sm'

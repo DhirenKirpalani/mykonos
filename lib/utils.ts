@@ -34,8 +34,8 @@ export function formatPrice(price: number | undefined | null, currency: string =
   return new Intl.NumberFormat(actualLocale, {
     style: 'currency',
     currency: actualCurrency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(price)
 }
 

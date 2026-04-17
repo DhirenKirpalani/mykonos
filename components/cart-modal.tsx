@@ -369,8 +369,19 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                   Loading...
                 </div>
               ) : cartItems.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm tracking-wide text-black/60">
-                  {t.cart.empty}
+                <div className="flex h-full flex-col items-center justify-center gap-6 px-4">
+                  <ShoppingBag className="h-16 w-16 text-gray-300" strokeWidth={1.5} />
+                  <div className="text-center">
+                    <p className="text-lg font-medium text-gray-900 mb-2">{t.cart.empty}</p>
+                    <p className="text-sm text-gray-500">{t.cart.emptyDescription || 'Start adding items to your cart'}</p>
+                  </div>
+                  <Link
+                    href="/products"
+                    onClick={onClose}
+                    className="bg-luxury-gold hover:bg-luxury-gold/90 text-white font-semibold px-8 py-3 rounded-lg transition-all hover:shadow-lg active:scale-[0.98]"
+                  >
+                    {t.cart.continueShopping || 'Continue Shopping'}
+                  </Link>
                 </div>
               ) : (
                 <div className="divide-y divide-black/5">

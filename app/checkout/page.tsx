@@ -67,7 +67,7 @@ export default function CheckoutPage() {
   const [isGuest, setIsGuest] = useState(false)
   const [isBuyNow, setIsBuyNow] = useState(false)
   const [isEditingAddress, setIsEditingAddress] = useState(false)
-  const [shippingCost, setShippingCost] = useState<number>(15)
+  const [shippingCost, setShippingCost] = useState<number>(region?.code === 'ID' ? 50000 : 15)
   const [isLoadingShipping, setIsLoadingShipping] = useState(false)
   const [recommendedProducts, setRecommendedProducts] = useState<any[]>([])
   const [quickAddedItems, setQuickAddedItems] = useState<CartItem[]>([])
@@ -80,6 +80,7 @@ export default function CheckoutPage() {
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
   const [isRecommendedExpanded, setIsRecommendedExpanded] = useState(true)
   const [pendingOrder, setPendingOrder] = useState<any>(null)
+  const [userEmail, setUserEmail] = useState<string>('')
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
@@ -106,6 +107,14 @@ export default function CheckoutPage() {
     const urlParams = new URLSearchParams(window.location.search)
     const buyNowParam = urlParams.get('buyNow')
     setIsBuyNow(buyNowParam === 'true')
+    
+    // Check if user canceled Stripe payment
+    const canceled = urlParams.get('canceled')
+    if (canceled === 'true') {
+      toast.info('Payment canceled. You can continue with your order or modify your cart.')
+      // Remove the canceled parameter from URL
+      window.history.replaceState({}, '', '/checkout')
+    }
     
     initializeCheckout()
     checkForPendingOrder()
@@ -179,6 +188,11 @@ export default function CheckoutPage() {
     try {
       setIsLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
+      
+      // Set user email for address formatting
+      if (session?.user?.email) {
+        setUserEmail(session.user.email)
+      }
       
       console.log('🔍 [CHECKOUT INIT] Session info:', {
         hasSession: !!session,
@@ -1016,15 +1030,16 @@ export default function CheckoutPage() {
       }
       console.log('✅ [ORDER] Session updated with shipping address')
 
-      // Create Midtrans payment token
       const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
       if (!selectedAddress) {
         throw new Error('Shipping address not found')
       }
 
-      // Convert to IDR only if region is not Indonesia (prices already in IDR for ID region)
-      const USD_TO_IDR = 15000 // Approximate exchange rate
+      // Check region for payment gateway routing
       const isIDRegion = region?.code === 'ID'
+
+      // Convert to IDR (prices already in IDR for ID region)
+      const USD_TO_IDR = 15000 // Approximate exchange rate
       const convertToIDR = (amount: number) => {
         // If already in IDR region, just round to whole number
         if (isIDRegion) {
@@ -1105,6 +1120,66 @@ export default function CheckoutPage() {
       }
 
       console.log('✅ [ORDER] Order created:', orderData.order_number)
+      
+      // For non-ID regions, redirect to Stripe checkout
+      if (!isIDRegion) {
+        console.log('💳 [STRIPE] Creating Stripe checkout session for non-ID region...')
+        
+        const itemsForStripe = cartItems.map(item => {
+          const itemWithVariant = item as any
+          let basePrice = (item.product as any).price_usd || 0
+          
+          if (itemWithVariant.variant_sku && (item.product as any).variants) {
+            const variant = (item.product as any).variants.find((v: any) => v.sku === itemWithVariant.variant_sku)
+            if (variant) {
+              basePrice = variant.price_usd
+            }
+          }
+          
+          const discounted = getDiscountedPrice(item.product, item.product_id, itemWithVariant.variant_name)
+          const price = discounted !== null ? discounted : basePrice
+          const voucherDiscount = voucherDiscounts.get(item.id) || 0
+          const netPrice = price - (voucherDiscount / item.quantity)
+          
+          return {
+            name: itemWithVariant.variant_name ? `${item.product.name} - ${itemWithVariant.variant_name}` : item.product.name,
+            price: netPrice,
+            quantity: item.quantity,
+            variant_name: itemWithVariant.variant_name,
+            image_url: item.product.image_urls?.[0],
+          }
+        })
+        
+        const stripeResponse = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: orderData.order_id,
+            customerEmail: session.user.email,
+            customerName: selectedAddress.full_name,
+            items: itemsForStripe,
+            shippingCost: shipping,
+            totalAmount: total,
+            currency: 'usd',
+          }),
+        })
+        
+        const stripeData = await stripeResponse.json()
+        
+        if (!stripeResponse.ok) {
+          console.error('❌ [STRIPE] Failed to create checkout session:', stripeData.error)
+          throw new Error(stripeData.error || 'Failed to create Stripe session')
+        }
+        
+        console.log('✅ [STRIPE] Redirecting to Stripe checkout...')
+        toast.success('Redirecting to payment...')
+        setIsProcessing(false)
+        window.location.href = stripeData.url
+        return
+      }
+      
+      // For ID region, continue with Midtrans
+      console.log('💳 [MIDTRANS] Processing payment for ID region...')
       
       // Check if this is a guest user
       const isGuest = session?.user?.is_anonymous
@@ -1905,6 +1980,13 @@ export default function CheckoutPage() {
     const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
     if (!selectedAddress) return
 
+    // Only fetch dynamic shipping for ID region
+    // For non-ID regions, use flat rate shipping
+    if (region?.code !== 'ID') {
+      setShippingCost(15) // Flat $15 for international shipping
+      return
+    }
+
     setIsLoadingShipping(true)
     try {
       // Calculate total weight (assuming 500g per item as default)
@@ -1929,10 +2011,27 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error('Failed to fetch shipping cost:', error)
-      // Keep default shipping cost on error
+      // Keep default shipping cost on error (Rp 50,000 for ID)
+      setShippingCost(50000)
     } finally {
       setIsLoadingShipping(false)
     }
+  }
+
+  // Helper function to format address name (avoid showing email username)
+  const formatAddressName = (address: Address, userEmail?: string) => {
+    const name = address.full_name
+    // If name looks like an email username (no spaces, matches email), try to get real name
+    if (name && !name.includes(' ') && userEmail && name === userEmail.split('@')[0]) {
+      // Return a placeholder or extract from email
+      return userEmail.split('@')[0].replace(/[0-9]/g, '').replace(/[._-]/g, ' ').trim() || name
+    }
+    return name
+  }
+
+  // Helper function to format phone number (show "-" if empty)
+  const formatPhone = (phone: string | null | undefined) => {
+    return phone && phone.trim() ? phone : '-'
   }
 
   // Helper function to get base price from product based on region
@@ -2078,27 +2177,6 @@ export default function CheckoutPage() {
         <div className="grid lg:grid-cols-3 gap-4 lg:gap-8">
           {/* Cart Items List */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Free Shipping Progress Bar */}
-            {subtotal < 100 && (
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg className="h-5 w-5 text-luxury-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-                  </svg>
-                  <p className="text-sm font-medium text-gray-700">
-                    {100 - subtotal > 0 
-                      ? t.checkout.freeShipping.replace('{amount}', region ? formatRegionPrice(100 - subtotal, region) : formatCurrencyPrice(100 - subtotal, currency))
-                      : t.checkout.qualifyFreeShipping}
-                  </p>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-luxury-gold h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((subtotal / 100) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
 
             {/* Pre-order Shipping Info — shown once for all items */}
             {allItems.length > 0 && (() => {
@@ -2384,7 +2462,7 @@ export default function CheckoutPage() {
                       />
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium text-gray-900">{address.full_name}</p>
+                          <p className="font-medium text-gray-900">{formatAddressName(address, userEmail)}</p>
                           <p className="text-sm text-gray-600 mt-1">
                             {address.address_line1}
                             {address.address_line2 && `, ${address.address_line2}`}
@@ -2392,7 +2470,7 @@ export default function CheckoutPage() {
                           <p className="text-sm text-gray-600">
                             {address.city}, {address.state_province} {address.postal_code}
                           </p>
-                          <p className="text-sm text-gray-600">{address.phone}</p>
+                          <p className="text-sm text-gray-600">Telepon: {formatPhone(address.phone)}</p>
                         </div>
                         {address.is_default && (
                           <span className="px-2 py-1 bg-luxury-navy text-white text-xs rounded-full">

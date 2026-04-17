@@ -330,7 +330,11 @@ function ProductsContent() {
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
-                params.set('filter', 'popular')
+                if (filter === 'popular') {
+                  params.delete('filter')
+                } else {
+                  params.set('filter', 'popular')
+                }
                 router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
@@ -344,7 +348,11 @@ function ProductsContent() {
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
-                params.set('filter', 'newest')
+                if (filter === 'newest') {
+                  params.delete('filter')
+                } else {
+                  params.set('filter', 'newest')
+                }
                 router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
@@ -358,7 +366,11 @@ function ProductsContent() {
             <button
               onClick={() => {
                 const params = new URLSearchParams(searchParams.toString())
-                params.set('filter', 'best-selling')
+                if (filter === 'best-selling') {
+                  params.delete('filter')
+                } else {
+                  params.set('filter', 'best-selling')
+                }
                 router.push(`/products?${params.toString()}`)
               }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${

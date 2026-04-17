@@ -8,6 +8,7 @@ import type { Database } from '@/lib/supabase/database.types'
 import { formatPrice } from '@/lib/utils'
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useTranslation } from '@/hooks/useTranslation'
 import { toast } from 'sonner'
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
@@ -47,6 +48,8 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
   tracking_number?: string | null
   carrier?: string | null
   snap_token?: string | null
+  stripe_session_id?: string | null
+  stripe_payment_intent_id?: string | null
   expiry_time?: string | null
   payment_metadata?: any
   payment_method_type?: string | null
@@ -56,6 +59,7 @@ export default function OrderDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const { t } = useLanguage()
+  const { t: tFunc } = useTranslation()
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
@@ -64,17 +68,16 @@ export default function OrderDetailsPage() {
 
   // Helper function to translate order status
   const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending_payment': return 'Menunggu Pembayaran'
-      case 'processing': return 'Diproses'
-      case 'packed': return 'Dikemas'
-      case 'shipped': return 'Dikirim'
-      case 'delivered': return 'Terkirim'
-      case 'cancelled': return 'Dibatalkan'
-      case 'refunded': return 'Dikembalikan'
-      case 'disputed': return 'Disengketakan'
-      default: return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+    const statusMap: Record<string, string> = {
+      'pending_payment': tFunc('trackOrder.statuses.pending_payment'),
+      'processing': tFunc('trackOrder.statuses.processing'),
+      'packed': tFunc('trackOrder.statuses.packed'),
+      'shipped': tFunc('trackOrder.statuses.shipped'),
+      'delivered': tFunc('trackOrder.statuses.delivered'),
+      'cancelled': tFunc('trackOrder.statuses.cancelled'),
+      'refunded': tFunc('trackOrder.statuses.refunded')
     }
+    return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
   }
 
   // Real-time countdown timer
@@ -309,12 +312,77 @@ export default function OrderDetailsPage() {
   }
 
   const handleContinuePayment = async () => {
-    if (!order) return
+    console.log('🔵 [PAYMENT] ========== CONTINUE PAYMENT STARTED ==========')
+    console.log('📦 [PAYMENT] Order ID:', order?.id)
+    console.log('📦 [PAYMENT] Order Number:', order?.order_number)
+    console.log('📦 [PAYMENT] Payment Status:', order?.payment_status)
+    
+    if (!order) {
+      console.error('❌ [PAYMENT] No order found!')
+      return
+    }
 
     setIsProcessingPayment(true)
     try {
+      // Check if this is a Stripe order (non-ID region)
+      const stripeSessionId = (order as any)?.stripe_session_id
+      const snapToken = order.snap_token
+      const expiryTime = order.expiry_time
+      
+      console.log('🔍 [PAYMENT] Payment Details:')
+      console.log('  - stripe_session_id:', stripeSessionId ? 'EXISTS' : 'MISSING')
+      console.log('  - snap_token:', snapToken ? 'EXISTS' : 'MISSING')
+      console.log('  - expiry_time:', expiryTime || 'MISSING')
+      
+      if (expiryTime) {
+        const expiryDate = new Date(expiryTime)
+        const now = new Date()
+        const isExpired = expiryDate < now
+        console.log('⏰ [PAYMENT] Expiry Check:')
+        console.log('  - Expiry Date:', expiryDate.toISOString())
+        console.log('  - Current Date:', now.toISOString())
+        console.log('  - Is Expired:', isExpired)
+        console.log('  - Time Difference (minutes):', Math.round((expiryDate.getTime() - now.getTime()) / 1000 / 60))
+      }
+      
+      if (stripeSessionId) {
+        console.log('💳 [STRIPE] Detected Stripe order, redirecting to Stripe checkout...')
+        console.log('💳 [STRIPE] Session ID:', stripeSessionId)
+        toast.info('Redirecting to payment...')
+        
+        // Redirect to Stripe checkout
+        try {
+          console.log('💳 [STRIPE] Fetching checkout URL from API...')
+          const response = await fetch(`/api/stripe/checkout-session/${stripeSessionId}`)
+          console.log('💳 [STRIPE] API Response Status:', response.status)
+          
+          const data = await response.json()
+          console.log('💳 [STRIPE] API Response Data:', data)
+          
+          if (data.url) {
+            console.log('✅ [STRIPE] Redirecting to:', data.url)
+            window.location.href = data.url
+          } else {
+            console.error('❌ [STRIPE] No URL in response:', data)
+            toast.error('Unable to continue payment. Please contact support.')
+            setIsProcessingPayment(false)
+          }
+        } catch (error) {
+          console.error('❌ [STRIPE] Failed to get checkout URL:', error)
+          toast.error('Unable to continue payment. Please contact support.')
+          setIsProcessingPayment(false)
+        }
+        return
+      }
+
+      // For Midtrans orders (ID region)
+      console.log('🟡 [MIDTRANS] Processing Midtrans order...')
+      
       // Check if order has expired
       if (order.expiry_time && new Date(order.expiry_time) < new Date()) {
+        console.error('❌ [MIDTRANS] Order has expired!')
+        console.error('❌ [MIDTRANS] Expiry time:', order.expiry_time)
+        console.error('❌ [MIDTRANS] Current time:', new Date().toISOString())
         toast.error('Payment link has expired. Please create a new order.')
         setIsProcessingPayment(false)
         return
@@ -322,38 +390,52 @@ export default function OrderDetailsPage() {
 
       // Check if snap_token exists and is valid
       if (order.snap_token) {
-        console.log('✅ [PAYMENT] Reusing existing snap_token')
+        console.log('✅ [MIDTRANS] Found snap_token, opening Snap modal...')
+        console.log('✅ [MIDTRANS] Snap token:', order.snap_token.substring(0, 20) + '...')
+        
         // Open Snap modal with existing token
         if (typeof window !== 'undefined' && (window as any).snap) {
-          (window as any).snap.pay(order.snap_token, {
+          console.log('✅ [MIDTRANS] Snap library loaded, calling snap.pay()...')
+          const snapPay = (window as any).snap.pay as Function
+          snapPay(order.snap_token, {
             onSuccess: (result: any) => {
-              console.log('✅ [PAYMENT] Payment successful!', result)
+              console.log('✅ [MIDTRANS] Payment successful!', result)
               toast.success('Payment successful! Your order is being processed.')
               fetchOrderDetails() // Refresh order data
             },
             onPending: (result: any) => {
-              console.log('⏳ [PAYMENT] Payment pending', result)
+              console.log('⏳ [MIDTRANS] Payment pending', result)
               toast.info('Payment pending. We will notify you once confirmed.')
               fetchOrderDetails()
               setIsProcessingPayment(false)
             },
             onError: (result: any) => {
-              console.error('❌ [PAYMENT] Payment error', result)
+              console.error('❌ [MIDTRANS] Payment error', result)
               toast.error('Payment failed. Please try again.')
               setIsProcessingPayment(false)
             },
             onClose: () => {
-              console.log('🚪 [PAYMENT] Payment modal closed')
+              console.log('🚪 [MIDTRANS] Payment modal closed')
               setIsProcessingPayment(false)
             }
           })
         } else {
+          console.error('❌ [MIDTRANS] Snap library not loaded!')
           toast.error('Payment system not loaded. Please refresh the page.')
           setIsProcessingPayment(false)
         }
       } else {
-        // No snap_token, need to regenerate
-        toast.error('Payment link expired. Please create a new order.')
+        // No snap_token and no stripe_session_id - this shouldn't happen
+        console.error('❌ [PAYMENT] No payment token found!')
+        console.error('❌ [PAYMENT] This order has neither snap_token nor stripe_session_id')
+        console.error('❌ [PAYMENT] Order data:', {
+          id: order.id,
+          order_number: order.order_number,
+          payment_status: order.payment_status,
+          snap_token: order.snap_token,
+          stripe_session_id: (order as any)?.stripe_session_id
+        })
+        toast.error('Payment configuration error. Please contact support.')
         setIsProcessingPayment(false)
       }
     } catch (error) {
@@ -486,16 +568,16 @@ export default function OrderDetailsPage() {
           {/* Order Details Grid - Same as Track Order Page */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
             <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl sm:text-2xl font-serif">Detail Pesanan</h2>
+              <h2 className="text-xl sm:text-2xl font-serif">{tFunc('trackOrder.orderDetails') || 'Order Details'}</h2>
             </div>
             <div className="p-4 sm:p-8">
               <div className="grid grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Nomor Pesanan</p>
+                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.orderNumber')}</p>
                   <p className="font-mono font-semibold text-gray-900 text-sm">{order.order_number}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Tanggal Pesanan</p>
+                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.orderDate')}</p>
                   <p className="font-semibold text-gray-900 text-sm">
                     {new Date(order.created_at).toLocaleString('id-ID', {
                       day: 'numeric',
@@ -508,21 +590,21 @@ export default function OrderDetailsPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Email</p>
+                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.emailLabel')}</p>
                   <p className="font-semibold text-gray-900 text-sm truncate">{order.customer_email}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Total Pembayaran</p>
+                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.totalAmount')}</p>
                   <p className="font-semibold text-gray-900 text-sm">
                     {formatPrice(order.total_amount, order.currency_code)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Status Pesanan</p>
+                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.orderStatus')}</p>
                   <p className="font-semibold text-gray-900 text-sm">{getStatusLabel(order.status)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">Status Pembayaran</p>
+                  <p className="text-gray-600 text-xs mb-1">{t.account.paymentStatus}</p>
                   <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${
                     order.payment_status === 'completed'          ? 'bg-green-100 text-green-700' :
                     order.payment_status === 'pending'            ? 'bg-yellow-100 text-yellow-700' :
@@ -549,16 +631,17 @@ export default function OrderDetailsPage() {
                 </div>
                 {(order.payment_metadata?.payment_type || order.payment_method_type || order.payment_method) && (
                   <div>
-                    <p className="text-gray-600 text-xs mb-1">Metode Pembayaran</p>
+                    <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.paymentMethod')}</p>
                     <p className="font-semibold text-gray-900 text-sm capitalize">
                       {(order.payment_metadata?.payment_type || order.payment_method_type || order.payment_method || '').replace('_', ' ')}
                     </p>
                   </div>
                 )}
-                {(order.payment_metadata?.expiry_time || order.expiry_time) && (
+                {/* Only show expiry time for Midtrans orders (not Stripe) */}
+                {!order.stripe_session_id && (order.payment_metadata?.expiry_time || order.expiry_time) && (
                   <>
                     <div>
-                      <p className="text-gray-600 text-xs mb-1">Bayar Sebelum</p>
+                      <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.payBefore')}</p>
                       <p className="font-semibold text-gray-900 text-sm">
                         {new Date(order.payment_metadata?.expiry_time || order.expiry_time!).toLocaleString('id-ID', {
                           day: 'numeric',
@@ -573,7 +656,7 @@ export default function OrderDetailsPage() {
                     {/* Only show Waktu Tersisa if payment is not successful */}
                     {!(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && order.payment_status === 'pending' && (
                       <div>
-                        <p className="text-gray-600 text-xs mb-1">Waktu Tersisa</p>
+                        <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.timeRemaining')}</p>
                         <p className="font-semibold text-gray-900 text-sm">
                           {timeRemaining || 'Menghitung...'}
                         </p>
@@ -594,7 +677,7 @@ export default function OrderDetailsPage() {
         {/* Order Items */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
           <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-            <h2 className="text-xl sm:text-2xl font-serif">Produk Pesanan</h2>
+            <h2 className="text-xl sm:text-2xl font-serif">{tFunc('trackOrder.products')}</h2>
           </div>
           <div className="p-4 sm:p-8">
             {order.order_items.map((item) => (
@@ -646,7 +729,7 @@ export default function OrderDetailsPage() {
                   ) : (
                     <h3 className="font-semibold text-sm sm:text-base leading-snug mb-0.5">{item.product.name}</h3>
                   )}
-                  <p className="text-xs text-gray-500">Jumlah: {item.quantity}</p>
+                  <p className="text-xs text-gray-500">{tFunc('trackOrder.qty')}: {item.quantity}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   {(() => {
@@ -675,26 +758,56 @@ export default function OrderDetailsPage() {
           {order.shipping_address && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-                <h2 className="text-xl sm:text-2xl font-serif">Alamat Pengiriman</h2>
+                <h2 className="text-xl sm:text-2xl font-serif">{tFunc('trackOrder.shippingAddress')}</h2>
               </div>
               <div className="p-4 sm:p-8">
                 {(() => {
                   const addr = order.shipping_address as any
+                  const fullName = order.shipping_address?.full_name || addr?.name || ''
+                  const email = order.customer_email || ''
+                  
+                  // Format name - get actual customer name from shipping address or email
+                  let displayName = fullName
+                  
+                  // If name looks like email username, try to get better name
+                  if (fullName && !fullName.includes(' ') && email && fullName === email.split('@')[0]) {
+                    // Try to extract name from email before @ symbol
+                    const emailName = email.split('@')[0]
+                    // Clean up: remove numbers, replace dots/underscores with spaces, capitalize
+                    const cleaned = emailName
+                      .replace(/[0-9]/g, '')
+                      .replace(/[._-]/g, ' ')
+                      .trim()
+                      .split(' ')
+                      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                      .join(' ')
+                    displayName = cleaned || fullName
+                  }
+                  
+                  // Final fallback if still no valid name
+                  if (!displayName || displayName.trim() === '') {
+                    displayName = email ? email.split('@')[0] : 'Customer'
+                  }
+                  
+                  // Format phone
+                  const phone = order.shipping_address?.phone || addr?.phone_number || ''
+                  const displayPhone = phone && phone.trim() ? phone : '-'
+                  
                   return (
                     <>
                       <p className="font-semibold text-base mb-0.5">
-                        {order.shipping_address?.full_name || addr?.name || order.customer_email?.split('@')[0] || 'Customer'}
+                        {displayName}
                       </p>
                       <p className="text-gray-600 text-sm mb-3">
-                        {order.shipping_address?.phone || addr?.phone_number || 'N/A'}
+                        {displayPhone}
                       </p>
                       <div className="text-gray-700 space-y-1">
-                        <p>{order.shipping_address?.address_line1 || addr?.address || 'N/A'}</p>
+                        <p>{order.shipping_address?.address_line1 || addr?.address || ''}</p>
                         {order.shipping_address?.address_line2 && (
                           <p>{order.shipping_address.address_line2}</p>
                         )}
                         <p>
-                          {order.shipping_address?.city || 'N/A'}, {order.shipping_address?.state || addr?.state_province || addr?.province || ''} {order.shipping_address?.postal_code || ''}
+                          {order.shipping_address?.city || ''}, {order.shipping_address?.state || addr?.state_province || addr?.province || ''} {order.shipping_address?.postal_code || ''}
                         </p>
                         <p>{order.shipping_address?.country || 'Indonesia'}</p>
                       </div>
@@ -708,32 +821,32 @@ export default function OrderDetailsPage() {
           {/* Order Summary */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl sm:text-2xl font-serif">Ringkasan Pesanan</h2>
+              <h2 className="text-xl sm:text-2xl font-serif">{tFunc('checkout.orderSummary')}</h2>
             </div>
             <div className="p-4 sm:p-8">
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-700">
-                  <span>Subtotal</span>
+                  <span>{tFunc('checkout.subtotal')}</span>
                   <span className="font-medium">{formatPrice(order.subtotal, order.currency_code)}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
-                  <span>Ongkir</span>
+                  <span>{tFunc('checkout.shipping')}</span>
                   <span className="font-medium">{formatPrice(order.shipping_cost, order.currency_code)}</span>
                 </div>
                 {order.discount_amount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>Diskon</span>
+                    <span>{tFunc('checkout.discount')}</span>
                     <span className="font-medium">-{formatPrice(order.discount_amount, order.currency_code)}</span>
                   </div>
                 )}
                 {order.tax_amount > 0 && (
                   <div className="flex justify-between text-gray-700">
-                    <span>Pajak</span>
+                    <span>{tFunc('checkout.tax')}</span>
                     <span className="font-medium">{formatPrice(order.tax_amount, order.currency_code)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xl font-bold pt-4 border-t-2 border-gray-200">
-                  <span>Total</span>
+                  <span>{tFunc('checkout.total')}</span>
                   <span>{formatPrice(order.total_amount, order.currency_code)}</span>
                 </div>
               </div>
