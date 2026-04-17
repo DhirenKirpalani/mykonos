@@ -38,6 +38,8 @@ export async function GET(request: Request) {
         tracking_number,
         estimated_delivery_date,
         snap_token,
+        stripe_session_id,
+        stripe_payment_intent_id,
         expiry_time,
         payment_method_type,
         payment_metadata,

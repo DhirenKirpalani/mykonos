@@ -3,37 +3,84 @@
 import { useState } from 'react'
 import { WhatsappLogo } from 'phosphor-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useRegion } from '@/contexts/RegionContext'
 import { toast } from 'sonner'
 
 export default function ContactPage() {
   const { t } = useLanguage()
+  const { region } = useRegion()
+  const isIndonesia = region?.code === 'ID'
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     message: ''
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const whatsappMessageID = encodeURIComponent('Halo! Saya ingin bertanya tentang produk Anda.')
   const whatsappMessageEN = encodeURIComponent('Hello! I would like to inquire about your products.')
-  const whatsappUrl = `https://wa.me/6285780218514?text=${whatsappMessageID}`
-  const internationalWhatsappUrl = `https://wa.me/6281626178?text=${whatsappMessageEN}`
+  const whatsappUrlID = `https://wa.me/6285780218514?text=${whatsappMessageID}`
+  const whatsappUrlInternational = `https://wa.me/62816261783?text=${whatsappMessageEN}`
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Create mailto link with prefilled subject and body
-    const subject = encodeURIComponent('Inquiry from Mykonos Website')
-    const body = encodeURIComponent(
-      `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`
-    )
-    const mailtoLink = `mailto:officialmykonos@outlook.com?subject=${subject}&body=${body}`
+    // Client-side validation
+    if (!formData.name.trim()) {
+      toast.error('Please enter your name')
+      return
+    }
+
+    if (!formData.email.trim()) {
+      toast.error('Please enter your email')
+      return
+    }
+
+    if (!validateEmail(formData.email)) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+
+    if (!formData.message.trim()) {
+      toast.error('Please enter your message')
+      return
+    }
+
+    if (formData.message.trim().length < 10) {
+      toast.error('Message must be at least 10 characters long')
+      return
+    }
     
-    // Open email client
-    window.open(mailtoLink, '_blank')
+    setIsSubmitting(true)
     
-    // Show success message and reset form
-    toast.success(t.contact.messageSent)
-    setFormData({ name: '', email: '', message: '' })
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send message')
+      }
+
+      toast.success(t.contact.messageSent || 'Message sent successfully!')
+      setFormData({ name: '', email: '', message: '' })
+    } catch (error) {
+      console.error('Contact form error:', error)
+      toast.error(error instanceof Error ? error.message : (t.contact.messageError || 'Failed to send message. Please try again.'))
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -53,6 +100,7 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
           {/* Left Column - Contact Form */}
           <div>
+            <h2 className="text-2xl font-serif font-bold mb-6">Email</h2>
             <div className="rounded-2xl bg-luxury-gray-light p-6 sm:p-8">
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
@@ -62,7 +110,6 @@ export default function ContactPage() {
                   <input
                     type="text"
                     id="name"
-                    required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder={t.contact.yourName}
@@ -75,9 +122,8 @@ export default function ContactPage() {
                     {t.contact.email}
                   </label>
                   <input
-                    type="email"
+                    type="text"
                     id="email"
-                    required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder={t.contact.yourEmail}
@@ -91,7 +137,6 @@ export default function ContactPage() {
                   </label>
                   <textarea
                     id="message"
-                    required
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     placeholder={t.contact.yourMessage}
@@ -102,9 +147,10 @@ export default function ContactPage() {
 
                 <button
                   type="submit"
-                  className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-white font-semibold py-3 px-6 rounded-lg transition-all hover:shadow-lg active:scale-[0.98]"
+                  disabled={isSubmitting}
+                  className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-white font-semibold py-3 px-6 rounded-lg transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {t.contact.submit}
+                  {isSubmitting ? t.contact.sending : t.contact.submit}
                 </button>
               </form>
             </div>
@@ -113,53 +159,47 @@ export default function ContactPage() {
           {/* Right Column - WhatsApp & Business Hours */}
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-serif font-bold mb-6">{t.contact.getInTouch}</h2>
+              <h2 className="text-2xl font-serif font-bold mb-6">WhatsApp</h2>
               
               {/* WhatsApp Cards */}
               <div className="space-y-4">
-                {/* Indonesia WhatsApp */}
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                      <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">Indonesia</span>
+                {isIndonesia ? (
+                  /* Indonesia WhatsApp - Green for ID region only */
+                  <a
+                    href={whatsappUrlID}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                        <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
                       </div>
-                      <p className="font-bold text-white text-base mb-0.5">WhatsApp Indonesia</p>
-                      <p className="text-white/90 text-sm font-medium">+62 857-8021-8514</p>
-                      <p className="text-white/70 text-xs mt-1">{t.contact.tapToChat}</p>
-                    </div>
-                  </div>
-                </a>
-
-                {/* International WhatsApp */}
-                <a
-                  href={internationalWhatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block rounded-xl bg-gradient-to-r from-[#0078D4] to-[#0063B1] p-5 transition-all hover:from-[#106EBE] hover:to-[#005A9E] hover:shadow-xl active:scale-[0.98] border-2 border-[#005A9E]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                      <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">International</span>
+                      <div className="flex-1">
+                        <p className="font-bold text-white text-lg mb-0.5">+62 857-8021-8514</p>
+                        <p className="text-white/80 text-sm">{t.contact.tapToChat}</p>
                       </div>
-                      <p className="font-bold text-white text-base mb-0.5">WhatsApp International</p>
-                      <p className="text-white/90 text-sm font-medium">+62 816-261-783</p>
-                      <p className="text-white/70 text-xs mt-1">{t.contact.tapToChat}</p>
                     </div>
-                  </div>
-                </a>
+                  </a>
+                ) : (
+                  /* International WhatsApp - Green for non-ID regions only */
+                  <a
+                    href={whatsappUrlInternational}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                        <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-white text-lg mb-0.5">+62 816-261-783</p>
+                        <p className="text-white/80 text-sm">{t.contact.tapToChat}</p>
+                      </div>
+                    </div>
+                  </a>
+                )}
               </div>
             </div>
 

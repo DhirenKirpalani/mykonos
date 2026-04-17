@@ -1,9 +1,19 @@
 'use client'
 
+import { useRegion } from '@/contexts/RegionContext'
+
 export function WhatsAppButton() {
-  const whatsappNumber = '6285780218514'
-  const defaultMessage = 'Hello! I would like to inquire about your products.'
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(defaultMessage)}`
+  const { region } = useRegion()
+  const isIndonesia = region?.code === 'ID'
+  
+  const whatsappNumberID = '6285780218514'
+  const whatsappNumberInternational = '62816261783'
+  const messageID = 'Halo! Saya ingin bertanya tentang produk Anda.'
+  const messageEN = 'Hello! I would like to inquire about your products.'
+  
+  const whatsappNumber = isIndonesia ? whatsappNumberID : whatsappNumberInternational
+  const message = isIndonesia ? messageID : messageEN
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
 
   return (
     <a
