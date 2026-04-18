@@ -8,7 +8,6 @@ import type { Database } from '@/lib/supabase/database.types'
 import { formatPrice } from '@/lib/utils'
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useTranslation } from '@/hooks/useTranslation'
 import { toast } from 'sonner'
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
@@ -59,7 +58,6 @@ export default function OrderDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const { t } = useLanguage()
-  const { t: tFunc } = useTranslation()
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
@@ -69,13 +67,13 @@ export default function OrderDetailsPage() {
   // Helper function to translate order status
   const getStatusLabel = (status: string) => {
     const statusMap: Record<string, string> = {
-      'pending_payment': tFunc('trackOrder.statuses.pending_payment'),
-      'processing': tFunc('trackOrder.statuses.processing'),
-      'packed': tFunc('trackOrder.statuses.packed'),
-      'shipped': tFunc('trackOrder.statuses.shipped'),
-      'delivered': tFunc('trackOrder.statuses.delivered'),
-      'cancelled': tFunc('trackOrder.statuses.cancelled'),
-      'refunded': tFunc('trackOrder.statuses.refunded')
+      'pending_payment': t.trackOrder.statuses.pending_payment,
+      'processing': t.trackOrder.statuses.processing,
+      'packed': t.trackOrder.statuses.packed,
+      'shipped': t.trackOrder.statuses.shipped,
+      'delivered': t.trackOrder.statuses.delivered,
+      'cancelled': t.trackOrder.statuses.cancelled,
+      'refunded': t.trackOrder.statuses.refunded
     }
     return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
   }
@@ -93,7 +91,7 @@ export default function OrderDetailsPage() {
       const diff = expiry - now
 
       if (diff <= 0) {
-        setTimeRemaining('Kadaluarsa')
+        setTimeRemaining(t.trackOrder.timeUnits.expired)
         return
       }
 
@@ -101,14 +99,14 @@ export default function OrderDetailsPage() {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
       const seconds = Math.floor((diff % (1000 * 60)) / 1000)
 
-      setTimeRemaining(`${hours}j ${minutes}m ${seconds}d`)
+      setTimeRemaining(`${hours}${t.trackOrder.timeUnits.hours} ${minutes}${t.trackOrder.timeUnits.minutes} ${seconds}${t.trackOrder.timeUnits.seconds}`)
     }
 
     updateCountdown()
     const interval = setInterval(updateCountdown, 1000)
 
     return () => clearInterval(interval)
-  }, [order?.expiry_time, order?.payment_metadata?.expiry_time])
+  }, [order?.expiry_time, order?.payment_metadata?.expiry_time, t])
 
   useEffect(() => {
     fetchOrderDetails()
@@ -348,7 +346,6 @@ export default function OrderDetailsPage() {
       if (stripeSessionId) {
         console.log('💳 [STRIPE] Detected Stripe order, redirecting to Stripe checkout...')
         console.log('💳 [STRIPE] Session ID:', stripeSessionId)
-        toast.info('Redirecting to payment...')
         
         // Redirect to Stripe checkout
         try {
@@ -568,16 +565,16 @@ export default function OrderDetailsPage() {
           {/* Order Details Grid - Same as Track Order Page */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
             <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl sm:text-2xl font-serif">{tFunc('trackOrder.orderDetails') || 'Order Details'}</h2>
+              <h2 className="text-xl sm:text-2xl font-serif">{t.trackOrder.orderDetails}</h2>
             </div>
             <div className="p-4 sm:p-8">
               <div className="grid grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.orderNumber')}</p>
+                  <p className="text-gray-600 text-xs mb-1">{t.trackOrder.orderNumber}</p>
                   <p className="font-mono font-semibold text-gray-900 text-sm">{order.order_number}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.orderDate')}</p>
+                  <p className="text-gray-600 text-xs mb-1">{t.trackOrder.orderDate}</p>
                   <p className="font-semibold text-gray-900 text-sm">
                     {new Date(order.created_at).toLocaleString('id-ID', {
                       day: 'numeric',
@@ -590,17 +587,17 @@ export default function OrderDetailsPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.emailLabel')}</p>
+                  <p className="text-gray-600 text-xs mb-1">{t.trackOrder.emailLabel}</p>
                   <p className="font-semibold text-gray-900 text-sm truncate">{order.customer_email}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.totalAmount')}</p>
+                  <p className="text-gray-600 text-xs mb-1">{t.trackOrder.totalAmount}</p>
                   <p className="font-semibold text-gray-900 text-sm">
                     {formatPrice(order.total_amount, order.currency_code)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.orderStatus')}</p>
+                  <p className="text-gray-600 text-xs mb-1">{t.trackOrder.orderStatus}</p>
                   <p className="font-semibold text-gray-900 text-sm">{getStatusLabel(order.status)}</p>
                 </div>
                 <div>
@@ -629,19 +626,35 @@ export default function OrderDetailsPage() {
                      order.payment_status}
                   </span>
                 </div>
-                {(order.payment_metadata?.payment_type || order.payment_method_type || order.payment_method) && (
+                {order.payment_gateway && (
                   <div>
-                    <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.paymentMethod')}</p>
+                    <p className="text-gray-600 text-xs mb-1">Payment Gateway</p>
                     <p className="font-semibold text-gray-900 text-sm capitalize">
-                      {(order.payment_metadata?.payment_type || order.payment_method_type || order.payment_method || '').replace('_', ' ')}
+                      {order.payment_gateway}
                     </p>
                   </div>
                 )}
-                {/* Only show expiry time for Midtrans orders (not Stripe) */}
-                {!order.stripe_session_id && (order.payment_metadata?.expiry_time || order.expiry_time) && (
+                {(order.payment_metadata?.payment_type || order.payment_method_type) && (
+                  <div>
+                    <p className="text-gray-600 text-xs mb-1">Payment Method Type</p>
+                    <p className="font-semibold text-gray-900 text-sm capitalize">
+                      {(order.payment_metadata?.payment_type || order.payment_method_type || '').replace('_', ' ')}
+                    </p>
+                  </div>
+                )}
+                {order.payment_metadata?.channel && (
+                  <div>
+                    <p className="text-gray-600 text-xs mb-1">Payment Channel</p>
+                    <p className="font-semibold text-gray-900 text-sm capitalize">
+                      {order.payment_metadata.channel.replace('_', ' ')}
+                    </p>
+                  </div>
+                )}
+                {/* Show expiry time for pending orders */}
+                {(order.payment_metadata?.expiry_time || order.expiry_time) && order.payment_status === 'pending' && (
                   <>
                     <div>
-                      <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.payBefore')}</p>
+                      <p className="text-gray-600 text-xs mb-1">{t.trackOrder.payBefore}</p>
                       <p className="font-semibold text-gray-900 text-sm">
                         {new Date(order.payment_metadata?.expiry_time || order.expiry_time!).toLocaleString('id-ID', {
                           day: 'numeric',
@@ -656,7 +669,7 @@ export default function OrderDetailsPage() {
                     {/* Only show Waktu Tersisa if payment is not successful */}
                     {!(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && order.payment_status === 'pending' && (
                       <div>
-                        <p className="text-gray-600 text-xs mb-1">{tFunc('trackOrder.timeRemaining')}</p>
+                        <p className="text-gray-600 text-xs mb-1">{t.trackOrder.timeRemaining}</p>
                         <p className="font-semibold text-gray-900 text-sm">
                           {timeRemaining || 'Menghitung...'}
                         </p>
@@ -677,7 +690,7 @@ export default function OrderDetailsPage() {
         {/* Order Items */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
           <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-            <h2 className="text-xl sm:text-2xl font-serif">{tFunc('trackOrder.products')}</h2>
+            <h2 className="text-xl sm:text-2xl font-serif">{t.trackOrder.products}</h2>
           </div>
           <div className="p-4 sm:p-8">
             {order.order_items.map((item) => (
@@ -729,7 +742,7 @@ export default function OrderDetailsPage() {
                   ) : (
                     <h3 className="font-semibold text-sm sm:text-base leading-snug mb-0.5">{item.product.name}</h3>
                   )}
-                  <p className="text-xs text-gray-500">{tFunc('trackOrder.qty')}: {item.quantity}</p>
+                  <p className="text-xs text-gray-500">{t.trackOrder.qty}: {item.quantity}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   {(() => {
@@ -758,7 +771,7 @@ export default function OrderDetailsPage() {
           {order.shipping_address && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-                <h2 className="text-xl sm:text-2xl font-serif">{tFunc('trackOrder.shippingAddress')}</h2>
+                <h2 className="text-xl sm:text-2xl font-serif">{t.trackOrder.shippingAddress}</h2>
               </div>
               <div className="p-4 sm:p-8">
                 {(() => {
@@ -821,39 +834,39 @@ export default function OrderDetailsPage() {
           {/* Order Summary */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl sm:text-2xl font-serif">{tFunc('checkout.orderSummary')}</h2>
+              <h2 className="text-xl sm:text-2xl font-serif">{t.checkout.orderSummary}</h2>
             </div>
             <div className="p-4 sm:p-8">
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-700">
-                  <span>{tFunc('checkout.subtotal')}</span>
+                  <span>{t.checkout.subtotal}</span>
                   <span className="font-medium">{formatPrice(order.subtotal, order.currency_code)}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
-                  <span>{tFunc('checkout.shipping')}</span>
+                  <span>{t.checkout.shipping}</span>
                   <span className="font-medium">{formatPrice(order.shipping_cost, order.currency_code)}</span>
                 </div>
                 {order.discount_amount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>{tFunc('checkout.discount')}</span>
+                    <span>{t.checkout.discount}</span>
                     <span className="font-medium">-{formatPrice(order.discount_amount, order.currency_code)}</span>
                   </div>
                 )}
                 {order.tax_amount > 0 && (
                   <div className="flex justify-between text-gray-700">
-                    <span>{tFunc('checkout.tax')}</span>
+                    <span>{t.checkout.tax}</span>
                     <span className="font-medium">{formatPrice(order.tax_amount, order.currency_code)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xl font-bold pt-4 border-t-2 border-gray-200">
-                  <span>{tFunc('checkout.total')}</span>
+                  <span>{t.checkout.total}</span>
                   <span>{formatPrice(order.total_amount, order.currency_code)}</span>
                 </div>
               </div>
-              {order.payment_method && (
+              {order.payment_gateway && (
                 <div className="mt-6 pt-6 border-t border-gray-100">
                   <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Metode Pembayaran</p>
-                  <p className="font-semibold capitalize">{order.payment_method.replace('_', ' ')}</p>
+                  <p className="font-semibold capitalize">{order.payment_gateway.replace('_', ' ')}</p>
                 </div>
               )}
               {order.payment_intent_id && (

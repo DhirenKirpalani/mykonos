@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
@@ -25,6 +26,8 @@ export function HeroCarousel() {
   const [heroItems, setHeroItems] = useState<HeroMedia[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [imagesLoaded, setImagesLoaded] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetchHeroMedia()
@@ -66,6 +69,8 @@ export function HeroCarousel() {
       }
     } catch (error) {
       console.error('[Hero Carousel] ❌ Exception:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -98,10 +103,17 @@ export function HeroCarousel() {
 
   return (
     <div
-      className="relative h-[35vh] sm:h-[40vh] md:h-[60vh] lg:h-[75vh] overflow-hidden bg-luxury-gray-light"
+      className="relative h-[35vh] sm:h-[40vh] md:h-[60vh] lg:h-[75vh] overflow-hidden bg-luxury-navy"
       role="region"
       aria-label="Hero banner"
     >
+      {/* Loading Skeleton */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-gradient-to-br from-luxury-navy via-luxury-navy/90 to-luxury-navy animate-pulse">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        </div>
+      )}
+
       {/* Media Background with crossfade transition */}
       {heroItems.map((item, index) => {
         const itemDesktopUrl = item.media_url
@@ -120,6 +132,7 @@ export function HeroCarousel() {
                   loop
                   muted
                   playsInline
+                  preload="auto"
                   className="hidden md:block h-full w-full object-cover object-center"
                 >
                   <source src={itemDesktopUrl} type="video/mp4" />
@@ -130,6 +143,7 @@ export function HeroCarousel() {
                   loop
                   muted
                   playsInline
+                  preload="auto"
                   className="block md:hidden h-full w-full object-cover object-center"
                 >
                   <source src={itemMobileUrl} type="video/mp4" />
@@ -137,18 +151,36 @@ export function HeroCarousel() {
               </>
             ) : (
               <>
-                <img
-                  key={`${item.id}-desktop-image`}
-                  src={itemDesktopUrl}
-                  alt={item.title || "Hero"}
-                  className="hidden md:block h-full w-full object-cover object-center"
-                />
-                <img
-                  key={`${item.id}-mobile-image`}
-                  src={itemMobileUrl}
-                  alt={item.title || "Hero"}
-                  className="block md:hidden h-full w-full object-cover object-center"
-                />
+                <div className="hidden md:block relative h-full w-full">
+                  <Image
+                    key={`${item.id}-desktop-image`}
+                    src={itemDesktopUrl}
+                    alt={item.title || "Hero"}
+                    fill
+                    priority={index === 0}
+                    quality={90}
+                    sizes="100vw"
+                    className="object-cover object-center"
+                    onLoad={() => {
+                      setImagesLoaded(prev => new Set(prev).add(`${item.id}-desktop`))
+                    }}
+                  />
+                </div>
+                <div className="block md:hidden relative h-full w-full">
+                  <Image
+                    key={`${item.id}-mobile-image`}
+                    src={itemMobileUrl}
+                    alt={item.title || "Hero"}
+                    fill
+                    priority={index === 0}
+                    quality={90}
+                    sizes="100vw"
+                    className="object-cover object-center"
+                    onLoad={() => {
+                      setImagesLoaded(prev => new Set(prev).add(`${item.id}-mobile`))
+                    }}
+                  />
+                </div>
               </>
             )}
             <div className="absolute inset-0 bg-black" style={{ opacity: itemOverlayOpacity / 100 }} />

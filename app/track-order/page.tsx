@@ -62,11 +62,13 @@ type Order = {
   stripe_payment_intent_id?: string
   expiry_time?: string
   payment_method_type?: string
+  payment_gateway?: string
   order_items?: OrderItem[]
   payment_metadata?: {
     transaction_time?: string
     expiry_time?: string
     payment_type?: string
+    channel?: string
     [key: string]: any
   }
 }
@@ -417,7 +419,7 @@ export default function TrackOrderPage() {
       const diff = expiry.getTime() - now.getTime()
 
       if (diff <= 0) {
-        setTimeRemaining('Kadaluarsa')
+        setTimeRemaining(t('trackOrder.timeUnits.expired'))
         return
       }
 
@@ -425,7 +427,7 @@ export default function TrackOrderPage() {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
       const seconds = Math.floor((diff % (1000 * 60)) / 1000)
       
-      setTimeRemaining(`${hours}j ${minutes}m ${seconds}s`)
+      setTimeRemaining(`${hours}${t('trackOrder.timeUnits.hours')} ${minutes}${t('trackOrder.timeUnits.minutes')} ${seconds}${t('trackOrder.timeUnits.seconds')}`)
     }
 
     // Update immediately
@@ -435,7 +437,7 @@ export default function TrackOrderPage() {
     const interval = setInterval(updateCountdown, 1000)
 
     return () => clearInterval(interval)
-  }, [order?.payment_metadata?.expiry_time, order?.expiry_time])
+  }, [order?.payment_metadata?.expiry_time, order?.expiry_time, t])
 
   const handleContinuePayment = async (orderToUse?: Order) => {
     const currentOrder = orderToUse || order
@@ -461,7 +463,6 @@ export default function TrackOrderPage() {
     const stripeSessionId = (currentOrder as any)?.stripe_session_id
     if (stripeSessionId) {
       console.log('💳 [STRIPE] Detected Stripe order, redirecting to Stripe checkout...')
-      toast.info('Redirecting to payment...')
       
       // Redirect to Stripe checkout
       try {
@@ -1258,16 +1259,32 @@ export default function TrackOrderPage() {
                     {formatPrice(order.total_amount, order.currency_code as any)}
                   </p>
                 </div>
+                {order.payment_gateway && (
+                  <div>
+                    <p className="text-gray-600 text-xs mb-1">Payment Gateway</p>
+                    <p className="font-semibold text-gray-900 text-xs capitalize">
+                      {order.payment_gateway}
+                    </p>
+                  </div>
+                )}
                 {(order.payment_metadata?.payment_type || order.payment_method_type) && (
                   <div>
-                    <p className="text-gray-600 text-xs mb-1">{t('trackOrder.paymentMethod')}</p>
+                    <p className="text-gray-600 text-xs mb-1">Payment Method Type</p>
                     <p className="font-semibold text-gray-900 text-xs capitalize">
                       {(order.payment_metadata?.payment_type || order.payment_method_type || '').replace('_', ' ')}
                     </p>
                   </div>
                 )}
-                {/* Only show expiry time for Midtrans orders (not Stripe) */}
-                {!order.stripe_session_id && (order.payment_metadata?.expiry_time || order.expiry_time) && (
+                {order.payment_metadata?.channel && (
+                  <div>
+                    <p className="text-gray-600 text-xs mb-1">Payment Channel</p>
+                    <p className="font-semibold text-gray-900 text-xs capitalize">
+                      {order.payment_metadata.channel.replace('_', ' ')}
+                    </p>
+                  </div>
+                )}
+                {/* Show expiry time for pending orders */}
+                {(order.payment_metadata?.expiry_time || order.expiry_time) && order.payment_status === 'pending' && (
                   <>
                     <div>
                       <p className="text-gray-600 text-xs mb-1">{t('trackOrder.payBefore')}</p>

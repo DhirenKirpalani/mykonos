@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { WhatsappLogo } from 'phosphor-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useRegion } from '@/contexts/RegionContext'
@@ -9,13 +9,18 @@ import { toast } from 'sonner'
 export default function ContactPage() {
   const { t } = useLanguage()
   const { region } = useRegion()
-  const isIndonesia = region?.code === 'ID'
+  const [clientRegion, setClientRegion] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     message: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Only set region after mount to prevent hydration mismatch
+  useEffect(() => {
+    setClientRegion(region?.code || null)
+  }, [region])
 
   const whatsappMessageID = encodeURIComponent('Halo! Saya ingin bertanya tentang produk Anda.')
   const whatsappMessageEN = encodeURIComponent('Hello! I would like to inquire about your products.')
@@ -163,7 +168,20 @@ export default function ContactPage() {
               
               {/* WhatsApp Cards */}
               <div className="space-y-4">
-                {isIndonesia ? (
+                {clientRegion === null ? (
+                  /* Show placeholder during SSR and initial render to prevent hydration mismatch */
+                  <div className="block rounded-xl bg-[#25D366] p-5 border-2 border-[#1DA851]">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                        <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="h-6 bg-white/30 rounded w-48 mb-1 animate-pulse"></div>
+                        <div className="h-4 bg-white/20 rounded w-32 animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+                ) : clientRegion === 'ID' ? (
                   /* Indonesia WhatsApp - Green for ID region only */
                   <a
                     href={whatsappUrlID}

@@ -304,7 +304,7 @@ export function HeaderMobile() {
               <Menu className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
             </button>
             <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-              <span className="font-serif text-lg font-medium tracking-[0.25em] text-luxury-gold md:text-xl">
+              <span className="font-futura text-lg font-medium tracking-normal text-luxury-gold md:text-xl">
                 MYKONOS
               </span>
             </Link>
@@ -334,7 +334,7 @@ export function HeaderMobile() {
           </button>
           
           <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-            <span className="font-serif text-lg font-medium tracking-[0.15em] text-luxury-gold transition-all duration-300 hover:opacity-90 sm:text-xl sm:tracking-[0.2em] md:text-2xl md:tracking-[0.25em]">
+            <span className="font-futura text-lg font-medium tracking-normal text-luxury-gold transition-all duration-300 hover:opacity-90 sm:text-xl md:text-2xl">
               MYKONOS
             </span>
           </Link>

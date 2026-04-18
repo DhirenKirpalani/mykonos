@@ -84,11 +84,13 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   const { region } = useRegion()
   const { t, locale } = useLanguage()
   const [mounted, setMounted] = useState(false)
+  const [clientRegion, setClientRegion] = useState<typeof region | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<string>('')
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    setClientRegion(region)
+  }, [region])
 
   useEffect(() => {
     if (!voucher?.valid_until || !mounted) return
@@ -151,7 +153,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   }, [hasVariants, product])
   
   const variantPrices = hasVariants ? (product as any).variants.map((v: any) => 
-    region?.code === 'ID' ? (v.price_idr || 0) : (v.price_usd || 0)
+    clientRegion?.code === 'ID' ? (v.price_idr || 0) : (v.price_usd || 0)
   ).filter((p: number) => p > 0) : []
   
   const minVariantPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0
@@ -160,7 +162,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   
   // Get compare-at prices for variants
   const variantCompareAtPrices = hasVariants ? (product as any).variants.map((v: any) => 
-    region?.code === 'ID' ? (v.compare_at_price_idr || 0) : (v.compare_at_price_usd || 0)
+    clientRegion?.code === 'ID' ? (v.compare_at_price_idr || 0) : (v.compare_at_price_usd || 0)
   ).filter((p: number) => p > 0) : []
   
   const minVariantCompareAtPrice = variantCompareAtPrices.length > 0 ? Math.min(...variantCompareAtPrices) : 0
@@ -169,7 +171,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   
   // Get price based on region
   const getPrice = () => {
-    if (region?.code === 'ID' && (product as any).price_idr) {
+    if (clientRegion?.code === 'ID' && (product as any).price_idr) {
       return (product as any).price_idr
     }
     return (product as any).price_usd || 0
@@ -188,7 +190,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
     if (hasVariants && activeDiscount.variant_id) {
       const discountedVariant = (product as any).variants?.find((v: any) => v.name === activeDiscount.variant_id)
       if (discountedVariant) {
-        originalPrice = region?.code === 'ID' ? (discountedVariant.price_idr || 0) : (discountedVariant.price_usd || 0)
+        originalPrice = clientRegion?.code === 'ID' ? (discountedVariant.price_idr || 0) : (discountedVariant.price_usd || 0)
       }
     }
     
@@ -399,8 +401,8 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
             let discountPct = 0
             if (hasVariants && minVariantCompareAtPrice > 0 && minVariantCompareAtPrice > minVariantPrice) {
               discountPct = Math.round((minVariantCompareAtPrice - minVariantPrice) / minVariantCompareAtPrice * 100)
-            } else if (!hasVariants && region) {
-              const compareAt = region.code === 'ID' ? (product as any).compare_at_price_idr : (product as any).compare_at_price_usd
+            } else if (!hasVariants && clientRegion) {
+              const compareAt = clientRegion.code === 'ID' ? (product as any).compare_at_price_idr : (product as any).compare_at_price_usd
               if (compareAt && compareAt > originalPrice) {
                 discountPct = Math.round((compareAt - originalPrice) / compareAt * 100)
               }
@@ -410,12 +412,12 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
               <div className="flex flex-col gap-0.5">
                 {hasActiveDiscount && (
                   <div className="text-xs text-gray-500 line-through">
-                    {region ? formatPrice(originalPrice, region.currency_code) : '...'}
+                    {clientRegion ? formatPrice(originalPrice, clientRegion.currency_code) : '...'}
                   </div>
                 )}
                 <div className="flex items-center gap-1.5 mb-1.5 flex-nowrap">
                   <p className="text-sm md:text-base text-[#EE4D2D] font-bold">
-                    {region ? formatPrice(voucher ? netPrice : basePrice, region.currency_code) : '...'}
+                    {clientRegion ? formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code) : '...'}
                   </p>
                   {(discountPct > 0 || hasActiveDiscount) && !voucher && (
                     <span className="text-[10px] md:text-xs text-gray-500 font-medium">

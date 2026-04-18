@@ -136,12 +136,17 @@ export async function POST(request: NextRequest) {
       console.log('✅ [STRIPE] Order found before update:', existingOrder)
     }
     
+    // Calculate expiry time (24 hours from now, matching Stripe's default session expiry)
+    const expiryTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    
     // Now update the order
     const { data: updateData, error: updateError } = await supabase
       .from('orders')
       .update({
         stripe_session_id: session.id,
         stripe_payment_intent_id: session.payment_intent as string,
+        payment_gateway: 'stripe',
+        expiry_time: expiryTime,
       })
       .eq('id', orderId)
       .select()

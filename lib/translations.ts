@@ -85,7 +85,8 @@ export const translations = {
       shelfLife: "Shelf Life",
       countryOfOrigin: "Country of Origin",
       shipsFrom: "Ships From",
-      bpomNumber: "BPOM No."
+      bpomNumber: "BPOM No.",
+      months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     },
     home: {
       shopNow: "Shop Now",
@@ -242,6 +243,12 @@ export const translations = {
         delivered: "Delivered",
         cancelled: "Cancelled",
         refunded: "Refunded"
+      },
+      timeUnits: {
+        hours: "h",
+        minutes: "m",
+        seconds: "s",
+        expired: "Expired"
       }
     },
     emailModal: {
@@ -716,7 +723,8 @@ export const translations = {
       shelfLife: "Masa Simpan",
       countryOfOrigin: "Negara Asal",
       shipsFrom: "Dikirim Dari",
-      bpomNumber: "No. BPOM"
+      bpomNumber: "No. BPOM",
+      months: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
     },
     home: {
       shopNow: "Belanja Sekarang",
@@ -873,6 +881,12 @@ export const translations = {
         delivered: "Terkirim",
         cancelled: "Dibatalkan",
         refunded: "Dikembalikan"
+      },
+      timeUnits: {
+        hours: "j",
+        minutes: "m",
+        seconds: "d",
+        expired: "Kadaluarsa"
       }
     },
     emailModal: {

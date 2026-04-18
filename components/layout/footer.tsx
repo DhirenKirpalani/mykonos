@@ -40,7 +40,7 @@ export function Footer() {
           {/* Brand Column */}
           <div className="overflow-hidden">
             <Link href="/" className="inline-block">
-              <span className="font-serif text-xl sm:text-2xl font-medium tracking-[0.25em] text-luxury-gold">
+              <span className="font-futura text-xl sm:text-2xl font-medium tracking-normal text-luxury-gold">
                 MYKONOS
               </span>
             </Link>

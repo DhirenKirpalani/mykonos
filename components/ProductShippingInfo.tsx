@@ -23,14 +23,13 @@ export function ProductShippingInfo({ product }: ProductShippingInfoProps) {
   // Format dates as "DD MMM"
   const formatDate = (date: Date) => {
     const day = date.getDate()
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-    const month = months[date.getMonth()]
+    const month = t.products.months[date.getMonth()]
     return `${day} ${month}`
   }
 
   return (
-    <div className="flex items-start gap-3">
-      <svg className="mt-1 h-5 w-5 text-[#26AA99]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="flex items-center gap-3">
+      <svg className="h-5 w-5 text-[#26AA99] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <div className="flex-1">
