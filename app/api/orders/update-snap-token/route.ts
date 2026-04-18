@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       .update({
         snap_token,
         snap_redirect_url,
+        payment_gateway: 'midtrans',
         expiry_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       })
       .eq('id', order_id)

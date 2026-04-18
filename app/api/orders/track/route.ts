@@ -42,6 +42,7 @@ export async function GET(request: Request) {
         stripe_payment_intent_id,
         expiry_time,
         payment_method_type,
+        payment_gateway,
         payment_metadata,
         packed_at,
         shipped_at,

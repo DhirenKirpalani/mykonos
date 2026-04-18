@@ -304,7 +304,7 @@ export function HeaderDesktop() {
           <div className="flex h-20 items-center justify-center">
             <div className="flex items-center gap-5 flex-1" />
             <Link href="/" className="static translate-x-0">
-              <span className="font-serif text-4xl font-medium tracking-[0.25em] text-luxury-gold transition-all duration-300 hover:opacity-90">
+              <span className="font-futura text-4xl font-medium tracking-normal text-luxury-gold transition-all duration-300 hover:opacity-90">
                 MYKONOS
               </span>
             </Link>
@@ -325,7 +325,7 @@ export function HeaderDesktop() {
           </div>
           
           <Link href="/" className="static translate-x-0">
-            <span className="font-serif text-4xl font-medium tracking-[0.25em] text-luxury-gold transition-all duration-300 hover:opacity-90">
+            <span className="font-futura text-4xl font-medium tracking-normal text-luxury-gold transition-all duration-300 hover:opacity-90">
               MYKONOS
             </span>
           </Link>

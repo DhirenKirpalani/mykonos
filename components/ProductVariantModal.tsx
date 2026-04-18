@@ -327,8 +327,8 @@ export function ProductVariantModal({
                     estimateEnd.setDate(today.getDate() + preOrderDays + 5)
                     const formatDate = (date: Date) => {
                       const day = date.getDate()
-                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-                      return `${day} ${months[date.getMonth()]}`
+                      const month = t.products.months[date.getMonth()]
+                      return `${day} ${month}`
                     }
                     return `${t.products.preOrder} (${t.products.shippedIn} ${preOrderDays} ${t.products.days}). ${t.products.estimatedArrival} ${formatDate(estimateStart)} - ${formatDate(estimateEnd)}`
                   })()}

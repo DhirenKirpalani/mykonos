@@ -1172,7 +1172,6 @@ export default function CheckoutPage() {
         }
         
         console.log('✅ [STRIPE] Redirecting to Stripe checkout...')
-        toast.success('Redirecting to payment...')
         setIsProcessing(false)
         window.location.href = stripeData.url
         return
@@ -2188,8 +2187,8 @@ export default function CheckoutPage() {
               estimateEnd.setDate(today.getDate() + preOrderDays + 5)
               const formatDate = (date: Date) => {
                 const day = date.getDate()
-                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-                return `${day} ${months[date.getMonth()]}`
+                const month = t.products.months[date.getMonth()]
+                return `${day} ${month}`
               }
               return (
                 <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200 flex items-start gap-2">
