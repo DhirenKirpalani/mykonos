@@ -77,6 +77,7 @@ const config: Config = {
         sans: ['var(--font-inter)', 'sans-serif'],
         serif: ['var(--font-playfair)', 'serif'],
         heading: ['var(--font-playfair)', 'serif'],
+        futura: ['Futura PT', 'sans-serif'],
       },
       keyframes: {
         'accordion-down': {
