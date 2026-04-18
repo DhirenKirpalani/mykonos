@@ -294,7 +294,7 @@ export interface Database {
           shipping_address: Json
           shipping_address_id: string | null
           shipping_method_id: string | null
-          payment_method: string | null
+          payment_gateway: string | null
           payment_status: string
           payment_intent_id: string | null
           subtotal: number
@@ -327,7 +327,7 @@ export interface Database {
           shipping_address: Json
           shipping_address_id?: string | null
           shipping_method_id?: string | null
-          payment_method?: string | null
+          payment_gateway?: string | null
           payment_status?: string
           payment_intent_id?: string | null
           subtotal?: number
@@ -360,7 +360,7 @@ export interface Database {
           shipping_address?: Json
           shipping_address_id?: string | null
           shipping_method_id?: string | null
-          payment_method?: string | null
+          payment_gateway?: string | null
           payment_status?: string
           payment_intent_id?: string | null
           subtotal?: number
