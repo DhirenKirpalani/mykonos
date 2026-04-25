@@ -18,10 +18,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
   const router = useRouter()
 
   // Pre-fill email from track order page or remembered credentials
   useEffect(() => {
+    // Check for redirect parameter in URL
+    const params = new URLSearchParams(window.location.search)
+    const redirect = params.get('redirect')
+    if (redirect) {
+      setRedirectUrl(decodeURIComponent(redirect))
+    }
+    
     // First check for signin context from track order
     const signinContext = sessionStorage.getItem('signinContext')
     if (signinContext) {
@@ -96,7 +104,12 @@ export default function LoginPage() {
         description: 'You have successfully logged in.',
       })
       
-      router.push('/account')
+      // Redirect to original page if redirect parameter exists, otherwise go to account
+      if (redirectUrl) {
+        router.push(redirectUrl)
+      } else {
+        router.push('/account')
+      }
     } catch (error: any) {
       toast.error('Login failed', {
         description: error.message || 'Failed to sign in'

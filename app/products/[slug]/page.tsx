@@ -253,12 +253,12 @@ export default function ProductDetailPage({
                 />
                 {/* Voucher Discount Badge */}
                 {voucher && (
-                  <div className="mt-2 inline-flex items-center gap-2 bg-white border-2 border-orange-500 rounded-lg px-3 py-1.5">
-                    <svg className="h-4 w-4 text-orange-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="mt-2 inline-flex items-center gap-2 bg-luxury-gold/10 border-2 border-luxury-gold rounded-lg px-3 py-1.5">
+                    <svg className="h-4 w-4 text-luxury-gold flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
                       <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-sm font-bold text-orange-600">
+                    <span className="text-sm font-bold text-luxury-navy">
                       Diskon {voucher.discount_type === 'percentage' 
                         ? `${voucher.discount_value}%`
                         : `Rp${voucher.discount_value.toLocaleString('id-ID')}`
@@ -270,8 +270,8 @@ export default function ProductDetailPage({
             )}
 
             {/* Product Title */}
-            <div>
-              <h1 className="mb-2 text-lg md:text-2xl font-medium text-gray-900">
+            <div className="py-2">
+              <h1 className="mb-2 text-xl md:text-2xl font-semibold text-gray-900">
                 {product.name}
               </h1>
               {/* Rating and Sold */}
@@ -300,7 +300,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Shipping - Dynamic based on pre-order */}
-            <div className="py-3">
+            <div className="py-4 border-t border-gray-100">
               <ProductShippingInfo product={product} />
             </div>
 

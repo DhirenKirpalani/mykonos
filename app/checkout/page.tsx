@@ -2639,7 +2639,7 @@ export default function CheckoutPage() {
                   <div className="mt-4 text-center">
                     <p className="text-sm text-gray-600">
                       {t.checkout.haveAccount}{' '}
-                      <a href="/login" className="text-luxury-navy hover:underline font-semibold">
+                      <a href={`/login?redirect=${encodeURIComponent('/checkout' + (isBuyNow ? '?buyNow=true' : ''))}`} className="text-luxury-navy hover:underline font-semibold">
                         {t.checkout.signIn}
                       </a>
                       {' '}{t.checkout.fasterCheckout}

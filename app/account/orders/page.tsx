@@ -243,8 +243,15 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="flex items-center justify-between gap-2 mt-2">
-                  <span className={cn('px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap', getStatusColor(order.status))}>
-                    {getStatusLabel(order.status)}
+                  <span className={cn('px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap', 
+                    (order as any).payment_status === 'pending' && (order as any).expiry_time && new Date((order as any).expiry_time) < new Date()
+                      ? 'bg-red-100 text-red-700'
+                      : getStatusColor(order.status)
+                  )}>
+                    {(order as any).payment_status === 'pending' && (order as any).expiry_time && new Date((order as any).expiry_time) < new Date()
+                      ? t.account.expired
+                      : getStatusLabel(order.status)
+                    }
                   </span>
                   <span className="font-semibold text-xs sm:text-sm whitespace-nowrap">
                     {order.currency_code === 'IDR'
