@@ -16,8 +16,17 @@ interface ProductPriceDisplayProps {
 }
 
 export function ProductPriceDisplay({ product, quantity = 1, showRange = false, voucher = null, activeDiscounts = null }: ProductPriceDisplayProps) {
-  const { region } = useRegion()
+  const { region, isLoading: regionLoading } = useRegion()
   const [showBreakdown, setShowBreakdown] = useState(false)
+  
+  // Show loading state while region is being determined to prevent price flash
+  if (regionLoading || !region) {
+    return (
+      <div className="animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-32"></div>
+      </div>
+    )
+  }
   
   // Check if product has variants with different prices
   const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
