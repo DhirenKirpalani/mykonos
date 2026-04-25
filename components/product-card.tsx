@@ -314,7 +314,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
       >
         {/* Image Frame - Fixed aspect ratio */}
         <div 
-          className="relative aspect-square bg-[#F1F4F8] overflow-hidden group/image"
+          className="relative aspect-square bg-[#F1F4F8] overflow-hidden group/image select-none"
           onTouchStart={(e) => {
             const touch = e.touches[0]
             const startX = touch.clientX
@@ -332,6 +332,21 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
               }
             }
             document.addEventListener('touchmove', handleTouchMove, { once: true })
+          }}
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
+          onDrop={(e) => e.preventDefault()}
+          onMouseDown={(e) => {
+            // Prevent right-click and middle-click
+            if (e.button === 2 || e.button === 1) {
+              e.preventDefault()
+            }
+          }}
+          style={{ 
+            WebkitTouchCallout: 'none', 
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
+            pointerEvents: 'auto'
           }}
         >
           {/* Out of Stock Overlay - Circular Badge */}
@@ -356,10 +371,10 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                       e.preventDefault()
                       setCurrentImageIndex(prev => prev - 1)
                     }}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-md transition-all"
+                    className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-30 bg-white/95 hover:bg-white rounded-full p-2 md:p-1.5 shadow-lg transition-all active:scale-95"
                     aria-label="Previous image"
                   >
-                    <ChevronLeft className="h-3 w-3 md:h-4 md:w-4 text-luxury-navy" />
+                    <ChevronLeft className="h-5 w-5 md:h-4 md:w-4 text-luxury-navy" />
                   </button>
                 )}
                 {/* Right Arrow */}
@@ -369,10 +384,10 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                       e.preventDefault()
                       setCurrentImageIndex(prev => prev + 1)
                     }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-md transition-all"
+                    className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-30 bg-white/95 hover:bg-white rounded-full p-2 md:p-1.5 shadow-lg transition-all active:scale-95"
                     aria-label="Next image"
                   >
-                    <ChevronRight className="h-3 w-3 md:h-4 md:w-4 text-luxury-navy" />
+                    <ChevronRight className="h-5 w-5 md:h-4 md:w-4 text-luxury-navy" />
                   </button>
                 )}
                 {/* Image Counter */}
@@ -408,10 +423,27 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                     object-cover
                     transition-all duration-300 ease-out
                     group-hover:scale-[1.04]
+                    select-none
+                    pointer-events-none
                   "
                   quality={90}
                   loading="lazy"
                   unoptimized={displayUrl.includes('supabase')}
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onDragStart={(e) => e.preventDefault()}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => {
+                    // Allow touch for navigation but prevent long press
+                    const target = e.currentTarget
+                    const timeout = setTimeout(() => {
+                      target.style.pointerEvents = 'none'
+                      setTimeout(() => {
+                        target.style.pointerEvents = 'auto'
+                      }, 100)
+                    }, 500)
+                    target.addEventListener('touchend', () => clearTimeout(timeout), { once: true })
+                  }}
                   onError={(e) => {
                     const target = e.currentTarget as HTMLImageElement;
                     console.error('Image load error for:', product.name, displayUrl);
