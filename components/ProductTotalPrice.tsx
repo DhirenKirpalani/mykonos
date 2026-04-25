@@ -32,7 +32,7 @@ export function ProductTotalPrice({ quantity, price, priceIdr, salePrice, compar
       </div>
       <div className="text-right">
         <p className="text-sm text-gray-500">Total</p>
-        <p className="text-2xl font-bold text-[#EE4D2D]">
+        <p className="text-2xl font-bold text-luxury-navy">
           {formatPrice(totalPrice, currencyCode)}
         </p>
       </div>

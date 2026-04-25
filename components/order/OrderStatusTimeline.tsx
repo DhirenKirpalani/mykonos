@@ -23,7 +23,7 @@ type TimelineStep = {
   id: string
   label: string
   icon: React.ReactNode
-  status: 'completed' | 'current' | 'pending'
+  status: 'completed' | 'current' | 'pending' | 'expired'
   timestamp?: string | null
 }
 
@@ -57,6 +57,29 @@ export function OrderStatusTimeline({
   })
   
   const getSteps = (): TimelineStep[] => {
+    // Check if payment expired
+    const isPaymentExpired = paymentStatus === 'pending' && expiryTime && new Date(expiryTime) < new Date()
+    
+    // If payment expired, show simplified timeline
+    if (isPaymentExpired) {
+      return [
+        {
+          id: 'placed',
+          label: t.account.orderPlaced,
+          icon: <Package className="w-5 h-5" />,
+          status: 'completed',
+          timestamp: createdAt,
+        },
+        {
+          id: 'expired',
+          label: t.account.paymentExpired,
+          icon: <CreditCard className="w-5 h-5" />,
+          status: 'expired',
+          timestamp: expiryTime,
+        },
+      ]
+    }
+    
     // If order is cancelled, show simplified timeline
     if (currentStatus === 'cancelled') {
       // Use payment_metadata.expiry_time as primary source (from Midtrans webhook)
@@ -79,7 +102,7 @@ export function OrderStatusTimeline({
         },
       ]
     }
-
+    
     const steps: TimelineStep[] = [
       {
         id: 'placed',
@@ -150,6 +173,10 @@ export function OrderStatusTimeline({
   }
 
   const getStatusMessage = () => {
+    // Check if payment expired
+    if (paymentStatus === 'pending' && expiryTime && new Date(expiryTime) < new Date()) {
+      return t.account.paymentExpired
+    }
     if (currentStatus === 'cancelled') return t.account.orderCancelled
     if (currentStatus === 'completed') return t.account.orderDelivered
     if (currentStatus === 'shipped') return t.account.orderOnTheWay
@@ -194,6 +221,7 @@ export function OrderStatusTimeline({
               {steps.map((step, index) => {
                 const isCompleted = step.status === 'completed'
                 const isCurrent = step.status === 'current'
+                const isExpired = step.status === 'expired'
 
                 return (
                   <div key={step.id} className="flex flex-col items-center relative" style={{ width: `${100 / steps.length}%` }}>
@@ -203,7 +231,8 @@ export function OrderStatusTimeline({
                         'flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all z-10 bg-white',
                         isCompleted && 'bg-green-500 border-green-500 text-white',
                         isCurrent && 'bg-luxury-gold border-luxury-gold text-white animate-pulse',
-                        !isCompleted && !isCurrent && 'border-gray-300 text-gray-400'
+                        isExpired && 'bg-red-500 border-red-500 text-white',
+                        !isCompleted && !isCurrent && !isExpired && 'border-gray-300 text-gray-400'
                       )}
                     >
                       {isCompleted ? <Check className="w-5 h-5" /> : step.icon}
@@ -215,7 +244,8 @@ export function OrderStatusTimeline({
                         'text-xs sm:text-sm font-semibold mt-3 text-center',
                         isCompleted && 'text-gray-900',
                         isCurrent && 'text-luxury-gold',
-                        !isCompleted && !isCurrent && 'text-gray-400'
+                        isExpired && 'text-red-600',
+                        !isCompleted && !isCurrent && !isExpired && 'text-gray-400'
                       )}
                     >
                       {step.label}
@@ -250,6 +280,7 @@ export function OrderStatusTimeline({
               const isLast = index === steps.length - 1
               const isCompleted = step.status === 'completed'
               const isCurrent = step.status === 'current'
+              const isExpired = step.status === 'expired'
 
               return (
                 <div key={step.id} className="relative pb-8 last:pb-0">
@@ -258,7 +289,7 @@ export function OrderStatusTimeline({
                     <div
                       className={cn(
                         'absolute left-5 top-10 w-0.5 h-full -ml-px',
-                        isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                        isCompleted ? 'bg-green-500' : isExpired ? 'bg-red-500' : 'bg-gray-200'
                       )}
                     />
                   )}
@@ -271,7 +302,8 @@ export function OrderStatusTimeline({
                         'flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all',
                         isCompleted && 'bg-green-500 border-green-500 text-white',
                         isCurrent && 'bg-luxury-gold border-luxury-gold text-white animate-pulse',
-                        !isCompleted && !isCurrent && 'bg-white border-gray-300 text-gray-400'
+                        isExpired && 'bg-red-500 border-red-500 text-white',
+                        !isCompleted && !isCurrent && !isExpired && 'bg-white border-gray-300 text-gray-400'
                       )}
                     >
                       {isCompleted ? <Check className="w-5 h-5" /> : step.icon}
@@ -284,7 +316,8 @@ export function OrderStatusTimeline({
                           'text-sm font-semibold',
                           isCompleted && 'text-gray-900',
                           isCurrent && 'text-luxury-gold',
-                          !isCompleted && !isCurrent && 'text-gray-400'
+                          isExpired && 'text-red-600',
+                          !isCompleted && !isCurrent && !isExpired && 'text-gray-400'
                         )}
                       >
                         {step.label}

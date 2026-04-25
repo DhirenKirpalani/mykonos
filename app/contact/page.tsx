@@ -103,65 +103,7 @@ export default function ContactPage() {
 
       <div className="container mx-auto px-4 py-12 sm:py-16 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
-          {/* Left Column - Contact Form */}
-          <div>
-            <h2 className="text-2xl font-serif font-bold mb-6">Email</h2>
-            <div className="rounded-2xl bg-luxury-gray-light p-6 sm:p-8">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.contact.name}
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder={t.contact.yourName}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.contact.email}
-                  </label>
-                  <input
-                    type="text"
-                    id="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder={t.contact.yourEmail}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.contact.message}
-                  </label>
-                  <textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder={t.contact.yourMessage}
-                    rows={6}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors resize-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-white font-semibold py-3 px-6 rounded-lg transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? t.contact.sending : t.contact.submit}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          {/* Right Column - WhatsApp & Business Hours */}
+          {/* Left Column - WhatsApp & Business Hours */}
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-serif font-bold mb-6">WhatsApp</h2>
@@ -238,6 +180,64 @@ export default function ContactPage() {
                   <span className="font-semibold text-red-600">{t.contact.closed}</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Right Column - Contact Form */}
+          <div>
+            <h2 className="text-2xl font-serif font-bold mb-6">Email</h2>
+            <div className="rounded-2xl bg-luxury-gray-light p-6 sm:p-8">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.contact.name}
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder={t.contact.yourName}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.contact.email}
+                  </label>
+                  <input
+                    type="text"
+                    id="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder={t.contact.yourEmail}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.contact.message}
+                  </label>
+                  <textarea
+                    id="message"
+                    value={formData.message}
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    placeholder={t.contact.yourMessage}
+                    rows={6}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-white font-semibold py-3 px-6 rounded-lg transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? t.contact.sending : t.contact.submit}
+                </button>
+              </form>
             </div>
           </div>
         </div>

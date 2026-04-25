@@ -488,39 +488,66 @@ export default function OrderDetailsPage() {
           </div>
 
           {/* Payment Status Alert for Pending Orders */}
-          {order.payment_status === 'pending' && (
-            <div className="mb-5 sm:mb-8 bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-                <div className="flex-1">
-                  <h3 className="text-base sm:text-lg font-semibold text-yellow-900 mb-1">
-                    ⏳ {t.account.waitingForPayment}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-yellow-800 mb-1">
-                    {t.account.orderNotComplete}
-                  </p>
-                  {order.expiry_time && (
-                    <p className="text-xs text-yellow-700">
-                      {t.account.completeBefore}: {new Date(order.expiry_time).toLocaleString('id-ID', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'Asia/Jakarta',
-                      })}
-                    </p>
-                  )}
+          {order.payment_status === 'pending' && (() => {
+            const isExpired = order.expiry_time && new Date(order.expiry_time) < new Date()
+            
+            if (isExpired) {
+              return (
+                <div className="mb-5 sm:mb-8 bg-red-50 border-2 border-red-200 rounded-xl p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-base sm:text-lg font-semibold text-red-900 mb-1">
+                        ⏰ {t.account.paymentLinkExpired}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-red-800">
+                        {t.account.paymentLinkExpiredMessage}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleOrderAgain}
+                      className="w-full sm:w-auto px-5 py-3 bg-luxury-navy text-white rounded-xl hover:bg-luxury-navy/80 font-semibold text-sm transition-colors"
+                    >
+                      {t.account.orderAgain}
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={handleContinuePayment}
-                  disabled={isProcessingPayment || (order.expiry_time ? new Date(order.expiry_time) < new Date() : false)}
-                  className="w-full sm:w-auto px-5 py-3 bg-luxury-gold text-luxury-navy rounded-xl hover:bg-luxury-gold-light disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold text-sm transition-colors"
-                >
-                  {isProcessingPayment ? t.common.loading : t.account.continuePayment}
-                </button>
+              )
+            }
+            
+            return (
+              <div className="mb-5 sm:mb-8 bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-base sm:text-lg font-semibold text-yellow-900 mb-1">
+                      ⏳ {t.account.waitingForPayment}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-yellow-800 mb-1">
+                      {t.account.orderNotComplete}
+                    </p>
+                    {order.expiry_time && (
+                      <p className="text-xs text-yellow-700">
+                        {t.account.completeBefore}: {new Date(order.expiry_time).toLocaleString('id-ID', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'Asia/Jakarta',
+                        })}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleContinuePayment}
+                    disabled={isProcessingPayment}
+                    className="w-full sm:w-auto px-5 py-3 bg-luxury-gold text-luxury-navy rounded-xl hover:bg-luxury-gold-light disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold text-sm transition-colors"
+                  >
+                    {isProcessingPayment ? t.common.loading : t.account.continuePayment}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Expired Order Alert */}
           {order.payment_status === 'expired' && (
@@ -598,32 +625,47 @@ export default function OrderDetailsPage() {
                 </div>
                 <div>
                   <p className="text-gray-600 text-xs mb-1">{t.trackOrder.orderStatus}</p>
-                  <p className="font-semibold text-gray-900 text-sm">{getStatusLabel(order.status)}</p>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {order.payment_status === 'pending' && order.expiry_time && new Date(order.expiry_time) < new Date()
+                      ? t.account.expired
+                      : getStatusLabel(order.status)
+                    }
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-xs mb-1">{t.account.paymentStatus}</p>
-                  <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    order.payment_status === 'completed'          ? 'bg-green-100 text-green-700' :
-                    order.payment_status === 'pending'            ? 'bg-yellow-100 text-yellow-700' :
-                    order.payment_status === 'authorized'         ? 'bg-blue-100 text-blue-700' :
-                    order.payment_status === 'under_review'       ? 'bg-orange-100 text-orange-700' :
-                    order.payment_status === 'refunded'           ? 'bg-teal-100 text-teal-700' :
-                    order.payment_status === 'partially_refunded' ? 'bg-teal-50 text-teal-600' :
-                    order.payment_status === 'chargeback'         ? 'bg-purple-100 text-purple-700' :
-                    order.payment_status === 'expired'            ? 'bg-gray-100 text-gray-500' :
-                    order.payment_status === 'failed'             ? 'bg-red-100 text-red-600' :
-                    'bg-gray-100 text-gray-500'
-                  }`}>
-                    {order.payment_status === 'completed'          ? t.account.paymentCompleted :
-                     order.payment_status === 'pending'            ? t.account.pendingPayment :
-                     order.payment_status === 'authorized'         ? t.account.paymentAuthorized :
-                     order.payment_status === 'under_review'       ? t.account.paymentUnderReview :
-                     order.payment_status === 'refunded'           ? t.account.paymentRefunded :
-                     order.payment_status === 'partially_refunded' ? t.account.paymentPartiallyRefunded :
-                     order.payment_status === 'chargeback'         ? t.account.paymentChargeback :
-                     order.payment_status === 'expired'            ? t.account.paymentExpired :
-                     order.payment_status === 'failed'             ? t.account.paymentFailed :
-                     order.payment_status}
+                  <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${(() => {
+                    // Check if pending payment has expired
+                    if (order.payment_status === 'pending' && order.expiry_time && new Date(order.expiry_time) < new Date()) {
+                      return 'bg-red-100 text-red-600'
+                    }
+                    if (order.payment_status === 'completed') return 'bg-green-100 text-green-700'
+                    if (order.payment_status === 'pending') return 'bg-yellow-100 text-yellow-700'
+                    if (order.payment_status === 'authorized') return 'bg-blue-100 text-blue-700'
+                    if (order.payment_status === 'under_review') return 'bg-orange-100 text-orange-700'
+                    if (order.payment_status === 'refunded') return 'bg-teal-100 text-teal-700'
+                    if (order.payment_status === 'partially_refunded') return 'bg-teal-50 text-teal-600'
+                    if (order.payment_status === 'chargeback') return 'bg-purple-100 text-purple-700'
+                    if (order.payment_status === 'expired') return 'bg-gray-100 text-gray-500'
+                    if (order.payment_status === 'failed') return 'bg-red-100 text-red-600'
+                    return 'bg-gray-100 text-gray-500'
+                  })()}`}>
+                    {(() => {
+                      // Check if pending payment has expired
+                      if (order.payment_status === 'pending' && order.expiry_time && new Date(order.expiry_time) < new Date()) {
+                        return t.account.expired
+                      }
+                      if (order.payment_status === 'completed') return t.account.paymentCompleted
+                      if (order.payment_status === 'pending') return t.account.pendingPayment
+                      if (order.payment_status === 'authorized') return t.account.paymentAuthorized
+                      if (order.payment_status === 'under_review') return t.account.paymentUnderReview
+                      if (order.payment_status === 'refunded') return t.account.paymentRefunded
+                      if (order.payment_status === 'partially_refunded') return t.account.paymentPartiallyRefunded
+                      if (order.payment_status === 'chargeback') return t.account.paymentChargeback
+                      if (order.payment_status === 'expired') return t.account.expired
+                      if (order.payment_status === 'failed') return t.account.paymentFailed
+                      return order.payment_status
+                    })()}
                   </span>
                 </div>
                 {order.payment_gateway && (
@@ -651,32 +693,35 @@ export default function OrderDetailsPage() {
                   </div>
                 )}
                 {/* Show expiry time for pending orders */}
-                {(order.payment_metadata?.expiry_time || order.expiry_time) && order.payment_status === 'pending' && (
-                  <>
-                    <div>
-                      <p className="text-gray-600 text-xs mb-1">{t.trackOrder.payBefore}</p>
-                      <p className="font-semibold text-gray-900 text-sm">
-                        {new Date(order.payment_metadata?.expiry_time || order.expiry_time!).toLocaleString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          timeZone: 'Asia/Jakarta'
-                        })}
-                      </p>
-                    </div>
-                    {/* Only show Waktu Tersisa if payment is not successful */}
-                    {!(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && order.payment_status === 'pending' && (
+                {(order.payment_metadata?.expiry_time || order.expiry_time) && order.payment_status === 'pending' && (() => {
+                  const isExpired = order.expiry_time && new Date(order.expiry_time) < new Date()
+                  return (
+                    <>
                       <div>
-                        <p className="text-gray-600 text-xs mb-1">{t.trackOrder.timeRemaining}</p>
+                        <p className="text-gray-600 text-xs mb-1">{t.trackOrder.payBefore}</p>
                         <p className="font-semibold text-gray-900 text-sm">
-                          {timeRemaining || 'Menghitung...'}
+                          {new Date(order.payment_metadata?.expiry_time || order.expiry_time!).toLocaleString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: 'Asia/Jakarta'
+                          })}
                         </p>
                       </div>
-                    )}
-                  </>
-                )}
+                      {/* Only show Waktu Tersisa if payment is not successful */}
+                      {!(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && order.payment_status === 'pending' && (
+                        <div>
+                          <p className="text-gray-600 text-xs mb-1">{t.trackOrder.timeRemaining}</p>
+                          <p className={`font-semibold text-sm ${isExpired ? 'text-red-600' : 'text-gray-900'}`}>
+                            {isExpired ? t.account.expired : (timeRemaining || 'Menghitung...')}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
                 {order.tracking_number && (
                   <div>
                     <p className="text-gray-600 text-xs mb-1">Nomor Resi</p>
@@ -756,7 +801,7 @@ export default function OrderDetailsPage() {
                           <p className="text-xs text-gray-400 line-through">{formatPrice(item.price_at_purchase * item.quantity, order.currency_code)}</p>
                         )}
                         <p className="font-semibold text-sm sm:text-base">{formatPrice(displayPrice * item.quantity, order.currency_code)}</p>
-                        <p className="text-xs text-gray-500">{formatPrice(displayPrice, order.currency_code)} each</p>
+                        <p className="text-xs text-gray-500">{formatPrice(displayPrice, order.currency_code)} {t.account.each}</p>
                       </>
                     )
                   })()}

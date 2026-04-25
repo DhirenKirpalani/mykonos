@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Mail, CheckCircle2, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ForgotPasswordModalProps {
   isOpen: boolean
@@ -16,6 +17,7 @@ interface ForgotPasswordModalProps {
 }
 
 export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: ForgotPasswordModalProps) {
+  const { t } = useLanguage()
   const [email, setEmail] = useState(defaultEmail)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
@@ -41,7 +43,7 @@ export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: Forg
     e.preventDefault()
     
     if (!email || !validateEmail(email)) {
-      toast.error('Please enter a valid email address')
+      toast.error(t.resetPassword.invalidEmail)
       return
     }
 
@@ -53,15 +55,15 @@ export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: Forg
       })
 
       if (error) {
-        toast.error(error.message || 'Failed to send reset email')
+        toast.error(error.message || t.resetPassword.errorSending)
         return
       }
 
       setEmailSent(true)
-      toast.success('Password reset email sent! Please check your inbox.')
+      toast.success(t.resetPassword.successToast)
     } catch (error: any) {
       console.error('Password reset error:', error)
-      toast.error('Failed to send reset email. Please try again.')
+      toast.error(t.resetPassword.errorSending)
     } finally {
       setIsSubmitting(false)
     }
@@ -84,12 +86,12 @@ export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: Forg
             {emailSent ? (
               <>
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
-                Check Your Email
+                {t.resetPassword.checkEmail}
               </>
             ) : (
               <>
                 <Mail className="h-5 w-5 text-luxury-navy" />
-                Reset Password
+                {t.resetPassword.title}
               </>
             )}
           </DialogTitle>
@@ -101,18 +103,18 @@ export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: Forg
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-green-900">Email sent successfully!</p>
+                  <p className="text-sm font-medium text-green-900">{t.resetPassword.emailSentSuccess}</p>
                   <p className="text-sm text-green-700 mt-1">
-                    We've sent a password reset link to <strong>{email}</strong>
+                    {t.resetPassword.emailSentTo} <strong>{email}</strong>
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="text-sm text-gray-600 space-y-2">
-              <p>Please check your email and click the link to reset your password.</p>
+              <p>{t.resetPassword.checkInbox}</p>
               <p className="text-xs text-gray-500">
-                If you don't see the email, check your spam folder.
+                {t.resetPassword.checkSpam}
               </p>
             </div>
 
@@ -120,20 +122,20 @@ export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: Forg
               onClick={handleClose} 
               className="w-full bg-luxury-navy hover:bg-luxury-navy-light"
             >
-              Close
+              {t.resetPassword.close}
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 pt-4">
             <div>
-              <Label htmlFor="reset-email">Email Address *</Label>
+              <Label htmlFor="reset-email">{t.resetPassword.emailAddress} *</Label>
               <div className="relative">
                 <Input
                   id="reset-email"
                   type="email"
                   value={email}
                   onChange={handleEmailChange}
-                  placeholder="your@email.com"
+                  placeholder={t.resetPassword.emailPlaceholder}
                   required
                   disabled={isSubmitting}
                   autoFocus
@@ -150,10 +152,10 @@ export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: Forg
                 )}
               </div>
               {emailValid === false && email.length > 0 && (
-                <p className="text-sm text-red-600 mt-1">Please enter a valid email address</p>
+                <p className="text-sm text-red-600 mt-1">{t.resetPassword.invalidEmail}</p>
               )}
               <p className="text-xs text-gray-500 mt-2">
-                Enter your email address and we'll send you a link to reset your password.
+                {t.resetPassword.instructions}
               </p>
             </div>
 
@@ -165,14 +167,14 @@ export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: Forg
                 className="flex-1"
                 disabled={isSubmitting}
               >
-                Cancel
+                {t.resetPassword.cancel}
               </Button>
               <Button 
                 type="submit" 
                 className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
                 disabled={isSubmitting || !emailValid}
               >
-                {isSubmitting ? 'Sending...' : 'Send Reset Link'}
+                {isSubmitting ? t.resetPassword.sending : t.resetPassword.sendResetLink}
               </Button>
             </div>
           </form>

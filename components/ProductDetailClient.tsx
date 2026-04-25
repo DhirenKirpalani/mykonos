@@ -455,7 +455,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           onClick={() => handleBuyNow(undefined, quantity)}
           disabled={isBuyingNow || isOutOfStock}
           style={isOutOfStock ? { pointerEvents: 'none' } : {}}
-          className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-2 px-3 sm:py-3 sm:px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 text-sm sm:text-base"
+          className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light active:bg-luxury-navy-dark text-white font-medium py-2.5 px-3 sm:py-3 sm:px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 text-sm sm:text-base transition-all duration-200 active:scale-[0.98] touch-manipulation min-h-[44px]"
         >
           {isBuyingNow ? t('common.loading') : (() => {
             if (voucher && productData) {

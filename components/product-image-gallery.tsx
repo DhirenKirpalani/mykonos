@@ -72,7 +72,7 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
         
         {/* Voucher Countdown Overlay */}
         {voucher && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-orange-600 to-red-600 px-3 py-2 shadow-lg">
+          <div className="absolute bottom-0 left-0 right-0 bg-luxury-gold px-3 py-2 shadow-lg">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <svg className="h-4 w-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">

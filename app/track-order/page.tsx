@@ -74,7 +74,7 @@ type Order = {
 }
 
 export default function TrackOrderPage() {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   const { user } = useAuth()
   const [email, setEmail] = useState('')
   const [orderNumber, setOrderNumber] = useState('')
@@ -785,8 +785,15 @@ export default function TrackOrderPage() {
                         <p className="font-mono font-semibold text-xs sm:text-sm text-gray-900 truncate">
                           {sessionOrder.order_number}
                         </p>
-                        <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ${getStatusColor(sessionOrder.status)}`}>
-                          {getTranslatedStatus(sessionOrder.status)}
+                        <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ${
+                          sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
+                            ? 'bg-red-100 text-red-800'
+                            : getStatusColor(sessionOrder.status)
+                        }`}>
+                          {sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
+                            ? (lang === 'id' ? 'Kadaluarsa' : 'Expired')
+                            : getTranslatedStatus(sessionOrder.status)
+                          }
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-gray-600 font-medium">
@@ -803,7 +810,8 @@ export default function TrackOrderPage() {
                           minute: '2-digit'
                         })}
                       </p>
-                      {sessionOrder.payment_status === 'pending' && (
+                      {sessionOrder.payment_status === 'pending' && 
+                       !(sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()) && (
                         <Button
                           size="sm"
                           className="bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy text-[10px] sm:text-xs px-3 py-1.5 h-auto whitespace-nowrap"
@@ -927,8 +935,12 @@ export default function TrackOrderPage() {
               {/* Status Header */}
               <div className="flex items-center justify-between mb-4 pb-4 border-b">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">{t('trackOrder.orderStatus')}</h2>
-                <span className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 ${
+                <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
                   (() => {
+                    // Check if payment expired
+                    if (order.payment_status === 'pending' && order.expiry_time && new Date(order.expiry_time) < new Date()) {
+                      return 'bg-red-100 text-red-800'
+                    }
                     const status = order.payment_metadata?.transaction_status
                     if (status === 'settlement' || status === 'capture' || status === 'reversal') return 'bg-blue-100 text-blue-800'
                     if (status === 'authorize') return 'bg-purple-100 text-purple-800'
@@ -951,6 +963,11 @@ export default function TrackOrderPage() {
                     return getStatusIcon(order.status)
                   })()}
                   {(() => {
+                    // Check if payment expired
+                    if (order.payment_status === 'pending' && order.expiry_time && new Date(order.expiry_time) < new Date()) {
+                      return lang === 'id' ? 'Pembayaran Kadaluarsa' : 'Payment Expired'
+                    }
+                    
                     const paymentStatus = order.payment_metadata?.transaction_status
                     const orderStatus = order.status
                     
@@ -1026,26 +1043,38 @@ export default function TrackOrderPage() {
               )}
 
               {/* Payment Status Alert */}
-              {order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && (
-                <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <Clock className="h-5 w-5 text-yellow-600 mt-0.5" />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-yellow-900 mb-1">{t('trackOrder.paymentPending')}</h3>
-                      <p className="text-sm text-yellow-700 mb-3">
-                        {t('trackOrder.completePaymentMessage')}
-                      </p>
-                      <Button
-                        onClick={() => handleContinuePayment()}
-                        disabled={isProcessingPayment}
-                        className="bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy"
-                      >
-                        {isProcessingPayment ? t('common.loading') : t('trackOrder.continuePayment')}
-                      </Button>
+              {order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && (() => {
+                const isExpired = new Date(order.expiry_time) < new Date()
+                return (
+                  <div className={`mb-4 rounded-lg p-4 ${isExpired ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+                    <div className="flex items-start gap-3">
+                      <Clock className={`h-5 w-5 mt-0.5 ${isExpired ? 'text-red-600' : 'text-yellow-600'}`} />
+                      <div className="flex-1">
+                        <h3 className={`font-semibold mb-1 ${isExpired ? 'text-red-900' : 'text-yellow-900'}`}>
+                          {isExpired ? (lang === 'id' ? 'Pembayaran Kadaluarsa' : 'Payment Expired') : t('trackOrder.paymentPending')}
+                        </h3>
+                        <p className={`text-sm mb-3 ${isExpired ? 'text-red-700' : 'text-yellow-700'}`}>
+                          {isExpired 
+                            ? (lang === 'id' 
+                                ? 'Waktu pembayaran telah habis. Silakan buat pesanan baru untuk melanjutkan.' 
+                                : 'Payment time has expired. Please create a new order to continue.')
+                            : t('trackOrder.completePaymentMessage')
+                          }
+                        </p>
+                        {!isExpired && (
+                          <Button
+                            onClick={() => handleContinuePayment()}
+                            disabled={isProcessingPayment}
+                            className="bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy"
+                          >
+                            {isProcessingPayment ? t('common.loading') : t('trackOrder.continuePayment')}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
 
               {/* Authorized Payment Alert */}
               {order.payment_metadata?.transaction_status === 'authorize' && (

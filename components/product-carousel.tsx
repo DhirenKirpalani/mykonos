@@ -85,24 +85,25 @@ export function ProductCarousel({
   }
 
   return (
-    <section className={`relative ${backgroundColor} py-6 md:py-8 lg:py-10`}>
-      <div className="mx-auto max-w-7xl px-3 md:px-6 lg:px-8">
+    <section className={`relative ${backgroundColor} py-8 md:py-10 lg:py-12`}>
+      <div className="mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         {/* Title with scroll reveal */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-30%" }}
           transition={{ duration: 0.55, ease: [0.25, 0.1, 0.25, 1] }}
-          className="mb-6 text-center md:mb-8"
+          className="mb-6 md:mb-8 text-center"
         >
           <h2
             className={`
               font-serif
-              text-xl
+              text-2xl
               font-bold
               ${titleColor}
-              md:text-2xl
-              lg:text-3xl
+              md:text-3xl
+              lg:text-4xl
+              tracking-tight
             `}
           >
             {title}
@@ -112,7 +113,7 @@ export function ProductCarousel({
             whileInView={{ opacity: 1, scaleX: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
-            className={`mx-auto mt-3 h-px w-12 ${dividerColor} md:mt-4 md:w-14`}
+            className={`mx-auto mt-3 h-0.5 w-16 ${dividerColor} md:mt-4 md:w-20 rounded-full`}
           />
         </motion.div>
 
@@ -124,30 +125,32 @@ export function ProductCarousel({
               aria-label="Previous products"
               type="button"
               className="
-                absolute left-1 top-1/2 z-20
-                flex -translate-y-1/2
+                absolute left-2 top-1/2 z-20
+                hidden md:flex -translate-y-1/2
                 items-center justify-center
                 rounded-full
-                bg-white
-                p-2
-                text-[#1C2E4A]
-                shadow-[0_2px_8px_rgba(0,0,0,0.12)]
-                transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]
-                active:scale-[0.92]
-                hover:bg-[#1C2E4A]
+                bg-white/95
+                backdrop-blur-sm
+                p-2.5
+                text-luxury-navy
+                shadow-lg
+                transition-all duration-200 ease-out
+                active:scale-95
+                hover:bg-luxury-navy
                 hover:text-white
+                hover:shadow-xl
                 focus:outline-none
                 focus:ring-2
-                focus:ring-[#C2A36B]
+                focus:ring-luxury-gold
                 focus:ring-offset-2
                 md:-left-4
-                md:p-2.5
                 lg:-left-6
                 lg:p-3
                 cursor-pointer
+                touch-manipulation
               "
             >
-              <ChevronLeft size={16} className="md:h-5 md:w-5 lg:h-6 lg:w-6" aria-hidden="true" />
+              <ChevronLeft size={20} className="lg:h-6 lg:w-6" aria-hidden="true" />
             </button>
           )}
 
@@ -158,43 +161,49 @@ export function ProductCarousel({
               aria-label="Next products"
               type="button"
               className="
-                absolute right-1 top-1/2 z-20
-                flex -translate-y-1/2
+                absolute right-2 top-1/2 z-20
+                hidden md:flex -translate-y-1/2
                 items-center justify-center
                 rounded-full
-                bg-white
-                p-2
-                text-[#1C2E4A]
-                shadow-[0_2px_8px_rgba(0,0,0,0.12)]
-                transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]
-                active:scale-[0.92]
-                hover:bg-[#1C2E4A]
+                bg-white/95
+                backdrop-blur-sm
+                p-2.5
+                text-luxury-navy
+                shadow-lg
+                transition-all duration-200 ease-out
+                active:scale-95
+                hover:bg-luxury-navy
                 hover:text-white
+                hover:shadow-xl
                 focus:outline-none
                 focus:ring-2
-                focus:ring-[#C2A36B]
+                focus:ring-luxury-gold
                 focus:ring-offset-2
                 md:-right-4
-                md:p-2.5
                 lg:-right-6
                 lg:p-3
                 cursor-pointer
+                touch-manipulation
               "
             >
-              <ChevronRight size={16} className="md:h-5 md:w-5 lg:h-6 lg:w-6" aria-hidden="true" />
+              <ChevronRight size={20} className="lg:h-6 lg:w-6" aria-hidden="true" />
             </button>
           )}
+
 
           {/* Track */}
           <div
             ref={scrollRef}
             className="
-              flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-3
-              scrollbar-hide sm:gap-4 md:gap-4 lg:gap-6
+              flex gap-4 overflow-x-auto snap-x snap-mandatory px-4 pb-4
+              scrollbar-hide sm:gap-5 md:gap-5 lg:gap-6
               focus:outline-none
+              -mx-4 md:mx-0
             "
             style={{
               WebkitOverflowScrolling: 'touch',
+              scrollPaddingLeft: '1rem',
+              scrollPaddingRight: '1rem',
             }}
           >
             {products.map((product, index) => {
@@ -221,11 +230,13 @@ export function ProductCarousel({
                   className="
                     snap-center
                     flex-shrink-0
-                    w-[42vw] max-w-[160px]
-                    sm:w-[38vw] sm:max-w-[200px]
-                    md:w-[260px]
-                    lg:w-[300px]
-                    xl:w-[320px]
+                    w-[45vw] max-w-[180px]
+                    sm:w-[40vw] sm:max-w-[220px]
+                    md:w-[280px]
+                    lg:w-[320px]
+                    xl:w-[340px]
+                    first:ml-0
+                    last:mr-0
                   "
                 >
                   <ProductCard product={product} voucher={voucherData} activeDiscount={activeDiscounts?.get(product.id) || null} className={getCardClasses()} />

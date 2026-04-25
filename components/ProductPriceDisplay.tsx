@@ -106,7 +106,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
         </div>
       )}
       <div className="flex items-baseline gap-3 flex-wrap">
-        <div className="text-3xl font-medium text-[#EE4D2D]">
+        <div className="text-2xl md:text-3xl font-bold text-luxury-navy">
           {hasPriceRange ? (
             voucher ? (
               <>
@@ -126,7 +126,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
         {voucher && (
           <button
             onClick={() => setShowBreakdown(!showBreakdown)}
-            className="flex items-center gap-1.5 text-sm text-orange-600 hover:text-orange-700 font-medium cursor-pointer"
+            className="flex items-center gap-1.5 text-xs md:text-sm text-luxury-gold hover:text-luxury-gold/80 font-medium cursor-pointer touch-manipulation"
           >
             <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
               <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
@@ -143,7 +143,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
             <span className="text-lg text-gray-400 line-through">
               {formatPrice(salePrice * quantity, currencyCode)}
             </span>
-            <span className="rounded bg-[#EE4D2D] px-2 py-0.5 text-xs font-medium text-white">
+            <span className="rounded-full bg-luxury-gold px-2.5 py-1 text-xs font-semibold text-luxury-navy">
               {Math.round(((salePrice - unitPrice) / salePrice) * 100)}% OFF
             </span>
           </>
@@ -152,7 +152,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
       
       {/* Price Breakdown Modal */}
       {showBreakdown && voucher && (
-        <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-2">
+        <div className="mt-3 bg-luxury-gold/5 border border-luxury-gold/20 rounded-lg p-4 space-y-2.5 animate-in slide-in-from-top-2 duration-300">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Harga Asli</span>
             <span className="font-medium">
@@ -163,14 +163,14 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
             </span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-orange-600">Diskon Voucher</span>
-            <span className="font-medium text-orange-600">
+            <span className="text-luxury-gold">Diskon Voucher</span>
+            <span className="font-semibold text-luxury-gold">
               - {formatPrice(voucherDiscount, currencyCode)}
             </span>
           </div>
-          <div className="border-t border-orange-200 pt-2 flex justify-between">
+          <div className="border-t border-luxury-gold/20 pt-2.5 flex justify-between">
             <span className="font-bold text-gray-900">Harga Bersih</span>
-            <span className="font-bold text-[#EE4D2D] text-lg">
+            <span className="font-bold text-luxury-navy text-lg md:text-xl">
               {hasPriceRange
                 ? `${formatPrice((minVariantPrice - voucherDiscount) * quantity, currencyCode)} - ${formatPrice((maxVariantPrice - voucherDiscount) * quantity, currencyCode)}`
                 : formatPrice(priceAfterVoucher, currencyCode)

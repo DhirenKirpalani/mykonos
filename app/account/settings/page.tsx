@@ -20,11 +20,11 @@ export default function SettingsPage() {
     setFeedback(null)
 
     if (form.newPassword.length < 8) {
-      setFeedback({ type: 'error', message: 'Password must be at least 8 characters.' })
+      setFeedback({ type: 'error', message: t.account.passwordTooShort })
       return
     }
     if (form.newPassword !== form.confirmPassword) {
-      setFeedback({ type: 'error', message: 'Passwords do not match.' })
+      setFeedback({ type: 'error', message: t.account.passwordsDoNotMatch })
       return
     }
 
@@ -32,11 +32,11 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: form.newPassword })
       if (error) throw error
-      setFeedback({ type: 'success', message: 'Password updated successfully.' })
+      setFeedback({ type: 'success', message: t.account.passwordUpdated })
       setForm({ newPassword: '', confirmPassword: '' })
       setShowForm(false)
     } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || 'Failed to update password.' })
+      setFeedback({ type: 'error', message: err.message || t.account.passwordUpdateFailed })
     } finally {
       setIsLoading(false)
     }
@@ -74,7 +74,7 @@ export default function SettingsPage() {
             ) : (
               <form onSubmit={handleChangePassword} className="space-y-4 max-w-sm">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium">New Password</label>
+                  <label className="mb-1.5 block text-sm font-medium">{t.account.newPassword}</label>
                   <div className="relative">
                     <input
                       type={showNew ? 'text' : 'password'}
@@ -82,7 +82,7 @@ export default function SettingsPage() {
                       onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
                       required
                       minLength={8}
-                      placeholder="Min. 8 characters"
+                      placeholder={t.account.minCharacters}
                       className="w-full rounded-md border border-input bg-background px-4 py-3 pr-11 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                     />
                     <button
@@ -96,14 +96,14 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium">Confirm New Password</label>
+                  <label className="mb-1.5 block text-sm font-medium">{t.account.confirmNewPassword}</label>
                   <div className="relative">
                     <input
                       type={showConfirm ? 'text' : 'password'}
                       value={form.confirmPassword}
                       onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                       required
-                      placeholder="Repeat new password"
+                      placeholder={t.account.repeatPassword}
                       className="w-full rounded-md border border-input bg-background px-4 py-3 pr-11 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
                     />
                     <button
@@ -118,7 +118,7 @@ export default function SettingsPage() {
 
                 <div className="flex gap-3 pt-1">
                   <Button type="submit" variant="luxury" size="sm" disabled={isLoading}>
-                    {isLoading ? 'Saving…' : 'Save Password'}
+                    {isLoading ? t.account.saving : t.account.savePassword}
                   </Button>
                   <Button
                     type="button"
@@ -126,7 +126,7 @@ export default function SettingsPage() {
                     size="sm"
                     onClick={() => { setShowForm(false); setForm({ newPassword: '', confirmPassword: '' }); setFeedback(null) }}
                   >
-                    Cancel
+                    {t.account.cancel}
                   </Button>
                 </div>
               </form>
