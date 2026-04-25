@@ -389,7 +389,7 @@ export function HeaderMobile() {
                 href="/"
                 role="menuitem"
                 className={cn(
-                  "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98",
+                  "block rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20 active:scale-98",
                   pathname === '/' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
                 )}
                 onClick={() => setMobileMenuOpen(false)}
@@ -401,7 +401,7 @@ export function HeaderMobile() {
                 href="/products"
                 role="menuitem"
                 className={cn(
-                  "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98",
+                  "block rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20 active:scale-98",
                   pathname === '/products' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
                 )}
                 onClick={() => setMobileMenuOpen(false)}
@@ -413,7 +413,7 @@ export function HeaderMobile() {
                 href="/contact"
                 role="menuitem"
                 className={cn(
-                  "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98",
+                  "block rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20 active:scale-98",
                   pathname === '/contact' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
                 )}
                 onClick={() => setMobileMenuOpen(false)}
@@ -425,7 +425,7 @@ export function HeaderMobile() {
                 href="/track-order"
                 role="menuitem"
                 className={cn(
-                  "block rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20 active:scale-98",
+                  "block rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20 active:scale-98",
                   pathname === '/track-order' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
                 )}
                 onClick={() => setMobileMenuOpen(false)}
@@ -440,7 +440,7 @@ export function HeaderMobile() {
                     setWishlistOpen(true)
                     setMobileMenuOpen(false)
                   }}
-                  className="flex w-full items-center justify-between rounded-lg px-4 py-4 text-base font-medium transition-all text-white hover:bg-luxury-gold/20"
+                  className="flex w-full items-center justify-between rounded-lg px-4 py-4 text-base font-medium uppercase transition-all text-white hover:bg-luxury-gold/20"
                 >
                   <div className="flex items-center gap-3">
                     <Heart className="h-5 w-5" />
@@ -459,14 +459,14 @@ export function HeaderMobile() {
                     rel="noopener noreferrer"
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-4 py-4 text-base font-medium transition-all hover:bg-luxury-gold/20",
+                      "flex w-full items-center gap-3 rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20",
                       pathname.startsWith('/cms')
                         ? "bg-luxury-gold/20 text-luxury-gold"
                         : "text-white"
                     )}
                   >
                     <Settings className="h-5 w-5" />
-                    <span>Admin Panel</span>
+                    <span>{t.header.adminPanel || 'Admin Panel'}</span>
                   </Link>
                 )}
               </div>
@@ -475,7 +475,7 @@ export function HeaderMobile() {
                 <div className="flex items-center justify-between rounded-lg px-4 py-4">
                   <div className="flex items-center gap-3">
                     <Globe className="h-5 w-5 text-white" />
-                    <span className="text-base font-medium text-white">{t.header.region}</span>
+                    <span className="text-base font-medium uppercase text-white">{t.header.region}</span>
                   </div>  
                   <RegionCurrencySelector />
                 </div>
@@ -483,7 +483,7 @@ export function HeaderMobile() {
               <div className="flex items-center justify-between rounded-lg px-4 py-4">
                 <div className="flex items-center gap-3">
                   <Globe className="h-5 w-5 text-white" />
-                  <span className="text-base font-medium text-white">{t.header.language}</span>
+                  <span className="text-base font-medium uppercase text-white">{t.header.language}</span>
                 </div>  
                 <LanguageSwitcher />
               </div>

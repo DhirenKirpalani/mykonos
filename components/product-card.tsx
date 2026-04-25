@@ -86,6 +86,22 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   const [mounted, setMounted] = useState(false)
   const [clientRegion, setClientRegion] = useState<typeof region | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<string>('')
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [isHovering, setIsHovering] = useState(false)
+
+  // Combine variant images with product images (same logic as product detail page)
+  const allProductImages = (() => {
+    const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
+    const variantImages = hasVariants 
+      ? (product as any).variants
+          .map((v: any) => v.image_url)
+          .filter((url: string) => url && url.trim() !== '')
+      : []
+    
+    return variantImages.length > 0 
+      ? [...variantImages, ...(product.image_urls || [])]
+      : (product.image_urls || [])
+  })()
 
   useEffect(() => {
     setMounted(true)
@@ -286,9 +302,38 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
       
 
       {/* Card link */}
-      <Link href={`/products/${product.slug}`} className="flex flex-col" aria-label={`View ${product.name}`}>
+      <Link 
+        href={`/products/${product.slug}`} 
+        className="flex flex-col" 
+        aria-label={`View ${product.name}`}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => {
+          setIsHovering(false)
+          setCurrentImageIndex(0)
+        }}
+      >
         {/* Image Frame - Fixed aspect ratio */}
-        <div className="relative aspect-square bg-[#F1F4F8] overflow-hidden">
+        <div 
+          className="relative aspect-square bg-[#F1F4F8] overflow-hidden group/image"
+          onTouchStart={(e) => {
+            const touch = e.touches[0]
+            const startX = touch.clientX
+            const handleTouchMove = (e: TouchEvent) => {
+              const touch = e.touches[0]
+              const diff = startX - touch.clientX
+              if (Math.abs(diff) > 50) {
+                const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+                if (diff > 0 && currentImageIndex < validImages.length - 1) {
+                  setCurrentImageIndex(prev => prev + 1)
+                } else if (diff < 0 && currentImageIndex > 0) {
+                  setCurrentImageIndex(prev => prev - 1)
+                }
+                document.removeEventListener('touchmove', handleTouchMove)
+              }
+            }
+            document.addEventListener('touchmove', handleTouchMove, { once: true })
+          }}
+        >
           {/* Out of Stock Overlay - Circular Badge */}
           {isOutOfStock && (
             <div className="absolute inset-0 z-20 flex items-center justify-center">
@@ -299,49 +344,80 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
               </div>
             </div>
           )}
-          {thumbnailUrl ? (
-            isVideo(thumbnailUrl) ? (
-              <video
-                src={thumbnailUrl}
-                className="
-                  h-full w-full object-cover
-                  transition-transform duration-500 ease-out
-                  group-hover:scale-[1.04]
-                "
-                muted
-                playsInline
-              />
-            ) : (
-              <Image
-                src={thumbnailUrl}
-                alt={`${product.name} - ${product.category} fragrance`}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
-                className="
-                  object-cover
-                  transition-transform duration-500 ease-out
-                  group-hover:scale-[1.04]
-                "
-                quality={90}
-                loading="lazy"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  target.style.display = 'none';
-                }}
-              />
+          {/* Image Navigation Dots */}
+          {(() => {
+            const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+            return validImages.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex gap-1">
+                {validImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setCurrentImageIndex(index)
+                    }}
+                    className={`h-1.5 rounded-full transition-all ${
+                      index === currentImageIndex
+                        ? 'w-4 bg-luxury-gold'
+                        : 'w-1.5 bg-white/60 hover:bg-white/80'
+                    }`}
+                    aria-label={`View image ${index + 1}`}
+                  />
+                ))}
+              </div>
             )
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-gray-400">
-              <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          )}
+          })()}
+          
+          {(() => {
+            const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+            const displayUrl = validImages[currentImageIndex] || thumbnailUrl
+            return displayUrl ? (
+              isVideo(displayUrl) ? (
+                <video
+                  src={displayUrl}
+                  className="
+                    h-full w-full object-cover
+                    transition-transform duration-500 ease-out
+                    group-hover:scale-[1.04]
+                  "
+                  muted
+                  playsInline
+                />
+            ) : (
+                <Image
+                  src={displayUrl}
+                  alt={`${product.name} - ${product.category} fragrance`}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
+                  className="
+                    object-cover
+                    transition-all duration-300 ease-out
+                    group-hover:scale-[1.04]
+                  "
+                  quality={90}
+                  loading="lazy"
+                  unoptimized={displayUrl.includes('supabase')}
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    console.error('Image load error for:', product.name, displayUrl);
+                    target.onerror = null;
+                    target.src = '/images/placeholder-product.png';
+                  }}
+                />
+              )
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-gray-400">
+                <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )
+          })()}
         </div>
 
-        {/* Voucher Discount Banner - Shopee Style */}
+        {/* Voucher Discount Banner - Mykonos Style */}
         {voucher && (
-          <div className="bg-[#EE4D2D] px-2 py-1.5 flex items-center justify-between gap-1.5">
+          <div className="bg-luxury-gold px-2 py-1.5 flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5">
               {/* Ticket icon */}
               <div className="bg-white/20 rounded-sm px-1 py-0.5 flex items-center justify-center">
@@ -416,7 +492,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                   </div>
                 )}
                 <div className="flex items-center gap-1.5 mb-1.5 flex-nowrap">
-                  <p className="text-sm md:text-base text-[#EE4D2D] font-bold">
+                  <p className="text-sm md:text-base text-luxury-navy font-bold">
                     {clientRegion ? formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code) : '...'}
                   </p>
                   {(discountPct > 0 || hasActiveDiscount) && !voucher && (
@@ -426,7 +502,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                   )}
                   {voucher && (
                     <div className="relative bg-white rounded-full p-1">
-                      <svg className="h-4 w-4 md:h-5 md:w-5 text-[#EE4D2D]" fill="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4 md:h-5 md:w-5 text-luxury-gold" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
                       </svg>
                       <svg className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 md:h-3 md:w-3 bg-white rounded-full" viewBox="0 0 24 24">

@@ -449,7 +449,7 @@ export function ProductVariantModal({
                                 <div className="font-medium text-gray-900">{variant.name}</div>
                               </div>
                               <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                <div className="font-semibold text-[#EE4D2D]">
+                                <div className="font-bold text-luxury-navy">
                                   {(() => {
                                     const qty = isSelected && selectedItem ? selectedItem.quantity : 1
                                     const discountedPrice = getVariantPrice(variant) * qty

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { ChevronRight, Package, Sparkles, Clock, Globe, FileText } from 'lucide-react'
 
 interface ExpandableSpecificationsProps {
   product: any
@@ -26,35 +27,47 @@ export function ExpandableSpecifications({ product, fragranceFamily }: Expandabl
     { label: p.bpomNumber, value: (product as any).bpom_number || null },
   ].filter(row => row.value !== null && row.value !== '')
 
+  // Generate dynamic preview text from first 3 specs
+  const previewText = specRows.slice(0, 3).map(row => row.value).join(', ') || p.specsPreview
+
+  // Icon mapping for different spec types
+  const getSpecIcon = (label: string) => {
+    if (label.toLowerCase().includes('size') || label.toLowerCase().includes('ukuran')) return <Package className="h-4 w-4" />
+    if (label.toLowerCase().includes('note')) return <Sparkles className="h-4 w-4" />
+    if (label.toLowerCase().includes('shelf') || label.toLowerCase().includes('masa')) return <Clock className="h-4 w-4" />
+    if (label.toLowerCase().includes('country') || label.toLowerCase().includes('negara')) return <Globe className="h-4 w-4" />
+    return <FileText className="h-4 w-4" />
+  }
+
   return (
     <div className="border-t border-gray-200">
       <button 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between py-3 w-full text-left"
+        className="flex items-center justify-between py-4 w-full text-left active:bg-gray-50 transition-colors touch-manipulation min-h-[60px] -mx-1 px-1 rounded-lg"
       >
         <div className="flex-1">
-          <h3 className="text-base font-semibold text-gray-900 mb-1">{p.specifications}</h3>
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-1">{p.specifications}</h3>
           {!isExpanded && (
-            <span className="text-sm text-gray-500">{p.specsPreview}</span>
+            <span className="text-xs md:text-sm text-gray-500 line-clamp-1">{previewText}</span>
           )}
         </div>
-        <svg 
-          className={`h-5 w-5 text-gray-400 flex-shrink-0 ml-2 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+        <ChevronRight 
+          className={`h-5 w-5 text-gray-400 flex-shrink-0 ml-3 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
+        />
       </button>
 
       {isExpanded && (
-        <div className="border-t border-gray-100 pb-3">
-          <div className="space-y-2.5 text-sm pt-3">
+        <div className="border-t border-gray-100 pb-4 animate-in slide-in-from-top-2 duration-300">
+          <div className="space-y-3 pt-4">
             {specRows.map(({ label, value }) => (
-              <div key={label} className="flex">
-                <span className="w-40 flex-shrink-0 text-gray-500">{label}</span>
-                <span className="text-gray-900 font-medium">{value}</span>
+              <div key={label} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                <div className="text-gray-400 mt-0.5">
+                  {getSpecIcon(label)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs md:text-sm text-gray-500 mb-1">{label}</div>
+                  <div className="text-sm md:text-base text-gray-900 font-medium break-words">{value}</div>
+                </div>
               </div>
             ))}
           </div>

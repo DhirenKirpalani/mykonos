@@ -342,16 +342,19 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="!fixed !left-0 !right-0 !bottom-0 !top-auto !translate-x-0 !translate-y-0 sm:!left-1/2 sm:!top-1/2 sm:!bottom-auto sm:!right-auto sm:!-translate-x-1/2 sm:!-translate-y-1/2 w-full max-w-lg max-h-[90vh] overflow-y-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl border-0 sm:border p-6 shadow-2xl animate-slide-up sm:animate-none">
         <DialogHeader>
+          {/* Drag handle for mobile */}
+          <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-gray-300 sm:hidden" />
+          
           {/* Progress Indicator */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">
-                Step {step === 'password' ? 2 : step === 'address' ? (isRegistered ? 3 : 2) : 1} of {getTotalSteps()}
+                {t.checkout?.step || 'Step'} {step === 'password' ? 2 : step === 'address' ? (isRegistered ? 3 : 2) : 1} {t.checkout?.of || 'of'} {getTotalSteps()}
               </span>
               <span className="text-xs text-gray-500">
-                {step === 'email' ? 'Email' : step === 'password' ? 'Sign In' : 'Shipping'}
+                {step === 'email' ? (t.emailModal?.title || 'Email') : step === 'password' ? (t.checkout?.signIn || 'Sign In') : (t.shippingModal?.title || 'Shipping')}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -374,7 +377,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
             {step === 'password' && (
               <>
                 <CheckCircle2 className="h-5 w-5 text-luxury-navy" />
-                Welcome Back!
+                {t.checkout?.welcomeBack || 'Welcome Back!'}
               </>
             )}
             {step === 'address' && (
@@ -387,7 +390,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
         </DialogHeader>
 
         {step === 'email' && (
-          <form onSubmit={handleEmailSubmit} className="space-y-4 pt-4">
+          <form onSubmit={handleEmailSubmit} className="space-y-4 pt-2 sm:pt-4">
             <div>
               <Label htmlFor="modal-email">{t.emailModal.emailAddress} *</Label>
               <div className="relative">
@@ -414,11 +417,11 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
               </div>
               {checkingEmail && (
                 <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
-                  <span className="animate-spin">⏳</span> Checking email...
+                  <span className="animate-spin">⏳</span> {t.emailModal?.checkingEmail || 'Checking email...'}
                 </p>
               )}
               {emailValid === false && email.length > 0 && (
-                <p className="text-sm text-red-600 mt-1">Please enter a valid email address</p>
+                <p className="text-sm text-red-600 mt-1">{t.emailModal?.invalidEmail || 'Please enter a valid email address'}</p>
               )}
               {emailValid === true && !checkingEmail && (
                 <p className="text-sm text-green-600 mt-1">{t.emailModal.validFormat}</p>
@@ -428,11 +431,11 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
               </p>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
+            <div className="flex gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={handleClose} className="flex-1 min-h-[44px]">
                 {t.emailModal.cancel}
               </Button>
-              <Button type="submit" className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light">
+              <Button type="submit" className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light min-h-[44px]">
                 {t.emailModal.continue}
               </Button>
             </div>
@@ -440,9 +443,9 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
         )}
 
         {step === 'password' && (
-          <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-4">
+          <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-2 sm:pt-4">
             <div>
-              <Label htmlFor="modal-email-display">Email</Label>
+              <Label htmlFor="modal-email-display">{t.emailModal?.emailAddress || 'Email'}</Label>
               <Input
                 id="modal-email-display"
                 type="email"
@@ -453,14 +456,14 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
             </div>
 
             <div>
-              <Label htmlFor="modal-password">Password *</Label>
+              <Label htmlFor="modal-password">{t.checkout?.password || 'Password'} *</Label>
               <div className="relative">
                 <Input
                   id="modal-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={t.checkout?.enterPassword || 'Enter your password'}
                   required
                   disabled={isSubmitting}
                   autoFocus
@@ -484,34 +487,34 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                   onClick={() => setShowForgotPassword(true)}
                   className="text-luxury-navy hover:underline"
                 >
-                  Forgot password?
+                  {t.checkout?.forgotPassword || 'Forgot password?'}
                 </button>
               </p>
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-4">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={() => setStep('email')} 
-                className="flex-1"
+                className="flex-1 min-h-[44px]"
                 disabled={isSubmitting}
               >
-                Back
+                {t.shippingModal?.back || 'Back'}
               </Button>
               <Button 
                 type="submit" 
-                className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
+                className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light min-h-[44px]"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Signing in...' : 'Sign In'}
+                {isSubmitting ? (t.checkout?.signingIn || 'Signing in...') : (t.checkout?.signIn || 'Sign In')}
               </Button>
             </div>
           </form>
         )}
 
         {step === 'address' && (
-          <form onSubmit={handleAddressSubmit} className="space-y-4 pt-4">
+          <form onSubmit={handleAddressSubmit} className="space-y-4 pt-2 sm:pt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="modal-full_name">{t.shippingModal.fullName} *</Label>
@@ -746,22 +749,22 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-4 pb-2">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={() => setStep('email')} 
-                className="flex-1"
+                className="flex-1 min-h-[44px]"
                 disabled={isSubmitting}
               >
                 {t.shippingModal.back}
               </Button>
               <Button 
                 type="submit" 
-                className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
+                className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light min-h-[44px]"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Processing...' : t.shippingModal.placeOrder}
+                {isSubmitting ? (t.checkout?.processing || 'Processing...') : t.shippingModal.placeOrder}
               </Button>
             </div>
           </form>
