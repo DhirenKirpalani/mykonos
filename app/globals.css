@@ -421,53 +421,73 @@ html[data-accessibility="true"] .transition-opacity {
   }
 }
 
-/* Image Protection - Prevent copying, downloading, and screenshots */
-img {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
+/* ========================================
+   COMPREHENSIVE IMAGE PROTECTION
+   Prevents copying, downloading, and unauthorized use
+   ======================================== */
+
+/* Global image protection - All images */
+img,
+picture,
+video,
+canvas {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+  -khtml-user-drag: none !important;
+  -moz-user-drag: none !important;
+  -o-user-drag: none !important;
+  user-drag: none !important;
+}
+
+/* Prevent context menu on images */
+img,
+picture,
+video,
+canvas {
   pointer-events: auto;
 }
 
-/* Prevent right-click on images */
-img::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
+/* Specific protection for Next.js Image components */
+img[src],
+img[srcset] {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+  pointer-events: none !important;
 }
 
-/* Disable image dragging globally */
-img {
-  -webkit-user-drag: none;
-  -khtml-user-drag: none;
-  -moz-user-drag: none;
-  -o-user-drag: none;
-  user-drag: none;
-}
-
-/* Prevent selection of product images specifically */
+/* Product images - Extra protection */
 [class*="product"] img,
-[class*="Product"] img {
+[class*="Product"] img,
+[class*="hero"] img,
+[class*="Hero"] img,
+[class*="carousel"] img,
+[class*="Carousel"] img,
+[class*="gallery"] img,
+[class*="Gallery"] img {
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
   -ms-user-select: none !important;
   user-select: none !important;
   pointer-events: none !important;
+  -webkit-touch-callout: none !important;
 }
 
 /* Allow pointer events on parent containers for navigation */
 [class*="product"] > *,
-[class*="Product"] > * {
+[class*="Product"] > *,
+[class*="carousel"] > *,
+[class*="Carousel"] > *,
+[class*="gallery"] > *,
+[class*="Gallery"] > * {
   pointer-events: auto;
 }
 
-/* Prevent long-press context menu on mobile */
+/* Prevent long-press context menu on mobile - Global */
 * {
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
@@ -478,7 +498,40 @@ button,
 a,
 input,
 textarea,
-select {
+select,
+label {
   -webkit-touch-callout: default;
   pointer-events: auto;
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  user-select: auto;
+}
+
+/* Prevent screenshot helpers (limited browser support) */
+@media print {
+  img,
+  picture,
+  video,
+  canvas {
+    display: none !important;
+  }
+}
+
+/* Disable image context menu via CSS */
+img::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+/* Additional protection for background images */
+[style*="background-image"] {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
 }
