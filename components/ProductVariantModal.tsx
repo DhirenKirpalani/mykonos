@@ -42,7 +42,7 @@ interface ProductVariantModalProps {
     discount_value: number
   } | null
   activeDiscounts?: Map<string, any> | null
-  onAddToCart: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
+  onAddToCart: (productId: string, quantity: number, selectedVariants?: Record<string, string>, suppressToast?: boolean) => Promise<void>
   onBuyNow?: (productId: string, quantity: number, selectedVariants?: Record<string, string>) => Promise<void>
   onAddToWishlist?: (selectedVariants?: Record<string, string>) => Promise<void>
   mode: 'add-to-cart' | 'buy-now' | 'wishlist'
@@ -175,6 +175,11 @@ export function ProductVariantModal({
 
 
   const handleSubmit = async () => {
+    // Prevent multiple submissions
+    if (isProcessing) {
+      return
+    }
+    
     if (hasVariants && selectedVariants.size === 0) {
       toast.error('Please select at least one variant')
       return
@@ -212,6 +217,9 @@ export function ProductVariantModal({
         // For Add to Cart and Wishlist, process each variant separately
         let successCount = 0
         let failCount = 0
+        const failedVariants: string[] = []
+        // Always suppress individual toasts - we'll show a summary at the end
+        const suppressIndividualToasts = true
         
         for (const [sku, { variant, quantity }] of variantsArray) {
           const variantData = {
@@ -224,22 +232,26 @@ export function ProductVariantModal({
               await onAddToWishlist(variantData as any)
               successCount++
             } else {
-              await onAddToCart(product.id, quantity, variantData as any)
+              await onAddToCart(product.id, quantity, variantData as any, suppressIndividualToasts)
               successCount++
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Failed to add variant ${variant.name}:`, error)
             failCount++
+            failedVariants.push(variant.name)
             // Continue to next variant instead of stopping
           }
         }
         
-        // Show summary only for cart, not wishlist
-        if (variantsArray.length > 1 && mode !== 'wishlist') {
+        // Show single summary toast with ID to prevent duplicates
+        if (mode !== 'wishlist') {
+          const toastId = `variant-cart-${Date.now()}`
           if (successCount > 0 && failCount === 0) {
-            toast.success(`Added ${successCount} variant${successCount > 1 ? 's' : ''} to cart`)
+            toast.success(`Added ${successCount} variant${successCount > 1 ? 's' : ''} to cart`, { id: toastId })
           } else if (successCount > 0 && failCount > 0) {
-            toast.info(`Added ${successCount} variant${successCount > 1 ? 's' : ''}, ${failCount} already existed`)
+            toast.warning(`Added ${successCount} variant${successCount > 1 ? 's' : ''} to cart. ${failCount} variant${failCount > 1 ? 's' : ''} could not be added (maximum quantity reached or out of stock)`, { id: toastId })
+          } else if (failCount > 0) {
+            toast.error(`Unable to add to cart. You've reached the maximum quantity limit for ${failCount > 1 ? 'these items' : 'this item'}.`, { id: toastId })
           }
         }
       }
