@@ -23,10 +23,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
-  // Get the first product image
-  const productImage = product.image_urls && product.image_urls.length > 0 
+  // Get the first product image and ensure it's an absolute URL
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mykonos-test.vercel.app'
+  let productImage = product.image_urls && product.image_urls.length > 0 
     ? product.image_urls[0] 
-    : '/images/mykonos-logo.png'
+    : `${baseUrl}/images/mykonos-logo.png`
+  
+  // Ensure URL is absolute
+  if (productImage && !productImage.startsWith('http')) {
+    productImage = `${baseUrl}${productImage}`
+  }
 
   // Format price for description
   const price = product.price_idr 
@@ -43,6 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: product.name,
       description,
+      url: `${baseUrl}/products/${slug}`,
       images: [
         {
           url: productImage,

@@ -198,15 +198,15 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
     } catch (error: any) {
       // Only handle errors that are NOT from the API response (e.g., network errors)
       // API errors are already handled above and thrown for variant modal to catch
-      if (error.message === 'Failed to add to cart' || error.message?.includes('Maximum quantity')) {
-        // This is an API error we already handled - re-throw for variant modal
+      if (error.message && (error.message.includes('Jumlah maksimal') || error.message.includes('Maximum quantity') || error.message.includes('stok habis') || error.message.includes('out of stock'))) {
+        // This is a translated API error we already handled - re-throw for variant modal
         throw error
       }
       
       // Handle unexpected errors (network, etc.)
       console.error('Add to cart error:', error)
       if (!suppressToast) {
-        toast.error('Failed to add to cart')
+        toast.error(t('cart.failedToAdd'))
       }
       window.dispatchEvent(new Event('cart-updated'))
       setIsAddingToCart(false)
