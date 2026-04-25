@@ -119,6 +119,17 @@ export default function CheckoutPage() {
     initializeCheckout()
     checkForPendingOrder()
 
+    // Handle browser back/forward button navigation (bfcache)
+    const handlePageShow = (event: PageTransitionEvent) => {
+      // If page is loaded from bfcache (browser back button), reinitialize
+      if (event.persisted) {
+        console.log('🔄 [CHECKOUT] Page loaded from bfcache, reinitializing...')
+        setIsLoading(true)
+        initializeCheckout()
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+
     // Listen for cart updates only in cart flow (not buy now or order again flow)
     const handleCartUpdate = async () => {
       console.log('🔔 [CHECKOUT] Received cart-updated event')
@@ -180,6 +191,7 @@ export default function CheckoutPage() {
         snapScript.parentNode.removeChild(snapScript)
       }
       window.removeEventListener('cart-updated', handleCartUpdate)
+      window.removeEventListener('pageshow', handlePageShow)
       subscription.unsubscribe()
     }
   }, [])
@@ -829,6 +841,11 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     console.log('🚀 [ORDER] handlePlaceOrder called')
     
+    // Validate cart quantities before proceeding
+    if (!validateCartQuantities()) {
+      return
+    }
+    
     // For guests, show modal to collect email and shipping info
     if (isGuest) {
       console.log('👤 [ORDER] Guest user detected, showing checkout modal')
@@ -1424,8 +1441,46 @@ export default function CheckoutPage() {
     }
   }
 
+  const validateCartQuantities = () => {
+    const allItems = [...cartItems, ...quickAddedItems]
+    
+    for (const item of allItems) {
+      let effectiveMaxQty: number | null | undefined = item.product.max_purchase_quantity
+      let effectiveStock = item.product.stock_quantity || 0
+      
+      // Check variant-specific limits if variant is selected
+      if (item.variant_sku && item.product.variants) {
+        const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+        if (variant) {
+          effectiveMaxQty = variant.max_purchase_quantity || item.product.max_purchase_quantity
+          effectiveStock = variant.stock_quantity
+        }
+      }
+      
+      // Validate maximum quantity
+      if (effectiveMaxQty !== null && effectiveMaxQty !== undefined && item.quantity > effectiveMaxQty) {
+        toast.error(`${item.variant_name || item.product.name}: Maximum quantity is ${effectiveMaxQty}. Please reduce quantity in cart.`)
+        return false
+      }
+      
+      // Validate stock quantity
+      if (item.quantity > effectiveStock) {
+        toast.error(`${item.variant_name || item.product.name}: Only ${effectiveStock} items available. Please reduce quantity in cart.`)
+        return false
+      }
+    }
+    
+    return true
+  }
+
   const handleGuestCheckout = async (guestData: any) => {
     console.log('🚀 [GUEST] handleGuestCheckout called')
+    
+    // Validate cart quantities before proceeding
+    if (!validateCartQuantities()) {
+      return
+    }
+    
     setIsProcessing(true)
     try {
       // Get current session (anonymous or authenticated)

@@ -130,18 +130,25 @@ export async function POST(request: Request) {
         price_usd: number
         price_idr: number
         stock_quantity: number
+        min_purchase_quantity?: number | null
+        max_purchase_quantity?: number | null
       }>
     }
 
     // Get variant-specific data if variant is specified
     let variantStock = typedProduct.stock_quantity ?? 0
     let basePrice = typedProduct.price_idr || typedProduct.price_usd
+    let variantMinQty = typedProduct.min_purchase_quantity || 1
+    let variantMaxQty = typedProduct.max_purchase_quantity
     
     if (variant_sku && typedProduct.variants) {
       const variant = typedProduct.variants.find(v => v.sku === variant_sku)
       if (variant) {
         variantStock = variant.stock_quantity
         basePrice = variant.price_idr || variant.price_usd
+        // Use variant-specific limits if available, otherwise fall back to product-level
+        variantMinQty = variant.min_purchase_quantity ?? typedProduct.min_purchase_quantity ?? 1
+        variantMaxQty = variant.max_purchase_quantity ?? typedProduct.max_purchase_quantity
       }
     }
 
@@ -153,9 +160,9 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate quantity constraints
-    const minQty = typedProduct.min_purchase_quantity || 1
-    const maxQty = typedProduct.max_purchase_quantity
+    // Validate quantity constraints (use variant-specific limits)
+    const minQty = variantMinQty
+    const maxQty = variantMaxQty
 
     // Check minimum quantity
     if (quantity < minQty) {

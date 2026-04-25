@@ -323,6 +323,36 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
   
   const total = subtotal - totalVoucherDiscount - discountAmount
 
+  const validateBeforeCheckout = () => {
+    for (const item of cartItems) {
+      let effectiveMaxQty: number | null | undefined = item.product.max_purchase_quantity
+      let effectiveStock = item.product.stock_quantity
+      
+      // Check variant-specific limits if variant is selected
+      if (item.variant_sku && item.product.variants) {
+        const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+        if (variant) {
+          effectiveMaxQty = variant.max_purchase_quantity || item.product.max_purchase_quantity
+          effectiveStock = variant.stock_quantity
+        }
+      }
+      
+      // Validate maximum quantity
+      if (effectiveMaxQty !== null && effectiveMaxQty !== undefined && item.quantity > effectiveMaxQty) {
+        toast.error(`${item.variant_name || item.product.name}: Maximum quantity is ${effectiveMaxQty}. Please reduce quantity.`)
+        return false
+      }
+      
+      // Validate stock quantity
+      if (item.quantity > effectiveStock) {
+        toast.error(`${item.variant_name || item.product.name}: Only ${effectiveStock} items available. Please reduce quantity.`)
+        return false
+      }
+    }
+    
+    return true
+  }
+
   if (!mounted) return null
 
   return createPortal(
@@ -551,7 +581,13 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
                 <Link
                   href="/checkout"
-                  onClick={onClose}
+                  onClick={(e) => {
+                    if (!validateBeforeCheckout()) {
+                      e.preventDefault()
+                      return
+                    }
+                    onClose()
+                  }}
                   className="block w-full border border-black py-4 text-center text-xs tracking-[0.2em] font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white"
                 >
                   {t.cart.proceedToCheckout}

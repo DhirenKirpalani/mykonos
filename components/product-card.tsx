@@ -60,7 +60,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { BadgePercent, Ticket } from 'lucide-react'
+import { BadgePercent, Ticket, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Database } from '@/lib/supabase/database.types'
 
@@ -344,27 +344,42 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
               </div>
             </div>
           )}
-          {/* Image Navigation Dots */}
+          {/* Image Navigation Arrows */}
           {(() => {
             const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
             return validImages.length > 1 && (
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex gap-1">
-                {validImages.map((_, index) => (
+              <>
+                {/* Left Arrow */}
+                {currentImageIndex > 0 && (
                   <button
-                    key={index}
                     onClick={(e) => {
                       e.preventDefault()
-                      setCurrentImageIndex(index)
+                      setCurrentImageIndex(prev => prev - 1)
                     }}
-                    className={`h-1.5 rounded-full transition-all ${
-                      index === currentImageIndex
-                        ? 'w-4 bg-luxury-gold'
-                        : 'w-1.5 bg-white/60 hover:bg-white/80'
-                    }`}
-                    aria-label={`View image ${index + 1}`}
-                  />
-                ))}
-              </div>
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-md transition-all"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className="h-3 w-3 md:h-4 md:w-4 text-luxury-navy" />
+                  </button>
+                )}
+                {/* Right Arrow */}
+                {currentImageIndex < validImages.length - 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setCurrentImageIndex(prev => prev + 1)
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-md transition-all"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className="h-3 w-3 md:h-4 md:w-4 text-luxury-navy" />
+                  </button>
+                )}
+                {/* Image Counter */}
+                <div className="absolute bottom-2 right-2 z-30 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                  {currentImageIndex + 1}/{validImages.length}
+                </div>
+              </>
             )
           })()}
           

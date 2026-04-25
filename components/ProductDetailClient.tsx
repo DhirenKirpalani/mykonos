@@ -97,10 +97,10 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
     setQuantity(newQuantity)
   }
 
-  const handleAddToCart = async (productIdOverride?: string, quantity: number = 1, selectedVariants?: Record<string, string>) => {
+  const handleAddToCart = async (productIdOverride?: string, quantity: number = 1, selectedVariants?: Record<string, string>, suppressToast: boolean = false) => {
     // Check if out of stock
     if (isOutOfStock) {
-      toast.error('This product is out of stock')
+      if (!suppressToast) toast.error('This product is out of stock')
       return
     }
     
@@ -141,13 +141,10 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         return
       }
 
-      // ⚡ Optimistic update — increment badge locally and reset button immediately
+      // Fire API call and wait for response before updating UI
       const qty = quantity || 1
-      window.dispatchEvent(new CustomEvent('cart-count-increment', { detail: { delta: qty } }))
-      setIsAddingToCart(false)
-
-      // Fire API in background; sync real count when done
-      fetch('/api/cart', {
+      
+      const response = await fetch('/api/cart', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -160,23 +157,40 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           variant_sku: selectedVariants?.variant_sku,
         }),
       })
-        .then(async (response) => {
-          if (!response.ok) {
-            const data = await response.json()
-            console.error('Cart API error:', data)
-            toast.error(data.error || 'Failed to add to cart')
-          }
-          // Always sync real count from DB after API completes
-          window.dispatchEvent(new Event('cart-updated'))
-        })
-        .catch((error) => {
-          console.error('Add to cart error:', error)
-          toast.error('Failed to add to cart')
-          window.dispatchEvent(new Event('cart-updated'))
-        })
-    } catch (error) {
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        console.error('Cart API error:', data)
+        if (!suppressToast) {
+          toast.error(data.error || 'Failed to add to cart')
+        }
+        // Sync real count from DB after error
+        window.dispatchEvent(new Event('cart-updated'))
+        setIsAddingToCart(false)
+        // Throw error so variant modal can catch it in its try-catch
+        throw new Error(data.error || 'Failed to add to cart')
+      }
+      
+      // Only increment cart count if API call succeeded
+      window.dispatchEvent(new CustomEvent('cart-count-increment', { detail: { delta: qty } }))
+      // Sync real count from DB to ensure accuracy
+      window.dispatchEvent(new Event('cart-updated'))
+      setIsAddingToCart(false)
+    } catch (error: any) {
+      // Only handle errors that are NOT from the API response (e.g., network errors)
+      // API errors are already handled above and thrown for variant modal to catch
+      if (error.message === 'Failed to add to cart' || error.message?.includes('Maximum quantity')) {
+        // This is an API error we already handled - re-throw for variant modal
+        throw error
+      }
+      
+      // Handle unexpected errors (network, etc.)
       console.error('Add to cart error:', error)
-      toast.error('Failed to add to cart')
+      if (!suppressToast) {
+        toast.error('Failed to add to cart')
+      }
+      window.dispatchEvent(new Event('cart-updated'))
       setIsAddingToCart(false)
     }
   }
@@ -404,7 +418,13 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         <Button 
           className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 text-base transition-all duration-300"
           size="lg" 
-          onClick={() => handleAddToCart(undefined, quantity)}
+          onClick={async () => {
+            try {
+              await handleAddToCart(undefined, quantity)
+            } catch (error) {
+              // Error already handled in handleAddToCart
+            }
+          }}
           disabled={isAddingToCart || isOutOfStock}
           style={isOutOfStock ? { pointerEvents: 'none' } : {}}
         >
@@ -442,7 +462,13 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         
         {/* Cart Icon */}
         <button 
-          onClick={() => handleAddToCart(undefined, quantity)}
+          onClick={async () => {
+            try {
+              await handleAddToCart(undefined, quantity)
+            } catch (error) {
+              // Error already handled in handleAddToCart
+            }
+          }}
           disabled={isAddingToCart || isOutOfStock}
           style={isOutOfStock ? { pointerEvents: 'none' } : {}}
           className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
