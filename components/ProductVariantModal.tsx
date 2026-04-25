@@ -181,7 +181,7 @@ export function ProductVariantModal({
     }
     
     if (hasVariants && selectedVariants.size === 0) {
-      toast.error('Please select at least one variant')
+      toast.error(t.cart.selectVariant)
       return
     }
 
@@ -247,11 +247,21 @@ export function ProductVariantModal({
         if (mode !== 'wishlist') {
           const toastId = `variant-cart-${Date.now()}`
           if (successCount > 0 && failCount === 0) {
-            toast.success(`Added ${successCount} variant${successCount > 1 ? 's' : ''} to cart`, { id: toastId })
+            const message = t.cart.variantsAdded
+              .replace('{count}', successCount.toString())
+              .replace('{plural}', successCount > 1 ? 's' : '')
+            toast.success(message, { id: toastId })
           } else if (successCount > 0 && failCount > 0) {
-            toast.warning(`Added ${successCount} variant${successCount > 1 ? 's' : ''} to cart. ${failCount} variant${failCount > 1 ? 's' : ''} could not be added (maximum quantity reached or out of stock)`, { id: toastId })
+            const message = t.cart.variantsPartiallyAdded
+              .replace('{success}', successCount.toString())
+              .replace('{successPlural}', successCount > 1 ? 's' : '')
+              .replace('{failed}', failCount.toString())
+              .replace('{failedPlural}', failCount > 1 ? 's' : '')
+            toast.warning(message, { id: toastId })
           } else if (failCount > 0) {
-            toast.error(`Unable to add to cart. You've reached the maximum quantity limit for ${failCount > 1 ? 'these items' : 'this item'}.`, { id: toastId })
+            const itemText = failCount > 1 ? t.cart.theseItems : t.cart.thisItem
+            const message = t.cart.variantsMaxQuantity.replace('{itemText}', itemText)
+            toast.error(message, { id: toastId })
           }
         }
       }

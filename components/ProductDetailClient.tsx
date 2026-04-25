@@ -97,10 +97,27 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
     setQuantity(newQuantity)
   }
 
+  // Translate API error messages
+  const translateError = (errorMessage: string): string => {
+    // Check for "Maximum quantity is X" pattern
+    const maxQtyMatch = errorMessage.match(/Maximum quantity is (\d+)/)
+    if (maxQtyMatch) {
+      return t('cart.maximumQuantityIs').replace('{max}', maxQtyMatch[1])
+    }
+    
+    // Check for other common errors
+    if (errorMessage.includes('out of stock')) {
+      return t('cart.outOfStockError')
+    }
+    
+    // Default fallback
+    return t('cart.failedToAdd')
+  }
+
   const handleAddToCart = async (productIdOverride?: string, quantity: number = 1, selectedVariants?: Record<string, string>, suppressToast: boolean = false) => {
     // Check if out of stock
     if (isOutOfStock) {
-      if (!suppressToast) toast.error('This product is out of stock')
+      if (!suppressToast) toast.error(t('cart.outOfStockError'))
       return
     }
     
@@ -162,14 +179,15 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
       
       if (!response.ok) {
         console.error('Cart API error:', data)
+        const translatedError = translateError(data.error || 'Failed to add to cart')
         if (!suppressToast) {
-          toast.error(data.error || 'Failed to add to cart')
+          toast.error(translatedError)
         }
         // Sync real count from DB after error
         window.dispatchEvent(new Event('cart-updated'))
         setIsAddingToCart(false)
         // Throw error so variant modal can catch it in its try-catch
-        throw new Error(data.error || 'Failed to add to cart')
+        throw new Error(translatedError)
       }
       
       // Only increment cart count if API call succeeded
