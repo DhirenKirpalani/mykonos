@@ -6,28 +6,31 @@ type Props = {
   children: React.ReactNode
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = params
-  const supabase = createClient()
-  
-  console.log('🔍 Generating metadata for slug:', slug)
-  
-  // Fetch product data
-  const { data: product, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('slug', slug)
-    .single() as { data: any, error: any }
+export const dynamic = 'force-dynamic'
 
-  if (error || !product) {
-    console.error('❌ Product not found for slug:', slug, error)
-    return {
-      title: 'Product Not Found | Mykonos',
-      description: 'The product you are looking for could not be found.',
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const { slug } = params
+    const supabase = createClient()
+    
+    console.log('🔍 [METADATA] Generating for slug:', slug)
+    
+    // Fetch product data
+    const { data: product, error } = await supabase
+      .from('products')
+      .select('name, description, price_idr, price_usd, image_urls')
+      .eq('slug', slug)
+      .single() as { data: any, error: any }
+
+    if (error || !product) {
+      console.error('❌ [METADATA] Product not found:', slug, error)
+      return {
+        title: 'Product Not Found | Mykonos',
+        description: 'The product you are looking for could not be found.',
+      }
     }
-  }
-  
-  console.log('✅ Product found:', product.name)
+    
+    console.log('✅ [METADATA] Product found:', product.name)
 
   // Get the first product image and ensure it's an absolute URL
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mykonos-test.vercel.app'
@@ -75,13 +78,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
   }
   
-  console.log('📱 Generated metadata:', {
-    title: metadata.title,
-    ogImage: productImage,
-    ogTitle: metadata.openGraph.title,
-  })
-  
-  return metadata
+    console.log('📱 [METADATA] Generated:', {
+      title: metadata.title,
+      ogImage: productImage,
+      ogTitle: metadata.openGraph.title,
+    })
+    
+    return metadata
+  } catch (error) {
+    console.error('❌ [METADATA] Error generating metadata:', error)
+    return {
+      title: 'Mykonos - Modern & Vibrant Perfumery',
+      description: 'Discover exquisite luxury fragrances and perfumes.',
+    }
+  }
 }
 
 export default function ProductLayout({ children }: Props) {
