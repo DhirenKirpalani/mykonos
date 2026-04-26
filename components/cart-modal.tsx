@@ -465,6 +465,24 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                           <h3 className="text-sm font-medium tracking-wide uppercase">
                             {item.variant_name || item.product.name}
                           </h3>
+                          {region && (() => {
+                            let unitPrice = 0
+                            if (item.variant_sku && item.product.variants) {
+                              const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                              if (variant) unitPrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                            } else {
+                              unitPrice = region.code === 'ID' && (item.product as any).price_idr 
+                                ? (item.product as any).price_idr 
+                                : (item.product as any).price_usd || 0
+                            }
+                            const discounted = getItemDiscountedPrice(item)
+                            const displayUnitPrice = discounted !== null ? discounted : unitPrice
+                            return (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatPrice(displayUnitPrice, region)} / {t.cart.item}
+                              </p>
+                            )
+                          })()}
                         </div>
 
                         <div className="flex items-center justify-between">

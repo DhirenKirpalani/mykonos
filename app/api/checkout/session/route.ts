@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     console.log('🔵 [API] POST /api/checkout/session - Creating checkout session')
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
-    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0, item_discounts = [] } = body
+    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0, item_discounts = [], tax: providedTax } = body
     
     console.log('📥 [API] Request body:', { user_id, session_id, items_count: items?.length, currency_code, region_code })
 
@@ -112,12 +112,15 @@ export async function POST(request: Request) {
       console.log('💰 [API] Calculated subtotal from cart:', subtotal)
     }
 
+    // Use tax provided by client (which respects per-product tax_enabled), fallback to 10% of net
+    const netAmount = subtotal - voucher_discount
+    const tax = providedTax !== undefined ? providedTax : netAmount * 0.1
     const pricingSnapshot = {
       subtotal,
       discount: voucher_discount,
       shipping: 0,
-      tax: (subtotal - voucher_discount) * 0.1,
-      total: (subtotal - voucher_discount) + ((subtotal - voucher_discount) * 0.1),
+      tax,
+      total: netAmount + tax,
       currency_code: finalCurrencyCode
     }
 

@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Crosshair, Loader2 } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 // Fix for default marker icons in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -80,6 +81,7 @@ function LocationMarker({ onLocationSelect }: { onLocationSelect: MapPickerProps
 }
 
 export function MapPicker({ onLocationSelect, initialPosition = [-6.2088, 106.8456], height = '400px' }: MapPickerProps) {
+  const { t } = useLanguage()
   const [isMounted, setIsMounted] = useState(false)
   const [currentPosition, setCurrentPosition] = useState<[number, number]>(initialPosition)
   const [isLocating, setIsLocating] = useState(false)
@@ -203,14 +205,14 @@ export function MapPicker({ onLocationSelect, initialPosition = [-6.2088, 106.84
           ) : (
             <>
               <Crosshair className="h-4 w-4" />
-              Use My Location
+              {t.shippingModal.useMyLocation}
             </>
           )}
         </button>
       </div>
 
       <div className="absolute bottom-4 left-4 z-[1000] rounded-md bg-white px-3 py-2 text-xs shadow-lg">
-        <p className="font-medium">Click on the map to select a location</p>
+        <p className="font-medium">{t.shippingModal.clickMapToSelect}</p>
         {locationError && (
           <p className="mt-1 text-red-600">{locationError}</p>
         )}

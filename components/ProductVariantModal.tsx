@@ -325,8 +325,8 @@ export function ProductVariantModal({
 
             {/* Product Details */}
             <div className="flex flex-col">
-              <div className="flex items-center gap-2 flex-wrap mb-2">
-                <h2 className="text-base md:text-2xl font-bold text-gray-900 leading-snug">{product.name}</h2>
+              <div className="flex items-start gap-2 flex-wrap mb-2">
+                <h2 className="text-sm sm:text-base md:text-2xl font-bold text-gray-900 leading-tight break-words flex-1">{product.name}</h2>
                 {(product as any).in_stock && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     In Stock
@@ -551,12 +551,12 @@ export function ProductVariantModal({
                     {isProcessing ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="animate-spin">⏳</span>
-                        Adding...
+                        {t.common.loading}
                       </span>
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         <ShoppingCart className="h-5 w-5" />
-                        Add to Wishlist {selectedVariants.size > 0 && `(${selectedVariants.size})`}
+                        {t.product.addToWishlist} {selectedVariants.size > 0 && `(${selectedVariants.size})`}
                       </span>
                     )}
                   </Button>
@@ -570,7 +570,7 @@ export function ProductVariantModal({
                     {isProcessing ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="animate-spin">⏳</span>
-                        Processing...
+                        {t.common.loading}
                       </span>
                     ) : (
                       <span className="flex items-center justify-center gap-2">
@@ -612,12 +612,12 @@ export function ProductVariantModal({
                     {isProcessing ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="animate-spin">⏳</span>
-                        Adding...
+                        {t.common.loading}
                       </span>
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         <ShoppingCart className="h-5 w-5" />
-                        Add to Cart {selectedVariants.size > 0 && `(${selectedVariants.size})`}
+                        {t.product.addToCart} {selectedVariants.size > 0 && `(${selectedVariants.size})`}
                       </span>
                     )}
                   </Button>

@@ -80,8 +80,11 @@ export function ForgotPasswordModal({ isOpen, onClose, defaultEmail = '' }: Forg
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="!fixed !left-0 !right-0 !bottom-0 !top-auto !translate-x-0 !translate-y-0 sm:!left-1/2 sm:!top-1/2 sm:!bottom-auto sm:!right-auto sm:!-translate-x-1/2 sm:!-translate-y-1/2 w-full max-w-md max-h-[90vh] overflow-y-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-lg border-0 sm:border p-6 shadow-2xl animate-slide-up sm:animate-none">
         <DialogHeader>
+          {/* Drag handle for mobile */}
+          <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-gray-300 sm:hidden" />
+          
           <DialogTitle className="flex items-center gap-2">
             {emailSent ? (
               <>

@@ -382,11 +382,11 @@ export default function TrackOrderPage() {
             
             // Show notification based on new status
             if (data.payment_status === 'paid') {
-              toast.success('Payment successful! Your order is being processed.')
+              toast.success(t('trackOrder.paymentSuccessful'))
             } else if (data.payment_status === 'expired') {
-              toast.error('Payment has expired. Please contact support for a new payment link.')
+              toast.error(lang === 'id' ? 'Pembayaran telah kadaluarsa. Silakan hubungi dukungan untuk tautan pembayaran baru.' : 'Payment has expired. Please contact support for a new payment link.')
             } else if (data.payment_status === 'failed') {
-              toast.error('Payment failed. Please try again or contact support.')
+              toast.error(t('trackOrder.paymentFailed'))
             }
           } else {
             console.log('✓ [POLLING] No status change detected')
@@ -555,7 +555,7 @@ export default function TrackOrderPage() {
               payment_type: result.payment_type,
               transaction_status: result.transaction_status
             })
-            toast.success('Payment successful! Your order is being processed.')
+            toast.success(t('trackOrder.paymentSuccessful'))
             // Set state and refresh order status
             setEmail(currentOrder.customer_email)
             setOrderNumber(currentOrder.order_number)
@@ -570,7 +570,7 @@ export default function TrackOrderPage() {
               order_id: result.order_id,
               transaction_status: result.transaction_status
             })
-            toast.info('Payment is pending. We will notify you once confirmed.')
+            toast.info(t('trackOrder.paymentPendingToast'))
             // Set state and refresh order status
             setEmail(currentOrder.customer_email)
             setOrderNumber(currentOrder.order_number)
@@ -586,20 +586,20 @@ export default function TrackOrderPage() {
               status_message: result.status_message,
               transaction_id: result.transaction_id
             })
-            toast.error('Payment failed. Please try again.')
+            toast.error(t('trackOrder.paymentFailed'))
           },
           onClose: () => {
             console.log('🔴 [PAYMENT DEBUG] Payment modal closed by user')
-            toast.info('Payment cancelled. You can continue payment anytime.')
+            toast.info(t('trackOrder.paymentCancelled'))
             setIsProcessingPayment(false)
           }
         })
       } else {
-        throw new Error('Payment system not loaded. Please refresh the page.')
+        throw new Error(t('trackOrder.paymentSystemError'))
       }
     } catch (error: any) {
       console.error('Payment error:', error)
-      toast.error(error.message || 'Failed to open payment. Please try again.')
+      toast.error(error.message || t('trackOrder.paymentError'))
       setIsProcessingPayment(false)
     }
   }
@@ -614,7 +614,7 @@ export default function TrackOrderPage() {
 
     if (!email || !orderNumber) {
       console.error('❌ [ORDER DEBUG] Missing email or order number')
-      toast.error('Please enter both email and order number')
+      toast.error(t('trackOrder.enterBothFields'))
       return
     }
 
@@ -726,7 +726,7 @@ export default function TrackOrderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className={`min-h-screen bg-gray-50 py-12 ${order && order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && new Date(order.expiry_time) >= new Date() ? 'pb-28 sm:pb-12' : ''}`}>
       <div className="container mx-auto px-4 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
@@ -874,7 +874,6 @@ export default function TrackOrderPage() {
                   placeholder={t('trackOrder.emailPlaceholder')}
                   className={`pl-10 ${user && !user.is_anonymous ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                   readOnly={!!(user && !user.is_anonymous)}
-                  required
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -893,7 +892,6 @@ export default function TrackOrderPage() {
                   onChange={(e) => setOrderNumber(e.target.value)}
                   placeholder={t('trackOrder.orderNumberPlaceholder')}
                   className="pl-10"
-                  required
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -1223,7 +1221,16 @@ export default function TrackOrderPage() {
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{item.variant_name || item.product.name}</p>
-                          <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                          {(() => {
+                            const discKey = item.variant_name ? `${item.product_id}-${item.variant_name}` : item.product_id
+                            const discounted = activeDiscounts.get(discKey) ?? activeDiscounts.get(item.product_id)
+                            const displayPrice = discounted ?? item.price_at_purchase
+                            return (
+                              <p className="text-xs text-gray-500">
+                                {formatPrice(displayPrice, order.currency_code as any)} × {item.quantity}
+                              </p>
+                            )
+                          })()}
                         </div>
                         <div className="text-right">
                           {(() => {
@@ -1459,6 +1466,19 @@ export default function TrackOrderPage() {
           </div>
         )}
       </div>
+
+      {/* Sticky bottom payment bar — mobile only, when payment pending and not expired */}
+      {order && order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && new Date(order.expiry_time) >= new Date() && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-4 shadow-lg sm:hidden">
+          <Button
+            onClick={() => handleContinuePayment()}
+            disabled={isProcessingPayment}
+            className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-semibold py-3 text-base"
+          >
+            {isProcessingPayment ? t('common.loading') : t('trackOrder.continuePayment')}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

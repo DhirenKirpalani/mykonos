@@ -136,24 +136,55 @@ export async function POST(request: Request) {
     }
 
     // Get variant-specific data if variant is specified
-    let variantStock = typedProduct.stock_quantity ?? 0
+    let variantStock: number | null = typedProduct.stock_quantity
     let basePrice = typedProduct.price_idr || typedProduct.price_usd
     let variantMinQty = typedProduct.min_purchase_quantity || 1
     let variantMaxQty = typedProduct.max_purchase_quantity
     
+    console.log('🔍 [CART API] Stock validation debug:', {
+      product_id,
+      product_name: typedProduct.name,
+      variant_sku,
+      product_stock_quantity: typedProduct.stock_quantity,
+      product_stock_is_null: typedProduct.stock_quantity === null,
+      initial_variantStock: variantStock,
+      requested_quantity: quantity,
+      has_variants: !!typedProduct.variants,
+      variants_count: typedProduct.variants?.length || 0
+    })
+    
     if (variant_sku && typedProduct.variants) {
       const variant = typedProduct.variants.find(v => v.sku === variant_sku)
+      console.log('🔍 [CART API] Variant lookup:', {
+        variant_sku,
+        variant_found: !!variant,
+        variant_stock: variant?.stock_quantity,
+        variant_stock_is_null: variant?.stock_quantity === null
+      })
       if (variant) {
         variantStock = variant.stock_quantity
         basePrice = variant.price_idr || variant.price_usd
         // Use variant-specific limits if available, otherwise fall back to product-level
         variantMinQty = variant.min_purchase_quantity ?? typedProduct.min_purchase_quantity ?? 1
         variantMaxQty = variant.max_purchase_quantity ?? typedProduct.max_purchase_quantity
+        console.log('🔍 [CART API] Variant stock after processing:', {
+          variantStock,
+          variantMinQty,
+          variantMaxQty
+        })
       }
     }
 
-    // Check if product/variant is out of stock
-    if (variantStock === 0) {
+    // Check if product/variant is explicitly out of stock (0, not null)
+    const isExplicitlyOutOfStock = typedProduct.stock_quantity === 0 || (variant_sku && typedProduct.variants?.find(v => v.sku === variant_sku)?.stock_quantity === 0)
+    console.log('🔍 [CART API] Out of stock check:', {
+      isExplicitlyOutOfStock,
+      product_stock_is_zero: typedProduct.stock_quantity === 0,
+      variant_stock_is_zero: variant_sku ? typedProduct.variants?.find(v => v.sku === variant_sku)?.stock_quantity === 0 : 'N/A'
+    })
+    
+    if (isExplicitlyOutOfStock) {
+      console.error('❌ [CART API] Product is out of stock')
       return NextResponse.json(
         { error: 'This product is out of stock' },
         { status: 400 }
@@ -173,12 +204,30 @@ export async function POST(request: Request) {
     }
 
     // Check inventory (use variant stock if variant is specified)
-    if (variantStock < quantity) {
+    // Only validate if stock tracking is enabled (stock is not null)
+    console.log('🔍 [CART API] Final stock validation:', {
+      variantStock,
+      quantity,
+      stock_tracking_enabled: variantStock !== null,
+      has_enough_stock: variantStock !== null ? variantStock >= quantity : true,
+      stock_difference: variantStock !== null ? variantStock - quantity : 'N/A (no tracking)'
+    })
+    
+    if (variantStock !== null && variantStock < quantity) {
+      console.error('❌ [CART API] Insufficient stock:', {
+        variantStock,
+        quantity,
+        product_name: typedProduct.name,
+        variant_sku,
+        error_message: `Only ${variantStock} items available`
+      })
       return NextResponse.json(
         { error: `Only ${variantStock} items available` },
         { status: 400 }
       )
     }
+    
+    console.log('✅ [CART API] Stock validation passed')
 
     const priceAtAdd = getEffectivePrice(basePrice, null)
 

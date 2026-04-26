@@ -573,12 +573,12 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
 
           {/* Title */}
           <DialogPrimitive.Title className="text-center text-xl font-semibold text-gray-900 mb-2">
-            Sign in to save items
+            {t('product.signInToSave')}
           </DialogPrimitive.Title>
 
           {/* Description */}
           <DialogPrimitive.Description className="text-center text-sm text-gray-500 mb-1">
-            Log in or create an account to save
+            {t('product.loginOrCreateAccount')}
           </DialogPrimitive.Description>
           <p className="text-center text-sm font-semibold text-gray-800 mb-1">
             {productName}
@@ -586,7 +586,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
               <span className="block text-xs font-medium text-luxury-gold mt-0.5">{pendingVariantName}</span>
             )}
           </p>
-          <p className="text-center text-sm text-gray-500 mb-6">to your wishlist.</p>
+          <p className="text-center text-sm text-gray-500 mb-6">{t('product.toYourWishlist')}</p>
 
           {/* Actions */}
           <div className="flex flex-col gap-3">
@@ -598,7 +598,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
               }}
             >
               <LogIn className="mr-2 h-5 w-5" />
-              Log in
+              {t('product.logIn')}
             </Button>
             <Button
               variant="outline"
@@ -608,13 +608,13 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
                 router.push(`/register?redirect=${encodeURIComponent(window.location.pathname)}`)
               }}
             >
-              Create account
+              {t('product.createAccount')}
             </Button>
             <button
               className="text-sm text-gray-400 hover:text-gray-600 text-center py-2"
               onClick={() => setShowLoginModal(false)}
             >
-              Cancel
+              {t('product.cancel')}
             </button>
           </div>
         </DialogPrimitive.Content>

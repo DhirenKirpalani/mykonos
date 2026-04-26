@@ -430,6 +430,28 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                           <h3 className="text-sm font-medium tracking-wide uppercase">
                             {(item as any).variant_name || item.product.name}
                           </h3>
+                          {region && (() => {
+                            let unitPrice = region.code === 'ID' && (item.product as any).price_idr 
+                              ? (item.product as any).price_idr 
+                              : (item.product as any).price_usd || 0
+                            
+                            if ((item as any).variant_sku && item.product.variants) {
+                              const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
+                              if (variant) unitPrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                            }
+
+                            const variantName = (item as any).variant_name
+                            const discountKey = variantName ? `${item.product_id}-${variantName}` : item.product_id
+                            const campaignDiscount = activeDiscounts.get(discountKey) || activeDiscounts.get(item.product_id)
+                            const discounted = campaignDiscount?.discounted_price ?? null
+                            const displayUnitPrice = discounted !== null && discounted < unitPrice ? discounted : unitPrice
+
+                            return (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatPrice(displayUnitPrice, region)} / {t.cart.item}
+                              </p>
+                            )
+                          })()}
                           {!(item as any).variant_name && item.product.size && (
                             <p className="mt-1 text-xs tracking-wide text-black/60">
                               {item.product.size}
