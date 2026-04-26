@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import { useConfirmDialog } from '@/components/ui/confirm-dialog'
 import dynamic from 'next/dynamic'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const MapPicker = dynamic(() => import('@/components/map/MapPicker').then(mod => ({ default: mod.MapPicker })), {
   ssr: false,
@@ -32,6 +33,7 @@ interface ShippingAddressesProps {
 }
 
 export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingAddressesProps) {
+  const { t } = useLanguage()
   const [addresses, setAddresses] = useState<ShippingAddress[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -339,19 +341,19 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
           className="inline-flex items-center gap-2 rounded-md bg-luxury-gold px-4 py-2 text-sm font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light"
         >
           <Plus className="h-4 w-4" />
-          Add New Address
+          {t.account.addNewAddress}
         </button>
       )}
 
       {showForm && (
         <div className="rounded-lg border border-border/40 bg-white p-6">
           <h3 className="mb-4 font-serif text-xl font-bold">
-            {editingAddress ? 'Edit Address' : 'Add New Address'}
+            {editingAddress ? t.account.editAddress : t.account.addNewAddress}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             {isGuestCheckout && (
               <div>
-                <label className="mb-2 block text-sm font-medium">Full Name *</label>
+                <label className="mb-2 block text-sm font-medium">{t.shippingModal.fullName} *</label>
                 <input
                   type="text"
                   value={formData.full_name}
@@ -363,7 +365,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
             )}
 
             <div>
-              <label className="mb-2 block text-sm font-medium">Address Line 1 *</label>
+              <label className="mb-2 block text-sm font-medium">{t.shippingModal.addressLine1} *</label>
               <input
                 type="text"
                 value={formData.address_line1}
@@ -374,7 +376,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">Address Line 2</label>
+              <label className="mb-2 block text-sm font-medium">{t.shippingModal.addressLine2}</label>
               <input
                 type="text"
                 value={formData.address_line2}
@@ -385,7 +387,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium">State/Province *</label>
+                <label className="mb-2 block text-sm font-medium">{t.shippingModal.stateProvince} *</label>
                 {hasRegionData(formData.country) && availableProvinces.length > 0 ? (
                   <Select
                     value={selectedProvince}
@@ -397,7 +399,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                     required
                   >
                     <SelectTrigger className="w-full focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold">
-                      <SelectValue placeholder="Select province" />
+                      <SelectValue placeholder={t.account.selectProvince} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableProvinces.map((province) => (
@@ -414,12 +416,12 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                     onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
                     required
                     className="w-full rounded-md border border-input bg-background px-4 py-2 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
-                    placeholder="Enter state/province"
+                    placeholder={t.account.enterStateProvince}
                   />
                 )}
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">City *</label>
+                <label className="mb-2 block text-sm font-medium">{t.shippingModal.city} *</label>
                 {hasRegionData(formData.country) && availableCities.length > 0 ? (
                   <Select
                     value={formData.city}
@@ -427,7 +429,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                     required
                   >
                     <SelectTrigger className="w-full focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold">
-                      <SelectValue placeholder="Select city" />
+                      <SelectValue placeholder={t.account.selectCity} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableCities.map((city) => (
@@ -444,7 +446,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     required
                     className="w-full rounded-md border border-input bg-background px-4 py-2 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold"
-                    placeholder="Enter city"
+                    placeholder={t.account.enterCity}
                   />
                 )}
               </div>
@@ -452,7 +454,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium">Postal Code *</label>
+                <label className="mb-2 block text-sm font-medium">{t.shippingModal.postalCode} *</label>
                 <input
                   type="text"
                   value={formData.postal_code}
@@ -462,7 +464,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Country *</label>
+                <label className="mb-2 block text-sm font-medium">{t.shippingModal.country} *</label>
                 <Select
                   value={formData.country}
                   onValueChange={(value) => {
@@ -472,7 +474,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                   required
                 >
                   <SelectTrigger className="w-full focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold">
-                    <SelectValue placeholder="Select a country" />
+                    <SelectValue placeholder={t.account.selectCountry} />
                   </SelectTrigger>
                   <SelectContent>
                     {COUNTRIES.map((country) => (
@@ -487,7 +489,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
 
             {isGuestCheckout && (
               <div>
-                <label className="mb-2 block text-sm font-medium">Phone Number *</label>
+                <label className="mb-2 block text-sm font-medium">{t.shippingModal.phoneNumber} *</label>
                 <input
                   type="tel"
                   value={formData.phone}
@@ -514,14 +516,14 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                   className="inline-flex items-center gap-2 text-sm font-medium text-luxury-gold hover:text-luxury-gold-light"
                 >
                   <Map className="h-4 w-4" />
-                  {showMap ? 'Hide Map' : 'Pick Location from Map'}
+                  {showMap ? t.shippingModal.hideMap : t.shippingModal.pickLocation}
                 </button>
               </div>
 
               {showMap && (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">
-                    Click on the map to automatically fill in address details
+                    {t.shippingModal.mapInstruction}
                   </p>
                   <MapPicker
                     onLocationSelect={handleMapLocationSelect}
@@ -541,7 +543,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                 className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
               />
               <label htmlFor="is_default" className="ml-2 text-sm text-muted-foreground">
-                Set as default address
+                {t.account.setAsDefaultAddress}
               </label>
             </div>
 
@@ -550,14 +552,14 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                 type="submit"
                 className="rounded-md bg-luxury-gold px-6 py-2 text-sm font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light"
               >
-                {editingAddress ? 'Update Address' : 'Add Address'}
+                {editingAddress ? t.account.updateAddress : t.account.addAddress}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
                 className="rounded-md border border-border/40 px-6 py-2 text-sm font-medium transition-all hover:bg-luxury-gray-light"
               >
-                Cancel
+                {t.common.cancel}
               </button>
             </div>
           </form>
@@ -567,9 +569,9 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
       {addresses.length === 0 && !showForm ? (
         <div className="rounded-lg border border-border/40 bg-luxury-gray-light p-12 text-center">
           <MapPin className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <h3 className="mb-2 font-serif text-xl font-bold">No Addresses Yet</h3>
+          <h3 className="mb-2 font-serif text-xl font-bold">{t.account.noAddressesYet}</h3>
           <p className="text-sm text-muted-foreground">
-            Add a shipping address to make checkout faster.
+            {t.account.noAddressesDesc}
           </p>
         </div>
       ) : (
@@ -583,7 +585,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                 <div className="absolute right-4 top-4">
                   <span className="inline-flex items-center gap-1 rounded-full bg-luxury-gold px-3 py-1 text-xs font-medium text-luxury-navy">
                     <Star className="h-3 w-3 fill-current" />
-                    Default
+                    {t.account.defaultBadge}
                   </span>
                 </div>
               )}
@@ -607,7 +609,7 @@ export function ShippingAddresses({ userId, isGuestCheckout = false }: ShippingA
                     onClick={() => handleSetDefault(address.id)}
                     className="flex-1 rounded-md border border-border/40 px-3 py-2 text-sm font-medium transition-all hover:bg-luxury-gray-light"
                   >
-                    Set as Default
+                    {t.account.setAsDefault}
                   </button>
                 )}
                 <button

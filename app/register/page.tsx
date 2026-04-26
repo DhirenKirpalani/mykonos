@@ -57,8 +57,8 @@ export default function RegisterPage() {
 
     // Validate email format
     if (!validateEmail(formData.email)) {
-      toast.error('Invalid email address', {
-        description: 'Please enter a valid email address'
+      toast.error(t.auth.invalidEmail, {
+        description: t.auth.invalidEmailDesc
       })
       setIsSubmitting(false)
       return
@@ -72,8 +72,8 @@ export default function RegisterPage() {
       .single()
 
     if (existingUser) {
-      toast.error('Email already exists', {
-        description: 'An account with this email already exists'
+      toast.error(t.auth.emailExists, {
+        description: t.auth.emailExistsDesc
       })
       setIsSubmitting(false)
       return
@@ -82,24 +82,24 @@ export default function RegisterPage() {
     // Validate password strength
     const passwordValidation = validatePassword(formData.password)
     if (!passwordValidation.isValid) {
-      toast.error('Weak password', {
-        description: 'Password does not meet security requirements. Please check the password strength indicator.'
+      toast.error(t.auth.weakPassword, {
+        description: t.auth.weakPasswordDesc
       })
       setIsSubmitting(false)
       return
     }
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match', {
-        description: 'Please make sure both passwords are identical'
+      toast.error(t.auth.passwordsDoNotMatch, {
+        description: t.auth.passwordsDoNotMatchDesc
       })
       setIsSubmitting(false)
       return
     }
 
     if (!termsAccepted) {
-      toast.error('Terms not accepted', {
-        description: 'You must accept the Terms of Service and Privacy Policy to continue'
+      toast.error(t.auth.termsNotAccepted, {
+        description: t.auth.termsNotAcceptedDesc
       })
       setIsSubmitting(false)
       return
@@ -142,8 +142,8 @@ export default function RegisterPage() {
       if (error) {
         // Handle rate limit errors specifically
         if (error.message?.includes('rate limit') || error.message?.includes('email_send_rate_limit')) {
-          toast.error('Too many attempts', {
-            description: 'Please wait a few minutes and try again.'
+          toast.error(t.auth.tooManyAttempts, {
+            description: t.auth.tooManyAttemptsDesc
           })
           setIsSubmitting(false)
           setLoading(false)
@@ -197,13 +197,13 @@ export default function RegisterPage() {
       // Show success message and redirect
       if (data.user && !data.session) {
         // Email confirmation required
-        toast.success('Registration successful!', {
-          description: 'Please check your email to confirm your account.',
+        toast.success(t.auth.registrationSuccess, {
+          description: t.auth.registrationSuccessDesc,
           duration: 6000,
         })
       } else if (data.session) {
-        toast.success('Account created successfully!', {
-          description: 'You can now sign in to your account.',
+        toast.success(t.auth.accountCreatedSuccess, {
+          description: t.auth.accountCreatedSuccessDesc,
           duration: 4000,
         })
       }
@@ -213,8 +213,8 @@ export default function RegisterPage() {
         router.push('/login')
       }, 1500)
     } catch (error: any) {
-      toast.error('Registration failed', {
-        description: error.message || 'Failed to create account'
+      toast.error(t.auth.registrationFailed, {
+        description: error.message || t.auth.registrationFailedDesc
       })
     } finally {
       setLoading(false)

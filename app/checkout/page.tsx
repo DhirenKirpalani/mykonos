@@ -15,7 +15,22 @@ import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown } from 'lucide-rea
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CheckoutModal } from '@/components/CheckoutModal'
+import dynamic from 'next/dynamic'
+import { COUNTRIES } from '@/lib/constants'
+import { getProvinces, getCities, hasRegionData } from '@/lib/constants/regions'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { getEffectivePrice } from '@/lib/utils/pricing'
+
+const MapPicker = dynamic(() => import('@/components/map/MapPicker').then(mod => ({ default: mod.MapPicker })), {
+  ssr: false,
+  loading: () => <div className="h-[400px] flex items-center justify-center bg-gray-100 rounded-lg">Loading map...</div>
+})
 import { useCurrency } from '@/hooks/useCurrency'
 import { formatPrice as formatCurrencyPrice } from '@/lib/utils/currency'
 import { formatPrice as formatRegionPrice } from '@/lib/utils/region'
@@ -58,6 +73,7 @@ export default function CheckoutPage() {
   const { region } = useRegion()
   const { t } = useLanguage()
   const wasAlreadySignedIn = useRef(false)
+  const [userId, setUserId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
   const [cartItems, setCartItems] = useState<CartItem[]>([])
@@ -67,7 +83,11 @@ export default function CheckoutPage() {
   const [isGuest, setIsGuest] = useState(false)
   const [isBuyNow, setIsBuyNow] = useState(false)
   const [isEditingAddress, setIsEditingAddress] = useState(false)
-  const [shippingCost, setShippingCost] = useState<number>(region?.code === 'ID' ? 50000 : 15)
+  const [showEditMap, setShowEditMap] = useState(false)
+  const [editSelectedProvince, setEditSelectedProvince] = useState('')
+  const [editAvailableProvinces, setEditAvailableProvinces] = useState<{code: string, name: string}[]>([])
+  const [editAvailableCities, setEditAvailableCities] = useState<string[]>([])
+  const [shippingCost, setShippingCost] = useState<number>(0)
   const [isLoadingShipping, setIsLoadingShipping] = useState(false)
   const [recommendedProducts, setRecommendedProducts] = useState<any[]>([])
   const [quickAddedItems, setQuickAddedItems] = useState<CartItem[]>([])
@@ -90,6 +110,9 @@ export default function CheckoutPage() {
     state_province: '',
     postal_code: '',
     country: 'United States',
+    is_default: false,
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
   })
 
   useEffect(() => {
@@ -201,9 +224,12 @@ export default function CheckoutPage() {
       setIsLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       
-      // Set user email for address formatting
+      // Set user email and ID for address formatting
       if (session?.user?.email) {
         setUserEmail(session.user.email)
+      }
+      if (session?.user?.id && !session.user.is_anonymous) {
+        setUserId(session.user.id)
       }
       
       console.log('🔍 [CHECKOUT INIT] Session info:', {
@@ -409,6 +435,9 @@ export default function CheckoutPage() {
             image_urls: typedProduct.image_urls,
             price_usd: typedProduct.price_usd,
             price_idr: typedProduct.price_idr,
+            stock_quantity: typedProduct.stock_quantity,
+            min_purchase_quantity: typedProduct.min_purchase_quantity,
+            max_purchase_quantity: typedProduct.max_purchase_quantity,
             variants: typedProduct.variants,
             tax_enabled: typedProduct.tax_enabled
           }
@@ -959,7 +988,7 @@ export default function CheckoutPage() {
         }, 0)
         const manualTax = manualTaxableAmount * 0.1
         console.log(`💰 [BUY NOW] Taxable amount: ${manualTaxableAmount}, Tax (10%): ${manualTax}`)
-        const manualShipping = subtotal >= 100 ? 0 : 15
+        const manualShipping = 0 // Courier API not yet integrated
         
         const sessionResponse = await fetch('/api/checkout/session/manual', {
           method: 'POST',
@@ -1015,6 +1044,7 @@ export default function CheckoutPage() {
             region_code: region?.code,
             voucher_discount: totalVoucherDiscount,
             item_discounts: itemDiscountsForSession,
+            tax,
           }),
         })
 
@@ -1135,8 +1165,9 @@ export default function CheckoutPage() {
         console.error('❌ [ORDER] Failed to create order:', orderData.error)
         throw new Error(orderData.error || 'Failed to create order')
       }
-
       console.log('✅ [ORDER] Order created:', orderData.order_number)
+      // Immediately reset cart badge
+      window.dispatchEvent(new Event('cart-updated'))
       
       // For non-ID regions, redirect to Stripe checkout
       if (!isIDRegion) {
@@ -1206,7 +1237,7 @@ export default function CheckoutPage() {
       // This prevents duplicate inventory reservations
       if (orderData.is_existing) {
         console.log('♻️ [ORDER] Reusing existing pending order')
-        toast.info('Continuing with your pending order')
+        toast.info(t.checkout.continuingPendingOrder)
 
         if (isGuest) {
           const customerEmail = orderData.customer_email || ''
@@ -1254,7 +1285,7 @@ export default function CheckoutPage() {
                 },
                 onClose: () => {
                   console.log('🚪 [PAYMENT] Payment modal closed by user')
-                  toast.info('You can continue payment later from My Orders')
+                  toast.info(t.checkout.continuePaymentLater)
                   router.push(redirectUrl)
                   setIsProcessing(false)
                 }
@@ -1425,7 +1456,7 @@ export default function CheckoutPage() {
           },
           onClose: () => {
             console.log('🚪 [PAYMENT] Payment modal closed by user')
-            toast.info('You can continue payment later from My Orders')
+            toast.info(t.checkout.continuePaymentLater)
             router.push(redirectUrl)
             setIsProcessing(false)
           }
@@ -1435,7 +1466,12 @@ export default function CheckoutPage() {
       }
     } catch (error: any) {
       console.error('Place order error:', error)
-      toast.error(error.message || 'Failed to place order')
+      // Translate specific error messages
+      let errorMessage = error.message || 'Failed to place order'
+      if (errorMessage.includes('Maximum pending orders limit reached')) {
+        errorMessage = t.checkout.maxPendingOrdersError
+      }
+      toast.error(errorMessage)
     } finally {
       setIsProcessing(false)
     }
@@ -1446,7 +1482,7 @@ export default function CheckoutPage() {
     
     for (const item of allItems) {
       let effectiveMaxQty: number | null | undefined = item.product.max_purchase_quantity
-      let effectiveStock = item.product.stock_quantity || 0
+      let effectiveStock: number | null | undefined = item.product.stock_quantity
       
       // Check variant-specific limits if variant is selected
       if (item.variant_sku && item.product.variants) {
@@ -1463,8 +1499,8 @@ export default function CheckoutPage() {
         return false
       }
       
-      // Validate stock quantity
-      if (item.quantity > effectiveStock) {
+      // Validate stock quantity (only if stock tracking is enabled for this product/variant)
+      if (effectiveStock !== null && effectiveStock !== undefined && item.quantity > effectiveStock) {
         toast.error(`${item.variant_name || item.product.name}: Only ${effectiveStock} items available. Please reduce quantity in cart.`)
         return false
       }
@@ -1597,6 +1633,8 @@ export default function CheckoutPage() {
 
       console.log('✅ [GUEST] Order created:', orderData.order_number)
       console.log('🔵 [GUEST] Order data:', orderData)
+      // Immediately reset cart badge
+      window.dispatchEvent(new Event('cart-updated'))
 
       // If order already has snap_token and it's not expired, reuse it
       if (orderData.snap_token && orderData.expiry_time) {
@@ -1850,7 +1888,12 @@ export default function CheckoutPage() {
     } catch (error: any) {
       console.error('❌ [ORDER] Order placement failed:', error)
       console.error('❌ [ORDER] Error details:', error.message)
-      toast.error(error.message || 'Failed to complete checkout')
+      // Translate specific error messages
+      let errorMessage = error.message || 'Failed to complete checkout'
+      if (errorMessage.includes('Maximum pending orders limit reached')) {
+        errorMessage = t.checkout.maxPendingOrdersError
+      }
+      toast.error(errorMessage)
       throw error
     } finally {
       setIsProcessing(false)
@@ -1983,13 +2026,36 @@ export default function CheckoutPage() {
         state_province: selectedAddress.state_province,
         postal_code: selectedAddress.postal_code,
         country: selectedAddress.country,
+        is_default: selectedAddress.is_default,
+        latitude: (selectedAddress as any).latitude,
+        longitude: (selectedAddress as any).longitude,
       })
+      // Initialize province/city dropdowns
+      const provinces = getProvinces(selectedAddress.country)
+      setEditAvailableProvinces(provinces)
+      const matchedProvince = provinces.find(p => p.name === selectedAddress.state_province)
+      if (matchedProvince) {
+        setEditSelectedProvince(matchedProvince.code)
+        setEditAvailableCities(getCities(selectedAddress.country, matchedProvince.code))
+      } else {
+        setEditSelectedProvince('')
+        setEditAvailableCities([])
+      }
       setIsEditingAddress(true)
     }
   }
 
   const handleSaveAddress = async () => {
     try {
+      // If setting as default, unset any existing default first
+      if (editForm.is_default) {
+        await supabase
+          .from('shipping_addresses')
+          .update({ is_default: false } as any)
+          .neq('id', selectedAddressId)
+          .eq('user_id', userId)
+      }
+
       const { error } = await supabase
         .from('shipping_addresses')
         .update({
@@ -2001,6 +2067,7 @@ export default function CheckoutPage() {
           state_province: editForm.state_province,
           postal_code: editForm.postal_code,
           country: editForm.country,
+          is_default: editForm.is_default,
         } as any)
         .eq('id', selectedAddressId)
 
@@ -2011,7 +2078,7 @@ export default function CheckoutPage() {
         prev.map(addr =>
           addr.id === selectedAddressId
             ? { ...addr, ...editForm }
-            : addr
+            : editForm.is_default ? { ...addr, is_default: false } : addr
         )
       )
 
@@ -2035,9 +2102,8 @@ export default function CheckoutPage() {
     if (!selectedAddress) return
 
     // Only fetch dynamic shipping for ID region
-    // For non-ID regions, use flat rate shipping
+    // For non-ID regions, shipping will be determined by courier API (not yet integrated)
     if (region?.code !== 'ID') {
-      setShippingCost(15) // Flat $15 for international shipping
       return
     }
 
@@ -2065,8 +2131,7 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error('Failed to fetch shipping cost:', error)
-      // Keep default shipping cost on error (Rp 50,000 for ID)
-      setShippingCost(50000)
+      // Courier API not yet integrated — shipping remains 0
     } finally {
       setIsLoadingShipping(false)
     }
@@ -2134,7 +2199,7 @@ export default function CheckoutPage() {
 
   // Calculate net amount after voucher discount for tax calculation
   const netAmount = subtotal - totalVoucherDiscount
-  const shipping = netAmount >= 100 ? 0 : shippingCost
+  const shipping = shippingCost // Courier API not yet integrated; will be calculated dynamically
   
   // Calculate tax only for products with tax_enabled = true
   const taxableAmount = cartItems.reduce((total, item) => {
@@ -2311,6 +2376,9 @@ export default function CheckoutPage() {
                           <h3 className="font-medium text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
                             {(item as any).variant_name || item.product.name}
                           </h3>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {region ? formatRegionPrice(price, region) : formatCurrencyPrice(price, currency)} / {t.cart.item}
+                          </p>
                         </div>
                         {item.id.startsWith('quick-') && (
                           <button
@@ -2393,106 +2461,201 @@ export default function CheckoutPage() {
                     </Button>
                   </div>
                 ) : isEditingAddress ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-xl font-serif mb-6">{t.checkout.editAddress}</h3>
+                    
+                    <div className="space-y-4">
+                      {/* Address Line 1 */}
                       <div>
-                        <Label htmlFor="edit-full_name">{t.checkout.fullName} *</Label>
+                        <Label htmlFor="edit-address_line1">{t.shippingModal.addressLine1} *</Label>
                         <Input
-                          id="edit-full_name"
-                          value={editForm.full_name}
-                          onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
+                          id="edit-address_line1"
+                          value={editForm.address_line1}
+                          onChange={(e) => setEditForm({...editForm, address_line1: e.target.value})}
                           required
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="edit-phone">{t.checkout.phone} *</Label>
-                        <Input
-                          id="edit-phone"
-                          type="tel"
-                          value={editForm.phone}
-                          onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                          required
-                        />
-                      </div>
-                    </div>
 
-                    <div>
-                      <Label htmlFor="edit-address_line1">{t.checkout.addressLine1} *</Label>
-                      <Input
-                        id="edit-address_line1"
-                        value={editForm.address_line1}
-                        onChange={(e) => setEditForm({...editForm, address_line1: e.target.value})}
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="edit-address_line2">{t.checkout.addressLine2}</Label>
-                      <Input
-                        id="edit-address_line2"
-                        value={editForm.address_line2}
-                        onChange={(e) => setEditForm({...editForm, address_line2: e.target.value})}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Address Line 2 */}
                       <div>
-                        <Label htmlFor="edit-city">{t.checkout.city} *</Label>
+                        <Label htmlFor="edit-address_line2">{t.shippingModal.addressLine2}</Label>
                         <Input
-                          id="edit-city"
-                          value={editForm.city}
-                          onChange={(e) => setEditForm({...editForm, city: e.target.value})}
-                          required
+                          id="edit-address_line2"
+                          value={editForm.address_line2}
+                          onChange={(e) => setEditForm({...editForm, address_line2: e.target.value})}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="edit-state">{t.checkout.stateProvince} *</Label>
-                        <Input
-                          id="edit-state"
-                          value={editForm.state_province}
-                          onChange={(e) => setEditForm({...editForm, state_province: e.target.value})}
-                          required
-                        />
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="edit-postal">{t.checkout.postalCode} *</Label>
-                        <Input
-                          id="edit-postal"
-                          value={editForm.postal_code}
-                          onChange={(e) => setEditForm({...editForm, postal_code: e.target.value})}
-                          required
-                        />
+                      {/* Province | City */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="edit-state">{t.shippingModal.stateProvince} *</Label>
+                          {hasRegionData(editForm.country) && editAvailableProvinces.length > 0 ? (
+                            <Select
+                              value={editSelectedProvince}
+                              onValueChange={(value) => {
+                                setEditSelectedProvince(value)
+                                const province = editAvailableProvinces.find(p => p.code === value)
+                                setEditAvailableCities(getCities(editForm.country, value))
+                                setEditForm({ ...editForm, state_province: province?.name || '', city: '' })
+                              }}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder={t.account.selectProvince} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {editAvailableProvinces.map((p) => (
+                                  <SelectItem key={p.code} value={p.code}>{p.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              id="edit-state"
+                              value={editForm.state_province}
+                              onChange={(e) => setEditForm({...editForm, state_province: e.target.value})}
+                              placeholder={t.account.enterStateProvince}
+                              required
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-city">{t.shippingModal.city} *</Label>
+                          {hasRegionData(editForm.country) && editAvailableCities.length > 0 ? (
+                            <Select
+                              value={editForm.city}
+                              onValueChange={(value) => setEditForm({ ...editForm, city: value })}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder={t.account.selectCity} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {editAvailableCities.map((city) => (
+                                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              id="edit-city"
+                              value={editForm.city}
+                              onChange={(e) => setEditForm({...editForm, city: e.target.value})}
+                              placeholder={t.account.enterCity}
+                              required
+                            />
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <Label htmlFor="edit-country">{t.checkout.country} *</Label>
-                        <Input
-                          id="edit-country"
-                          value={editForm.country}
-                          onChange={(e) => setEditForm({...editForm, country: e.target.value})}
-                          required
-                        />
-                      </div>
-                    </div>
 
-                    <div className="flex gap-3 pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsEditingAddress(false)}
-                        className="flex-1"
-                      >
-                        {t.checkout.cancel}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleSaveAddress}
-                        className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
-                      >
-                        {t.checkout.saveChanges}
-                      </Button>
+                      {/* Postal Code | Country */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="edit-postal">{t.shippingModal.postalCode} *</Label>
+                          <Input
+                            id="edit-postal"
+                            value={editForm.postal_code}
+                            onChange={(e) => setEditForm({...editForm, postal_code: e.target.value})}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-country">{t.shippingModal.country} *</Label>
+                          <Select
+                            value={editForm.country}
+                            onValueChange={(value) => {
+                              const provinces = getProvinces(value)
+                              setEditAvailableProvinces(provinces)
+                              setEditSelectedProvince('')
+                              setEditAvailableCities([])
+                              setEditForm({ ...editForm, country: value, state_province: '', city: '' })
+                            }}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder={t.account.selectCountry} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COUNTRIES.map((c) => (
+                                <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Set as default checkbox */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="edit-is-default"
+                          checked={editForm.is_default}
+                          onChange={(e) => setEditForm({ ...editForm, is_default: e.target.checked })}
+                          className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                        />
+                        <label htmlFor="edit-is-default" className="text-sm text-muted-foreground cursor-pointer">
+                          {t.account.setAsDefaultAddress}
+                        </label>
+                      </div>
+
+                      {/* Map Picker Button (same position as profile page) */}
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setShowEditMap(!showEditMap)}
+                          className="inline-flex items-center gap-2 text-sm font-medium text-luxury-gold hover:text-luxury-gold-light"
+                        >
+                          <MapPin className="h-4 w-4" />
+                          {t.shippingModal.pickLocation}
+                        </button>
+                        {showEditMap && (
+                          <div className="mt-2 space-y-2">
+                            <MapPicker
+                              onLocationSelect={(location) => {
+                                const provinces = getProvinces(editForm.country)
+                                setEditAvailableProvinces(provinces)
+                                const matchedProvince = provinces.find(p => p.name === location.state)
+                                if (matchedProvince) {
+                                  setEditSelectedProvince(matchedProvince.code)
+                                  setEditAvailableCities(getCities(editForm.country, matchedProvince.code))
+                                }
+                                setEditForm({
+                                  ...editForm,
+                                  address_line1: location.address || editForm.address_line1,
+                                  city: location.city || editForm.city,
+                                  state_province: location.state || editForm.state_province,
+                                  postal_code: location.postalCode || editForm.postal_code,
+                                  country: location.country || editForm.country,
+                                  latitude: location.lat,
+                                  longitude: location.lng
+                                })
+                              }}
+                              initialPosition={
+                                editForm.latitude && editForm.longitude
+                                  ? [editForm.latitude, editForm.longitude]
+                                  : undefined
+                              }
+                            />
+                            <p className="text-xs text-gray-500">{t.shippingModal.mapInstruction}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsEditingAddress(false)}
+                          className="flex-1"
+                        >
+                          {t.checkout.cancel}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleSaveAddress}
+                          className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
+                        >
+                          {t.checkout.saveChanges}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -2516,15 +2679,16 @@ export default function CheckoutPage() {
                       />
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium text-gray-900">{formatAddressName(address, userEmail)}</p>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-900">
                             {address.address_line1}
                             {address.address_line2 && `, ${address.address_line2}`}
                           </p>
                           <p className="text-sm text-gray-600">
                             {address.city}, {address.state_province} {address.postal_code}
                           </p>
-                          <p className="text-sm text-gray-600">Telepon: {formatPhone(address.phone)}</p>
+                          {address.phone && address.phone.trim() && (
+                            <p className="text-sm text-gray-600">{t.checkout.phone}: {address.phone}</p>
+                          )}
                         </div>
                         {address.is_default && (
                           <span className="px-2 py-1 bg-luxury-navy text-white text-xs rounded-full">
@@ -2619,10 +2783,12 @@ export default function CheckoutPage() {
                     )}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{t.checkout.tax}</span>
-                  <span className="font-medium text-gray-900">{region ? formatRegionPrice(tax, region) : formatCurrencyPrice(tax, currency)}</span>
-                </div>
+                {tax > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>{t.checkout.tax}</span>
+                    <span className="font-medium text-gray-900">{region ? formatRegionPrice(tax, region) : formatCurrencyPrice(tax, currency)}</span>
+                  </div>
+                )}
               </div>
 
               {/* Total */}
@@ -2689,16 +2855,6 @@ export default function CheckoutPage() {
                   {/* Payment Methods */}
                   <div className="mt-4">
                     <PaymentMethods size="small" showTitle />
-                  </div>
-
-                  <div className="mt-4 text-center">
-                    <p className="text-sm text-gray-600">
-                      {t.checkout.haveAccount}{' '}
-                      <a href={`/login?redirect=${encodeURIComponent('/checkout' + (isBuyNow ? '?buyNow=true' : ''))}`} className="text-luxury-navy hover:underline font-semibold">
-                        {t.checkout.signIn}
-                      </a>
-                      {' '}{t.checkout.fasterCheckout}
-                    </p>
                   </div>
                 </>
               )}

@@ -853,12 +853,6 @@ export default function OrderDetailsPage() {
                   
                   return (
                     <>
-                      <p className="font-semibold text-base mb-0.5">
-                        {displayName}
-                      </p>
-                      <p className="text-gray-600 text-sm mb-3">
-                        {displayPhone}
-                      </p>
                       <div className="text-gray-700 space-y-1">
                         <p>{order.shipping_address?.address_line1 || addr?.address || ''}</p>
                         {order.shipping_address?.address_line2 && (
@@ -868,6 +862,9 @@ export default function OrderDetailsPage() {
                           {order.shipping_address?.city || ''}, {order.shipping_address?.state || addr?.state_province || addr?.province || ''} {order.shipping_address?.postal_code || ''}
                         </p>
                         <p>{order.shipping_address?.country || 'Indonesia'}</p>
+                        {displayPhone && displayPhone !== '-' && (
+                          <p className="mt-2">{t.trackOrder.phone}: {displayPhone}</p>
+                        )}
                       </div>
                     </>
                   )

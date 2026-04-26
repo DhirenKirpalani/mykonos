@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Eye, EyeOff } from 'lucide-react'
+import { useTranslation } from '@/hooks/useTranslation'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -24,17 +26,17 @@ export default function ResetPasswordPage() {
     e.preventDefault()
 
     if (!password || !confirmPassword) {
-      toast.error('Please fill in all fields')
+      toast.error(t('resetPassword.fillAllFields'))
       return
     }
 
     if (password.length < 6) {
-      toast.error('Password must be at least 6 characters')
+      toast.error(t('resetPassword.passwordLength'))
       return
     }
 
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match')
+      toast.error(t('resetPassword.passwordsDoNotMatch'))
       return
     }
 
@@ -47,7 +49,7 @@ export default function ResetPasswordPage() {
 
       if (error) throw error
 
-      toast.success('Password updated successfully!')
+      toast.success(t('resetPassword.passwordUpdated'))
       
       // Redirect to home page after a short delay
       setTimeout(() => {
@@ -55,7 +57,7 @@ export default function ResetPasswordPage() {
       }, 1500)
     } catch (error: any) {
       console.error('Error updating password:', error)
-      toast.error(error.message || 'Failed to update password')
+      toast.error(error.message || t('resetPassword.updateFailed'))
     } finally {
       setIsSubmitting(false)
     }

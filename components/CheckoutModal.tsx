@@ -706,14 +706,14 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                 className="inline-flex items-center gap-2 text-sm font-medium text-luxury-gold hover:text-luxury-gold/80 transition-colors"
               >
                 <Map className="h-4 w-4" />
-                {showMap ? 'Hide Map' : t.shippingModal.pickLocation}
+                {showMap ? t.shippingModal.hideMap : t.shippingModal.pickLocation}
               </button>
             </div>
 
             {showMap && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Click on the map to automatically fill in address details
+                  {t.shippingModal.mapInstruction}
                 </p>
                 <MapPicker
                   onLocationSelect={(location) => {

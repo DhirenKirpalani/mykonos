@@ -51,7 +51,12 @@ export const translations = {
       hours: {
         weekday: "9:00 AM - 6:00 PM (GMT+7)",
         saturday: "10:00 AM - 4:00 PM (GMT+7)"
-      }
+      },
+      enterName: "Please enter your name",
+      enterEmail: "Please enter your email",
+      validEmail: "Please enter a valid email address",
+      enterMessage: "Please enter your message",
+      messageLength: "Message must be at least 10 characters long"
     },
     products: {
       new: "NEW",
@@ -135,7 +140,19 @@ export const translations = {
       noNotifications: "No notifications",
       allCaughtUp: "You're all caught up!",
       markAllAsRead: "Mark all as read",
-      viewAll: "View all notifications"
+      viewAll: "View all notifications",
+      orderPlacedTitle: "Order Placed Successfully",
+      orderReminderTitle: "Order Reminder",
+      viewDetails: "View details",
+      orderPlacedMessage: "Your order #{orderNumber} has been placed. Please complete payment to process your order.",
+      orderReminderMessage: "Your order #{orderNumber} is still pending. Please complete payment to process your order.",
+      loadMore: "Load More ({count} more)",
+      unread: "unread",
+      close: "Close",
+      justNow: "Just now",
+      minutesAgo: "{m}m ago",
+      hoursAgo: "{h}h ago",
+      daysAgo: "{d}d ago"
     },
     wishlist: {
       title: "Wishlist",
@@ -204,7 +221,29 @@ export const translations = {
       agreeToTermsPre: "I agree to the ",
       termsOfService: "Terms of Service",
       agreeToTermsMiddle: " and ",
-      privacyPolicy: "Privacy Policy"
+      privacyPolicy: "Privacy Policy",
+      loginSuccess: "Welcome back!",
+      loginSuccessDesc: "You have successfully logged in.",
+      loginFailed: "Login failed",
+      loginFailedDesc: "Failed to sign in",
+      registrationSuccess: "Registration successful!",
+      registrationSuccessDesc: "Please check your email to confirm your account.",
+      accountCreatedSuccess: "Account created successfully!",
+      accountCreatedSuccessDesc: "You can now sign in to your account.",
+      registrationFailed: "Registration failed",
+      registrationFailedDesc: "Failed to create account",
+      invalidEmail: "Invalid email address",
+      invalidEmailDesc: "Please enter a valid email address",
+      emailExists: "Email already exists",
+      emailExistsDesc: "An account with this email already exists",
+      weakPassword: "Weak password",
+      weakPasswordDesc: "Password does not meet security requirements. Please check the password strength indicator.",
+      passwordsDoNotMatch: "Passwords do not match",
+      passwordsDoNotMatchDesc: "Please make sure both passwords are identical",
+      termsNotAccepted: "Terms not accepted",
+      termsNotAcceptedDesc: "You must accept the Terms of Service and Privacy Policy to continue",
+      tooManyAttempts: "Too many attempts",
+      tooManyAttemptsDesc: "Please wait a few minutes and try again."
     },
     product: {
       buyNow: "Buy Now",
@@ -218,7 +257,13 @@ export const translations = {
       remaining: "remaining",
       selected: "selected",
       variants: "variants",
-      variant: "variant"
+      variant: "variant",
+      signInToSave: "Sign in to save items",
+      loginOrCreateAccount: "Log in or create an account to save",
+      toYourWishlist: "to your wishlist.",
+      logIn: "Log in",
+      createAccount: "Create account",
+      cancel: "Cancel"
     },
     trackOrder: {
       title: "Track Your Order",
@@ -272,7 +317,14 @@ export const translations = {
         minutes: "m",
         seconds: "s",
         expired: "Expired"
-      }
+      },
+      enterBothFields: "Please enter both email and order number",
+      paymentSuccessful: "Payment successful! Your order is being processed.",
+      paymentPendingToast: "Payment is pending. We will notify you once confirmed.",
+      paymentFailed: "Payment failed. Please try again.",
+      paymentCancelled: "Payment cancelled. You can continue payment anytime.",
+      paymentSystemError: "Payment system not loaded. Please refresh the page.",
+      paymentError: "Failed to open payment. Please try again."
     },
     emailModal: {
       title: "Enter Your Email",
@@ -295,13 +347,20 @@ export const translations = {
       city: "City",
       selectCity: "Select city",
       stateProvince: "State/Province",
-      selectState: "Select state",
+      selectState: "Select state/province",
       postalCode: "Postal Code",
       country: "Country",
       basedOnRegion: "Based on your region",
       pickLocation: "Pick Location from Map",
+      hideMap: "Hide Map",
+      useMyLocation: "Use My Location",
+      clickMapToSelect: "Click on the map to select a location",
+      mapInstruction: "Click on the map to auto-fill address details",
       back: "Back",
-      placeOrder: "Place Order"
+      placeOrder: "Place Order",
+      enterCity: "Enter city",
+      setAsDefaultAddress: "Set as default address",
+      addAddress: "Add Address"
     },
     checkout: {
       title: "Shopping Cart",
@@ -310,6 +369,9 @@ export const translations = {
       freeShipping: "Add {amount} more for FREE shipping!",
       qualifyFreeShipping: "You qualify for FREE shipping!",
       addToOrder: "Add to Your Order",
+      continuePaymentLater: "You can continue payment later from My Orders",
+      maxPendingOrdersError: "Maximum pending orders limit reached (5). Please complete or cancel existing orders.",
+      continuingPendingOrder: "Continuing with your pending order",
       added: "Added",
       add: "Add",
       shippingAddress: "Shipping Address",
@@ -374,7 +436,12 @@ export const translations = {
       sending: "Sending...",
       close: "Close",
       errorSending: "Failed to send reset email. Please try again.",
-      successToast: "Password reset email sent! Please check your inbox."
+      successToast: "Password reset email sent! Please check your inbox.",
+      fillAllFields: "Please fill in all fields",
+      passwordLength: "Password must be at least 6 characters",
+      passwordsDoNotMatch: "Passwords do not match",
+      passwordUpdated: "Password updated successfully!",
+      updateFailed: "Failed to update password"
     },
     productsPage: {
       allFragrances: "All Fragrances",
@@ -588,6 +655,19 @@ export const translations = {
       logout: "Logout",
       shippingAddresses: "Shipping Addresses",
       addNewAddress: "Add New Address",
+      editAddress: "Edit Address",
+      addAddress: "Add Address",
+      updateAddress: "Update Address",
+      noAddressesYet: "No Addresses Yet",
+      noAddressesDesc: "Add a shipping address to make checkout faster.",
+      setAsDefault: "Set as Default",
+      setAsDefaultAddress: "Set as default address",
+      selectProvince: "Select province",
+      enterStateProvince: "Enter state/province",
+      selectCity: "Select city",
+      enterCity: "Enter city",
+      selectCountry: "Select a country",
+      defaultBadge: "Default",
       security: "Security",
       password: "Password",
       changePassword: "Change Password",
@@ -669,7 +749,12 @@ export const translations = {
       successMessage: "Successfully subscribed! Check your inbox.",
       errorEmail: "Please enter your email address",
       errorConsent: "Please accept the terms to subscribe",
-      errorGeneric: "Failed to subscribe. Please try again."
+      errorGeneric: "Failed to subscribe. Please try again.",
+      emailRequired: "Email required",
+      invalidEmail: "Invalid email",
+      consentRequired: "Consent required",
+      subscribed: "Subscribed!",
+      subscriptionFailed: "Subscription failed"
     },
     email: {
       orderConfirmed: 'Order Confirmed',
@@ -752,7 +837,12 @@ export const translations = {
       hours: {
         weekday: "9:00 - 18:00 WIB",
         saturday: "10:00 - 16:00 WIB"
-      }
+      },
+      enterName: "Mohon masukkan nama Anda",
+      enterEmail: "Mohon masukkan email Anda",
+      validEmail: "Mohon masukkan alamat email yang valid",
+      enterMessage: "Mohon masukkan pesan Anda",
+      messageLength: "Pesan harus minimal 10 karakter"
     },
     products: {
       new: "BARU",
@@ -836,7 +926,19 @@ export const translations = {
       noNotifications: "Tidak ada notifikasi",
       allCaughtUp: "Anda sudah melihat semuanya!",
       markAllAsRead: "Tandai semua sudah dibaca",
-      viewAll: "Lihat semua notifikasi"
+      viewAll: "Lihat semua notifikasi",
+      orderPlacedTitle: "Pesanan Berhasil Dibuat",
+      orderReminderTitle: "Pengingat Pesanan",
+      viewDetails: "Lihat detail",
+      orderPlacedMessage: "Pesanan Anda #{orderNumber} telah dibuat. Silakan selesaikan pembayaran untuk memproses pesanan Anda.",
+      orderReminderMessage: "Pesanan Anda #{orderNumber} masih tertunda. Silakan selesaikan pembayaran untuk memproses pesanan Anda.",
+      loadMore: "Muat Lebih Banyak ({count} lagi)",
+      unread: "belum dibaca",
+      close: "Tutup",
+      justNow: "Baru saja",
+      minutesAgo: "{m} mnt lalu",
+      hoursAgo: "{h} jam lalu",
+      daysAgo: "{d} hari lalu"
     },
     wishlist: {
       title: "Wishlist",
@@ -859,6 +961,8 @@ export const translations = {
       apply: "Terapkan",
       subtotal: "Subtotal",
       proceedToCheckout: "Lanjutkan ke Pembayaran",
+      items: "barang",
+      item: "barang",
       variantsAdded: "{count} varian ditambahkan ke keranjang",
       variantsPartiallyAdded: "{success} varian ditambahkan ke keranjang. {failed} varian tidak dapat ditambahkan (jumlah maksimal tercapai atau stok habis)",
       variantsMaxQuantity: "Tidak dapat menambahkan ke keranjang. Anda telah mencapai batas jumlah maksimal untuk {itemText}.",
@@ -892,7 +996,29 @@ export const translations = {
       agreeToTermsPre: "Saya setuju dengan ",
       termsOfService: "Syarat Layanan",
       agreeToTermsMiddle: " dan ",
-      privacyPolicy: "Kebijakan Privasi"
+      privacyPolicy: "Kebijakan Privasi",
+      loginSuccess: "Selamat datang kembali!",
+      loginSuccessDesc: "Anda berhasil masuk.",
+      loginFailed: "Login gagal",
+      loginFailedDesc: "Gagal masuk",
+      registrationSuccess: "Pendaftaran berhasil!",
+      registrationSuccessDesc: "Silakan periksa email Anda untuk mengonfirmasi akun Anda.",
+      accountCreatedSuccess: "Akun berhasil dibuat!",
+      accountCreatedSuccessDesc: "Anda sekarang dapat masuk ke akun Anda.",
+      registrationFailed: "Pendaftaran gagal",
+      registrationFailedDesc: "Gagal membuat akun",
+      invalidEmail: "Alamat email tidak valid",
+      invalidEmailDesc: "Silakan masukkan alamat email yang valid",
+      emailExists: "Email sudah terdaftar",
+      emailExistsDesc: "Akun dengan email ini sudah ada",
+      weakPassword: "Kata sandi lemah",
+      weakPasswordDesc: "Kata sandi tidak memenuhi persyaratan keamanan. Silakan periksa indikator kekuatan kata sandi.",
+      passwordsDoNotMatch: "Kata sandi tidak cocok",
+      passwordsDoNotMatchDesc: "Pastikan kedua kata sandi identik",
+      termsNotAccepted: "Syarat belum disetujui",
+      termsNotAcceptedDesc: "Anda harus menyetujui Syarat Layanan dan Kebijakan Privasi untuk melanjutkan",
+      tooManyAttempts: "Terlalu banyak percobaan",
+      tooManyAttemptsDesc: "Silakan tunggu beberapa menit dan coba lagi."
     },
     product: {
       buyNow: "Beli Sekarang",
@@ -906,7 +1032,13 @@ export const translations = {
       remaining: "tersisa",
       selected: "dipilih",
       variants: "varian",
-      variant: "varian"
+      variant: "varian",
+      signInToSave: "Masuk untuk menyimpan item",
+      loginOrCreateAccount: "Masuk atau buat akun untuk menyimpan",
+      toYourWishlist: "ke wishlist Anda.",
+      logIn: "Masuk",
+      createAccount: "Buat akun",
+      cancel: "Batal"
     },
     trackOrder: {
       title: "Lacak Pesanan Anda",
@@ -960,7 +1092,14 @@ export const translations = {
         minutes: "m",
         seconds: "d",
         expired: "Kadaluarsa"
-      }
+      },
+      enterBothFields: "Mohon masukkan email dan nomor pesanan",
+      paymentSuccessful: "Pembayaran berhasil! Pesanan Anda sedang diproses.",
+      paymentPendingToast: "Pembayaran tertunda. Kami akan memberi tahu Anda setelah dikonfirmasi.",
+      paymentFailed: "Pembayaran gagal. Silakan coba lagi.",
+      paymentCancelled: "Pembayaran dibatalkan. Anda dapat melanjutkan pembayaran kapan saja.",
+      paymentSystemError: "Sistem pembayaran tidak dimuat. Silakan refresh halaman.",
+      paymentError: "Gagal membuka pembayaran. Silakan coba lagi."
     },
     emailModal: {
       title: "Masukkan Email Anda",
@@ -988,8 +1127,15 @@ export const translations = {
       country: "Negara",
       basedOnRegion: "Berdasarkan wilayah Anda",
       pickLocation: "Pilih Lokasi dari Peta",
+      hideMap: "Sembunyikan Peta",
+      useMyLocation: "Gunakan Lokasi Saya",
+      clickMapToSelect: "Klik pada peta untuk memilih lokasi",
+      mapInstruction: "Klik pada peta untuk mengisi detail alamat secara otomatis",
       back: "Kembali",
-      placeOrder: "Buat Pesanan"
+      placeOrder: "Buat Pesanan",
+      enterCity: "Masukkan kota",
+      setAsDefaultAddress: "Jadikan alamat utama",
+      addAddress: "Tambah Alamat"
     },
     checkout: {
       title: "Keranjang Belanja",
@@ -998,6 +1144,9 @@ export const translations = {
       freeShipping: "Tambah {amount} lagi untuk pengiriman GRATIS!",
       qualifyFreeShipping: "Anda memenuhi syarat untuk pengiriman GRATIS!",
       addToOrder: "Tambahkan ke Pesanan Anda",
+      continuePaymentLater: "Anda dapat melanjutkan pembayaran nanti dari Pesanan Saya",
+      maxPendingOrdersError: "Batas pesanan tertunda maksimal tercapai (5). Silakan selesaikan atau batalkan pesanan yang ada.",
+      continuingPendingOrder: "Melanjutkan pesanan tertunda Anda",
       added: "Ditambahkan",
       add: "Tambah",
       shippingAddress: "Alamat Pengiriman",
@@ -1062,7 +1211,12 @@ export const translations = {
       sending: "Mengirim...",
       close: "Tutup",
       errorSending: "Gagal mengirim email reset. Silakan coba lagi.",
-      successToast: "Email pengaturan ulang kata sandi terkirim! Silakan periksa kotak masuk Anda."
+      successToast: "Email pengaturan ulang kata sandi terkirim! Silakan periksa kotak masuk Anda.",
+      fillAllFields: "Mohon isi semua kolom",
+      passwordLength: "Kata sandi harus minimal 6 karakter",
+      passwordsDoNotMatch: "Kata sandi tidak cocok",
+      passwordUpdated: "Kata sandi berhasil diperbarui!",
+      updateFailed: "Gagal memperbarui kata sandi"
     },
     productsPage: {
       allFragrances: "Semua Wewangian",
@@ -1276,6 +1430,19 @@ export const translations = {
       logout: "Keluar",
       shippingAddresses: "Alamat Pengiriman",
       addNewAddress: "Tambah Alamat Baru",
+      editAddress: "Edit Alamat",
+      addAddress: "Tambah Alamat",
+      updateAddress: "Perbarui Alamat",
+      noAddressesYet: "Belum Ada Alamat",
+      noAddressesDesc: "Tambahkan alamat pengiriman untuk mempercepat proses checkout.",
+      setAsDefault: "Jadikan Utama",
+      setAsDefaultAddress: "Jadikan alamat utama",
+      selectProvince: "Pilih provinsi",
+      enterStateProvince: "Masukkan provinsi",
+      selectCity: "Pilih kota",
+      enterCity: "Masukkan kota",
+      selectCountry: "Pilih negara",
+      defaultBadge: "Utama",
       security: "Keamanan",
       password: "Kata Sandi",
       changePassword: "Ubah Kata Sandi",
@@ -1357,7 +1524,12 @@ export const translations = {
       successMessage: "Berhasil berlangganan! Periksa inbox Anda.",
       errorEmail: "Mohon masukkan alamat email Anda",
       errorConsent: "Mohon setujui persyaratan untuk berlangganan",
-      errorGeneric: "Gagal berlangganan. Silakan coba lagi."
+      errorGeneric: "Gagal berlangganan. Silakan coba lagi.",
+      emailRequired: "Email diperlukan",
+      invalidEmail: "Email tidak valid",
+      consentRequired: "Persetujuan diperlukan",
+      subscribed: "Berlangganan!",
+      subscriptionFailed: "Berlangganan gagal"
     },
     email: {
       orderConfirmed: 'Pesanan Dikonfirmasi',

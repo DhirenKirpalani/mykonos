@@ -37,27 +37,27 @@ export default function ContactPage() {
     
     // Client-side validation
     if (!formData.name.trim()) {
-      toast.error('Please enter your name')
+      toast.error(t.contact.enterName)
       return
     }
 
     if (!formData.email.trim()) {
-      toast.error('Please enter your email')
+      toast.error(t.contact.enterEmail)
       return
     }
 
     if (!validateEmail(formData.email)) {
-      toast.error('Please enter a valid email address')
+      toast.error(t.contact.validEmail)
       return
     }
 
     if (!formData.message.trim()) {
-      toast.error('Please enter your message')
+      toast.error(t.contact.enterMessage)
       return
     }
 
     if (formData.message.trim().length < 10) {
-      toast.error('Message must be at least 10 characters long')
+      toast.error(t.contact.messageLength)
       return
     }
     

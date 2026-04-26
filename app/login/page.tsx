@@ -10,7 +10,7 @@ import { ForgotPasswordModal } from '@/components/ForgotPasswordModal'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function LoginPage() {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -100,8 +100,8 @@ export default function LoginPage() {
         localStorage.removeItem('rememberedEmail')
       }
 
-      toast.success('Welcome back!', {
-        description: 'You have successfully logged in.',
+      toast.success(t.auth.loginSuccess, {
+        description: t.auth.loginSuccessDesc,
       })
       
       // Redirect to original page if redirect parameter exists, otherwise go to account
@@ -111,8 +111,25 @@ export default function LoginPage() {
         router.push('/account')
       }
     } catch (error: any) {
-      toast.error('Login failed', {
-        description: error.message || 'Failed to sign in'
+      // Translate common Supabase error messages
+      let errorDescription = t.auth.loginFailedDesc
+      
+      if (error.message) {
+        const errorMsg = error.message.toLowerCase()
+        if (errorMsg.includes('email') && errorMsg.includes('phone')) {
+          errorDescription = locale === 'id' ? 'Email atau nomor telepon tidak boleh kosong' : 'Email or phone number is required'
+        } else if (errorMsg.includes('invalid') && errorMsg.includes('credentials')) {
+          errorDescription = locale === 'id' ? 'Email atau kata sandi salah' : 'Invalid email or password'
+        } else if (errorMsg.includes('email not confirmed')) {
+          errorDescription = locale === 'id' ? 'Silakan konfirmasi email Anda terlebih dahulu' : 'Please confirm your email first'
+        } else {
+          // For other errors, use the original message only if it's not a generic Supabase error
+          errorDescription = error.message
+        }
+      }
+      
+      toast.error(t.auth.loginFailed, {
+        description: errorDescription
       })
     } finally {
       setLoading(false)

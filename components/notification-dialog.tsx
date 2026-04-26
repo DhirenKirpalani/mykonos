@@ -38,6 +38,31 @@ export function NotificationDialog({
   const [displayCount, setDisplayCount] = useState(10)
   const unreadCount = notifications.filter(n => !n.read).length
   
+  // Helper function to translate notification title and message
+  const translateNotification = (notification: Notification) => {
+    let title = notification.title
+    let message = notification.message
+    
+    // Translate title
+    if (title === 'Order Placed Successfully') {
+      title = t.notifications.orderPlacedTitle
+    } else if (title === 'Order Reminder') {
+      title = t.notifications.orderReminderTitle
+    }
+    
+    // Translate message and extract order number
+    const orderNumberMatch = message.match(/#([A-Z0-9-]+)/)
+    const orderNumber = orderNumberMatch ? orderNumberMatch[1] : ''
+    
+    if (message.includes('has been placed')) {
+      message = t.notifications.orderPlacedMessage.replace('{orderNumber}', orderNumber)
+    } else if (message.includes('is still pending')) {
+      message = t.notifications.orderReminderMessage.replace('{orderNumber}', orderNumber)
+    }
+    
+    return { title, message }
+  }
+  
   const displayedNotifications = notifications.slice(0, displayCount)
   const hasMore = notifications.length > displayCount
   
@@ -86,10 +111,10 @@ export function NotificationDialog({
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
 
-    if (minutes < 1) return 'Just now'
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    if (days < 7) return `${days}d ago`
+    if (minutes < 1) return t.notifications.justNow
+    if (minutes < 60) return t.notifications.minutesAgo.replace('{m}', String(minutes))
+    if (hours < 24) return t.notifications.hoursAgo.replace('{h}', String(hours))
+    if (days < 7) return t.notifications.daysAgo.replace('{d}', String(days))
     return date.toLocaleDateString()
   }
 
@@ -106,13 +131,93 @@ export function NotificationDialog({
             className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
           />
 
-          {/* Dialog */}
+          {/* Mobile bottom sheet */}
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white shadow-2xl ring-1 ring-black/5 md:hidden"
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="h-1 w-10 rounded-full bg-gray-300" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <div>
+                <h2 className="text-lg font-semibold text-luxury-navy">{t.notifications.title}</h2>
+                {unreadCount > 0 && (
+                  <p className="text-sm text-gray-500">{unreadCount} {t.notifications.unread}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button onClick={onMarkAllAsRead} className="rounded-lg px-3 py-1.5 text-sm font-medium text-luxury-gold transition-colors hover:bg-luxury-gold/10">
+                    {t.notifications.markAllAsRead}
+                  </button>
+                )}
+                <button onClick={onClose} className="rounded-lg p-2 transition-colors hover:bg-gray-100" aria-label={t.notifications.close}>
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="max-h-[70vh] overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="mb-4 rounded-full bg-gray-100 p-4"><Bell className="h-8 w-8 text-gray-400" /></div>
+                  <p className="text-sm font-medium text-gray-900">{t.notifications.noNotifications}</p>
+                  <p className="mt-1 text-sm text-gray-500">{t.notifications.allCaughtUp}</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {displayedNotifications.map((notification) => (
+                    <motion.div key={notification.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      className={cn("group relative transition-all", !notification.read && "bg-luxury-gold/5 border-l-4 border-luxury-gold")}>
+                      <div onClick={() => handleNotificationClick(notification)} className="flex gap-3 p-4 cursor-pointer active:bg-gray-50">
+                        <div className={cn("flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full", getIconColor(notification.type))}>
+                          {getIcon(notification.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h3 className={cn("text-sm font-semibold leading-tight", notification.read ? "text-gray-700" : "text-luxury-navy")}>
+                              {translateNotification(notification).title}
+                            </h3>
+                            {!notification.read && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-luxury-gold mt-1" />}
+                          </div>
+                          <p className={cn("text-sm line-clamp-2 leading-relaxed", notification.read ? "text-gray-500" : "text-gray-700")}>
+                            {translateNotification(notification).message}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <p className="text-xs text-gray-400">{formatTimestamp(notification.timestamp)}</p>
+                            {notification.link && <span className="text-xs text-luxury-gold">{t.notifications.viewDetails} →</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {hasMore && (
+                    <div className="p-4 text-center">
+                      <button onClick={handleLoadMore} className="w-full rounded-lg py-2.5 px-4 text-sm font-medium text-luxury-navy hover:bg-luxury-gold/10 hover:text-luxury-gold">
+                        {t.notifications.loadMore.replace('{count}', String(notifications.length - displayCount))}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Desktop dropdown */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="fixed right-4 top-20 z-50 w-[calc(100vw-2rem)] max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 md:right-8 md:top-24"
+            className="hidden md:block fixed right-8 top-24 z-50 w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 p-4">
@@ -122,7 +227,7 @@ export function NotificationDialog({
                 </h2>
                 {unreadCount > 0 && (
                   <p className="text-sm text-gray-500">
-                    {unreadCount} {t.notifications.unread}
+                    {unreadCount} {t.notifications.unread || 'unread'}
                   </p>
                 )}
               </div>
@@ -138,7 +243,7 @@ export function NotificationDialog({
                 <button
                   onClick={onClose}
                   className="rounded-lg p-2 transition-colors hover:bg-gray-100"
-                  aria-label={t.notifications.close}
+                  aria-label={t.notifications.close || 'Close'}
                 >
                   <X className="h-5 w-5 text-gray-500" />
                 </button>
@@ -188,7 +293,7 @@ export function NotificationDialog({
                               "text-sm font-semibold leading-tight",
                               notification.read ? "text-gray-700" : "text-luxury-navy"
                             )}>
-                              {notification.title}
+                              {translateNotification(notification).title}
                             </h3>
                             {!notification.read && (
                               <div className="flex items-center gap-1">
@@ -200,7 +305,7 @@ export function NotificationDialog({
                             "text-sm line-clamp-2 leading-relaxed",
                             notification.read ? "text-gray-500" : "text-gray-700"
                           )}>
-                            {notification.message}
+                            {translateNotification(notification).message}
                           </p>
                           <div className="flex items-center gap-2 mt-2">
                             <p className="text-xs text-gray-400 font-medium">
@@ -208,7 +313,7 @@ export function NotificationDialog({
                             </p>
                             {notification.link && (
                               <span className="text-xs text-luxury-gold group-hover:underline">
-                                View details →
+                                {t.notifications.viewDetails} →
                               </span>
                             )}
                           </div>
@@ -239,7 +344,7 @@ export function NotificationDialog({
                         onClick={handleLoadMore}
                         className="w-full rounded-lg py-2.5 px-4 text-sm font-medium text-luxury-navy transition-all hover:bg-luxury-gold/10 hover:text-luxury-gold"
                       >
-                        Load More ({notifications.length - displayCount} more)
+                        {t.notifications.loadMore.replace('{count}', String(notifications.length - displayCount))}
                       </button>
                     </div>
                   )}

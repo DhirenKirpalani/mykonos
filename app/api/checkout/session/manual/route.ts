@@ -54,7 +54,8 @@ export async function POST(request: Request) {
             price_usd,
             price_idr,
             stock_quantity,
-            variants
+            variants,
+            tax_enabled
           )
         `)
 
@@ -97,11 +98,20 @@ export async function POST(request: Request) {
           return sum + (price * item.quantity)
         }, 0)
 
+        // Only tax items where tax_enabled = true
+        const taxableAmount = cartItems.reduce((sum, item) => {
+          const product = item.products as any
+          if (!product.tax_enabled) return sum
+          const price = region_code === 'ID' ? product.price_idr : product.price_usd
+          return sum + (price * item.quantity)
+        }, 0)
+        const tax = taxableAmount * 0.1
+
         pricing_snapshot = {
           subtotal,
-          shipping: 0,
-          tax: subtotal * 0.1,
-          total: subtotal + (subtotal * 0.1),
+          shipping: 0, // Courier API not yet integrated
+          tax,
+          total: subtotal + tax,
           currency_code: currency_code || (region_code === 'ID' ? 'IDR' : 'USD')
         }
       }

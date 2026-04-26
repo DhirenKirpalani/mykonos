@@ -18,7 +18,7 @@ export default function NewsletterSubscription() {
 
     // Validate all fields and show the most appropriate error
     if (!email) {
-      toast.error('Email required', {
+      toast.error(t.newsletter.emailRequired, {
         description: t.newsletter.errorEmail
       })
       return
@@ -27,14 +27,14 @@ export default function NewsletterSubscription() {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      toast.error('Invalid email', {
+      toast.error(t.newsletter.invalidEmail, {
         description: t.newsletter.errorEmail
       })
       return
     }
 
     if (!consent) {
-      toast.error('Consent required', {
+      toast.error(t.newsletter.consentRequired, {
         description: t.newsletter.errorConsent
       })
       return
@@ -61,7 +61,7 @@ export default function NewsletterSubscription() {
       setEmail('')
       setConsent(false)
       
-      toast.success('Subscribed!', {
+      toast.success(t.newsletter.subscribed, {
         description: t.newsletter.successMessage
       })
       
@@ -69,7 +69,7 @@ export default function NewsletterSubscription() {
         setSuccess(false)
       }, 5000)
     } catch (err: any) {
-      toast.error('Subscription failed', {
+      toast.error(t.newsletter.subscriptionFailed, {
         description: err.message || t.newsletter.errorGeneric
       })
     } finally {

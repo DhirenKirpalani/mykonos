@@ -175,6 +175,21 @@ export async function POST(request: Request) {
               console.warn('⚠️ [API] Cannot send email - missing customer_email or order_number')
             }
             
+            // Clear cart items for authenticated users when reusing existing order
+            if (user_id) {
+              console.log('🗑️ [API] Clearing cart items for existing order, user:', user_id)
+              const { error: clearCartError } = await supabase
+                .from('cart_items')
+                .delete()
+                .eq('user_id', user_id)
+              
+              if (clearCartError) {
+                console.error('❌ [API] Failed to clear cart:', clearCartError)
+              } else {
+                console.log('✅ [API] Cart cleared successfully')
+              }
+            }
+            
             return NextResponse.json({
               order_id: typedOrder.id,
               order_number: typedOrder.order_number,
@@ -331,6 +346,22 @@ export async function POST(request: Request) {
       }
     } else {
       console.warn('⚠️ [API] Cannot send email - missing customer_email or order_number')
+    }
+
+    // Clear cart items for authenticated users after successful order creation
+    if (user_id) {
+      console.log('🗑️ [API] Clearing cart items for user:', user_id)
+      const { error: clearCartError } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user_id)
+      
+      if (clearCartError) {
+        console.error('❌ [API] Failed to clear cart:', clearCartError)
+        // Don't fail the order creation if cart clearing fails
+      } else {
+        console.log('✅ [API] Cart cleared successfully')
+      }
     }
 
     console.log('✅ [API] Order created before payment successfully')
