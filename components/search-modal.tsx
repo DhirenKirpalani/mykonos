@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, X } from 'lucide-react'
 import { ProductCard } from '@/components/product-card'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 type Product = {
   id: string
@@ -25,6 +27,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [topProducts, setTopProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { t } = useLanguage()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (isOpen) {
@@ -32,6 +36,14 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       fetchTopProducts()
     }
   }, [isOpen])
+
+  // Close search when the route changes (product clicked navigated away)
+  useEffect(() => {
+    if (isOpen) {
+      onClose()
+      setSearchQuery('')
+    }
+  }, [pathname])
 
   useEffect(() => {
     if (searchQuery.length > 2) {
@@ -105,8 +117,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   <Search className="absolute left-0 top-1/2 h-5 w-5 -translate-y-1/2 text-luxury-navy/40" />
                   <input
                     ref={inputRef}
-                    type="search"
-                    placeholder="Search for fragrances..."
+                    type="text"
+                    placeholder={t.searchModal.placeholder}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-transparent border-0 border-b border-luxury-navy/20 py-3 pl-8 pr-4 text-lg lg:text-xl text-luxury-navy placeholder:text-luxury-navy/40 focus:outline-none focus:border-luxury-gold tracking-wide transition-colors"
@@ -129,11 +141,11 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             {/* Products Section */}
             <div>
               <h3 className="text-sm font-semibold text-luxury-navy uppercase tracking-widest mb-6">
-                {searchQuery.length > 2 ? 'Search Results' : 'Top Products'}
+                {searchQuery.length > 2 ? t.searchModal.searchResults : t.searchModal.topProducts}
               </h3>
               
               {loading ? (
-                <div className="text-center py-16 text-luxury-navy/60">Searching...</div>
+                <div className="text-center py-16 text-luxury-navy/60">{t.searchModal.searching}</div>
               ) : displayProducts.length > 0 ? (
                 <div className="overflow-x-auto -mx-6 px-6 lg:-mx-8 lg:px-8">
                   <div className="flex gap-4 pb-4 min-w-max">
@@ -141,7 +153,6 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                       <div
                         key={product.id}
                         className="flex-shrink-0 w-[160px] sm:w-[180px] lg:w-[200px]"
-                        onClick={onClose}
                       >
                         <ProductCard product={product as any} />
                       </div>
@@ -149,7 +160,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   </div>
                 </div>
               ) : searchQuery.length > 2 ? (
-                <div className="text-center py-16 text-luxury-navy/60">No products found</div>
+                <div className="text-center py-16 text-luxury-navy/60">{t.searchModal.noResults}</div>
               ) : null}
               </div>
             </div>

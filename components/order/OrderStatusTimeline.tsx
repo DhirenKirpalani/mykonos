@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Package, CreditCard, Box, Truck, CheckCircle2, HelpCircle } from 'lucide-react'
+import { Check, Package, CreditCard, Box, Truck, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { cn } from '@/lib/utils'
 
@@ -190,13 +190,6 @@ export function OrderStatusTimeline({
       <div className="px-6 sm:px-8 py-6 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <h2 className="text-xl sm:text-2xl font-serif">{t.trackOrder.orderStatus}</h2>
-          <a
-            href="#help"
-            className="inline-flex items-center gap-2 text-sm text-luxury-gold hover:text-luxury-gold/80 transition-colors"
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">{t.trackOrder.needHelp}</span>
-          </a>
         </div>
         <p className="text-sm sm:text-base text-gray-600 mt-2">{getStatusMessage()}</p>
       </div>

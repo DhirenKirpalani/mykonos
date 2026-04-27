@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { ChevronDown, FileText } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 interface CollapsibleDescriptionProps {
   description: string
@@ -18,10 +18,7 @@ export function CollapsibleDescription({ description }: CollapsibleDescriptionPr
     <div className="border-t border-gray-200">
       {/* Header */}
       <div className="py-4">
-        <div className="flex items-center gap-2 mb-3">
-          <FileText className="h-5 w-5 text-gray-400" />
-          <h3 className="text-base md:text-lg font-semibold text-gray-900">{t.products.description}</h3>
-        </div>
+        <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3">{t.products.description}</h3>
         
         {/* Description Content */}
         <div className="relative">
@@ -40,7 +37,7 @@ export function CollapsibleDescription({ description }: CollapsibleDescriptionPr
         {/* Show More/Less Button */}
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-4 w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] text-sm md:text-base font-medium text-gray-700"
+          className="mt-3 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 active:text-gray-900 transition-colors duration-200 touch-manipulation min-h-[44px] px-0"
         >
           <span>{isExpanded ? t.products.showLess : t.products.showMore}</span>
           <ChevronDown 

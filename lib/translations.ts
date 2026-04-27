@@ -133,7 +133,9 @@ export const translations = {
       submit: "Submit",
       free: "FREE",
       home: "Home",
-      products: "Products"
+      products: "Products",
+      showing: "Showing",
+      of: "of"
     },
     notifications: {
       title: "Notifications",
@@ -360,7 +362,16 @@ export const translations = {
       placeOrder: "Place Order",
       enterCity: "Enter city",
       setAsDefaultAddress: "Set as default address",
-      addAddress: "Add Address"
+      addAddress: "Add Address",
+      errorFullNameRequired: "Full name is required",
+      errorPhoneRequired: "Phone number is required",
+      errorPhoneFormat: "Phone number must start with {prefix}",
+      errorAddressRequired: "Address is required",
+      errorAddressTooShort: "Address is too short (minimum 5 characters)",
+      errorPostalCodeRequired: "Postal code is required",
+      errorPostalCodeFormat: "Invalid postal code format",
+      errorCityRequired: "City is required",
+      errorStateRequired: "Province is required"
     },
     checkout: {
       title: "Shopping Cart",
@@ -418,7 +429,15 @@ export const translations = {
       password: "Password",
       enterPassword: "Enter your password",
       forgotPassword: "Forgot password?",
-      signingIn: "Signing in..."
+      signingIn: "Signing in...",
+      shippingCalculated: "Calculated at checkout",
+      emailFound: "Email found! Using your saved address.",
+      fixValidationErrors: "Please fix the validation errors",
+      failedToSubmit: "Failed to submit",
+      invalidPassword: "Invalid password",
+      loggedIn: "Logged in successfully!",
+      addressFromMap: "Address details filled from map",
+      fieldsNeedAttention: "field(s) need attention"
     },
     resetPassword: {
       title: "Reset Password",
@@ -479,8 +498,10 @@ export const translations = {
     },
     searchModal: {
       title: "Search",
-      placeholder: "Search products...",
+      placeholder: "Search for fragrances...",
       topProducts: "Top Products",
+      searchResults: "Search Results",
+      searching: "Searching...",
       noResults: "No products found",
       viewAll: "View All Results"
     },
@@ -708,6 +729,7 @@ export const translations = {
       browseProducts: "Browse Products",
       items: "items",
       item: "item",
+      order: "order",
       each: "each",
       expired: "Expired",
       pendingPayment: "Pending payment",
@@ -919,7 +941,9 @@ export const translations = {
       submit: "Kirim",
       free: "GRATIS",
       home: "Beranda",
-      products: "Produk"
+      products: "Produk",
+      showing: "Menampilkan",
+      of: "dari"
     },
     notifications: {
       title: "Notifikasi",
@@ -1135,7 +1159,16 @@ export const translations = {
       placeOrder: "Buat Pesanan",
       enterCity: "Masukkan kota",
       setAsDefaultAddress: "Jadikan alamat utama",
-      addAddress: "Tambah Alamat"
+      addAddress: "Tambah Alamat",
+      errorFullNameRequired: "Nama lengkap wajib diisi",
+      errorPhoneRequired: "Nomor telepon wajib diisi",
+      errorPhoneFormat: "Nomor telepon harus dimulai dengan {prefix}",
+      errorAddressRequired: "Alamat wajib diisi",
+      errorAddressTooShort: "Alamat terlalu pendek (minimal 5 karakter)",
+      errorPostalCodeRequired: "Kode pos wajib diisi",
+      errorPostalCodeFormat: "Format kode pos tidak valid",
+      errorCityRequired: "Kota wajib diisi",
+      errorStateRequired: "Provinsi wajib diisi"
     },
     checkout: {
       title: "Keranjang Belanja",
@@ -1193,7 +1226,15 @@ export const translations = {
       password: "Kata Sandi",
       enterPassword: "Masukkan kata sandi Anda",
       forgotPassword: "Lupa kata sandi?",
-      signingIn: "Masuk..."
+      signingIn: "Masuk...",
+      shippingCalculated: "Dihitung saat checkout",
+      emailFound: "Email ditemukan! Menggunakan alamat tersimpan Anda.",
+      fixValidationErrors: "Silakan perbaiki kesalahan validasi",
+      failedToSubmit: "Gagal mengirimkan",
+      invalidPassword: "Kata sandi tidak valid",
+      loggedIn: "Berhasil masuk!",
+      addressFromMap: "Detail alamat diisi dari peta",
+      fieldsNeedAttention: "kolom perlu diperhatikan"
     },
     resetPassword: {
       title: "Atur Ulang Kata Sandi",
@@ -1254,8 +1295,10 @@ export const translations = {
     },
     searchModal: {
       title: "Cari",
-      placeholder: "Cari produk...",
+      placeholder: "Cari parfum...",
       topProducts: "Produk Teratas",
+      searchResults: "Hasil Pencarian",
+      searching: "Mencari...",
       noResults: "Tidak ada produk ditemukan",
       viewAll: "Lihat Semua Hasil"
     },
@@ -1483,6 +1526,7 @@ export const translations = {
       browseProducts: "Jelajahi Produk",
       items: "barang",
       item: "barang",
+      order: "pesanan",
       each: "satuan",
       expired: "Kadaluarsa",
       pendingPayment: "Menunggu pembayaran",

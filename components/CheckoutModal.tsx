@@ -139,7 +139,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
               country: typedAddress.country,
             })
             
-            toast.success('Email found! Using your saved address.', {
+            toast.success(t.checkout?.emailFound || 'Email found! Using your saved address.', {
               duration: 3000,
             })
             return { exists: true, hasAddress: true }
@@ -163,7 +163,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !validateEmail(email)) {
-      toast.error('Please enter a valid email address')
+      toast.error(t.emailModal?.invalidEmail || 'Please enter a valid email address')
       return
     }
     
@@ -185,6 +185,10 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setPasswordError('')
+    if (!password) {
+      toast.error(t.checkout?.invalidPassword || 'Please enter your password')
+      return
+    }
     setIsSubmitting(true)
 
     try {
@@ -199,7 +203,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
 
       if (error) {
         setPasswordError(error.message)
-        toast.error('Invalid password')
+        toast.error(t.checkout?.invalidPassword || 'Invalid password')
         return
       }
 
@@ -228,7 +232,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
           }
         }
 
-        toast.success('Logged in successfully!')
+        toast.success(t.checkout?.loggedIn || 'Logged in successfully!')
         // Set flag to prevent checkout page from re-initializing before reload
         sessionStorage.setItem('checkout_reloading', 'true')
         // Keep loading state and reload page to show logged-in state
@@ -239,41 +243,57 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
       }
     } catch (error: any) {
       setPasswordError('Login failed. Please try again.')
-      toast.error('Login failed')
+      toast.error(t.checkout?.failedToSubmit || 'Login failed')
       setIsSubmitting(false)
     }
   }
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
+    const sm = t.shippingModal
+
+    // Validate full name
+    if (!shippingForm.full_name.trim()) {
+      errors.full_name = sm.errorFullNameRequired || 'Full name is required'
+    }
 
     // Validate phone
-    const phoneValidation = validatePhone(shippingForm.phone, currentCountryCode)
-    if (!phoneValidation.valid) {
-      errors.phone = phoneValidation.message || 'Invalid phone number'
+    if (!shippingForm.phone || shippingForm.phone.trim().length === 0) {
+      errors.phone = sm.errorPhoneRequired || 'Phone number is required'
+    } else {
+      const phoneValidation = validatePhone(shippingForm.phone, currentCountryCode)
+      if (!phoneValidation.valid) {
+        const country = currentCountry
+        const expectedPrefix = currentCountryCode === 'ID' ? '+62' : currentCountryCode === 'US' ? '+1' : ''
+        errors.phone = (sm.errorPhoneFormat || 'Phone number must start with {prefix}').replace('{prefix}', expectedPrefix)
+      }
     }
 
     // Validate address
-    const addressValidation = validateAddress(shippingForm.address_line1)
-    if (!addressValidation.valid) {
-      errors.address_line1 = addressValidation.message || 'Invalid address'
+    if (!shippingForm.address_line1 || shippingForm.address_line1.trim().length === 0) {
+      errors.address_line1 = sm.errorAddressRequired || 'Address is required'
+    } else if (shippingForm.address_line1.trim().length < 5) {
+      errors.address_line1 = sm.errorAddressTooShort || 'Address is too short (minimum 5 characters)'
+    }
+
+    // Validate city
+    if (!shippingForm.city) {
+      errors.city = sm.errorCityRequired || 'City is required'
+    }
+
+    // Validate province
+    if (!shippingForm.state_province) {
+      errors.state_province = sm.errorStateRequired || 'Province is required'
     }
 
     // Validate postal code
-    const postalValidation = validatePostalCode(shippingForm.postal_code, currentCountryCode)
-    if (!postalValidation.valid) {
-      errors.postal_code = postalValidation.message || 'Invalid postal code'
-    }
-
-    // Validate required fields
-    if (!shippingForm.full_name.trim()) {
-      errors.full_name = 'Full name is required'
-    }
-    if (!shippingForm.city) {
-      errors.city = 'City is required'
-    }
-    if (!shippingForm.state_province) {
-      errors.state_province = 'State/Province is required'
+    if (!shippingForm.postal_code || shippingForm.postal_code.trim().length === 0) {
+      errors.postal_code = sm.errorPostalCodeRequired || 'Postal code is required'
+    } else {
+      const postalValidation = validatePostalCode(shippingForm.postal_code, currentCountryCode)
+      if (!postalValidation.valid) {
+        errors.postal_code = sm.errorPostalCodeFormat || 'Invalid postal code format'
+      }
     }
 
     setValidationErrors(errors)
@@ -283,8 +303,15 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!validateForm()) {
-      toast.error('Please fix the validation errors')
+    const errors: Record<string, string> = {}
+    const isValid = validateForm()
+    if (!isValid) {
+      const errorCount = Object.keys(validationErrors).length
+      toast.error(t.checkout?.fixValidationErrors || 'Please fix the validation errors', {
+        description: errorCount > 0
+          ? `${errorCount} ${t.checkout?.fieldsNeedAttention || 'field(s) need attention'}`
+          : undefined,
+      })
       return
     }
 
@@ -297,7 +324,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
       })
       onClose()
     } catch (error: any) {
-      toast.error(error.message || 'Failed to submit')
+      toast.error(error.message || t.checkout?.failedToSubmit || 'Failed to submit')
     } finally {
       setIsSubmitting(false)
     }
@@ -342,7 +369,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="!fixed !left-0 !right-0 !bottom-0 !top-auto !translate-x-0 !translate-y-0 sm:!left-1/2 sm:!top-1/2 sm:!bottom-auto sm:!right-auto sm:!-translate-x-1/2 sm:!-translate-y-1/2 w-full max-w-lg max-h-[90vh] overflow-y-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl border-0 sm:border p-6 shadow-2xl animate-slide-up sm:animate-none">
+      <DialogContent className="!fixed !left-0 !right-0 !bottom-0 !top-auto !translate-x-0 !translate-y-0 sm:!left-1/2 sm:!top-1/2 sm:!bottom-auto sm:!right-auto sm:!-translate-x-1/2 sm:!-translate-y-1/2 w-full max-w-lg max-h-[78vh] overflow-y-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl border-0 sm:border p-6 shadow-2xl animate-slide-up sm:animate-none">
         <DialogHeader>
           {/* Drag handle for mobile */}
           <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-gray-300 sm:hidden" />
@@ -390,7 +417,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
         </DialogHeader>
 
         {step === 'email' && (
-          <form onSubmit={handleEmailSubmit} className="space-y-4 pt-2 sm:pt-4">
+          <form noValidate onSubmit={handleEmailSubmit} className="space-y-4 pt-2 sm:pt-4">
             <div>
               <Label htmlFor="modal-email">{t.emailModal.emailAddress} *</Label>
               <div className="relative">
@@ -443,7 +470,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
         )}
 
         {step === 'password' && (
-          <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-2 sm:pt-4">
+          <form noValidate onSubmit={handlePasswordSubmit} className="space-y-4 pt-2 sm:pt-4">
             <div>
               <Label htmlFor="modal-email-display">{t.emailModal?.emailAddress || 'Email'}</Label>
               <Input
@@ -514,7 +541,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
         )}
 
         {step === 'address' && (
-          <form onSubmit={handleAddressSubmit} className="space-y-4 pt-2 sm:pt-4">
+          <form noValidate onSubmit={handleAddressSubmit} className="space-y-4 pt-2 sm:pt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="modal-full_name">{t.shippingModal.fullName} *</Label>
@@ -741,7 +768,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
                     }
                     
                     setShippingForm(prev => ({ ...prev, ...updates }))
-                    toast.success('Address details filled from map')
+                    toast.success(t.checkout?.addressFromMap || 'Address details filled from map')
                   }}
                   initialPosition={shippingForm.country === 'Indonesia' ? [-6.2088, 106.8456] : [40.7128, -74.0060]}
                   height="300px"
