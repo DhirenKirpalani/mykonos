@@ -41,14 +41,23 @@ export async function GET(
       let stock = 0
       let productImage = null
 
+      // Helper: resolve a possibly-relative Supabase storage path to a full public URL
+      const resolveImageUrl = (url: string | null | undefined): string | null => {
+        if (!url || url.trim() === '') return null
+        if (url.startsWith('http://') || url.startsWith('https://')) return url
+        // Relative path — prepend the Supabase project URL
+        const base = supabaseUrl.replace(/\/$/, '')
+        const path = url.startsWith('/') ? url : `/storage/v1/object/public/${url}`
+        return `${base}${path}`
+      }
+
       // If variant_id exists, find the variant details
       if (dp.variant_id && product.variants) {
         const variant = product.variants.find((v: any) => v.name === dp.variant_id)
         if (variant) {
           originalPrice = variant.price_idr || 0
           stock = variant.stock_quantity || 0
-          // Use variant image if available
-          productImage = variant.image_url || null
+          productImage = resolveImageUrl(variant.image_url)
         }
       } else {
         // No variant, use product price
@@ -56,9 +65,11 @@ export async function GET(
         stock = product.stock_quantity || 0
       }
 
-      // Fallback to product images if no variant image
+      // Fall back to product.image_urls if no variant image resolved
       if (!productImage) {
-        const validUrls = product.image_urls?.filter((url: string) => url && !url.includes('placehold.co')) || []
+        const validUrls = (product.image_urls || [])
+          .map((url: string) => resolveImageUrl(url))
+          .filter((url: string | null) => url && !url.includes('placehold.co'))
         productImage = validUrls[0] || null
       }
 

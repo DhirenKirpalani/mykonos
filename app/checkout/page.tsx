@@ -87,7 +87,7 @@ export default function CheckoutPage() {
   const [editSelectedProvince, setEditSelectedProvince] = useState('')
   const [editAvailableProvinces, setEditAvailableProvinces] = useState<{code: string, name: string}[]>([])
   const [editAvailableCities, setEditAvailableCities] = useState<string[]>([])
-  const [shippingCost, setShippingCost] = useState<number>(0)
+  const [shippingCost, setShippingCost] = useState<number | null>(null)
   const [isLoadingShipping, setIsLoadingShipping] = useState(false)
   const [recommendedProducts, setRecommendedProducts] = useState<any[]>([])
   const [quickAddedItems, setQuickAddedItems] = useState<CartItem[]>([])
@@ -2098,43 +2098,9 @@ export default function CheckoutPage() {
   }, [selectedAddressId])
 
   const fetchShippingCost = async () => {
-    const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
-    if (!selectedAddress) return
-
-    // Only fetch dynamic shipping for ID region
-    // For non-ID regions, shipping will be determined by courier API (not yet integrated)
-    if (region?.code !== 'ID') {
-      return
-    }
-
-    setIsLoadingShipping(true)
-    try {
-      // Calculate total weight (assuming 500g per item as default)
-      const totalWeight = cartItems.reduce((sum, item) => sum + (item.quantity * 500), 0)
-
-      const response = await fetch('/api/shipping/kirimaja', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          origin: 'Jakarta', // Default origin, should be from store settings
-          destination: selectedAddress.city,
-          weight: totalWeight,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.costs && data.costs.length > 0) {
-          // Use the first shipping option
-          setShippingCost(data.costs[0].cost)
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch shipping cost:', error)
-      // Courier API not yet integrated — shipping remains 0
-    } finally {
-      setIsLoadingShipping(false)
-    }
+    // TODO: Integrate KirimAja / DHL courier API here.
+    // When integrated, call the API and setShippingCost(result).
+    // Until then, leave shippingCost as null so the UI shows "Calculated at checkout".
   }
 
   // Helper function to format address name (avoid showing email username)
@@ -2199,7 +2165,7 @@ export default function CheckoutPage() {
 
   // Calculate net amount after voucher discount for tax calculation
   const netAmount = subtotal - totalVoucherDiscount
-  const shipping = shippingCost // Courier API not yet integrated; will be calculated dynamically
+  const shipping = shippingCost ?? 0 // null = not yet calculated; use 0 for total until API is integrated
   
   // Calculate tax only for products with tax_enabled = true
   const taxableAmount = cartItems.reduce((total, item) => {
@@ -2773,13 +2739,13 @@ export default function CheckoutPage() {
                 )}
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>{t.checkout.shipping}</span>
-                  <span className={`font-medium ${shipping === 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                    {isLoadingShipping ? (
-                      <span className="text-xs">{t.checkout.calculating}</span>
-                    ) : shipping === 0 ? (
-                      t.checkout.free
+                  <span className={`font-medium ${shippingCost === null || shippingCost === 0 ? 'text-gray-500' : 'text-gray-900'}`}>
+                    {shippingCost === null ? (
+                      <span className="text-xs italic">{t.checkout.shippingCalculated}</span>
+                    ) : shippingCost === 0 ? (
+                      <span className="text-green-600">{t.checkout.free}</span>
                     ) : (
-                      region ? formatRegionPrice(shipping, region) : formatCurrencyPrice(shipping, currency)
+                      region ? formatRegionPrice(shippingCost, region) : formatCurrencyPrice(shippingCost, currency)
                     )}
                   </span>
                 </div>

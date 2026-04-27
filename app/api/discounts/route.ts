@@ -49,7 +49,7 @@ export async function GET() {
       discount.discount_products?.forEach((dp: any) => {
         if (dp.products && !uniqueProducts.has(dp.product_id)) {
           // Filter out placeholder images
-          const validUrls = dp.products.image_urls?.filter((url: string) => url && !url.includes('placehold.co')) || []
+          const validUrls = dp.products.image_urls?.filter((url: string) => url && url.startsWith('http') && !url.includes('placehold.co')) || []
           uniqueProducts.set(dp.product_id, {
             id: dp.products.id,
             name: dp.products.name,

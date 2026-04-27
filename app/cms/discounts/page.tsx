@@ -35,10 +35,8 @@ export default function DiscountsPage() {
       newExpanded.delete(discountId)
     } else {
       newExpanded.add(discountId)
-      // Fetch detailed discount products if not already loaded
-      if (!discountDetails.has(discountId)) {
-        await fetchDiscountDetails(discountId)
-      }
+      // Always re-fetch to get fresh image URLs
+      await fetchDiscountDetails(discountId)
     }
     setExpandedDiscounts(newExpanded)
   }
@@ -215,9 +213,14 @@ export default function DiscountsPage() {
                             {discount.products.slice(0, 3).map((product) => (
                               <div key={product.id} className="flex items-center gap-1.5 bg-gray-50 rounded px-2 py-1">
                                 {product.image_url && (
-                                  <img src={product.image_url} alt={product.name} className="h-6 w-6 rounded object-cover" />
+                                  <img
+                                    src={product.image_url}
+                                    alt={product.name}
+                                    className="h-6 w-6 rounded object-cover"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                  />
                                 )}
-                                <span className="text-xs text-gray-700 truncate max-w-[120px]">{product.name}</span>
+                                <span className="text-xs text-gray-700">{product.name}</span>
                               </div>
                             ))}
                             {discount.products.length > 3 && (
@@ -302,13 +305,17 @@ export default function DiscountsPage() {
                                   <td className="px-4 py-3">
                                     <div className="flex items-center gap-2">
                                       {product.product_image && (
-                                        <img src={product.product_image} alt={product.product_name} className="h-8 w-8 rounded object-cover" />
+                                        <img
+                                          src={product.product_image}
+                                          alt={product.variant_name || product.product_name}
+                                          className="h-8 w-8 rounded object-cover"
+                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                        />
                                       )}
                                       <div>
-                                        <div className="font-medium text-gray-900">{product.product_name}</div>
-                                        {product.variant_name && (
-                                          <div className="text-xs text-gray-500">{product.variant_name}</div>
-                                        )}
+                                        <div className="font-medium text-gray-900">
+                                          {product.variant_name || product.product_name}
+                                        </div>
                                       </div>
                                     </div>
                                   </td>

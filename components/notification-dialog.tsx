@@ -131,19 +131,15 @@ export function NotificationDialog({
             className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
           />
 
-          {/* Mobile bottom sheet */}
+          {/* Mobile panel — anchored below the header */}
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white shadow-2xl ring-1 ring-black/5 md:hidden"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="fixed inset-x-3 top-16 z-50 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 md:hidden"
+            style={{ maxHeight: 'calc(100vh - 76px)' }}
           >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="h-1 w-10 rounded-full bg-gray-300" />
-            </div>
-
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
               <div>
@@ -165,7 +161,7 @@ export function NotificationDialog({
             </div>
 
             {/* List */}
-            <div className="max-h-[70vh] overflow-y-auto">
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(80vh - 80px)' }}>
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="mb-4 rounded-full bg-gray-100 p-4"><Bell className="h-8 w-8 text-gray-400" /></div>
