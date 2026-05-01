@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Html, Head, Body, Container, Heading, Text } from '@react-email/components'
 import { translations } from '@/lib/translations'
+import { getCountryName } from '@/lib/utils/country'
 
 interface OrderItem {
   product_name: string
@@ -27,6 +28,7 @@ interface OrderEmailProps {
     city: string
     province: string
     postal_code: string
+    country?: string
   }
   paymentStatus: string
   orderStatus: string
@@ -36,6 +38,7 @@ interface OrderEmailProps {
   estimatedDelivery?: string
   locale?: 'en' | 'id'
   orderId?: string
+  currencyCode?: string
   expiryTime?: string
 }
 
@@ -53,6 +56,7 @@ export function OrderConfirmationEmail({
   paymentStatus,
   orderStatus,
   orderId,
+  currencyCode = 'IDR',
   expiryTime,
   locale = 'en'
 }: OrderEmailProps) {
@@ -61,6 +65,11 @@ export function OrderConfirmationEmail({
   
   // Get translations for current locale
   const text = translations[locale].email
+  
+  // Determine currency symbol and contact number based on currency code
+  const isIDR = currencyCode === 'IDR'
+  const currencySymbol = isIDR ? 'Rp' : '$'
+  const contactNumber = isIDR ? '+62 857-8021-8514' : '+62 816-261-783'
   
   return (
     <Html>
@@ -151,14 +160,14 @@ export function OrderConfirmationEmail({
             </Text>
           </div>
 
-          {/* Order Confirmed Banner */}
-          <div className="banner" style={{ background: 'linear-gradient(90deg, #d4af37 0%, #f4d03f 100%)', padding: '40px 30px', textAlign: 'center' }}>
+          {/* Order Banner */}
+          <div className="banner" style={{ background: paymentStatus === 'pending' ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(90deg, #d4af37 0%, #f4d03f 100%)', padding: '40px 30px', textAlign: 'center' }}>
             <Text className="heading-large" style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '1px' }}>
-              ✨ {text.orderConfirmed}
+              {paymentStatus === 'pending' ? '⏳ Order Received - Payment Pending' : `✨ ${text.orderConfirmed}`}
             </Text>
             <Text style={{ fontSize: '15px', color: '#1e293b', margin: '12px 0 0 0', lineHeight: '1.5' }}>
-              {text.thankYou}<br />
-              {text.journeyBegins}
+              {paymentStatus === 'pending' ? 'Your order has been created. Please complete payment to confirm your order.' : `${text.thankYou}`}<br />
+              {paymentStatus === 'pending' ? '' : text.journeyBegins}
             </Text>
           </div>
 
@@ -189,27 +198,16 @@ export function OrderConfirmationEmail({
                   {total && (
                     <tr>
                       <td style={{ padding: '16px 0', color: '#64748b', fontSize: '13px', borderTop: '1px solid #e2e8f0' }}>{text.totalPayment}</td>
-                      <td style={{ padding: '16px 0', color: '#0f172a', fontSize: '16px', fontWeight: '700', textAlign: 'right', borderTop: '1px solid #e2e8f0' }}>Rp{total.toLocaleString()}</td>
+                      <td style={{ padding: '16px 0', color: '#0f172a', fontSize: '16px', fontWeight: '700', textAlign: 'right', borderTop: '1px solid #e2e8f0' }}>{currencySymbol}{total.toLocaleString()}</td>
                     </tr>
                   )}
                   
-                  {/* Status Group */}
+                  {/* Order Status */}
                   <tr>
-                    <td colSpan={2} style={{ padding: '16px 0 8px 0', color: '#0f172a', fontSize: '14px', fontWeight: '600', borderTop: '1px solid #e2e8f0' }}>{text.status}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '4px 0', color: '#64748b', fontSize: '13px', paddingLeft: '12px' }}>• {text.order}</td>
-                    <td style={{ padding: '4px 0', textAlign: 'right' }}>
-                      <span style={{ backgroundColor: '#e0f2fe', color: '#075985', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '500' }}>
-                        {orderStatus}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '4px 0 16px 0', color: '#64748b', fontSize: '13px', paddingLeft: '12px' }}>• {text.payment}</td>
-                    <td style={{ padding: '4px 0 16px 0', textAlign: 'right' }}>
-                      <span style={{ backgroundColor: paymentStatus === 'completed' ? '#dcfce7' : '#fef3c7', color: paymentStatus === 'completed' ? '#166534' : '#92400e', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '500' }}>
-                        {paymentStatus}
+                    <td style={{ padding: '16px 0 8px 0', color: '#64748b', fontSize: '13px', borderTop: '1px solid #e2e8f0' }}>{text.orderStatus}</td>
+                    <td style={{ padding: '16px 0 8px 0', textAlign: 'right', borderTop: '1px solid #e2e8f0' }}>
+                      <span style={{ backgroundColor: paymentStatus === 'pending' ? '#fef3c7' : '#dcfce7', color: paymentStatus === 'pending' ? '#92400e' : '#166534', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '500' }}>
+                        {paymentStatus === 'pending' ? 'Awaiting Payment' : (orderStatus === 'pending_payment' ? 'Order Placed' : orderStatus)}
                       </span>
                     </td>
                   </tr>
@@ -225,97 +223,10 @@ export function OrderConfirmationEmail({
               </table>
             </div>
 
-            {/* Order Items */}
-            <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '30px', marginTop: '30px' }}>
-              <Heading className="heading-medium" style={{ fontSize: '20px', color: '#0f172a', marginBottom: '20px', fontWeight: '700', letterSpacing: '0.5px' }}>
-                {text.orderItems}
-              </Heading>
-            </div>
-            
-            {items?.map((item, index) => (
-              <div key={index} style={{ borderBottom: '1px solid #e2e8f0', padding: '20px 0' }}>
-                <table className="product-item" style={{ width: '100%' }}>
-                  <tbody>
-                    <tr>
-                      <td style={{ width: '60%' }}>
-                        <Text style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: '0 0 4px 0' }}>
-                          {item.product_name}
-                        </Text>
-                        {item.variant_name && (
-                          <Text style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                            {item.variant_name}
-                          </Text>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
-                        {text.qty}: {item.quantity}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <Text style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: 0 }}>
-                          Rp{item.total.toLocaleString()}
-                        </Text>
-                        <Text style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>
-                          @Rp{item.price.toLocaleString()}
-                        </Text>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            ))}
-
-            {/* Order Summary */}
-            <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '20px', marginTop: '30px' }}>
-              <table className="order-details-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <tbody>
-                  <tr>
-                    <td style={{ padding: '8px 0', color: '#64748b', fontSize: '13px' }}>{text.subtotal}</td>
-                    <td style={{ padding: '8px 0', color: '#0f172a', fontSize: '14px', textAlign: 'right' }}>Rp{(subtotal || 0).toLocaleString()}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '8px 0', color: '#64748b', fontSize: '13px' }}>{text.shipping}</td>
-                    <td style={{ padding: '8px 0', color: '#0f172a', fontSize: '14px', textAlign: 'right' }}>Rp{(shipping || 0).toLocaleString()}</td>
-                  </tr>
-                  {(discount || 0) > 0 && (
-                    <tr>
-                      <td style={{ padding: '8px 0', color: '#16a34a', fontSize: '13px' }}>{text.discount}</td>
-                      <td style={{ padding: '8px 0', color: '#16a34a', fontSize: '14px', textAlign: 'right' }}>-Rp{(discount || 0).toLocaleString()}</td>
-                    </tr>
-                  )}
-                  <tr style={{ borderTop: '2px solid #d4af37' }}>
-                    <td style={{ padding: '16px 0 0 0', color: '#0f172a', fontSize: '16px', fontWeight: '700' }}>{text.total}</td>
-                    <td style={{ padding: '16px 0 0 0', color: '#d4af37', fontSize: '20px', fontWeight: '700', textAlign: 'right' }}>Rp{(total || 0).toLocaleString()}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Shipping Address */}
-            {shippingAddress && (
-              <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '30px', marginTop: '30px' }}>
-                <Heading className="heading-medium" style={{ fontSize: '20px', color: '#0f172a', marginBottom: '20px', fontWeight: '700', letterSpacing: '0.5px' }}>
-                  {text.shippingAddress}
-                </Heading>
-                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px' }}>
-                  {shippingAddress.address && (
-                    <Text style={{ fontSize: '14px', color: '#64748b', margin: '0 0 6px 0', lineHeight: '1.6' }}>
-                      {shippingAddress.address}
-                    </Text>
-                  )}
-                  <Text style={{ fontSize: '14px', color: '#64748b', margin: '0 0 6px 0' }}>
-                    {shippingAddress.city}, {shippingAddress.province} {shippingAddress.postal_code}
-                  </Text>
-                  <Text style={{ fontSize: '14px', color: '#64748b', margin: '0' }}>
-                    Indonesia
-                  </Text>
-                </div>
-              </div>
-            )}
-
-            {/* Next Steps */}
+            {/* Payment CTA - Immediately visible */}
             {paymentStatus === 'pending' && (
-              <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fde047', borderRadius: '8px', padding: '32px 24px', marginTop: '30px', textAlign: 'center' }}>
-                <Text style={{ fontSize: '16px', color: '#92400e', fontWeight: '600', margin: '0 0 16px 0' }}>
+              <div style={{ backgroundColor: '#fef3c7', border: '2px solid #fbbf24', borderRadius: '8px', padding: '32px 24px', marginBottom: '30px', textAlign: 'center' }}>
+                <Text style={{ fontSize: '18px', color: '#92400e', fontWeight: '700', margin: '0 0 12px 0' }}>
                   ⏳ {text.paymentPending}
                 </Text>
                 <Text style={{ fontSize: '14px', color: '#78350f', margin: '0 0 8px 0', lineHeight: '1.6' }}>
@@ -347,13 +258,105 @@ export function OrderConfirmationEmail({
                 </a>
               </div>
             )}
+
+            {/* Order Items */}
+            <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '30px', marginTop: '30px' }}>
+              <Heading className="heading-medium" style={{ fontSize: '20px', color: '#0f172a', marginBottom: '20px', fontWeight: '700', letterSpacing: '0.5px' }}>
+                {text.orderItems}
+              </Heading>
+            </div>
+            
+            {items?.map((item, index) => (
+              <div key={index} style={{ borderBottom: '1px solid #e2e8f0', padding: '20px 0' }}>
+                <table className="product-item" style={{ width: '100%' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ width: '60%' }}>
+                        <Text style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: '0 0 4px 0' }}>
+                          {item.product_name}
+                        </Text>
+                        {item.variant_name && (
+                          <Text style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                            {item.variant_name}
+                          </Text>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                        {text.qty}: {item.quantity}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <Text style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: 0 }}>
+                          {currencySymbol}{item.total.toLocaleString()}
+                        </Text>
+                        <Text style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>
+                          @{currencySymbol}{item.price.toLocaleString()}
+                        </Text>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            ))}
+
+            {/* Order Summary */}
+            <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '20px', marginTop: '30px' }}>
+              <table className="order-details-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '8px 0', color: '#64748b', fontSize: '13px' }}>{text.subtotal}</td>
+                    <td style={{ padding: '8px 0', color: '#0f172a', fontSize: '14px', textAlign: 'right' }}>{currencySymbol}{(subtotal || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '8px 0', color: '#64748b', fontSize: '13px' }}>{text.shipping}</td>
+                    <td style={{ padding: '8px 0', color: '#0f172a', fontSize: '14px', textAlign: 'right' }}>{currencySymbol}{(shipping || 0).toLocaleString()}</td>
+                  </tr>
+                  {(discount || 0) > 0 && (
+                    <tr>
+                      <td style={{ padding: '8px 0', color: '#16a34a', fontSize: '13px' }}>{text.discount}</td>
+                      <td style={{ padding: '8px 0', color: '#16a34a', fontSize: '14px', textAlign: 'right' }}>-{currencySymbol}{(discount || 0).toLocaleString()}</td>
+                    </tr>
+                  )}
+                  <tr style={{ borderTop: '2px solid #d4af37' }}>
+                    <td style={{ padding: '16px 0 0 0', color: '#0f172a', fontSize: '16px', fontWeight: '700' }}>{text.total}</td>
+                    <td style={{ padding: '16px 0 0 0', color: '#d4af37', fontSize: '20px', fontWeight: '700', textAlign: 'right' }}>{currencySymbol}{(total || 0).toLocaleString()}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Shipping Address */}
+            {shippingAddress && (
+              <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '30px', marginTop: '30px' }}>
+                <Heading className="heading-medium" style={{ fontSize: '20px', color: '#0f172a', marginBottom: '20px', fontWeight: '700', letterSpacing: '0.5px' }}>
+                  {text.shippingAddress}
+                </Heading>
+                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px' }}>
+                  {shippingAddress.address && (
+                    <Text style={{ fontSize: '14px', color: '#64748b', margin: '0 0 6px 0', lineHeight: '1.6' }}>
+                      {shippingAddress.address}
+                    </Text>
+                  )}
+                  {shippingAddress.city && (
+                    <Text style={{ fontSize: '14px', color: '#64748b', margin: '0 0 6px 0' }}>
+                      {shippingAddress.city}{shippingAddress.province ? `, ${shippingAddress.province}` : ''} {shippingAddress.postal_code}
+                    </Text>
+                  )}
+                  {shippingAddress.country && (
+                    <Text style={{ fontSize: '14px', color: '#64748b', margin: '0' }}>
+                      {getCountryName(shippingAddress.country)}
+                    </Text>
+                  )}
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Footer */}
           <div style={{ backgroundColor: '#0f172a', padding: '30px', textAlign: 'center' }}>
             <Text style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 15px 0', lineHeight: '1.6' }}>
               {text.contactUs}<br />
-              <a href="https://wa.me/6285780218514?text=Hello!%20I%20would%20like%20to%20inquire%20about%20your%20products." style={{ color: '#d4af37', textDecoration: 'none', fontWeight: '600' }}>+62 857-8021-8514</a>
+              <a href={isIDR ? "https://wa.me/6285780218514?text=Hello!%20I%20would%20like%20to%20inquire%20about%20your%20products." : "https://wa.me/62816261783?text=Hello!%20I%20would%20like%20to%20inquire%20about%20your%20products."} style={{ color: '#d4af37', textDecoration: 'none', fontWeight: '600' }}>{contactNumber}</a>
             </Text>
             <Text style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
               {text.copyright}
