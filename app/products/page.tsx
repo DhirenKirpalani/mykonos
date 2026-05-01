@@ -8,6 +8,7 @@ import { Pagination } from '@/components/Pagination'
 import { Breadcrumb } from '@/components/breadcrumb'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useRegion } from '@/contexts/RegionContext'
 import { useSearchParams, useRouter } from 'next/navigation'
 
 type Product = Database['public']['Tables']['products']['Row']
@@ -16,6 +17,7 @@ const ITEMS_PER_PAGE = 12
 
 function ProductsContent() {
   const { t } = useLanguage()
+  const { region } = useRegion()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
@@ -260,34 +262,40 @@ function ProductsContent() {
 
   // Combine and sort all products when price sorting is active
   const allProductsCombined = sort?.startsWith('price-') 
-    ? products.sort((a, b) => {
-        // Match ProductCard display logic: use min variant price if has price range, else product price
-        const getPriceForDisplay = (product: any) => {
-          const hasVariants = product.variants && product.variants.length > 0
+    ? (() => {
+        const isIDR = region?.code === 'ID'
+        
+        // Pre-calculate prices once per product for efficiency
+        const productsWithPrices = products.map(product => {
+          const productWithVariants = product as any
+          const hasVariants = productWithVariants.variants && productWithVariants.variants.length > 0
+          let displayPrice = 0
           
           if (hasVariants) {
-            const variantPrices = product.variants
-              .map((v: any) => Number(v.price_usd) || 0)
+            const variantPrices = productWithVariants.variants
+              .map((v: any) => Number(isIDR ? v.price_idr : v.price_usd) || 0)
               .filter((p: number) => p > 0)
             
             if (variantPrices.length > 0) {
               const minPrice = Math.min(...variantPrices)
               const maxPrice = Math.max(...variantPrices)
               // If variants have different prices, use minimum (hasPriceRange logic)
-              if (minPrice > 0 && maxPrice > minPrice) {
-                return minPrice
-              }
+              displayPrice = (minPrice > 0 && maxPrice > minPrice) ? minPrice : Number(isIDR ? product.price_idr : product.price_usd) || 0
+            } else {
+              displayPrice = Number(isIDR ? product.price_idr : product.price_usd) || 0
             }
+          } else {
+            displayPrice = Number(isIDR ? product.price_idr : product.price_usd) || 0
           }
           
-          // Otherwise use product-level price
-          return Number(product.price_usd) || 0
-        }
+          return { product, displayPrice }
+        })
         
-        const priceA = getPriceForDisplay(a)
-        const priceB = getPriceForDisplay(b)
-        return sort === 'price-asc' ? priceA - priceB : priceB - priceA
-      })
+        // Sort by pre-calculated prices
+        return productsWithPrices
+          .sort((a, b) => sort === 'price-asc' ? a.displayPrice - b.displayPrice : b.displayPrice - a.displayPrice)
+          .map(item => item.product)
+      })()
     : null
 
   // Apply pagination to sorted products
