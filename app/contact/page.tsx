@@ -102,65 +102,66 @@ export default function ContactPage() {
       </div>
 
       <div className="container mx-auto px-4 py-12 sm:py-16 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
+        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
           {/* Left Column - WhatsApp & Business Hours */}
-          <div className="space-y-6">
+          <div className="space-y-6 order-1 lg:order-none">
+            {/* WhatsApp Section */}
             <div>
               <h2 className="text-2xl font-serif font-bold mb-6">WhatsApp</h2>
               
               {/* WhatsApp Cards */}
               <div className="space-y-4">
-                {clientRegion === null ? (
-                  /* Show placeholder during SSR and initial render to prevent hydration mismatch */
-                  <div className="block rounded-xl bg-[#25D366] p-5 border-2 border-[#1DA851]">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                        <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="h-6 bg-white/30 rounded w-48 mb-1 animate-pulse"></div>
-                        <div className="h-4 bg-white/20 rounded w-32 animate-pulse"></div>
-                      </div>
+              {clientRegion === null ? (
+                /* Show placeholder during SSR and initial render to prevent hydration mismatch */
+                <div className="block rounded-xl bg-[#25D366] p-5 border-2 border-[#1DA851]">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                      <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="h-6 bg-white/30 rounded w-48 mb-1 animate-pulse"></div>
+                      <div className="h-4 bg-white/20 rounded w-32 animate-pulse"></div>
                     </div>
                   </div>
-                ) : clientRegion === 'ID' ? (
-                  /* Indonesia WhatsApp - Green for ID region only */
-                  <a
-                    href={whatsappUrlID}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                        <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-white text-lg mb-0.5">+62 857-8021-8514</p>
-                        <p className="text-white/80 text-sm">{t.contact.tapToChat}</p>
-                      </div>
+                </div>
+              ) : clientRegion === 'ID' ? (
+                /* Indonesia WhatsApp - Green for ID region only */
+                <a
+                  href={whatsappUrlID}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                      <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
                     </div>
-                  </a>
-                ) : (
-                  /* International WhatsApp - Green for non-ID regions only */
-                  <a
-                    href={whatsappUrlInternational}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                        <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-white text-lg mb-0.5">+62 816-261-783</p>
-                        <p className="text-white/80 text-sm">{t.contact.tapToChat}</p>
-                      </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-white text-lg mb-0.5">+62 857-8021-8514</p>
+                      <p className="text-white/80 text-sm">{t.contact.tapToChat}</p>
                     </div>
-                  </a>
-                )}
-              </div>
+                  </div>
+                </a>
+              ) : (
+                /* International WhatsApp - Green for non-ID regions only */
+                <a
+                  href={whatsappUrlInternational}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                      <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-white text-lg mb-0.5">+62 816-261-783</p>
+                      <p className="text-white/80 text-sm">{t.contact.tapToChat}</p>
+                    </div>
+                  </div>
+                </a>
+              )}
+            </div>
             </div>
 
             {/* Business Hours */}
@@ -184,7 +185,7 @@ export default function ContactPage() {
           </div>
 
           {/* Right Column - Contact Form */}
-          <div>
+          <div className="order-2 lg:order-none">
             <h2 className="text-2xl font-serif font-bold mb-6">Email</h2>
             <div className="rounded-2xl bg-luxury-gray-light p-6 sm:p-8">
               <form onSubmit={handleSubmit} className="space-y-5">

@@ -213,12 +213,14 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
           address: shippingAddress.address_line1 || shippingAddress.address || '',
           city: shippingAddress.city || '',
           province: shippingAddress.state_province || shippingAddress.province || '',
-          postal_code: shippingAddress.postal_code || ''
+          postal_code: shippingAddress.postal_code || '',
+          country: shippingAddress.country || ''
         },
         paymentStatus: typedOrder.payment_status || 'pending',
         orderStatus: typedOrder.status || 'pending',
         locale,
         orderId: data.orderId,
+        currencyCode: typedOrder.currency_code || 'IDR',
         expiryTime: typedOrder.expiry_time ? new Date(typedOrder.expiry_time).toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', {
           year: 'numeric',
           month: 'long',

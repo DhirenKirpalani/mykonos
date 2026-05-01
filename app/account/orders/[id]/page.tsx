@@ -9,6 +9,7 @@ import { formatPrice } from '@/lib/utils'
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
+import { getCountryName } from '@/lib/utils/country'
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
   order_items: Array<{
@@ -861,7 +862,7 @@ export default function OrderDetailsPage() {
                         <p>
                           {order.shipping_address?.city || ''}, {order.shipping_address?.state || addr?.state_province || addr?.province || ''} {order.shipping_address?.postal_code || ''}
                         </p>
-                        <p>{order.shipping_address?.country || 'Indonesia'}</p>
+                        <p>{getCountryName(order.shipping_address?.country || 'Indonesia')}</p>
                         {displayPhone && displayPhone !== '-' && (
                           <p className="mt-2">{t.trackOrder.phone}: {displayPhone}</p>
                         )}
@@ -905,12 +906,6 @@ export default function OrderDetailsPage() {
                   <span>{formatPrice(order.total_amount, order.currency_code)}</span>
                 </div>
               </div>
-              {order.payment_gateway && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Metode Pembayaran</p>
-                  <p className="font-semibold capitalize">{order.payment_gateway.replace('_', ' ')}</p>
-                </div>
-              )}
               {order.payment_intent_id && (
                 <div className="mt-4">
                   <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">ID Transaksi</p>

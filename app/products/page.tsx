@@ -193,17 +193,13 @@ function ProductsContent() {
         query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
       }
 
-      // Apply sorting
-      if (sort === 'price-asc') {
-        query = query.order('price_idr', { ascending: true, nullsFirst: false })
-      } else if (sort === 'price-desc') {
-        query = query.order('price_idr', { ascending: false, nullsFirst: false })
-      } else {
+      // Apply sorting (skip sorting for price - we'll sort after combining with sold-out products)
+      if (!sort?.startsWith('price-')) {
         // Default sort by creation date (newest first)
         query = query.order('created_at', { ascending: false })
+        // Apply pagination for non-price sorting
+        query = query.range(from, to)
       }
-
-      query = query.range(from, to)
 
       const { data, error, count } = await query as { data: Product[] | null; error: any; count: number | null }
 
@@ -243,7 +239,10 @@ function ProductsContent() {
         query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
       }
 
-      query = query.order('created_at', { ascending: false })
+      // Apply same sorting as main products (skip for price sorting)
+      if (!sort?.startsWith('price-')) {
+        query = query.order('created_at', { ascending: false })
+      }
 
       const { data, error } = await query as { data: Product[] | null; error: any }
 
@@ -257,7 +256,49 @@ function ProductsContent() {
     }
 
     fetchSoldOutProducts()
-  }, [category, collection, searchQuery])
+  }, [category, collection, searchQuery, sort])
+
+  // Combine and sort all products when price sorting is active
+  const allProductsCombined = sort?.startsWith('price-') 
+    ? products.sort((a, b) => {
+        // Match ProductCard display logic: use min variant price if has price range, else product price
+        const getPriceForDisplay = (product: any) => {
+          const hasVariants = product.variants && product.variants.length > 0
+          
+          if (hasVariants) {
+            const variantPrices = product.variants
+              .map((v: any) => Number(v.price_usd) || 0)
+              .filter((p: number) => p > 0)
+            
+            if (variantPrices.length > 0) {
+              const minPrice = Math.min(...variantPrices)
+              const maxPrice = Math.max(...variantPrices)
+              // If variants have different prices, use minimum (hasPriceRange logic)
+              if (minPrice > 0 && maxPrice > minPrice) {
+                return minPrice
+              }
+            }
+          }
+          
+          // Otherwise use product-level price
+          return Number(product.price_usd) || 0
+        }
+        
+        const priceA = getPriceForDisplay(a)
+        const priceB = getPriceForDisplay(b)
+        return sort === 'price-asc' ? priceA - priceB : priceB - priceA
+      })
+    : null
+
+  // Apply pagination to sorted products
+  const allProductsSorted = allProductsCombined 
+    ? allProductsCombined.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+    : null
+
+  // Calculate total pages for price sorting
+  const totalPagesForPriceSorting = allProductsCombined 
+    ? Math.ceil(allProductsCombined.length / ITEMS_PER_PAGE)
+    : 0
 
   // Prevent hydration mismatch - render loading state until mounted
   if (!mounted) {
@@ -411,56 +452,80 @@ function ProductsContent() {
               <div className="flex min-h-[300px] items-center justify-center md:min-h-[400px]">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-luxury-navy"></div>
               </div>
-            ) : products.length > 0 ? (
+            ) : products.length > 0 || soldOutProducts.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-                  {products.map((product: Product) => {
-                    const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
-                    const discount = productDiscounts.get(product.id)
-                    return (
-                      <ProductCard 
-                        key={product.id} 
-                        product={product}
-                        voucher={voucher || null}
-                        activeDiscount={discount || null}
-                      />
-                    )
-                  })}
-                </div>
-                <Pagination currentPage={currentPage} totalPages={totalPages} />
-
-                {/* Sold Out Section */}
-                {soldOutProducts.length > 0 && (
-                  <div className="mt-12 md:mt-16">
-                    <div className="mb-6 border-t border-gray-200 pt-8">
-                      <h2 className="text-xl font-bold uppercase tracking-wider text-luxury-navy md:text-2xl">
-                        {t.productsPage.soldOut}
-                      </h2>
-                      <p className="mt-2 text-sm text-gray-600">
-                        {t.productsPage.soldOutDescription}
-                      </p>
+                {allProductsSorted ? (
+                  /* When price sorting is active, show all products combined and sorted */
+                  <>
+                    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+                      {allProductsSorted.map((product: Product) => {
+                        const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
+                        const discount = productDiscounts.get(product.id)
+                        return (
+                          <ProductCard 
+                            key={product.id} 
+                            product={product}
+                            voucher={voucher || null}
+                            activeDiscount={discount || null}
+                          />
+                        )
+                      })}
                     </div>
-                    {isSoldOutLoading ? (
-                      <div className="flex min-h-[200px] items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-luxury-navy"></div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-                        {soldOutProducts.map((product: Product) => {
-                          const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
-                          const discount = productDiscounts.get(product.id)
-                          return (
-                            <ProductCard 
-                              key={product.id} 
-                              product={product}
-                              voucher={voucher || null}
-                              activeDiscount={discount || null}
-                            />
-                          )
-                        })}
+                    <Pagination currentPage={currentPage} totalPages={totalPagesForPriceSorting} />
+                  </>
+                ) : (
+                  /* Default view: show in-stock products first, then sold-out section */
+                  <>
+                    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+                      {products.map((product: Product) => {
+                        const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
+                        const discount = productDiscounts.get(product.id)
+                        return (
+                          <ProductCard 
+                            key={product.id} 
+                            product={product}
+                            voucher={voucher || null}
+                            activeDiscount={discount || null}
+                          />
+                        )
+                      })}
+                    </div>
+                    <Pagination currentPage={currentPage} totalPages={totalPages} />
+
+                    {/* Sold Out Section */}
+                    {soldOutProducts.length > 0 && (
+                      <div className="mt-12 md:mt-16">
+                        <div className="mb-6 border-t border-gray-200 pt-8">
+                          <h2 className="text-xl font-bold uppercase tracking-wider text-luxury-navy md:text-2xl">
+                            {t.productsPage.soldOut}
+                          </h2>
+                          <p className="mt-2 text-sm text-gray-600">
+                            {t.productsPage.soldOutDescription}
+                          </p>
+                        </div>
+                        {isSoldOutLoading ? (
+                          <div className="flex min-h-[200px] items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-luxury-navy"></div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+                            {soldOutProducts.map((product: Product) => {
+                              const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
+                              const discount = productDiscounts.get(product.id)
+                              return (
+                                <ProductCard 
+                                  key={product.id} 
+                                  product={product}
+                                  voucher={voucher || null}
+                                  activeDiscount={discount || null}
+                                />
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </>
             ) : (
