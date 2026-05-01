@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getEffectivePrice } from '@/lib/utils/pricing'
+import { getCountryName } from '@/lib/utils/country'
 
 const MapPicker = dynamic(() => import('@/components/map/MapPicker').then(mod => ({ default: mod.MapPicker })), {
   ssr: false,
@@ -2644,16 +2645,17 @@ export default function CheckoutPage() {
                         className="sr-only"
                       />
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-sm text-gray-900">
-                            {address.address_line1}
-                            {address.address_line2 && `, ${address.address_line2}`}
-                          </p>
-                          <p className="text-sm text-gray-600">
+                        <div className="text-gray-700 space-y-1">
+                          <p className="text-sm">{address.address_line1}</p>
+                          {address.address_line2 && (
+                            <p className="text-sm">{address.address_line2}</p>
+                          )}
+                          <p className="text-sm">
                             {address.city}, {address.state_province} {address.postal_code}
                           </p>
+                          <p className="text-sm">{getCountryName(address.country)}</p>
                           {address.phone && address.phone.trim() && (
-                            <p className="text-sm text-gray-600">{t.checkout.phone}: {address.phone}</p>
+                            <p className="text-sm mt-2">{t.checkout.phone}: {address.phone}</p>
                           )}
                         </div>
                         {address.is_default && (

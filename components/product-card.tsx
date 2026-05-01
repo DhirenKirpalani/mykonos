@@ -195,7 +195,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   
   // Apply discount campaign price if active
   let originalPrice = getPrice()
-  let displayPrice = hasPriceRange ? minVariantPrice : originalPrice
+  let displayPrice = originalPrice
   let hasActiveDiscount = false
   
   // For products with variants, we need to find the original price of the discounted variant

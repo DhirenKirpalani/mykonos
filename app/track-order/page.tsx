@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Package, Mail, MapPin, Calendar, Truck, CheckCircle2, Clock, UserPlus, LogIn } from 'lucide-react'
 import { formatPrice } from '@/lib/utils/currency'
+import { getCountryName } from '@/lib/utils/country'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
@@ -810,31 +811,6 @@ export default function TrackOrderPage() {
                           minute: '2-digit'
                         })}
                       </p>
-                      {sessionOrder.payment_status === 'pending' && 
-                       !(sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()) && (
-                        <Button
-                          size="sm"
-                          className="bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy text-[10px] sm:text-xs px-3 py-1.5 h-auto whitespace-nowrap"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            console.log('🔵 [PAY NOW] Clicked from recent orders')
-                            console.log('📦 [PAY NOW] Session Order:', {
-                              id: sessionOrder.id,
-                              order_number: sessionOrder.order_number,
-                              has_snap_token: !!sessionOrder.snap_token,
-                              snap_token_preview: sessionOrder.snap_token?.substring(0, 20),
-                              payment_status: sessionOrder.payment_status,
-                              expiry_time: sessionOrder.expiry_time
-                            })
-                            setOrder(sessionOrder)
-                            setEmail(sessionOrder.customer_email)
-                            setOrderNumber(sessionOrder.order_number)
-                            handleContinuePayment(sessionOrder)
-                          }}
-                        >
-                          {t('trackOrder.payNow')}
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -1040,38 +1016,26 @@ export default function TrackOrderPage() {
                 </div>
               )}
 
-              {/* Payment Status Alert */}
+              {/* Payment Expired Alert */}
               {order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && (() => {
                 const isExpired = new Date(order.expiry_time) < new Date()
-                return (
-                  <div className={`mb-4 rounded-lg p-4 ${isExpired ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+                return isExpired ? (
+                  <div className="mb-4 rounded-lg p-4 bg-red-50 border border-red-200">
                     <div className="flex items-start gap-3">
-                      <Clock className={`h-5 w-5 mt-0.5 ${isExpired ? 'text-red-600' : 'text-yellow-600'}`} />
+                      <Clock className="h-5 w-5 mt-0.5 text-red-600" />
                       <div className="flex-1">
-                        <h3 className={`font-semibold mb-1 ${isExpired ? 'text-red-900' : 'text-yellow-900'}`}>
-                          {isExpired ? (lang === 'id' ? 'Pembayaran Kadaluarsa' : 'Payment Expired') : t('trackOrder.paymentPending')}
+                        <h3 className="font-semibold mb-1 text-red-900">
+                          {lang === 'id' ? 'Pembayaran Kadaluarsa' : 'Payment Expired'}
                         </h3>
-                        <p className={`text-sm mb-3 ${isExpired ? 'text-red-700' : 'text-yellow-700'}`}>
-                          {isExpired 
-                            ? (lang === 'id' 
-                                ? 'Waktu pembayaran telah habis. Silakan buat pesanan baru untuk melanjutkan.' 
-                                : 'Payment time has expired. Please create a new order to continue.')
-                            : t('trackOrder.completePaymentMessage')
-                          }
+                        <p className="text-sm text-red-700">
+                          {lang === 'id' 
+                            ? 'Waktu pembayaran telah habis. Silakan buat pesanan baru untuk melanjutkan.' 
+                            : 'Payment time has expired. Please create a new order to continue.'}
                         </p>
-                        {!isExpired && (
-                          <Button
-                            onClick={() => handleContinuePayment()}
-                            disabled={isProcessingPayment}
-                            className="bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy"
-                          >
-                            {isProcessingPayment ? t('common.loading') : t('trackOrder.continuePayment')}
-                          </Button>
-                        )}
                       </div>
                     </div>
                   </div>
-                )
+                ) : null
               })()}
 
               {/* Authorized Payment Alert */}
@@ -1397,19 +1361,22 @@ export default function TrackOrderPage() {
                       
                       return (
                         <>
-                          <p className="font-semibold">{displayName}</p>
                           <p>{order.shipping_address?.address_line1 || addr?.address || ''}</p>
                           {order.shipping_address?.address_line2 && (
                             <p>{order.shipping_address.address_line2}</p>
                           )}
                           <p>
-                            {order.shipping_address?.city || 'N/A'}, {order.shipping_address?.state_province || addr?.province || ''}{' '}
+                            {order.shipping_address?.city || 'N/A'}{order.shipping_address?.state_province || addr?.province ? `, ${order.shipping_address?.state_province || addr?.province}` : ''}{' '}
                             {order.shipping_address?.postal_code || ''}
                           </p>
-                          <p>{order.shipping_address?.country || 'Indonesia'}</p>
-                          <p className="pt-2 text-gray-600">
-                            Telepon: {displayPhone}
-                          </p>
+                          {order.shipping_address?.country && (
+                            <p>{getCountryName(order.shipping_address.country)}</p>
+                          )}
+                          {displayPhone !== '-' && (
+                            <p className="pt-2 text-gray-600">
+                              Telepon: {displayPhone}
+                            </p>
+                          )}
                         </>
                       )
                     })()}
