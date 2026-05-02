@@ -103,7 +103,7 @@ export function HeroCarousel() {
 
   return (
     <div
-      className="relative h-[35vh] sm:h-[40vh] md:h-[60vh] lg:h-[75vh] overflow-hidden bg-luxury-navy"
+      className="relative h-[calc(100svh-6.5rem)] md:h-[70vh] lg:h-[85vh] overflow-hidden bg-luxury-navy"
       role="region"
       aria-label="Hero banner"
     >
@@ -144,7 +144,7 @@ export function HeroCarousel() {
                   muted
                   playsInline
                   preload="auto"
-                  className="block md:hidden h-full w-full object-cover object-center"
+                  className="block md:hidden h-full w-full object-cover object-top"
                 >
                   <source src={itemMobileUrl} type="video/mp4" />
                 </video>
@@ -215,7 +215,7 @@ export function HeroCarousel() {
             loop
             muted
             playsInline
-            className="block md:hidden h-full w-full object-cover object-center"
+            className="block md:hidden h-full w-full object-cover object-top"
           >
             <source src={defaultVideoUrl} type="video/mp4" />
           </video>
@@ -224,7 +224,7 @@ export function HeroCarousel() {
       )}
 
       {/* Content */}
-      <div className="relative z-10 flex h-full items-end justify-center pb-12 md:pb-20 lg:pb-24">
+      <div className="relative z-10 flex h-full items-end justify-center pb-16 md:pb-20 lg:pb-24" style={{ paddingBottom: 'max(4rem, calc(env(safe-area-inset-bottom) + 2rem))' }}>
         <div className="container mx-auto px-4 lg:px-8 text-center max-w-3xl">
           <motion.div
             key={currentIndex}
@@ -246,7 +246,7 @@ export function HeroCarousel() {
             {(currentItem?.show_button !== false) && (
               <Link
                 href={shopNowLink}
-                className="inline-block border-2 border-luxury-gold bg-luxury-gold px-4 py-2 sm:px-8 sm:py-4 text-xs sm:text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:bg-transparent hover:text-white"
+                className="inline-block border-2 border-white bg-white/10 backdrop-blur-sm px-8 py-3 sm:px-12 sm:py-4 text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition-all hover:bg-white/25"
               >
                 {buttonText}
               </Link>
@@ -266,10 +266,10 @@ export function HeroCarousel() {
                 setCurrentIndex(index)
                 setTimeout(() => setIsTransitioning(false), 500)
               }}
-              className={`h-2 rounded-full transition-all ${
+              className={`rounded-full transition-all ${
                 index === currentIndex
-                  ? 'w-8 bg-luxury-gold'
-                  : 'w-2 bg-white/50 hover:bg-white/75'
+                  ? 'h-2.5 w-2.5 bg-white'
+                  : 'h-2.5 w-2.5 border border-white/70 bg-transparent hover:border-white'
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />

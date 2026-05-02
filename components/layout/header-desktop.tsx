@@ -265,6 +265,7 @@ export function HeaderDesktop() {
   const navItems = [
     { name: t.nav.home, href: '/' },
     { name: t.nav.catalog, href: '/products' },
+    { name: (t.nav as any).aboutUs || 'ABOUT US', href: '/about' },
     { name: t.nav.contact, href: '/contact' },
     { name: t.header.trackOrder, href: '/track-order' },
   ]

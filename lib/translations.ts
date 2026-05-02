@@ -3,12 +3,13 @@ export const translations = {
     nav: {
       home: "HOME",
       catalog: "PRODUCTS",
-      contact: "CONTACT",
+      contact: "CONTACT US",
+      aboutUs: "ABOUT US",
       sale: "SALE"
     },
     footer: {
       followUs: "FOLLOW US for exclusive news and updates:",
-      houseOfMykonos: "THE HOUSE OF MYKONOS",
+      houseOfMykonos: "MYKONOS",
       ourStory: "Our Story",
       contactUs: "Contact Us",
       customerService: "CUSTOMER SERVICE",
@@ -98,6 +99,9 @@ export const translations = {
       newArrivals: "New Arrivals",
       popular: "Popular",
       bestSellers: "Best Sellers",
+      forMen: "For Men",
+      forWomen: "For Women",
+      forUnisex: "Unisex",
       comingSoon: "COMING SOON",
       premiumFragrances: "PREMIUM FRAGRANCES",
       andPerfumes: "AND PERFUMES",
@@ -812,12 +816,13 @@ export const translations = {
     nav: {
       home: "BERANDA",
       catalog: "PRODUK",
-      contact: "KONTAK",
+      contact: "KONTAK KAMI",
+      aboutUs: "TENTANG KAMI",
       sale: "DISKON"
     },
     footer: {
       followUs: "IKUTI KAMI untuk berita dan pembaruan eksklusif:",
-      houseOfMykonos: "RUMAH MYKONOS",
+      houseOfMykonos: "MYKONOS",
       ourStory: "Cerita Kami",
       contactUs: "Hubungi Kami",
       customerService: "LAYANAN PELANGGAN",
@@ -907,6 +912,9 @@ export const translations = {
       newArrivals: "Koleksi Terbaru",
       popular: "Populer",
       bestSellers: "Terlaris",
+      forMen: "Untuk Pria",
+      forWomen: "Untuk Wanita",
+      forUnisex: "Unisex",
       comingSoon: "SEGERA HADIR",
       premiumFragrances: "PARFUM PREMIUM",
       andPerfumes: "DAN WEWANGIAN",

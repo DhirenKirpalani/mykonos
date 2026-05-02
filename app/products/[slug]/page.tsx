@@ -2,15 +2,14 @@
 
 import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { ProductCarousel } from '@/components/product-carousel'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
+import { ProductCarousel } from '@/components/product-carousel'
 import { Breadcrumb, BreadcrumbItem } from '@/components/breadcrumb'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { ProductImageGallery } from '@/components/product-image-gallery'
 import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
 import { ProductShippingInfo } from '@/components/ProductShippingInfo'
-import { CollapsibleDescription } from '@/components/CollapsibleDescription'
 import { ExpandableSpecifications } from '@/components/ExpandableSpecifications'
 import { LoadingSpinner } from '@/components/common'
 import { VoucherCountdown } from '@/components/VoucherCountdown'
@@ -64,6 +63,8 @@ export default function ProductDetailPage({
   const [voucher, setVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string } | null>(null)
   const [relatedVouchers, setRelatedVouchers] = useState<any[]>([])
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
+  const [popularProducts, setPopularProducts] = useState<Product[]>([])
+  const [showFullDescription, setShowFullDescription] = useState(false)
 
   const handleVoucherExpire = () => {
     setVoucher(null)
@@ -76,9 +77,16 @@ export default function ProductDetailPage({
         notFound()
       }
       setProduct(productData)
+      document.title = `${productData.name} — MYKONOS`
       const fragranceFamily = productData.fragrance_family || 'Uncategorized'
       const related = await getRelatedProducts(fragranceFamily, productData.id)
       setRelatedProducts(related)
+      // Fetch popular products for the "You May Also Like" section
+      try {
+        const popRes = await fetch('/api/products?filter=popular&limit=12')
+        const popData = await popRes.json()
+        setPopularProducts((popData.products || []).filter((p: Product) => p.id !== productData.id))
+      } catch {}
       
       // Fetch active discount campaigns for this product (all variants)
       try {
@@ -166,21 +174,21 @@ export default function ProductDetailPage({
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-3 lg:px-8">
+      <div className="container mx-auto px-4 py-4 lg:px-8">
         {/* Back Button - Mobile only */}
-        <div className="mb-3 md:hidden">
-          <Link href="/products" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
+        <div className="mb-4 md:hidden">
+          <Link href="/products" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900">
             <ArrowLeft className="h-4 w-4" />
             <span>{t.common.back}</span>
           </Link>
         </div>
 
         {/* Breadcrumb - Desktop only */}
-        <div className="mb-3 hidden md:block">
+        <div className="mb-6 hidden md:block">
           <Breadcrumb items={breadcrumbItems} />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-8 lg:grid-cols-2 lg:gap-16">
           {/* Image Gallery */}
           <div className="w-full">
             <ProductImageGallery 
@@ -218,131 +226,192 @@ export default function ProductDetailPage({
           </div>
 
           {/* Product Details */}
-          <div className="space-y-3">
-            {/* Badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {hasDiscount && (
-                <div className="inline-flex items-center gap-2 rounded bg-red-600 px-3 py-1 text-sm font-medium text-white">
-                  <span>{productTranslations.flashSale}</span>
-                </div>
+          <div className="space-y-0">
+
+            {/* Gold top accent */}
+            <div className="h-px bg-gradient-to-r from-luxury-gold/60 via-luxury-gold/20 to-transparent mb-6" />
+
+            {/* Brand + Title + Rating */}
+            <div className="pb-6">
+              {(product as any).brand && (
+                <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.3em] text-luxury-gold">
+                  {(product as any).brand}
+                </p>
               )}
-              {(() => {
-                // Check if product is out of stock
-                const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
-                const isOutOfStock = hasVariants 
-                  ? (product as any).variants.every((v: any) => v.stock_quantity === 0)
-                  : product.stock_quantity === 0
-                
-                // Only show In Stock badge if product has stock
-                return !isOutOfStock && (product as any).in_stock && (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {productTranslations.inStock}
-                  </span>
-                )
-              })()}
-            </div>
-
-            {/* Price Display - Above Title */}
-            {product && (
-              <div className="mb-3">
-                <ProductPriceDisplay 
-                  product={product}
-                  showRange={true}
-                  voucher={voucher}
-                  activeDiscounts={activeDiscounts}
-                />
-                {/* Voucher Discount Badge */}
-                {voucher && (
-                  <div className="mt-2 inline-flex items-center gap-2 bg-luxury-gold/10 border-2 border-luxury-gold rounded-lg px-3 py-1.5">
-                    <svg className="h-4 w-4 text-luxury-gold flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm font-bold text-luxury-navy">
-                      Diskon {voucher.discount_type === 'percentage' 
-                        ? `${voucher.discount_value}%`
-                        : `Rp${voucher.discount_value.toLocaleString('id-ID')}`
-                      }
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Product Title */}
-            <div className="py-2">
-              <h1 className="mb-2 text-xl md:text-2xl font-semibold text-gray-900">
+              <h1 className="mb-4 font-serif text-3xl md:text-4xl font-bold text-luxury-navy leading-tight">
                 {product.name}
               </h1>
-              {/* Rating and Sold */}
               {((product as any).rating > 0 || (product as any).products_sold > 0) && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-3 text-sm">
                   {(product as any).rating > 0 && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-lg font-bold text-gray-900">{((product as any).rating as number).toFixed(1)}</span>
-                      <svg className="h-4 w-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
+                    <div className="flex items-center gap-1.5">
+                      <svg className="h-4 w-4 text-luxury-gold fill-current" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
+                      <span className="font-semibold text-luxury-navy">{((product as any).rating as number).toFixed(1)}</span>
                     </div>
                   )}
                   {(product as any).rating > 0 && (product as any).products_sold > 0 && (
-                    <span className="text-gray-400">|</span>
+                    <span className="text-luxury-gold/40">·</span>
                   )}
                   {(product as any).products_sold > 0 && (
-                    <span className="text-gray-600">
+                    <span className="text-gray-500 text-xs tracking-wide">
                       {(product as any).products_sold >= 1000
                         ? `${Math.floor((product as any).products_sold / 1000)}k+`
                         : `${(product as any).products_sold}`} {productTranslations.sold}
                     </span>
                   )}
+                  {hasDiscount && (
+                    <span className="ml-1 inline-flex items-center rounded bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white tracking-wide">
+                      {productTranslations.flashSale}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Shipping - Dynamic based on pre-order */}
-            <div className="py-4 border-t border-gray-100">
+            {/* Thin divider */}
+            <div className="h-px bg-gray-100 mb-6" />
+
+            {/* Price */}
+            <div className="pb-6">
+              <ProductPriceDisplay
+                product={product}
+                showRange={true}
+                voucher={voucher}
+                activeDiscounts={activeDiscounts}
+              />
+              {voucher && (
+                <div className="mt-3 inline-flex items-center gap-2 bg-luxury-gold/8 border border-luxury-gold/30 rounded px-3 py-1.5">
+                  <span className="text-xs font-semibold text-luxury-navy tracking-wide uppercase">
+                    Diskon {voucher.discount_type === 'percentage'
+                      ? `${voucher.discount_value}%`
+                      : `Rp${voucher.discount_value.toLocaleString('id-ID')}`}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Thin divider */}
+            <div className="h-px bg-gray-100 mb-6" />
+
+            {/* Description - collapsible */}
+            {product.description && (
+              <div className="pb-6">
+                <div
+                  className={`text-sm leading-7 text-gray-600 [&_p]:mb-3 [&_p:last-child]:mb-0 overflow-hidden transition-all duration-500 ${
+                    showFullDescription ? 'max-h-[2000px]' : 'max-h-[6rem]'
+                  }`}
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+                {!showFullDescription && (
+                  <div className="relative -mt-4 pt-6 bg-gradient-to-t from-white via-white/90 to-transparent">
+                    <button
+                      onClick={() => setShowFullDescription(true)}
+                      className="text-xs font-semibold uppercase tracking-[0.15em] text-luxury-navy border-b border-luxury-navy/30 pb-px hover:border-luxury-navy transition-colors"
+                    >
+                      Read More
+                    </button>
+                  </div>
+                )}
+                {showFullDescription && (
+                  <button
+                    onClick={() => setShowFullDescription(false)}
+                    className="mt-3 text-xs font-semibold uppercase tracking-[0.15em] text-luxury-navy border-b border-luxury-navy/30 pb-px hover:border-luxury-navy transition-colors"
+                  >
+                    Show Less
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Fragrance Notes - always visible */}
+            {((product as any).top_notes || (product as any).middle_notes || (product as any).base_notes) && (
+              <div className="pb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-luxury-navy">
+                    Perfume Notes
+                  </p>
+                  <div className="flex-1 h-px bg-gradient-to-r from-luxury-gold/40 to-transparent" />
+                </div>
+                <div className="space-y-2.5">
+                  {(product as any).top_notes && (
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold text-luxury-navy">{productTranslations.topNotes}:</span>{' '}
+                      {(product as any).top_notes}
+                    </p>
+                  )}
+                  {(product as any).middle_notes && (
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold text-luxury-navy">{productTranslations.middleNotes}:</span>{' '}
+                      {(product as any).middle_notes}
+                    </p>
+                  )}
+                  {(product as any).base_notes && (
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold text-luxury-navy">{productTranslations.baseNotes}:</span>{' '}
+                      {(product as any).base_notes}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Specifications */}
+            <ExpandableSpecifications product={product} fragranceFamily={fragranceFamily} />
+
+            {/* Shipping */}
+            <div className="pt-2 pb-6 border-t border-gray-100">
               <ProductShippingInfo product={product} />
             </div>
 
-            {/* Action Buttons - Hidden on mobile (shown in sticky bar) */}
-            <ProductDetailClient 
-              product={product}
-              productId={product.id} 
-              productName={product.name}
-              productSlug={product.slug}
-              minQuantity={(product as any).min_purchase_quantity || 1}
-              maxQuantity={(product as any).max_purchase_quantity || undefined}
-              stockQuantity={product.stock_quantity || 0}
-              price={(product as any).price_usd}
-              priceIdr={(product as any).price_idr}
-              compareAtPrice={(product as any).compare_at_price}
-              voucher={voucher}
-              activeDiscounts={activeDiscounts}
-              productData={{
-                id: product.id,
-                name: product.name,
-                image_urls: (product as any).image_urls || [],
-                price: (product as any).price_usd || 0,
-                price_idr: (product as any).price_idr,
-                stock_quantity: product.stock_quantity || 0,
-                min_purchase_quantity: (product as any).min_purchase_quantity,
-                max_purchase_quantity: (product as any).max_purchase_quantity,
-                variants: (product as any).variants || []
-              }}
-            />
+            {/* Action Buttons */}
+            <div className="pb-6">
+              <ProductDetailClient
+                product={product}
+                productId={product.id}
+                productName={product.name}
+                productSlug={product.slug}
+                minQuantity={(product as any).min_purchase_quantity || 1}
+                maxQuantity={(product as any).max_purchase_quantity || undefined}
+                stockQuantity={product.stock_quantity || 0}
+                price={(product as any).price_usd}
+                priceIdr={(product as any).price_idr}
+                compareAtPrice={(product as any).compare_at_price}
+                voucher={voucher}
+                activeDiscounts={activeDiscounts}
+                productData={{
+                  id: product.id,
+                  name: product.name,
+                  image_urls: (product as any).image_urls || [],
+                  price: (product as any).price_usd || 0,
+                  price_idr: (product as any).price_idr,
+                  stock_quantity: product.stock_quantity || 0,
+                  min_purchase_quantity: (product as any).min_purchase_quantity,
+                  max_purchase_quantity: (product as any).max_purchase_quantity,
+                  variants: (product as any).variants || []
+                }}
+              />
+            </div>
 
-            {/* Product Specifications */}
-            <ExpandableSpecifications product={product} fragranceFamily={fragranceFamily} />
-
-            {/* Product Description */}
-            <CollapsibleDescription description={product.description || ''} />
           </div>
         </div>
       </div>
 
-      {relatedProducts.length > 0 && (
-        <div className="border-t border-border/40 bg-luxury-gray-light pb-20">
-          <ProductCarousel title="You May Also Like" products={relatedProducts} backgroundColor="bg-luxury-gray-light" vouchers={relatedVouchers} />
+      {popularProducts.length > 0 && (
+        <div className="border-t border-gray-200">
+          <ProductCarousel
+            title={locale === 'id' ? 'Mungkin Kamu Suka' : 'You May Also Like'}
+            products={popularProducts}
+            backgroundColor="bg-white"
+            titleColor="text-luxury-navy"
+            variant="bestselling"
+            vouchers={relatedVouchers}
+            hideSubtitle={true}
+            compactTitle={true}
+            hideViewAll={true}
+            noBorders={true}
+          />
         </div>
       )}
     </div>

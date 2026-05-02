@@ -1,8 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { HeroCarousel } from '@/components/hero-carousel'
-import { FragranceFamiliesGrid } from '@/components/fragrance-families-grid'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -54,87 +54,144 @@ function CarouselSkeletonMobile({ bg, titleBg }: { bg: string; titleBg: string }
   )
 }
 
+function SizeCarouselSection({ products50ml, products100ml, vouchers, activeDiscounts }: {
+  products50ml: Product[]; products100ml: Product[]; vouchers: any[]; activeDiscounts?: Map<string, any>
+}) {
+  const sizes = [
+    ...(products50ml.length > 0 ? [{ label: '50ML', products: products50ml, href: '/products?size=50ml' }] : []),
+    ...(products100ml.length > 0 ? [{ label: '100ML', products: products100ml, href: '/products?size=100ml' }] : []),
+  ]
+  const [active, setActive] = useState(sizes[0]?.label ?? '50ML')
+  const current = sizes.find(s => s.label === active) ?? sizes[0]
+  return (
+    <section className="bg-white pt-8 md:pt-12">
+      <div className="text-center mb-6 px-4">
+        <p className="text-sm font-normal uppercase tracking-[0.3em] text-[#333] mb-4">SHOP BY SIZE</p>
+        <div className="inline-flex border border-[#e0e0e0]">
+          {sizes.map(({ label }) => (
+            <button
+              key={label}
+              onClick={() => setActive(label)}
+              className={`px-8 py-2.5 text-sm font-bold uppercase tracking-[0.15em] transition-all ${
+                active === label
+                  ? 'bg-[#1C2E4A] text-white'
+                  : 'bg-white text-[#1C2E4A] hover:bg-[#1C2E4A]/5'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {current && (
+        <ProductCarousel
+          key={active}
+          title={active}
+          products={current.products}
+          backgroundColor="bg-white"
+          titleColor="text-[#1C2E4A]"
+          variant="bestselling"
+          viewAllHref={current.href}
+          vouchers={vouchers}
+          activeDiscounts={activeDiscounts}
+          hideHeader={true}
+        />
+      )}
+    </section>
+  )
+}
+
 export function HomeMobile({ products, collections, newArrivals, bestSelling, vouchers, activeDiscounts, isLoading }: HomeMobileProps) {
   const { t } = useLanguage()
+
+  const maleProducts = products.filter(p => (p as any).gender?.toLowerCase() === 'male' || (p as any).gender?.toLowerCase() === 'men')
+  const femaleProducts = products.filter(p => (p as any).gender?.toLowerCase() === 'female' || (p as any).gender?.toLowerCase() === 'women')
+  const unisexProducts = products.filter(p => (p as any).gender?.toLowerCase() === 'unisex')
+  const products50ml = products.filter(p => {
+    const vol = ((p as any).volume || '').toLowerCase()
+    const name = (p.name || '').toLowerCase()
+    return vol.includes('50') || name.includes('50ml')
+  })
+  const products100ml = products.filter(p => {
+    const vol = ((p as any).volume || '').toLowerCase()
+    const name = (p.name || '').toLowerCase()
+    return vol.includes('100') || name.includes('100ml')
+  })
 
   return (
     <div className="min-h-screen">
       <HeroCarousel />
 
       {isLoading ? (
-        <CarouselSkeletonMobile bg="bg-gradient-to-br from-[#F5EFE6] via-[#E8DCC4] to-[#D4C5A0]" titleBg="bg-[#1C2E4A]/20" />
-      ) : newArrivals.length > 0 ? (
-        <section className="relative bg-gradient-to-br from-[#F5EFE6] via-[#E8DCC4] to-[#D4C5A0] py-8">
-          <ProductCarousel
-            title={t.home.newArrivals}
-            products={newArrivals}
-            backgroundColor="bg-transparent"
-            titleColor="text-[#1C2E4A]"
-            variant="new"
-            vouchers={vouchers}
-            activeDiscounts={activeDiscounts}
-          />
-        </section>
-      ) : null}
-
-      {isLoading ? (
-        <CarouselSkeletonMobile bg="bg-gradient-to-br from-[#1C2E4A] via-[#16213E] to-[#0F1729]" titleBg="bg-[#C2A36B]/30" />
-      ) : products.length > 0 ? (
-        <section className="relative bg-gradient-to-br from-[#1C2E4A] via-[#16213E] to-[#0F1729] py-8">
-          <ProductCarousel
-            title={t.home.popular}
-            products={products}
-            backgroundColor="bg-transparent"
-            titleColor="text-[#C2A36B]"
-            variant="popular"
-            vouchers={vouchers}
-            activeDiscounts={activeDiscounts}
-          />
-        </section>
-      ) : null}
-
-      {isLoading ? (
-        <CarouselSkeletonMobile bg="bg-gradient-to-br from-[#C2A36B] via-[#B8945E] to-[#A67C52]" titleBg="bg-[#1C2E4A]/20" />
+        <CarouselSkeletonMobile bg="bg-[#F2F2F2]" titleBg="bg-[#1C2E4A]/20" />
       ) : bestSelling.length > 0 ? (
-        <section className="relative bg-gradient-to-br from-[#C2A36B] via-[#B8945E] to-[#A67C52] py-8">
-          <ProductCarousel
-            title={t.home.bestSellers}
-            products={bestSelling}
-            backgroundColor="bg-transparent"
-            titleColor="text-[#1C2E4A]"
-            variant="bestselling"
-            vouchers={vouchers}
-            activeDiscounts={activeDiscounts}
-          />
-        </section>
+        <ProductCarousel
+          title={t.home.popular}
+          products={bestSelling}
+          backgroundColor="bg-white"
+          titleColor="text-[#1C2E4A]"
+          variant="bestselling"
+          viewAllHref="/products?filter=popular"
+          vouchers={vouchers}
+          activeDiscounts={activeDiscounts}
+        />
       ) : null}
 
-      <FragranceFamiliesGrid />
+      {isLoading ? (
+        <CarouselSkeletonMobile bg="bg-white" titleBg="bg-[#1C2E4A]/20" />
+      ) : maleProducts.length > 0 ? (
+        <ProductCarousel
+          title={(t.home as any).forMen || 'For Men'}
+          products={maleProducts}
+          backgroundColor="bg-white"
+          titleColor="text-[#1C2E4A]"
+          variant="bestselling"
+          viewAllHref="/products?gender=male"
+          vouchers={vouchers}
+          activeDiscounts={activeDiscounts}
+        />
+      ) : null}
 
-      <section className="relative bg-white py-16 text-luxury-navy">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.05)_1px,_transparent_0)] bg-[length:40px_40px]" />
-        <div className="container relative mx-auto px-4 text-center">
-          <ScrollReveal>
-            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.25em] text-luxury-gold/80">
-              {t.home.artOfPerfumery}
-            </p>
-            <h2 className="mb-4 font-serif text-2xl font-bold">
-              {t.home.experienceLuxury}
-            </h2>
-            <p className="mx-auto mb-8 max-w-3xl text-sm text-luxury-navy/80">
-              {t.home.experienceLuxuryDesc}
-            </p>
-            <Link href="/about">
-              <Button
-                size="lg"
-                className="border-2 border-luxury-gold bg-luxury-gold px-6 py-3 text-sm font-medium uppercase tracking-wider text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white"
-              >
-                {t.home.discoverStory}
-              </Button>
-            </Link>
-          </ScrollReveal>
-        </div>
-      </section>
+      {isLoading ? (
+        <CarouselSkeletonMobile bg="bg-white" titleBg="bg-[#1C2E4A]/20" />
+      ) : femaleProducts.length > 0 ? (
+        <ProductCarousel
+          title={(t.home as any).forWomen || 'For Women'}
+          products={femaleProducts}
+          backgroundColor="bg-white"
+          titleColor="text-[#1C2E4A]"
+          variant="bestselling"
+          viewAllHref="/products?gender=female"
+          vouchers={vouchers}
+          activeDiscounts={activeDiscounts}
+        />
+      ) : null}
+
+      {isLoading ? (
+        <CarouselSkeletonMobile bg="bg-white" titleBg="bg-[#1C2E4A]/20" />
+      ) : unisexProducts.length > 0 ? (
+        <ProductCarousel
+          title={(t.home as any).forUnisex || 'Unisex'}
+          products={unisexProducts}
+          backgroundColor="bg-white"
+          titleColor="text-[#1C2E4A]"
+          variant="bestselling"
+          viewAllHref="/products?gender=unisex"
+          vouchers={vouchers}
+          activeDiscounts={activeDiscounts}
+        />
+      ) : null}
+
+      {isLoading ? (
+        <CarouselSkeletonMobile bg="bg-white" titleBg="bg-[#1C2E4A]/20" />
+      ) : (products50ml.length > 0 || products100ml.length > 0) ? (
+        <SizeCarouselSection
+          products50ml={products50ml}
+          products100ml={products100ml}
+          vouchers={vouchers}
+          activeDiscounts={activeDiscounts}
+        />
+      ) : null}
     </div>
   )
 }

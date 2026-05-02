@@ -297,18 +297,18 @@ export function HeaderMobile() {
   // Prevent hydration mismatch - render minimal header until mounted
   if (!mounted) {
     return (
-      <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg lg:hidden relative">
-        <nav className="container mx-auto px-3 md:px-4">
-          <div className="flex h-16 items-center justify-between md:h-18">
-            <button className="flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:bg-white/10 md:h-10 md:w-10">
-              <Menu className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
+      <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white lg:hidden relative border-b border-white/10">
+        <nav className="container mx-auto px-4">
+          <div className="flex h-14 items-center justify-between">
+            <button className="flex h-9 w-9 items-center justify-center transition-all hover:bg-white/10">
+              <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
             <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-              <span className="font-futura text-lg font-medium tracking-normal text-luxury-gold md:text-xl">
+              <span className="font-futura text-base font-medium tracking-[0.25em] text-luxury-gold">
                 MYKONOS
               </span>
             </Link>
-            <div className="flex items-center gap-2 md:gap-3" />
+            <div className="flex items-center gap-2" />
           </div>
         </nav>
       </header>
@@ -316,25 +316,25 @@ export function HeaderMobile() {
   }
 
   return (
-    <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white shadow-lg lg:hidden relative">
-      <nav className="container mx-auto px-3 md:px-4">
-        <div className="flex h-16 items-center justify-between md:h-18">
+    <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white lg:hidden relative border-b border-white/10">
+      <nav className="container mx-auto px-4">
+        <div className="flex h-14 items-center justify-between">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:bg-white/10 active:scale-95 focus:outline-none md:h-10 md:w-10"
+            className="flex h-9 w-9 items-center justify-center transition-all hover:bg-white/10 active:scale-95 focus:outline-none"
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-menu"
           >
             {mobileMenuOpen ? (
-              <X className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
+              <X className="h-5 w-5" aria-hidden="true" />
             ) : (
-              <Menu className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
+              <Menu className="h-5 w-5" aria-hidden="true" />
             )}
           </button>
-          
+
           <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-            <span className="font-futura text-lg font-medium tracking-normal text-luxury-gold transition-all duration-300 hover:opacity-90 sm:text-xl md:text-2xl">
+            <span className="font-futura text-base font-medium tracking-[0.25em] text-luxury-gold transition-opacity hover:opacity-80">
               MYKONOS
             </span>
           </Link>
@@ -375,119 +375,91 @@ export function HeaderMobile() {
         </div>
       </nav>
 
+      {/* Full-width dropdown menu */}
       {mobileMenuOpen && (
-        <div 
+        <div
           id="mobile-menu"
-          className="absolute top-full left-0 right-0 max-h-[calc(100vh-5rem)] overflow-y-auto animate-slide-in-right border-t border-white/10 bg-luxury-navy-light shadow-2xl"
+          className="absolute top-full left-0 right-0 z-[70] bg-luxury-navy border-t border-white/10 shadow-2xl overflow-y-auto"
+          style={{ maxHeight: 'calc(100vh - 3.5rem)' }}
           role="navigation"
           aria-label="Mobile navigation"
         >
-          <div className="px-4 py-6">
-
-            <nav className="space-y-1" role="menu">
-              <Link
-                href="/"
-                role="menuitem"
-                className={cn(
-                  "block rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20 active:scale-98",
-                  pathname === '/' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t.nav.home}
-              </Link>
-
-              <Link
-                href="/products"
-                role="menuitem"
-                className={cn(
-                  "block rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20 active:scale-98",
-                  pathname === '/products' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t.nav.catalog}
-              </Link>
-
-              <Link
-                href="/contact"
-                role="menuitem"
-                className={cn(
-                  "block rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20 active:scale-98",
-                  pathname === '/contact' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t.nav.contact}
-              </Link>
-
-              <Link
-                href="/track-order"
-                role="menuitem"
-                className={cn(
-                  "block rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20 active:scale-98",
-                  pathname === '/track-order' ? "bg-luxury-gold/20 text-luxury-gold" : "text-white"
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t.header.trackOrder}
-              </Link>
-
-              {/* Wishlist and Admin */}
-              <div className="pt-4 border-t border-white/10 mt-4 space-y-1">
-                <button
-                  onClick={() => {
-                    setWishlistOpen(true)
-                    setMobileMenuOpen(false)
-                  }}
-                  className="flex w-full items-center justify-between rounded-lg px-4 py-4 text-base font-medium uppercase transition-all text-white hover:bg-luxury-gold/20"
-                >
-                  <div className="flex items-center gap-3">
-                    <Heart className="h-5 w-5" />
-                    <span>{t.header.wishlist}</span>
-                  </div>
-                  {wishlistCount > 0 && (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-luxury-gold text-xs font-bold text-luxury-navy">
-                      {wishlistCount}
-                    </span>
+          <div className="px-4 pt-4 pb-6">
+            {/* Primary nav */}
+            <nav role="menu">
+              {[
+                { href: '/', label: t.nav.home, active: pathname === '/' },
+                { href: '/products', label: t.nav.catalog, active: pathname === '/products' },
+                { href: '/about', label: (t.nav as any).aboutUs || 'About Us', active: pathname === '/about' },
+                { href: '/contact', label: t.nav.contact, active: pathname === '/contact' },
+                { href: '/track-order', label: t.header.trackOrder, active: pathname === '/track-order' },
+              ].map(({ href, label, active }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  role="menuitem"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "block px-4 py-4 text-base font-medium uppercase tracking-[0.12em] rounded-lg transition-colors mb-1",
+                    active
+                      ? "text-luxury-gold bg-white/[0.07]"
+                      : "text-white/80 hover:text-white hover:bg-white/[0.04]"
                   )}
-                </button>
-                {role !== 'customer' && (
-                  <Link
-                    href="/cms"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-4 py-4 text-base font-medium uppercase transition-all hover:bg-luxury-gold/20",
-                      pathname.startsWith('/cms')
-                        ? "bg-luxury-gold/20 text-luxury-gold"
-                        : "text-white"
-                    )}
-                  >
-                    <Settings className="h-5 w-5" />
-                    <span>{t.header.adminPanel || 'Admin Panel'}</span>
-                  </Link>
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+
+            {/* Divider */}
+            <div className="my-4 border-t border-white/10" />
+
+            {/* Secondary */}
+            <div className="space-y-1">
+              <button
+                onClick={() => { setWishlistOpen(true); setMobileMenuOpen(false) }}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium uppercase tracking-[0.12em] text-white/60 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+              >
+                <Heart className="h-4 w-4 flex-shrink-0" />
+                {t.header.wishlist}
+                {wishlistCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center bg-luxury-gold text-[9px] font-bold text-luxury-navy rounded-sm">
+                    {wishlistCount}
+                  </span>
                 )}
+              </button>
+
+              {role !== 'customer' && (
+                <Link
+                  href="/cms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3.5 text-sm font-medium uppercase tracking-[0.12em] text-white/60 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                >
+                  <Settings className="h-4 w-4 flex-shrink-0" />
+                  {t.header.adminPanel || 'Admin Panel'}
+                </Link>
+              )}
+
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <Globe className="h-4 w-4 flex-shrink-0 text-white/60" />
+                <span className="text-sm font-medium uppercase tracking-[0.12em] text-white/60">{t.header.language}</span>
+                <div className="ml-auto">
+                  <LanguageSwitcher />
+                </div>
               </div>
-              
+
               {(role === 'admin' || role === 'staff') && (
-                <div className="flex items-center justify-between rounded-lg px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    <Globe className="h-5 w-5 text-white" />
-                    <span className="text-base font-medium uppercase text-white">{t.header.region}</span>
-                  </div>  
-                  <RegionCurrencySelector />
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <Globe className="h-4 w-4 flex-shrink-0 text-white/60" />
+                  <span className="text-sm font-medium uppercase tracking-[0.12em] text-white/60">{t.header.region}</span>
+                  <div className="ml-auto">
+                    <RegionCurrencySelector />
+                  </div>
                 </div>
               )}
-              <div className="flex items-center justify-between rounded-lg px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <Globe className="h-5 w-5 text-white" />
-                  <span className="text-base font-medium uppercase text-white">{t.header.language}</span>
-                </div>  
-                <LanguageSwitcher />
-              </div>
-            </nav>
+            </div>
           </div>
         </div>
       )}
