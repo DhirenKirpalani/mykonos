@@ -413,10 +413,10 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-luxury-gold shadow-lg transition-all hover:scale-110 hover:shadow-xl sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
+        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-luxury-navy shadow-lg transition-all hover:scale-110 hover:shadow-xl sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
         aria-label="Open live chat"
       >
-        <MessageCircle className="h-5 w-5 text-luxury-navy sm:h-6 sm:w-6" />
+        <MessageCircle className="h-5 w-5 text-luxury-gold sm:h-6 sm:w-6" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -506,7 +506,7 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
                       <div
                         className={`max-w-[80%] rounded-lg px-4 py-2 ${
                           message.sender_type === 'customer'
-                            ? 'bg-luxury-gold text-luxury-navy'
+                            ? 'bg-luxury-navy text-luxury-gold'
                             : message.sender_type === 'agent'
                             ? 'bg-gray-100 text-gray-900'
                             : 'bg-blue-50 text-blue-900'
@@ -550,12 +550,12 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
                 onKeyPress={handleKeyPress}
                 placeholder="Ask me anything..."
                 disabled={isSending || !conversationId}
-                className="flex-1 resize-none rounded-full border border-gray-300 px-4 py-2.5 text-sm focus:border-luxury-gold focus:outline-none focus:ring-1 focus:ring-luxury-gold disabled:opacity-50"
+                className="flex-1 resize-none rounded-full border border-gray-300 px-4 py-2.5 text-sm focus:border-luxury-navy focus:outline-none focus:ring-1 focus:ring-luxury-navy disabled:opacity-50"
               />
               <button
                 onClick={sendMessage}
                 disabled={!inputMessage.trim() || isSending || !conversationId}
-                className="flex h-10 w-10 items-center justify-center self-center rounded-full bg-luxury-gold text-luxury-navy transition-all hover:bg-luxury-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-10 items-center justify-center self-center rounded-full bg-luxury-navy text-luxury-gold transition-all hover:bg-luxury-navy/90 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
                 <Send className="h-4 w-4" />

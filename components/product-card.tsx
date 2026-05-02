@@ -56,7 +56,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -88,6 +88,10 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   const [timeRemaining, setTimeRemaining] = useState<string>('')
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isHovering, setIsHovering] = useState(false)
+  const touchStartXRef = useRef(0)
+  
+  // Check if this is a bestselling card (minimal design)
+  const isBestsellingCard = className?.includes('bestselling') || false
 
   // Combine variant images with product images (same logic as product detail page)
   const allProductImages = (() => {
@@ -244,111 +248,87 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
     ? allMediaUrls.find(url => url && !isVideo(url)) || firstMedia
     : firstMedia
 
+  // For bestselling cards, use minimal design matching reference image
+  if (isBestsellingCard) {
+    return (
+      <Link href={`/products/${product.slug}`} className="block h-full">
+        <div className="group relative w-full h-full flex flex-col bg-white">
+          {/* Product Image - tall portrait ratio */}
+          <div className="relative w-full bg-white" style={{ paddingBottom: '105%' }}>
+            {thumbnailUrl ? (
+              <Image
+                src={thumbnailUrl}
+                alt={product.name}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw"
+                className="object-contain p-4 md:p-6 transition-transform duration-500 group-hover:scale-[1.03]"
+                quality={90}
+                loading="lazy"
+                unoptimized={thumbnailUrl.includes('supabase')}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+          </div>
+
+          {/* Product Name */}
+          <div className="px-4 py-3 md:px-5 md:py-4 text-center">
+            <h3 className="text-[9px] sm:text-[10px] md:text-xs font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug">
+              {product.name}
+            </h3>
+          </div>
+        </div>
+      </Link>
+    )
+  }
+  
+  // Standard card — matches bestselling visual style + extra product info
   return (
-    <motion.div
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-      className={`group relative
-        w-full h-full
-        flex flex-col
-        overflow-hidden
-        rounded-lg
-        bg-[#FBF9F5]
-        shadow-[0_2px_8px_rgba(0,0,0,0.08)]
-        hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)]
-        transition-shadow duration-300 ${className}`}
-    >
-      {/* Hall/ORI badge - Top left */}
-      {(product as any).halal_certified && (
-        <motion.span
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="
-            absolute left-2 top-2 z-10
-            rounded
-            bg-red-600
-            px-2 py-0.5
-            text-[9px] md:text-[10px]
-            uppercase tracking-wide
-            text-white
-            font-bold
-          "
-        >
-          Hall | ORI
-        </motion.span>
-      )}
-      
-      {/* NEW badge - Top right */}
-      {daysSinceCreation <= newBadgeDuration && (
-        <motion.span
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="
-            absolute right-2 top-2 z-10
-            rounded
-            bg-luxury-gold
-            px-2 py-0.5
-            text-[9px] md:text-[10px]
-            uppercase tracking-wide
-            text-white
-            font-bold
-          "
-        >
-          NEW
-        </motion.span>
-      )}
-      
+    <div className={`group relative w-full flex flex-col bg-white ${className}`}>
 
       {/* Card link */}
-      <Link 
-        href={`/products/${product.slug}`} 
-        className="flex flex-col" 
+      <Link
+        href={`/products/${product.slug}`}
+        className="flex flex-col flex-1"
         aria-label={`View ${product.name}`}
         onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => {
-          setIsHovering(false)
-          setCurrentImageIndex(0)
-        }}
+        onMouseLeave={() => { setIsHovering(false); setCurrentImageIndex(0) }}
       >
-        {/* Image Frame - Fixed aspect ratio */}
-        <div 
-          className="relative aspect-square bg-[#F1F4F8] overflow-hidden group/image select-none"
-          onTouchStart={(e) => {
-            const touch = e.touches[0]
-            const startX = touch.clientX
-            const handleTouchMove = (e: TouchEvent) => {
-              const touch = e.touches[0]
-              const diff = startX - touch.clientX
-              if (Math.abs(diff) > 50) {
-                const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
-                if (diff > 0 && currentImageIndex < validImages.length - 1) {
-                  setCurrentImageIndex(prev => prev + 1)
-                } else if (diff < 0 && currentImageIndex > 0) {
-                  setCurrentImageIndex(prev => prev - 1)
-                }
-                document.removeEventListener('touchmove', handleTouchMove)
-              }
-            }
-            document.addEventListener('touchmove', handleTouchMove, { once: true })
-          }}
+        {/* Image Frame — same portrait ratio as bestselling card */}
+        <div
+          className="relative w-full bg-white overflow-hidden select-none"
+          style={{ paddingBottom: '105%' }}
           onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => e.preventDefault()}
-          onDrop={(e) => e.preventDefault()}
-          onMouseDown={(e) => {
-            // Prevent right-click and middle-click
-            if (e.button === 2 || e.button === 1) {
-              e.preventDefault()
+          onTouchStart={(e) => { touchStartXRef.current = e.touches[0].clientX }}
+          onTouchEnd={(e) => {
+            const diff = touchStartXRef.current - e.changedTouches[0].clientX
+            if (Math.abs(diff) > 40) {
+              const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+              if (diff > 0 && currentImageIndex < validImages.length - 1) {
+                setCurrentImageIndex(prev => prev + 1)
+              } else if (diff < 0 && currentImageIndex > 0) {
+                setCurrentImageIndex(prev => prev - 1)
+              }
             }
           }}
-          style={{ 
-            WebkitTouchCallout: 'none', 
-            WebkitUserSelect: 'none',
-            userSelect: 'none',
-            pointerEvents: 'auto'
-          }}
         >
+          {/* NEW badge */}
+          {daysSinceCreation <= newBadgeDuration && (
+            <span className="absolute right-2 top-2 z-10 bg-luxury-gold text-white text-[9px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5">
+              NEW
+            </span>
+          )}
+          {/* Halal badge */}
+          {(product as any).halal_certified && (
+            <span className="absolute left-2 top-2 z-10 border border-red-500 text-red-600 bg-white text-[9px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5">
+              Halal
+            </span>
+          )}
           {/* Out of Stock Overlay - Circular Badge */}
           {isOutOfStock && (
             <div className="absolute inset-0 z-20 flex items-center justify-center">
@@ -371,10 +351,10 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                       e.preventDefault()
                       setCurrentImageIndex(prev => prev - 1)
                     }}
-                    className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-30 bg-white/95 hover:bg-white rounded-full p-2 md:p-1.5 shadow-lg transition-all active:scale-95"
+                    className="group/arrow absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-[#B8985F] rounded-full p-1.5 shadow-md transition-all duration-200 active:scale-95"
                     aria-label="Previous image"
                   >
-                    <ChevronLeft className="h-5 w-5 md:h-4 md:w-4 text-luxury-navy" />
+                    <ChevronLeft className="h-4 w-4 text-luxury-navy group-hover/arrow:text-white transition-colors duration-200" />
                   </button>
                 )}
                 {/* Right Arrow */}
@@ -384,10 +364,10 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                       e.preventDefault()
                       setCurrentImageIndex(prev => prev + 1)
                     }}
-                    className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-30 bg-white/95 hover:bg-white rounded-full p-2 md:p-1.5 shadow-lg transition-all active:scale-95"
+                    className="group/arrow absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-[#B8985F] rounded-full p-1.5 shadow-md transition-all duration-200 active:scale-95"
                     aria-label="Next image"
                   >
-                    <ChevronRight className="h-5 w-5 md:h-4 md:w-4 text-luxury-navy" />
+                    <ChevronRight className="h-4 w-4 text-luxury-navy group-hover/arrow:text-white transition-colors duration-200" />
                   </button>
                 )}
                 {/* Image Counter */}
@@ -405,11 +385,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
               isVideo(displayUrl) ? (
                 <video
                   src={displayUrl}
-                  className="
-                    h-full w-full object-cover
-                    transition-transform duration-500 ease-out
-                    group-hover:scale-[1.04]
-                  "
+                  className="absolute inset-0 h-full w-full object-contain p-4 transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                   muted
                   playsInline
                 />
@@ -418,14 +394,8 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                   src={displayUrl}
                   alt={`${product.name} - ${product.category} fragrance`}
                   fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 260px"
-                  className="
-                    object-cover
-                    transition-all duration-300 ease-out
-                    group-hover:scale-[1.04]
-                    select-none
-                    pointer-events-none
-                  "
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 260px"
+                  className="object-contain p-4 transition-transform duration-500 ease-out group-hover:scale-[1.03] select-none pointer-events-none"
                   quality={90}
                   loading="lazy"
                   unoptimized={displayUrl.includes('supabase')}
@@ -453,9 +423,9 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                 />
               )
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-gray-400">
-                <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
             )
@@ -485,124 +455,67 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
           </div>
         )}
 
-        {/* Content */}
-        <div className="flex flex-col flex-1 p-2 md:p-3">
-          {/* Product Name - Fixed height */}
-          <h3 className="
-            text-[11px] md:text-sm
-            text-[#1C2E4A]
-            font-medium
-            line-clamp-3 md:line-clamp-2
-            transition-colors duration-200
-            group-hover:text-[#1C2E4A]
-            mb-1.5
-            leading-tight
-            h-[3rem] md:h-[2.5rem]
-          ">
+        {/* Content — centered, matching bestselling style */}
+        <div className="px-3 pt-3 pb-4 text-center md:px-4 md:pt-4">
+          {/* Name */}
+          <h3 className="text-[9px] sm:text-[10px] md:text-xs font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug mb-2">
             {product.name}
           </h3>
 
-          {/* Price with discount */}
-          {(() => {
-            // Determine base display price
+          {/* Price */}
+          {mounted && clientRegion && (() => {
             let basePrice = hasPriceRange ? minVariantPrice : originalPrice
-            
-            // Apply discount campaign price if active
-            if (hasActiveDiscount) {
-              basePrice = displayPrice
-            }
-
-            // Apply voucher discount
-            const voucherDiscount = voucher ? (
-              voucher.discount_type === 'percentage' 
-                ? (basePrice * voucher.discount_value / 100)
+            if (hasActiveDiscount) basePrice = displayPrice
+            const voucherDiscount = voucher
+              ? voucher.discount_type === 'percentage'
+                ? basePrice * voucher.discount_value / 100
                 : voucher.discount_value
-            ) : 0
+              : 0
             const netPrice = basePrice - voucherDiscount
 
-            // Compute discount percent from compare-at
             let discountPct = 0
             if (hasVariants && minVariantCompareAtPrice > 0 && minVariantCompareAtPrice > minVariantPrice) {
               discountPct = Math.round((minVariantCompareAtPrice - minVariantPrice) / minVariantCompareAtPrice * 100)
-            } else if (!hasVariants && clientRegion) {
+            } else if (!hasVariants) {
               const compareAt = clientRegion.code === 'ID' ? (product as any).compare_at_price_idr : (product as any).compare_at_price_usd
-              if (compareAt && compareAt > originalPrice) {
-                discountPct = Math.round((compareAt - originalPrice) / compareAt * 100)
-              }
+              if (compareAt && compareAt > originalPrice) discountPct = Math.round((compareAt - originalPrice) / compareAt * 100)
             }
 
             return (
-              <div className="flex flex-col gap-0.5">
+              <div className="flex items-center justify-center gap-1.5 flex-wrap">
                 {hasActiveDiscount && (
-                  <div className="text-xs text-gray-500 line-through">
-                    {clientRegion ? formatPrice(originalPrice, clientRegion.currency_code) : '...'}
-                  </div>
+                  <span className="text-[10px] text-gray-400 line-through">{formatPrice(originalPrice, clientRegion.currency_code)}</span>
                 )}
-                <div className="flex items-center gap-1.5 mb-1.5 flex-nowrap">
-                  <p className="text-sm md:text-base text-luxury-navy font-bold">
-                    {clientRegion ? formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code) : '...'}
-                  </p>
-                  {(discountPct > 0 || hasActiveDiscount) && !voucher && (
-                    <span className="text-[10px] md:text-xs text-gray-500 font-medium">
-                      -{hasActiveDiscount ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : discountPct}%
-                    </span>
-                  )}
-                  {voucher && (
-                    <div className="relative bg-white rounded-full p-1">
-                      <svg className="h-4 w-4 md:h-5 md:w-5 text-luxury-gold" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
-                      </svg>
-                      <svg className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 md:h-3 md:w-3 bg-white rounded-full" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="11" fill="#EE4D2D"/>
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
-                      </svg>
-                    </div>
-                  )}
-                </div>
+                <span className="text-xs md:text-sm font-semibold text-[#B8985F]">
+                  {formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code)}
+                </span>
+                {discountPct > 0 && !voucher && (
+                  <span className="text-[9px] text-gray-400">-{discountPct}%</span>
+                )}
               </div>
             )
           })()}
 
-          {/* Spacer to push badge/rating to bottom */}
-          <div className="flex-1" />
-
-          {/* Pilih Lokal Badge */}
-          <div className="mb-1.5 min-h-[1.25rem]">
-            {mounted && product.pilih_lokal && (
-              <span className="inline-block rounded border border-[#1C2E4A] px-2 py-0.5 text-[9px] md:text-xs text-[#1C2E4A] font-medium">
-                {t.products.pilihLokal}
-              </span>
-            )}
-          </div>
-
-          {/* Trust Signals - Rating & Sold Count */}
-          <div>
-            {mounted && (product.rating > 0 || product.products_sold > 0) && (
-              <div className="flex items-center gap-1.5 text-xs md:text-sm">
+          {/* Rating + Sold */}
+          {mounted && (product.rating > 0 || product.products_sold > 0) && (
+            <div className="flex items-center justify-center gap-1.5 mt-1.5 text-[10px] text-gray-500">
               {product.rating > 0 && (
-                <div className="flex items-center gap-1">
-                  <svg className="h-4 w-4 md:h-4 md:w-4 fill-amber-500" viewBox="0 0 20 20">
+                <span className="flex items-center gap-0.5">
+                  <svg className="h-3 w-3 fill-amber-400" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
-                  <span className="font-semibold text-gray-900">{product.rating.toFixed(1)}</span>
-                </div>
-              )}
-              {product.rating > 0 && product.products_sold > 0 && (
-                <span className="text-gray-400">|</span>
-              )}
-              {product.products_sold > 0 && (
-                <span className="text-gray-600">
-                  {product.products_sold >= 1000
-                    ? `${Math.floor(product.products_sold / 1000)}k+`
-                    : `${product.products_sold}+`} {t.products.sold}
+                  {product.rating.toFixed(1)}
                 </span>
               )}
-              </div>
-            )}
-          </div>
+              {product.rating > 0 && product.products_sold > 0 && <span>·</span>}
+              {product.products_sold > 0 && (
+                <span>{product.products_sold >= 1000 ? `${Math.floor(product.products_sold / 1000)}k+` : `${product.products_sold}+`} {t.products.sold}</span>
+              )}
+            </div>
+          )}
         </div>
       </Link>
-    </motion.div>
+    </div>
   )
 }
 

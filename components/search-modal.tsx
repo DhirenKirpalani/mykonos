@@ -65,7 +65,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
   const fetchTopProducts = async () => {
     try {
-      const response = await fetch('/api/products?filter=best-selling&limit=6')
+      const response = await fetch('/api/products?filter=popular&limit=6')
       const data = await response.json()
       setTopProducts(data.products || [])
     } catch (error) {

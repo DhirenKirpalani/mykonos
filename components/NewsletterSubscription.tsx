@@ -78,65 +78,81 @@ export default function NewsletterSubscription() {
   }
 
   return (
-    <div className="bg-luxury-gray-light border-t border-gray-200 py-8 sm:py-12" style={{ minHeight: '320px' }}>
-      <div className="max-w-4xl mx-auto text-center px-4">
-        <div className="flex justify-center mb-3 sm:mb-4">
-          <div className="bg-luxury-gold/10 p-2 sm:p-3 rounded-full">
-            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-luxury-gold" />
+    <section className="relative bg-white py-12 sm:py-16 overflow-hidden">
+      {/* Elegant background pattern */}
+      <div className="absolute inset-0 bg-gradient-to-b from-luxury-gray-light/30 via-white to-luxury-gray-light/30" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(198,159,112,0.04)_1px,_transparent_0)] bg-[length:40px_40px]" />
+      
+      <div className="relative max-w-2xl mx-auto text-center px-4 sm:px-6">
+        {/* Icon with elegant styling */}
+        <div className="flex justify-center mb-4 sm:mb-5">
+          <div className="relative">
+            <div className="absolute inset-0 bg-luxury-gold/20 blur-lg rounded-full" />
+            <div className="relative bg-gradient-to-br from-luxury-gold to-luxury-gold-light p-3 sm:p-3.5 rounded-xl shadow-lg">
+              <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={1.5} />
+            </div>
           </div>
         </div>
         
-        <h3 className="font-serif text-xl sm:text-2xl md:text-3xl font-medium text-luxury-navy mb-2">
+        {/* Title with luxury typography */}
+        <h2 className="font-serif text-2xl sm:text-3xl font-bold text-luxury-navy mb-3 tracking-tight">
           {t.newsletter.title}
-        </h3>
-        <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto">
+        </h2>
+        
+        {/* Description with refined spacing */}
+        <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
           {t.newsletter.description}
         </p>
 
         {success ? (
-          <div className="flex items-center justify-center gap-2 text-sm sm:text-base text-green-700 bg-green-50 rounded-lg p-3 sm:p-4 max-w-md mx-auto">
-            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+          <div className="flex items-center justify-center gap-2.5 text-sm sm:text-base text-green-700 bg-green-50 border border-green-200 rounded-xl p-4 sm:p-5 max-w-lg mx-auto shadow-sm">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
             <span className="font-medium">{t.newsletter.successMessage}</span>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-3">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t.newsletter.placeholder}
-              className="w-full px-4 py-3 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold"
-              disabled={loading}
-              required={false}
-            />
+          <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-4">
+            {/* Email input with luxury styling */}
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t.newsletter.placeholder}
+                className="w-full px-5 py-3.5 text-sm sm:text-base rounded-xl border-2 border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-luxury-gold/50 focus:border-luxury-gold transition-all duration-200 shadow-sm hover:border-gray-300"
+                disabled={loading}
+                required={false}
+              />
+            </div>
 
-            <label className="flex items-start gap-2.5 text-left cursor-pointer">
+            {/* Consent checkbox with refined styling */}
+            <label className="flex items-start gap-2.5 text-left cursor-pointer group">
               <input
                 type="checkbox"
                 id="newsletter-consent"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-luxury-gold border-gray-300 rounded focus:ring-luxury-gold flex-shrink-0"
+                className="mt-0.5 w-4 h-4 accent-luxury-gold border-gray-300 rounded focus:ring-luxury-gold flex-shrink-0 cursor-pointer"
                 disabled={loading}
                 required={false}
               />
-              <span className="text-xs text-gray-600 leading-relaxed">
+              <span className="text-xs sm:text-sm text-gray-600 leading-relaxed group-hover:text-gray-900 transition-colors">
                 {t.newsletter.consent}{' '}
-                <a href="/privacy" className="text-luxury-gold hover:underline">
+                <a href="/privacy" className="text-luxury-gold hover:text-luxury-gold-light underline decoration-luxury-gold/30 hover:decoration-luxury-gold transition-colors">
                   {t.newsletter.privacyPolicy}
                 </a>
                 {t.newsletter.consentSuffix}
               </span>
             </label>
 
+            {/* Subscribe button with luxury styling */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 text-sm bg-luxury-gold hover:bg-luxury-gold-light disabled:bg-gray-400 disabled:cursor-not-allowed text-luxury-navy font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+              className="w-full py-3.5 text-sm sm:text-base bg-luxury-gold hover:bg-luxury-gold-light disabled:bg-gray-300 disabled:cursor-not-allowed text-luxury-navy font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                   {t.newsletter.subscribing}
                 </>
               ) : (
@@ -144,12 +160,13 @@ export default function NewsletterSubscription() {
               )}
             </button>
 
-            <p className="text-xs text-gray-500 text-center">
+            {/* Privacy notice with subtle styling */}
+            <p className="text-xs text-gray-500 text-center pt-1">
               {t.newsletter.privacyNotice}
             </p>
           </form>
         )}
       </div>
-    </div>
+    </section>
   )
 }

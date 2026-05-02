@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { ChevronRight, Package, Sparkles, Clock, Globe, FileText } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 interface ExpandableSpecificationsProps {
   product: any
@@ -30,47 +30,39 @@ export function ExpandableSpecifications({ product, fragranceFamily }: Expandabl
   // Generate dynamic preview text from first 3 specs
   const previewText = specRows.slice(0, 3).map(row => row.value).join(', ') || p.specsPreview
 
-  // Icon mapping for different spec types
-  const getSpecIcon = (label: string) => {
-    if (label.toLowerCase().includes('size') || label.toLowerCase().includes('ukuran')) return <Package className="h-4 w-4" />
-    if (label.toLowerCase().includes('note')) return <Sparkles className="h-4 w-4" />
-    if (label.toLowerCase().includes('shelf') || label.toLowerCase().includes('masa')) return <Clock className="h-4 w-4" />
-    if (label.toLowerCase().includes('country') || label.toLowerCase().includes('negara')) return <Globe className="h-4 w-4" />
-    return <FileText className="h-4 w-4" />
-  }
-
   return (
-    <div className="border-t border-gray-200">
-      <button 
+    <div className="pb-8">
+      {/* Header */}
+      <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between py-4 w-full text-left active:bg-gray-50 transition-colors touch-manipulation min-h-[60px] -mx-1 px-1 rounded-lg"
+        className="w-full text-left group"
       >
-        <div className="flex-1">
-          <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-1">{p.specifications}</h3>
-          {!isExpanded && (
-            <span className="text-xs md:text-sm text-gray-500 line-clamp-1">{previewText}</span>
-          )}
+        <div className="flex items-center gap-3 mb-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-luxury-navy">
+            {p.specifications}
+          </p>
+          <div className="flex-1 h-px bg-gradient-to-r from-luxury-gold/40 to-transparent" />
+          <ChevronRight
+            className={`h-3.5 w-3.5 text-luxury-gold flex-shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
+          />
         </div>
-        <ChevronRight 
-          className={`h-5 w-5 text-gray-400 flex-shrink-0 ml-3 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
-        />
+        {!isExpanded && (
+          <p className="text-xs text-gray-400 tracking-wide line-clamp-1 mt-2">{previewText}</p>
+        )}
       </button>
 
       {isExpanded && (
-        <div className="border-t border-gray-100 pb-4 animate-in slide-in-from-top-2 duration-300">
-          <div className="space-y-3 pt-4">
-            {specRows.map(({ label, value }) => (
-              <div key={label} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
-                <div className="text-gray-400 mt-0.5">
-                  {getSpecIcon(label)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs md:text-sm text-gray-500 mb-1">{label}</div>
-                  <div className="text-sm md:text-base text-gray-900 font-medium break-words">{value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="mt-4 divide-y divide-gray-100">
+          {specRows.map(({ label, value }) => (
+            <div key={label} className="flex gap-4 py-2.5">
+              <span className="w-36 flex-shrink-0 text-xs uppercase tracking-[0.12em] text-gray-400 pt-0.5">
+                {label}
+              </span>
+              <span className="text-sm text-luxury-navy font-medium leading-relaxed">
+                {value}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

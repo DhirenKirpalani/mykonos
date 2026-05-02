@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { FaTiktok } from 'react-icons/fa'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { PaymentMethods } from '@/components/PaymentMethods'
 
 export function Footer() {
   const pathname = usePathname()
@@ -126,11 +125,6 @@ export function Footer() {
               ))}
             </ul>
           </div>
-        </div>
-
-        {/* Payment Methods Section */}
-        <div className="mt-8 sm:mt-10 border-t border-white/10 pt-6 sm:pt-8">
-          <PaymentMethods size="small" showTitle />
         </div>
 
         {/* Copyright Section */}

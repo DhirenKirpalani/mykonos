@@ -129,6 +129,7 @@ function ProductsContent() {
   const collection = searchParams.get('collection') || undefined
   const isNew = searchParams.get('new') || undefined
   const filter = searchParams.get('filter') || undefined
+  const gender = searchParams.get('gender') || undefined
   const sort = searchParams.get('sort') || undefined
   const page = searchParams.get('page') || '1'
   
@@ -191,6 +192,14 @@ function ProductsContent() {
         query = query.eq('is_new', true)
       }
 
+      if (gender === 'male') {
+        query = query.or('gender.ilike.male,gender.ilike.men')
+      } else if (gender === 'female') {
+        query = query.or('gender.ilike.female,gender.ilike.women')
+      } else if (gender) {
+        query = query.ilike('gender', gender)
+      }
+
       if (searchQuery.trim()) {
         query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
       }
@@ -217,7 +226,7 @@ function ProductsContent() {
     }
 
     fetchProducts()
-  }, [category, collection, isNew, filter, sort, currentPage, searchQuery])
+  }, [category, collection, isNew, filter, gender, sort, currentPage, searchQuery])
 
   useEffect(() => {
     async function fetchSoldOutProducts() {
@@ -235,6 +244,14 @@ function ProductsContent() {
 
       if (collection) {
         query = query.eq('collection', collection)
+      }
+
+      if (gender === 'male') {
+        query = query.or('gender.ilike.male,gender.ilike.men')
+      } else if (gender === 'female') {
+        query = query.or('gender.ilike.female,gender.ilike.women')
+      } else if (gender) {
+        query = query.ilike('gender', gender)
       }
 
       if (searchQuery.trim()) {
@@ -258,7 +275,7 @@ function ProductsContent() {
     }
 
     fetchSoldOutProducts()
-  }, [category, collection, searchQuery, sort])
+  }, [category, collection, gender, searchQuery, sort])
 
   // Combine and sort all products when price sorting is active
   const allProductsCombined = sort?.startsWith('price-') 
@@ -328,36 +345,38 @@ function ProductsContent() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header with Title and Search */}
-      <div className="border-b border-border/40 bg-luxury-gray-light py-4 md:py-6">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold uppercase tracking-wider text-luxury-navy md:text-3xl lg:text-4xl">
+      {/* Luxury Header */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-6 md:pt-12 md:pb-8">
+          <h1 className="font-serif text-3xl font-light uppercase tracking-[0.18em] text-luxury-navy md:text-4xl lg:text-5xl">
             {t.productsPage.allFragrances}
           </h1>
-          
-          {/* Search Bar - Directly under title */}
-          <div className="mt-3">
-            <div className="relative max-w-md">
+
+          {/* Underline search bar */}
+          <div className="mt-6 max-w-sm">
+            <div className="relative flex items-center border-b border-gray-300 focus-within:border-[#B8985F] transition-colors duration-200">
+              <svg
+                className="h-4 w-4 text-gray-400 mr-3 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               <input
                 type="text"
                 placeholder={t.productsPage.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-[#C2A36B] focus:outline-none focus:ring-2 focus:ring-[#C2A36B]/20"
+                className="flex-1 bg-transparent py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none tracking-wide"
               />
-              <svg
-                className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 transition-colors ml-2">
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -374,80 +393,28 @@ function ProductsContent() {
         </div>
 
         {/* Filter Controls - Sticky (Mobile Only) */}
-        <div className="sticky top-0 z-10 bg-white py-2 mb-3 border-b border-gray-100 lg:hidden">
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <button
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString())
-                if (filter === 'popular') {
-                  params.delete('filter')
-                } else {
-                  params.set('filter', 'popular')
-                }
-                router.push(`/products?${params.toString()}`)
-              }}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                filter === 'popular'
-                  ? 'bg-[#C2A36B] text-white shadow-sm'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {t.productsPage.sort.popular}
-            </button>
-            <button
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString())
-                if (filter === 'newest') {
-                  params.delete('filter')
-                } else {
-                  params.set('filter', 'newest')
-                }
-                router.push(`/products?${params.toString()}`)
-              }}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                filter === 'newest'
-                  ? 'bg-[#C2A36B] text-white shadow-sm'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {t.productsPage.sort.newest}
-            </button>
-            <button
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString())
-                if (filter === 'best-selling') {
-                  params.delete('filter')
-                } else {
-                  params.set('filter', 'best-selling')
-                }
-                router.push(`/products?${params.toString()}`)
-              }}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                filter === 'best-selling'
-                  ? 'bg-[#C2A36B] text-white shadow-sm'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {t.productsPage.sort.bestSelling}
-            </button>
-            <button
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString())
-                if (sort === 'price-asc') {
-                  params.set('sort', 'price-desc')
-                } else {
-                  params.set('sort', 'price-asc')
-                }
-                router.push(`/products?${params.toString()}`)
-              }}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                sort?.startsWith('price-')
-                  ? 'bg-[#C2A36B] text-white shadow-sm'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {t.productsPage.price} {sort === 'price-desc' ? '↓' : '↑'}
-            </button>
+        <div className="sticky top-0 z-10 bg-white pt-3 pb-0 mb-4 lg:hidden">
+          <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide border-b border-gray-100">
+            {([
+              { label: t.productsPage.sort.popular, active: filter === 'popular', onClick: () => { const p = new URLSearchParams(searchParams.toString()); filter === 'popular' ? p.delete('filter') : p.set('filter', 'popular'); router.push(`/products?${p.toString()}`) } },
+              { label: 'For Men', active: gender === 'male', onClick: () => { const p = new URLSearchParams(searchParams.toString()); gender === 'male' ? p.delete('gender') : p.set('gender', 'male'); router.push(`/products?${p.toString()}`) } },
+              { label: 'For Women', active: gender === 'female', onClick: () => { const p = new URLSearchParams(searchParams.toString()); gender === 'female' ? p.delete('gender') : p.set('gender', 'female'); router.push(`/products?${p.toString()}`) } },
+              { label: 'Unisex', active: gender === 'unisex', onClick: () => { const p = new URLSearchParams(searchParams.toString()); gender === 'unisex' ? p.delete('gender') : p.set('gender', 'unisex'); router.push(`/products?${p.toString()}`) } },
+              { label: t.productsPage.sort.newest, active: filter === 'newest', onClick: () => { const p = new URLSearchParams(searchParams.toString()); filter === 'newest' ? p.delete('filter') : p.set('filter', 'newest'); router.push(`/products?${p.toString()}`) } },
+              { label: `${t.productsPage.price} ${sort === 'price-desc' ? '↓' : '↑'}`, active: !!sort?.startsWith('price-'), onClick: () => { const p = new URLSearchParams(searchParams.toString()); p.set('sort', sort === 'price-asc' ? 'price-desc' : 'price-asc'); router.push(`/products?${p.toString()}`) } },
+            ] as { label: string; active: boolean; onClick: () => void }[]).map(({ label, active, onClick }) => (
+              <button
+                key={label}
+                onClick={onClick}
+                className={`relative flex-shrink-0 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all duration-200 whitespace-nowrap ${
+                  active
+                    ? 'text-[#B8985F] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#B8985F] after:rounded-full'
+                    : 'text-gray-500 hover:text-luxury-navy'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 

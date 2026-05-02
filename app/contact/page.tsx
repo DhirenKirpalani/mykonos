@@ -88,158 +88,120 @@ export default function ContactPage() {
     }
   }
 
+  const whatsappHref = clientRegion === 'ID' ? whatsappUrlID : whatsappUrlInternational
+  const whatsappNumber = clientRegion === 'ID' ? '+62 857-8021-8514' : '+62 816-261-783'
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="border-b border-border/40 bg-luxury-gray-light py-12 sm:py-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          <h1 className="mb-4 font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-center">
+      {/* Luxury Hero Header */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="container mx-auto px-4 lg:px-8 pt-12 pb-10 md:pt-16 md:pb-12 text-center">
+          <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-[#B8985F] mb-3">MYKONOS</p>
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light uppercase tracking-[0.15em] text-luxury-navy mb-4">
             {t.contact.title}
           </h1>
-          <p className="text-base sm:text-lg text-muted-foreground text-center max-w-2xl mx-auto">
-            {t.contact.subtitle}
-          </p>
+          <p className="text-sm text-gray-500 tracking-wide max-w-md mx-auto">{t.contact.subtitle}</p>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-12 sm:py-16 lg:px-8">
-        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
-          {/* Left Column - WhatsApp & Business Hours */}
-          <div className="space-y-6 order-1 lg:order-none">
-            {/* WhatsApp Section */}
+        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-20 max-w-5xl mx-auto">
+
+          {/* Left — WhatsApp & Business Hours */}
+          <div className="space-y-12 order-1 lg:order-none">
+
+            {/* WhatsApp */}
             <div>
-              <h2 className="text-2xl font-serif font-bold mb-6">WhatsApp</h2>
-              
-              {/* WhatsApp Cards */}
-              <div className="space-y-4">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Direct Chat</p>
+              <h2 className="font-serif text-xl font-light uppercase tracking-[0.12em] text-luxury-navy mb-6">WhatsApp</h2>
               {clientRegion === null ? (
-                /* Show placeholder during SSR and initial render to prevent hydration mismatch */
-                <div className="block rounded-xl bg-[#25D366] p-5 border-2 border-[#1DA851]">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                      <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="h-6 bg-white/30 rounded w-48 mb-1 animate-pulse"></div>
-                      <div className="h-4 bg-white/20 rounded w-32 animate-pulse"></div>
-                    </div>
-                  </div>
-                </div>
-              ) : clientRegion === 'ID' ? (
-                /* Indonesia WhatsApp - Green for ID region only */
-                <a
-                  href={whatsappUrlID}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                      <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-white text-lg mb-0.5">+62 857-8021-8514</p>
-                      <p className="text-white/80 text-sm">{t.contact.tapToChat}</p>
-                    </div>
-                  </div>
-                </a>
+                <div className="h-16 animate-pulse bg-gray-100 rounded" />
               ) : (
-                /* International WhatsApp - Green for non-ID regions only */
                 <a
-                  href={whatsappUrlInternational}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block rounded-xl bg-[#25D366] p-5 transition-all hover:bg-[#20BD5A] hover:shadow-xl active:scale-[0.98] border-2 border-[#1DA851]"
+                  className="flex items-center gap-4 border border-gray-200 px-5 py-4 transition-all hover:border-[#B8985F] hover:shadow-sm group"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                      <WhatsappLogo className="h-8 w-8 text-white" weight="fill" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-white text-lg mb-0.5">+62 816-261-783</p>
-                      <p className="text-white/80 text-sm">{t.contact.tapToChat}</p>
-                    </div>
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1A56DB] via-[#1E3A8A] to-[#B8985F]">
+                    <WhatsappLogo className="h-5 w-5 text-white" weight="fill" />
                   </div>
+                  <div>
+                    <p className="text-sm font-semibold text-luxury-navy tracking-wide">{whatsappNumber}</p>
+                    <p className="text-xs text-gray-400 tracking-wide">{t.contact.tapToChat}</p>
+                  </div>
+                  <span className="ml-auto text-gray-300 group-hover:text-[#B8985F] transition-colors text-lg">›</span>
                 </a>
               )}
             </div>
-            </div>
 
             {/* Business Hours */}
-            <div className="rounded-2xl bg-luxury-gray-light p-6 sm:p-8">
-              <h3 className="mb-6 font-serif text-xl font-bold text-center">{t.contact.businessHours}</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-border/30">
-                  <span className="text-muted-foreground font-medium">{t.contact.mondayFriday}</span>
-                  <span className="font-semibold text-luxury-navy">{t.contact.hours.weekday}</span>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Schedule</p>
+              <h2 className="font-serif text-xl font-light uppercase tracking-[0.12em] text-luxury-navy mb-6">{t.contact.businessHours}</h2>
+              <div className="space-y-0">
+                <div className="flex justify-between items-center py-3.5 border-b border-gray-100">
+                  <span className="text-sm text-gray-500">{t.contact.mondayFriday}</span>
+                  <span className="text-sm font-medium text-luxury-navy">{t.contact.hours.weekday}</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-border/30">
-                  <span className="text-muted-foreground font-medium">{t.contact.saturday}</span>
-                  <span className="font-semibold text-luxury-navy">{t.contact.hours.saturday}</span>
+                <div className="flex justify-between items-center py-3.5 border-b border-gray-100">
+                  <span className="text-sm text-gray-500">{t.contact.saturday}</span>
+                  <span className="text-sm font-medium text-luxury-navy">{t.contact.hours.saturday}</span>
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-muted-foreground font-medium">{t.contact.sunday}</span>
-                  <span className="font-semibold text-red-600">{t.contact.closed}</span>
+                <div className="flex justify-between items-center py-3.5">
+                  <span className="text-sm text-gray-500">{t.contact.sunday}</span>
+                  <span className="text-sm font-medium text-gray-400 italic">{t.contact.closed}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Contact Form */}
+          {/* Right — Email Form */}
           <div className="order-2 lg:order-none">
-            <h2 className="text-2xl font-serif font-bold mb-6">Email</h2>
-            <div className="rounded-2xl bg-luxury-gray-light p-6 sm:p-8">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.contact.name}
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder={t.contact.yourName}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors"
-                  />
+            <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Get In Touch</p>
+            <h2 className="font-serif text-xl font-light uppercase tracking-[0.12em] text-luxury-navy mb-8">Email</h2>
+            <form onSubmit={handleSubmit} className="space-y-7">
+              {[
+                { id: 'name', label: t.contact.name, placeholder: t.contact.yourName, value: formData.name, type: 'text', onChange: (v: string) => setFormData({ ...formData, name: v }) },
+                { id: 'email', label: t.contact.email, placeholder: t.contact.yourEmail, value: formData.email, type: 'text', onChange: (v: string) => setFormData({ ...formData, email: v }) },
+              ].map(({ id, label, placeholder, value, type, onChange }) => (
+                <div key={id}>
+                  <label htmlFor={id} className="block text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2">{label}</label>
+                  <div className="border-b border-gray-200 focus-within:border-[#B8985F] transition-colors">
+                    <input
+                      type={type}
+                      id={id}
+                      value={value}
+                      onChange={(e) => onChange(e.target.value)}
+                      placeholder={placeholder}
+                      className="w-full bg-transparent py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none"
+                    />
+                  </div>
                 </div>
+              ))}
 
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.contact.email}
-                  </label>
-                  <input
-                    type="text"
-                    id="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder={t.contact.yourEmail}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.contact.message}
-                  </label>
+              <div>
+                <label htmlFor="message" className="block text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2">{t.contact.message}</label>
+                <div className="border-b border-gray-200 focus-within:border-[#B8985F] transition-colors">
                   <textarea
                     id="message"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     placeholder={t.contact.yourMessage}
-                    rows={6}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20 transition-colors resize-none"
+                    rows={5}
+                    className="w-full bg-transparent py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none resize-none"
                   />
                 </div>
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-white font-semibold py-3 px-6 rounded-lg transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? t.contact.sending : t.contact.submit}
-                </button>
-              </form>
-            </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-luxury-navy text-white text-xs uppercase tracking-[0.2em] py-3.5 transition-all hover:bg-luxury-navy/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? t.contact.sending : t.contact.submit}
+              </button>
+            </form>
           </div>
         </div>
       </div>

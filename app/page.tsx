@@ -74,9 +74,8 @@ export default function HomePage() {
           .from('products')
           .select('*')
           .eq('is_visible', true)
-          .eq('is_popular', true)
           .gt('stock_quantity', 0)
-          .limit(8),
+          .limit(50),
         supabase
           .from('collections')
           .select('*')

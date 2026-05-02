@@ -104,18 +104,18 @@ export function ImageCarousel() {
 
           <button
             onClick={() => paginate(-1)}
-            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all hover:bg-white hover:scale-110"
+            className="group/arrow absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all hover:bg-gradient-to-br hover:from-[#1A56DB] hover:via-[#1E3A8A] hover:to-[#B8985F] hover:scale-105"
             aria-label="Previous image"
           >
-            <ChevronLeft className="h-5 w-5 md:h-6 md:w-6 text-[#1C2E4A]" />
+            <ChevronLeft className="h-5 w-5 md:h-6 md:w-6 text-[#1C2E4A] group-hover/arrow:text-white transition-colors" />
           </button>
 
           <button
             onClick={() => paginate(1)}
-            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all hover:bg-white hover:scale-110"
+            className="group/arrow absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-lg transition-all hover:bg-gradient-to-br hover:from-[#1A56DB] hover:via-[#1E3A8A] hover:to-[#B8985F] hover:scale-105"
             aria-label="Next image"
           >
-            <ChevronRight className="h-5 w-5 md:h-6 md:w-6 text-[#1C2E4A]" />
+            <ChevronRight className="h-5 w-5 md:h-6 md:w-6 text-[#1C2E4A] group-hover/arrow:text-white transition-colors" />
           </button>
 
           <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
