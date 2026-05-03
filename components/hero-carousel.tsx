@@ -37,13 +37,22 @@ export function HeroCarousel() {
     try {
       console.log('[Hero Carousel] Fetching hero media at', new Date().toISOString())
       
-      // Force fresh data by adding timestamp to bypass cache
-      const { data, error } = await supabase
-        .from('hero_media')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: false })
+      // Use fetch directly with cache: 'no-store' to bypass browser HTTP cache
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const res = await fetch(
+        `${supabaseUrl}/rest/v1/hero_media?is_active=eq.true&order=sort_order.asc,created_at.desc&select=*`,
+        {
+          cache: 'no-store',
+          headers: {
+            apikey: supabaseKey || '',
+            Authorization: `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+      const data = res.ok ? await res.json() : null
+      const error = res.ok ? null : { message: `HTTP ${res.status}` }
 
       if (error) {
         console.error('[Hero Carousel] Error fetching hero media:', error)
@@ -52,11 +61,10 @@ export function HeroCarousel() {
 
       console.log('[Hero Carousel] Query result:', { 
         count: data?.length || 0, 
-        items: data?.map(item => ({ 
+        items: data?.map((item: HeroMedia) => ({ 
           id: item.id.substring(0, 8), 
           type: item.media_type, 
-          order: item.sort_order,
-          active: item.is_active 
+          order: item.sort_order
         }))
       })
 
@@ -107,11 +115,9 @@ export function HeroCarousel() {
       role="region"
       aria-label="Hero banner"
     >
-      {/* Loading Skeleton */}
+      {/* Loading Skeleton - solid cover, NO animate-pulse (pulse reduces opacity and reveals video underneath) */}
       {isLoading && (
-        <div className="absolute inset-0 bg-gradient-to-br from-luxury-navy via-luxury-navy/90 to-luxury-navy animate-pulse">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-        </div>
+        <div className="absolute inset-0 z-10 bg-luxury-navy" />
       )}
 
       {/* Media Background with crossfade transition */}
@@ -199,7 +205,7 @@ export function HeroCarousel() {
       })}
       
       {/* Fallback for when no hero items exist */}
-      {heroItems.length === 0 && (
+      {heroItems.length === 0 && !isLoading && (
         <div className="absolute inset-0">
           <video
             autoPlay
