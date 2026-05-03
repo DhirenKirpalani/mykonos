@@ -54,6 +54,56 @@ function CarouselSkeleton({ bg, titleBg }: { bg: string; titleBg: string }) {
   )
 }
 
+function GenderCarouselSection({ genders, vouchers, activeDiscounts }: {
+  genders: { label: string; products: Product[]; href: string }[]
+  vouchers: any[]
+  activeDiscounts?: Map<string, any>
+}) {
+  const available = genders.filter(g => g.products.length > 0)
+  const [active, setActive] = useState(available[0]?.label ?? '')
+  const current = available.find(g => g.label === active) ?? available[0]
+  if (!available.length) return null
+  return (
+    <section className="bg-white pt-8 md:pt-12">
+      <div className="text-center mb-6 px-4">
+        <p className="mb-3 text-sm font-normal uppercase tracking-[0.3em] text-[#333] md:text-base">MUST HAVE</p>
+        <h2 className="font-sans uppercase tracking-[0.18em] text-[#1C2E4A] text-3xl font-bold md:text-4xl lg:text-5xl mb-5">
+          {active}
+        </h2>
+        <div className="inline-flex border border-[#e0e0e0]">
+          {available.map(({ label }) => (
+            <button
+              key={label}
+              onClick={() => setActive(label)}
+              className={`px-6 py-2.5 text-sm font-bold uppercase tracking-[0.15em] transition-all ${
+                active === label
+                  ? 'bg-[#1C2E4A] text-white'
+                  : 'bg-white text-[#1C2E4A] hover:bg-[#1C2E4A]/5'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {current && (
+        <ProductCarousel
+          key={active}
+          title={active}
+          products={current.products}
+          backgroundColor="bg-white"
+          titleColor="text-[#1C2E4A]"
+          variant="bestselling"
+          viewAllHref={current.href}
+          vouchers={vouchers}
+          activeDiscounts={activeDiscounts}
+          hideHeader={true}
+        />
+      )}
+    </section>
+  )
+}
+
 function SizeCarouselSection({ products50ml, products100ml, vouchers, activeDiscounts }: {
   products50ml: Product[]; products100ml: Product[]; vouchers: any[]; activeDiscounts?: Map<string, any>
 }) {
@@ -66,7 +116,10 @@ function SizeCarouselSection({ products50ml, products100ml, vouchers, activeDisc
   return (
     <section className="bg-white pt-8 md:pt-12">
       <div className="text-center mb-6 px-4">
-        <p className="text-sm font-normal uppercase tracking-[0.3em] text-[#333] mb-4">SHOP BY SIZE</p>
+        <p className="mb-3 text-sm font-normal uppercase tracking-[0.3em] text-[#333] md:text-base">SHOP BY SIZE</p>
+        <h2 className="font-sans uppercase tracking-[0.18em] text-[#1C2E4A] text-3xl font-bold md:text-4xl lg:text-5xl mb-5">
+          {active}
+        </h2>
         <div className="inline-flex border border-[#e0e0e0]">
           {sizes.map(({ label }) => (
             <button
@@ -139,48 +192,17 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling, v
 
       {isLoading ? (
         <CarouselSkeleton bg="bg-white" titleBg="bg-[#1C2E4A]/20" />
-      ) : maleProducts.length > 0 ? (
-        <ProductCarousel
-          title={(t.home as any).forMen || 'For Men'}
-          products={maleProducts}
-          backgroundColor="bg-white"
-          titleColor="text-[#1C2E4A]"
-          variant="bestselling"
-          viewAllHref="/products?gender=male"
+      ) : (
+        <GenderCarouselSection
+          genders={[
+            { label: (t.home as any).forMen || 'For Men', products: maleProducts, href: '/products?gender=male' },
+            { label: (t.home as any).forWomen || 'For Women', products: femaleProducts, href: '/products?gender=female' },
+            { label: (t.home as any).forUnisex || 'Unisex', products: unisexProducts, href: '/products?gender=unisex' },
+          ]}
           vouchers={vouchers}
           activeDiscounts={activeDiscounts}
         />
-      ) : null}
-
-      {isLoading ? (
-        <CarouselSkeleton bg="bg-white" titleBg="bg-[#1C2E4A]/20" />
-      ) : femaleProducts.length > 0 ? (
-        <ProductCarousel
-          title={(t.home as any).forWomen || 'For Women'}
-          products={femaleProducts}
-          backgroundColor="bg-white"
-          titleColor="text-[#1C2E4A]"
-          variant="bestselling"
-          viewAllHref="/products?gender=female"
-          vouchers={vouchers}
-          activeDiscounts={activeDiscounts}
-        />
-      ) : null}
-
-      {isLoading ? (
-        <CarouselSkeleton bg="bg-white" titleBg="bg-[#1C2E4A]/20" />
-      ) : unisexProducts.length > 0 ? (
-        <ProductCarousel
-          title={(t.home as any).forUnisex || 'Unisex'}
-          products={unisexProducts}
-          backgroundColor="bg-white"
-          titleColor="text-[#1C2E4A]"
-          variant="bestselling"
-          viewAllHref="/products?gender=unisex"
-          vouchers={vouchers}
-          activeDiscounts={activeDiscounts}
-        />
-      ) : null}
+      )}
 
       {isLoading ? (
         <CarouselSkeleton bg="bg-white" titleBg="bg-[#1C2E4A]/20" />

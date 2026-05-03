@@ -108,6 +108,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} bg-luxury-navy`}>
       <head>
+        {/* Sets html lang BEFORE hydration so Chrome's translate bubble fires */}
+        <script dangerouslySetInnerHTML={{ __html: `try{var l=localStorage.getItem('page_lang');if(l&&l!=='en')document.documentElement.lang=l;}catch(e){}` }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
