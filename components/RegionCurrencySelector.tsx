@@ -98,7 +98,27 @@ export function RegionCurrencySelector() {
   const { setRegion, detectionResult, isLoading: regionLoading } = useRegion()
   const [isOpen, setIsOpen]       = useState(false)
   const [activeTab, setActiveTab] = useState<Group | 'all'>('all')
-  const [selected, setSelected]   = useState(COUNTRIES[0])
+  
+  // Initialize with saved, detected, or default country
+  const getInitialCountry = () => {
+    if (typeof window === 'undefined') return COUNTRIES[0]
+    
+    const saved = localStorage.getItem(COUNTRY_KEY)
+    if (saved) {
+      const found = COUNTRIES.find(c => c.code === saved)
+      if (found) return found
+    }
+    
+    // Use detected country if available
+    if (detectionResult?.country_code) {
+      const detected = COUNTRIES.find(c => c.code === detectionResult.country_code)
+      if (detected) return detected
+    }
+    
+    return COUNTRIES[0]
+  }
+  
+  const [selected, setSelected]   = useState(getInitialCountry)
   const [saving, setSaving]       = useState(false)
   const [currentLang, setCurrentLang] = useState<string>('')
 
