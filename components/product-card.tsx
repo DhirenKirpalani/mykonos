@@ -69,6 +69,7 @@ type Product = Database['public']['Tables']['products']['Row']
 interface ProductCardProps {
   product: Product
   className?: string
+  noBorder?: boolean
   voucher?: {
     discount_type: 'percentage' | 'fixed'
     discount_value: number
@@ -80,7 +81,7 @@ interface ProductCardProps {
   } | null
 }
 
-export function ProductCard({ product, className, voucher, activeDiscount }: ProductCardProps) {
+export function ProductCard({ product, className, noBorder = false, voucher, activeDiscount }: ProductCardProps) {
   const { region } = useRegion()
   const { t, locale } = useLanguage()
   const [mounted, setMounted] = useState(false)
@@ -98,8 +99,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
     const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
     const variantImages = hasVariants 
       ? (product as any).variants
-          .map((v: any) => v.image_url)
-          .filter((url: string) => url && url.trim() !== '')
+          .flatMap((v: any) => Array.isArray(v.image_url) ? v.image_url : (v.image_url ? [v.image_url] : [])).filter((url: any) => typeof url === 'string' && url.trim() !== '')
       : []
     
     return variantImages.length > 0 
@@ -218,16 +218,15 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   }
   
   // Check if first media is a video
-  const isVideo = (url: string) => {
-    if (!url) return false
+  const isVideo = (url: any): boolean => {
+    if (!url || typeof url !== 'string') return false
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
   }
   
   // Check if product has variants with images
   const variantImages = hasVariants 
     ? (product as any).variants
-        .map((v: any) => v.image_url)
-        .filter((url: string) => url && !url.includes('placehold.co'))
+        .flatMap((v: any) => Array.isArray(v.image_url) ? v.image_url : (v.image_url ? [v.image_url] : [])).filter((url: any) => typeof url === 'string' && !url.includes('placehold.co'))
     : []
   
   // Filter out invalid placeholder URLs from product images
@@ -252,7 +251,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   if (isBestsellingCard) {
     return (
       <Link href={`/products/${product.slug}`} className="block h-full">
-        <div className="group relative w-full h-full flex flex-col bg-white">
+        <div className={`group relative w-full h-full flex flex-col bg-white ${noBorder ? '' : 'border border-[#e0e0e0] hover:border-[#c0c0c0] transition-colors duration-200'}`}>
           {/* Product Image - tall portrait ratio */}
           <div className="relative w-full bg-white" style={{ paddingBottom: '105%' }}>
             {thumbnailUrl ? (
@@ -275,11 +274,20 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
             )}
           </div>
 
-          {/* Product Name */}
+          {/* Product Name + Price */}
           <div className="px-4 py-3 md:px-5 md:py-4 text-center">
             <h3 className="text-[9px] sm:text-[10px] md:text-xs font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug">
               {product.name}
             </h3>
+            {mounted && clientRegion && (() => {
+              const basePrice = hasPriceRange ? minVariantPrice : originalPrice
+              if (!basePrice) return null
+              return (
+                <p className="mt-1 text-[10px] md:text-xs font-semibold text-[#B8985F]">
+                  {hasPriceRange ? 'From ' : ''}{formatPrice(basePrice, clientRegion.currency_code)}
+                </p>
+              )
+            })()}
           </div>
         </div>
       </Link>
@@ -288,7 +296,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
   
   // Standard card — matches bestselling visual style + extra product info
   return (
-    <div className={`group relative w-full flex flex-col bg-white ${className}`}>
+    <div className={`group relative w-full flex flex-col bg-white ${noBorder ? '' : 'border border-[#e0e0e0] hover:border-[#c0c0c0] transition-colors duration-200'} ${className}`}>
 
       {/* Card link */}
       <Link
@@ -487,7 +495,7 @@ export function ProductCard({ product, className, voucher, activeDiscount }: Pro
                   <span className="text-[10px] text-gray-400 line-through">{formatPrice(originalPrice, clientRegion.currency_code)}</span>
                 )}
                 <span className="text-xs md:text-sm font-semibold text-[#B8985F]">
-                  {formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code)}
+                  {hasPriceRange && !voucher ? 'From ' : ''}{formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code)}
                 </span>
                 {discountPct > 0 && !voucher && (
                   <span className="text-[9px] text-gray-400">-{discountPct}%</span>

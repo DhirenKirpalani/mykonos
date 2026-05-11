@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Hide Google Translate toolbar ────────────────────────────────── */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.skiptranslate,
+.skiptranslate {
+  display: none !important;
+}
+body {
+  top: 0 !important;
+  position: static !important;
+}
+#google_translate_element {
+  display: none !important;
+}
+
 @font-face {
   font-family: 'Futura PT';
   src: local('Futura PT Book'), local('FuturaPT-Book');

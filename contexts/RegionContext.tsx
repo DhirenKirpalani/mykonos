@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { Region, RegionDetectionResult } from '@/lib/types/region'
 import { DEFAULT_REGION_CODE } from '@/lib/utils/region'
+import { loadExchangeRates } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from './AuthContext'
 
@@ -53,6 +54,9 @@ export function RegionProvider({ children }: { children: ReactNode }) {
             const data: RegionDetectionResult = await response.json()
             setRegionState(data.region)
             setDetectionResult(data)
+            if (data.region.currency_code !== 'USD' && data.region.currency_code !== 'IDR') {
+              loadExchangeRates()
+            }
             setIsLoading(false)
             return // Return early to prevent auto-detection from overriding saved preference
           }
@@ -79,6 +83,9 @@ export function RegionProvider({ children }: { children: ReactNode }) {
               source: 'default',
             })
             localStorage.setItem('selected_region_code', data.region.code)
+            if (data.region.currency_code !== 'USD' && data.region.currency_code !== 'IDR') {
+              loadExchangeRates()
+            }
             setIsLoading(false)
             return
           }
@@ -92,6 +99,9 @@ export function RegionProvider({ children }: { children: ReactNode }) {
         setRegionState(data.region)
         setDetectionResult(data)
         localStorage.setItem('selected_region_code', data.region.code)
+        if (data.region.currency_code !== 'USD' && data.region.currency_code !== 'IDR') {
+          loadExchangeRates()
+        }
         
         // Save detected region to database for visitors
         if (!user && data.region) {
@@ -142,6 +152,9 @@ export function RegionProvider({ children }: { children: ReactNode }) {
         
         // Store in localStorage for persistence across page refreshes
         localStorage.setItem('selected_region_code', data.region.code)
+        if (data.region.currency_code !== 'USD' && data.region.currency_code !== 'IDR') {
+          loadExchangeRates()
+        }
         
         if (user) {
           // Save to user profile

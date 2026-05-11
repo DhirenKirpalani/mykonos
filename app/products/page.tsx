@@ -442,6 +442,7 @@ function ProductsContent() {
                             product={product}
                             voucher={voucher || null}
                             activeDiscount={discount || null}
+                            noBorder
                           />
                         )
                       })}
@@ -461,6 +462,7 @@ function ProductsContent() {
                             product={product}
                             voucher={voucher || null}
                             activeDiscount={discount || null}
+                            noBorder
                           />
                         )
                       })}
@@ -493,6 +495,7 @@ function ProductsContent() {
                                   product={product}
                                   voucher={voucher || null}
                                   activeDiscount={discount || null}
+                                  noBorder
                                 />
                               )
                             })}

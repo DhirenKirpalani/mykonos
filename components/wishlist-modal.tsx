@@ -57,7 +57,8 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
 
-  const isVideo = (url: string) => {
+  const isVideo = (url: any): boolean => {
+    if (!url || typeof url !== 'string') return false
     return url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')
   }
 
@@ -343,8 +344,8 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
             className="fixed right-0 top-0 z-[9999] h-full w-full max-w-md bg-white flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-black/5 px-8 py-7">
-              <h2 className="flex items-center gap-3 text-xl tracking-wide font-light text-black">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 sm:px-8 py-6">
+              <h2 className="flex items-center gap-3 text-2xl font-semibold text-gray-900">
                 <Heart className="h-5 w-5 stroke-[1.5]" />
                 {t.wishlist.title}
               </h2>
@@ -384,19 +385,30 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                     <div key={item.id} className="flex gap-6 py-8">
                       <div className="relative h-24 w-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
                         {(() => {
+                          // Parse image field that may be a JSON string, array, or plain string
+                          const parseImg = (raw: any): string | null => {
+                            if (!raw) return null
+                            if (Array.isArray(raw)) return raw.filter(Boolean)[0] || null
+                            if (typeof raw === 'string') {
+                              try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean)[0] || null : raw } catch { return raw }
+                            }
+                            return null
+                          }
+
                           // Get variant image if item has variant
-                          let displayUrl = null
+                          let displayUrl: string | null = null
                           if (item.variant_name && item.product.variants) {
                             const variant = item.product.variants.find((v: any) => v.name === item.variant_name)
                             if (variant?.image_url) {
-                              displayUrl = variant.image_url
+                              displayUrl = parseImg(variant.image_url)
                             }
                           }
                           
                           // Fallback to product images
                           if (!displayUrl) {
-                            const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
-                            displayUrl = validUrls[0]
+                            const raw = item.product.image_urls
+                            const urls: string[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw as any) } catch { return [] } })()
+                            displayUrl = urls.find(u => u && typeof u === 'string' && !u.includes('placehold.co')) || null
                           }
                           
                           return displayUrl ? (
@@ -427,7 +439,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
 
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
-                          <h3 className="text-sm font-medium tracking-wide uppercase">
+                          <h3 className="text-base font-semibold text-gray-900 leading-snug">
                             {(item as any).variant_name || item.product.name}
                           </h3>
                           {region && (() => {
@@ -447,7 +459,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                             const displayUnitPrice = discounted !== null && discounted < unitPrice ? discounted : unitPrice
 
                             return (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-sm text-gray-600 mt-1.5">
                                 {formatPrice(displayUnitPrice, region)} / {t.cart.item}
                               </p>
                             )
@@ -481,15 +493,15 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                               return (
                                 <>
                                   {discounted !== null && discounted < basePrice && (
-                                    <span className="text-xs text-gray-400 line-through">
+                                    <span className="text-sm text-gray-400 line-through">
                                       {formatPrice(basePrice * qty, region)}
                                     </span>
                                   )}
-                                  <p className="text-sm font-medium tracking-wide">
+                                  <p className="text-lg font-bold text-gray-900">
                                     {formatPrice((displayPrice * qty) - voucherDiscount, region)}
                                   </p>
                                   {voucherDiscount > 0 && (
-                                    <span className="text-[10px] text-orange-600 font-medium">
+                                    <span className="text-xs text-orange-600 font-semibold">
                                       Voucher: -{formatPrice(voucherDiscount, region)}
                                     </span>
                                   )}
@@ -517,9 +529,9 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                           
                           <button
                             onClick={() => removeItem(item.id)}
-                            className="text-xs tracking-wide text-black/50 hover:text-black transition-colors text-left w-full"
+                            className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors text-center w-full"
                           >
-                            {t.wishlist.remove}
+                            {t.wishlist.remove || 'Remove'}
                           </button>
                         </div>
                       </div>

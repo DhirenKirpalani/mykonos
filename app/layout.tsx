@@ -1,19 +1,29 @@
 import type { Metadata } from 'next'
-import { Inter, Playfair_Display } from 'next/font/google'
+import { Lato, Libre_Caslon_Text, Montserrat } from 'next/font/google'
 import { Suspense } from 'react'
+import Script from 'next/script'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { ConditionalLayout } from '@/components/conditional-layout'
 
-const inter = Inter({ 
+const lato = Lato({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-lato',
+  weight: ['400', '700'],
   display: 'swap',
 })
 
-const playfair = Playfair_Display({ 
+const caslon = Libre_Caslon_Text({
   subsets: ['latin'],
-  variable: '--font-playfair',
+  variable: '--font-caslon',
+  weight: ['400', '700'],
+  display: 'swap',
+})
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  weight: ['400'],
   display: 'swap',
 })
 
@@ -106,7 +116,7 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable} bg-luxury-navy`}>
+    <html lang="en" className={`${lato.variable} ${caslon.variable} ${montserrat.variable} bg-luxury-navy`}>
       <head>
         {/* Sets html lang BEFORE hydration so Chrome's translate bubble fires */}
         <script dangerouslySetInnerHTML={{ __html: `try{var l=localStorage.getItem('page_lang');if(l&&l!=='en')document.documentElement.lang=l;}catch(e){}` }} />
@@ -114,11 +124,17 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
+        {/* Google Translate initializer — creates mount div dynamically to avoid hydration mismatch */}
+        <script dangerouslySetInnerHTML={{ __html: `window.googleTranslateElementInit=function(){var e=document.getElementById('google_translate_element');if(!e){e=document.createElement('div');e.id='google_translate_element';e.style.display='none';document.body.appendChild(e);}new google.translate.TranslateElement({pageLanguage:'en',includedLanguages:'ar,de,fr,it,es,nl,pl,ro,cs,hu,sk,id,hi,ms,ur',autoDisplay:false},'google_translate_element');}` }} />
       </head>
-      <body className="font-sans antialiased bg-luxury-navy">
+      <body className="font-sans antialiased bg-luxury-navy" suppressHydrationWarning>
         <Providers>
           <ConditionalLayout>{children}</ConditionalLayout>
         </Providers>
+        <Script
+          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   )

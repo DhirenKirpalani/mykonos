@@ -115,16 +115,12 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
         </div>
       )}
       <div className="flex items-baseline gap-3 flex-wrap">
-        <div className="text-2xl md:text-3xl font-bold text-luxury-navy">
+        <div className="text-3xl md:text-4xl font-bold text-luxury-navy">
           {hasPriceRange ? (
             voucher ? (
-              <>
-                {formatPrice((minVariantPrice - voucherDiscount) * quantity, currencyCode)} - {formatPrice((maxVariantPrice - voucherDiscount) * quantity, currencyCode)}
-              </>
+              <>From {formatPrice((minVariantPrice - voucherDiscount) * quantity, currencyCode)}</>
             ) : (
-              <>
-                {formatPrice(minVariantPrice * quantity, currencyCode)} - {formatPrice(maxVariantPrice * quantity, currencyCode)}
-              </>
+              <>From {formatPrice(minVariantPrice * quantity, currencyCode)}</>
             )
           ) : voucher ? (
             formatPrice(priceAfterVoucher, currencyCode)
@@ -166,7 +162,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
             <span className="text-gray-600">Harga Asli</span>
             <span className="font-medium">
               {hasPriceRange 
-                ? `${formatPrice(minVariantPrice * quantity, currencyCode)} - ${formatPrice(maxVariantPrice * quantity, currencyCode)}`
+                ? `From ${formatPrice(minVariantPrice * quantity, currencyCode)}`
                 : formatPrice(totalPrice, currencyCode)
               }
             </span>
@@ -181,7 +177,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
             <span className="font-bold text-gray-900">Harga Bersih</span>
             <span className="font-bold text-luxury-navy text-lg md:text-xl">
               {hasPriceRange
-                ? `${formatPrice((minVariantPrice - voucherDiscount) * quantity, currencyCode)} - ${formatPrice((maxVariantPrice - voucherDiscount) * quantity, currencyCode)}`
+                ? `From ${formatPrice((minVariantPrice - voucherDiscount) * quantity, currencyCode)}`
                 : formatPrice(priceAfterVoucher, currencyCode)
               }
             </span>

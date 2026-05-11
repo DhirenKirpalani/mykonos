@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { ChevronRight } from 'lucide-react'
+import { ChevronDown, List } from 'lucide-react'
 
 interface ExpandableSpecificationsProps {
   product: any
@@ -22,40 +22,30 @@ export function ExpandableSpecifications({ product, fragranceFamily }: Expandabl
     { label: p.middleNotes, value: (product as any).middle_notes || null },
     { label: p.baseNotes, value: (product as any).base_notes || null },
     { label: p.shelfLife, value: (product as any).shelf_life || null },
-    { label: p.countryOfOrigin, value: (product as any).country_of_origin || null },
     { label: p.shipsFrom, value: (product as any).ships_from || null },
     { label: p.bpomNumber, value: (product as any).bpom_number || null },
   ].filter(row => row.value !== null && row.value !== '')
 
-  // Generate dynamic preview text from first 3 specs
-  const previewText = specRows.slice(0, 3).map(row => row.value).join(', ') || p.specsPreview
+  if (specRows.length === 0) return null
 
   return (
-    <div className="pb-8">
-      {/* Header */}
+    <div className="border-t border-gray-200 mb-6">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full text-left group"
+        className="w-full flex items-center gap-4 py-4 text-left"
       >
-        <div className="flex items-center gap-3 mb-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-luxury-navy">
-            {p.specifications}
-          </p>
-          <div className="flex-1 h-px bg-gradient-to-r from-luxury-gold/40 to-transparent" />
-          <ChevronRight
-            className={`h-3.5 w-3.5 text-luxury-gold flex-shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
-          />
-        </div>
-        {!isExpanded && (
-          <p className="text-xs text-gray-400 tracking-wide line-clamp-1 mt-2">{previewText}</p>
-        )}
+        <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+          <List className="h-5 w-5 text-gray-500" strokeWidth={1.5} />
+        </span>
+        <span className="flex-1 text-sm font-medium text-gray-900">{p.specifications}</span>
+        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
       </button>
 
       {isExpanded && (
-        <div className="mt-4 divide-y divide-gray-100">
+        <div className="pb-5 pl-12 pr-2 divide-y divide-gray-100">
           {specRows.map(({ label, value }) => (
             <div key={label} className="flex gap-4 py-2.5">
-              <span className="w-36 flex-shrink-0 text-xs uppercase tracking-[0.12em] text-gray-400 pt-0.5">
+              <span className="w-32 flex-shrink-0 text-xs uppercase tracking-[0.12em] text-gray-400 pt-0.5">
                 {label}
               </span>
               <span className="text-sm text-luxury-navy font-medium leading-relaxed">

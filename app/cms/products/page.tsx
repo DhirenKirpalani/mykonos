@@ -356,8 +356,8 @@ export default function ProductsPage() {
                 // Get variant images if available
                 const variantImages = hasVariants && product.variants
                   ? product.variants
-                      .map(v => v.image_url)
-                      .filter(url => url && url.trim() !== '')
+                      .flatMap(v => Array.isArray(v.image_url) ? v.image_url : (v.image_url ? [v.image_url] : []))
+                      .filter(url => typeof url === 'string' && url.trim() !== '')
                   : []
                 
                 // Get product images

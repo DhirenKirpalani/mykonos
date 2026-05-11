@@ -33,13 +33,16 @@ export function Footer() {
   }
 
   return (
-    <footer className="bg-luxury-navy text-white overflow-hidden mt-12 sm:mt-16" style={{ minHeight: '400px' }}>
-      <div className="container mx-auto px-4 py-6 sm:py-8 lg:py-12 lg:px-8 max-w-full">
-        <div className="flex flex-col gap-6 sm:gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 break-words" style={{ minHeight: '280px' }}>
+    <footer className="bg-luxury-navy text-white overflow-hidden mt-8 sm:mt-10">
+      <div className="container mx-auto px-4 py-6 sm:py-8 lg:px-8 max-w-full">
+        <div className="flex flex-col gap-5 sm:gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-4 break-words">
           {/* Brand Column */}
           <div className="overflow-hidden">
             <Link href="/" className="inline-block">
-              <span className="font-futura text-xl sm:text-2xl font-medium tracking-normal text-luxury-gold">
+              <span
+                className="font-montserrat text-2xl sm:text-3xl font-normal tracking-normal"
+                style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+              >
                 MYKONOS
               </span>
             </Link>

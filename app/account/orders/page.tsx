@@ -187,17 +187,34 @@ export default function OrdersPage() {
               {firstProduct && (
                 <div className="flex-shrink-0 relative w-16 h-16 sm:w-20 sm:h-20">
                   {(() => {
-                    // Get variant image if item has variant
-                    let displayImage = null
+                    // Parse image field that may be a JSON string, array, or plain string
+                    const parseImg = (raw: any): string | null => {
+                      if (!raw) return null
+                      if (Array.isArray(raw)) return raw.filter(Boolean)[0] || null
+                      if (typeof raw === 'string') {
+                        try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean)[0] || null : raw } catch { return raw }
+                      }
+                      return null
+                    }
+
+                    // Prefer variant-specific image
+                    let displayImage: string | null = null
                     if (firstItem?.variant_name && firstProduct.variants) {
                       const variant = firstProduct.variants.find((v: any) => v.name === firstItem.variant_name)
-                      if (variant?.image_url) {
-                        displayImage = variant.image_url
-                      }
+                      if (variant?.image_url) displayImage = parseImg(variant.image_url)
                     }
-                    // Fallback to product image
+                    // Fallback to product images
                     if (!displayImage) {
-                      displayImage = firstProduct.image_urls?.[0]
+                      const raw = firstProduct.image_urls
+                      const urls: string[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw as any) } catch { return [] } })()
+                      displayImage = urls.find(u => u && !u.includes('placehold.co')) || null
+                    }
+                    // Fallback to any variant image
+                    if (!displayImage && firstProduct.variants) {
+                      for (const v of firstProduct.variants) {
+                        const img = parseImg((v as any).image_url)
+                        if (img) { displayImage = img; break }
+                      }
                     }
                     
                     return displayImage ? (
@@ -206,7 +223,7 @@ export default function OrdersPage() {
                         alt={firstItem?.variant_name || firstProduct.name}
                         fill
                         sizes="(max-width: 640px) 64px, 80px"
-                        className="object-cover rounded-lg"
+                        className="object-contain rounded-lg bg-gray-50 p-1"
                         loading="lazy"
                       />
                     ) : (

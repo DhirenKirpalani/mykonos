@@ -1163,26 +1163,52 @@ export default function TrackOrderPage() {
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('trackOrder.products')}</h3>
                   <div className="space-y-3">
-                    {order.order_items.map((item) => (
+                    {order.order_items.map((item) => {
+                      // Parse image field that may be a JSON string, array, or plain string
+                      const parseImg = (raw: any): string | null => {
+                        if (!raw) return null
+                        if (Array.isArray(raw)) return raw.filter(Boolean)[0] || null
+                        if (typeof raw === 'string') {
+                          try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean)[0] || null : raw } catch { return raw }
+                        }
+                        return null
+                      }
+                      // Prefer variant-specific image
+                      let itemImage: string | null = null
+                      if (item.variant_name && item.product.variants) {
+                        const variant = item.product.variants.find(v => v.name === item.variant_name)
+                        if (variant?.image_url) itemImage = parseImg(variant.image_url)
+                      }
+                      // Fallback to product images
+                      if (!itemImage) {
+                        const raw = item.product.image_urls
+                        const urls: string[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw as any) } catch { return [] } })()
+                        itemImage = urls.find(u => u && !u.includes('placehold.co')) || null
+                      }
+                      // Fallback to any variant image
+                      if (!itemImage && item.product.variants) {
+                        for (const v of item.product.variants) {
+                          const img = parseImg(v.image_url)
+                          if (img) { itemImage = img; break }
+                        }
+                      }
+
+                      return (
                       <div key={item.id} className="flex gap-3">
-                        <img
-                          src={(() => {
-                            // Get variant image if item has variant
-                            if (item.variant_name && item.product.variants) {
-                              const variant = item.product.variants.find(v => v.name === item.variant_name)
-                              if (variant?.image_url) {
-                                return variant.image_url
-                              }
-                            }
-                            // Fallback to product image
-                            return item.product.image_urls && item.product.image_urls.length > 0 && item.product.image_urls[0] ? item.product.image_urls[0] : '/placeholder.png'
-                          })()}
-                          alt={item.variant_name || item.product.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                          onError={(e) => {
-                            e.currentTarget.src = '/placeholder.png'
-                          }}
-                        />
+                        {itemImage ? (
+                          <img
+                            src={itemImage}
+                            alt={item.variant_name || item.product.name}
+                            className="w-16 h-16 object-contain rounded-lg bg-gray-50 p-1 flex-shrink-0"
+                            onError={(e) => { e.currentTarget.style.display = 'none' }}
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-gray-100 flex items-center justify-center">
+                            <svg className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{item.variant_name || item.product.name}</p>
                           {(() => {
@@ -1217,7 +1243,8 @@ export default function TrackOrderPage() {
                           })()}
                         </div>
                       </div>
-                    ))}
+                    )
+                    })}
                   </div>
                 </div>
               )}

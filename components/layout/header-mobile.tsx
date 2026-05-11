@@ -334,7 +334,10 @@ export function HeaderMobile() {
           </button>
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-            <span className="font-futura text-base font-medium tracking-[0.25em] text-luxury-gold transition-opacity hover:opacity-80">
+            <span
+              className="font-montserrat text-base font-normal tracking-[0.25em] transition-opacity hover:opacity-80"
+              style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+            >
               MYKONOS
             </span>
           </Link>

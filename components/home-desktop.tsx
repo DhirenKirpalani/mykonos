@@ -64,8 +64,8 @@ function GenderCarouselSection({ genders, vouchers, activeDiscounts }: {
   const current = available.find(g => g.label === active) ?? available[0]
   if (!available.length) return null
   return (
-    <section className="bg-white pt-8 md:pt-12">
-      <div className="text-center mb-6 px-4">
+    <section className="bg-white">
+      <div className="text-center pt-8 mb-6 px-4">
         <p className="mb-3 text-sm font-normal uppercase tracking-[0.3em] text-[#333] md:text-base">MUST HAVE</p>
         <h2 className="font-sans uppercase tracking-[0.18em] text-[#1C2E4A] text-3xl font-bold md:text-4xl lg:text-5xl mb-5">
           {active}
@@ -98,6 +98,7 @@ function GenderCarouselSection({ genders, vouchers, activeDiscounts }: {
           vouchers={vouchers}
           activeDiscounts={activeDiscounts}
           hideHeader={true}
+          noBorders={true}
         />
       )}
     </section>
