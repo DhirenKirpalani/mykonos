@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Plus, Minus, ShoppingCart, Zap } from 'lucide-react'
+import { X, Plus, Minus, ShoppingCart, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useRegion } from '@/contexts/RegionContext'
@@ -67,9 +67,20 @@ export function ProductVariantModal({
   const [selectedVariants, setSelectedVariants] = useState<Map<string, { variant: ProductVariant, quantity: number }>>(new Map())
   const [quantity, setQuantity] = useState(minQty)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   
   const currencyCode = region?.currency_code || 'USD'
   const isIDR = region?.code === 'ID'
+
+  // Helper: parse image field that may be a string, JSON string, or array
+  const parseImageField = (raw: any): string[] => {
+    if (!raw) return []
+    if (Array.isArray(raw)) return raw.filter(Boolean)
+    if (typeof raw === 'string') {
+      try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean) : [raw] } catch { return [raw] }
+    }
+    return []
+  }
 
   if (!isOpen) return null
 
@@ -130,11 +141,11 @@ export function ProductVariantModal({
       if (newMap.has(variant.sku)) {
         newMap.delete(variant.sku)
       } else {
-        // Start with quantity 1
         newMap.set(variant.sku, { variant, quantity: 1 })
       }
       return newMap
     })
+    setCurrentImageIndex(0)
   }
 
   const handleVariantQuantityChange = (sku: string, delta: number) => {
@@ -293,39 +304,75 @@ export function ProductVariantModal({
         {/* Content */}
         <div className="p-3 sm:p-5 md:p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
-            {/* Product Image - hidden on very small screens to save space */}
-            <div className="relative hidden xs:block sm:block aspect-square max-h-32 sm:max-h-40 md:max-h-none rounded-lg overflow-hidden bg-gray-100">
-              {(() => {
-                // Get selected variant image if available
-                const selectedVariantArray = Array.from(selectedVariants.values())
-                const selectedVariantImage = selectedVariantArray.length > 0 && selectedVariantArray[0].variant.image_url
-                  ? selectedVariantArray[0].variant.image_url
-                  : null
-                
-                // Fallback to product images
-                const validUrls = product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
-                const displayUrl = selectedVariantImage || validUrls[0]
-                
-                return displayUrl ? (
-                  <img
-                    src={displayUrl}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <span className="text-sm">No image</span>
-                  </div>
-                )
-              })()}
-            </div>
+            {/* Product Image Carousel */}
+            {(() => {
+              const selectedArr = Array.from(selectedVariants.values())
+              // Images = last selected variant's images → product images → first variant images
+              const carouselImages = (() => {
+                if (selectedArr.length > 0) {
+                  const imgs = parseImageField(selectedArr[selectedArr.length - 1].variant.image_url).filter(u => !u.includes('placehold.co'))
+                  if (imgs.length > 0) return imgs
+                }
+                const productImgs = parseImageField(product.image_urls).filter(u => !u.includes('placehold.co'))
+                if (productImgs.length > 0) return productImgs
+                // Fallback: use first available variant image
+                return (product.variants || []).flatMap(v => parseImageField(v.image_url)).filter(u => !u.includes('placehold.co')).slice(0, 6)
+              })()
+              const safeIdx = Math.min(currentImageIndex, Math.max(0, carouselImages.length - 1))
+
+              return (
+                <div className="relative hidden sm:block aspect-square rounded-lg overflow-hidden bg-gray-100 select-none">
+                  {carouselImages.length > 0 ? (
+                    <>
+                      <img
+                        key={carouselImages[safeIdx]}
+                        src={carouselImages[safeIdx]}
+                        alt={product.name}
+                        className="w-full h-full object-contain p-4"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      />
+                      {carouselImages.length > 1 && (
+                        <>
+                          <button
+                            onClick={() => setCurrentImageIndex(i => Math.max(0, i - 1))}
+                            disabled={safeIdx === 0}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-sm disabled:opacity-25 hover:bg-white transition-all z-10"
+                          >
+                            <ChevronLeft className="h-4 w-4 text-gray-700" />
+                          </button>
+                          <button
+                            onClick={() => setCurrentImageIndex(i => Math.min(carouselImages.length - 1, i + 1))}
+                            disabled={safeIdx === carouselImages.length - 1}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-sm disabled:opacity-25 hover:bg-white transition-all z-10"
+                          >
+                            <ChevronRight className="h-4 w-4 text-gray-700" />
+                          </button>
+                          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                            {carouselImages.map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setCurrentImageIndex(i)}
+                                className={`rounded-full transition-all ${
+                                  i === safeIdx ? 'w-4 h-2 bg-luxury-navy' : 'w-2 h-2 bg-black/25 hover:bg-black/40'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <span className="text-sm">No image</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Product Details */}
             <div className="flex flex-col">
-              <div className="flex items-start gap-2 flex-wrap mb-2">
+              <div className="flex items-start gap-2 flex-wrap mb-2 pr-8 sm:pr-0">
                 <h2 className="text-sm sm:text-base md:text-2xl font-bold text-gray-900 leading-tight break-words flex-1">{product.name}</h2>
                 {(product as any).in_stock && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -358,32 +405,18 @@ export function ProductVariantModal({
               </div>
 
               {/* Price */}
-              <div className="mb-2 md:mb-4">
-                {/* Strikethrough original price range when discounts active */}
-                {hasDiscountedVariants && priceRange && originalPriceRange && (
-                  <div className="text-base text-gray-400 line-through">
-                    {formatPrice(originalPriceRange.min, currencyCode)} - {formatPrice(originalPriceRange.max, currencyCode)}
-                  </div>
-                )}
+              {!hasVariants && (
+              <div className="mb-4 md:mb-6">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-lg md:text-3xl font-bold text-luxury-navy">
+                  <span className="text-2xl md:text-3xl font-bold text-luxury-navy">
                     {(() => {
-                      if (priceRange) {
-                        const voucherDiscount = voucher ? (
-                          voucher.discount_type === 'percentage' 
-                            ? (priceRange.min * voucher.discount_value / 100)
-                            : voucher.discount_value
-                        ) : 0
-                        return `${formatPrice(priceRange.min - voucherDiscount, currencyCode)} - ${formatPrice(priceRange.max - voucherDiscount, currencyCode)}`
-                      } else {
-                        const price = effectivePrice * (!hasVariants ? quantity : 1)
-                        const voucherDiscount = voucher ? (
-                          voucher.discount_type === 'percentage' 
-                            ? (price * voucher.discount_value / 100)
-                            : voucher.discount_value
-                        ) : 0
-                        return formatPrice(price - voucherDiscount, currencyCode)
-                      }
+                      const price = effectivePrice * (!hasVariants ? quantity : 1)
+                      const voucherDiscount = voucher ? (
+                        voucher.discount_type === 'percentage' 
+                          ? (price * voucher.discount_value / 100)
+                          : voucher.discount_value
+                      ) : 0
+                      return formatPrice(price - voucherDiscount, currencyCode)
                     })()}
                   </span>
                 </div>
@@ -401,7 +434,7 @@ export function ProductVariantModal({
                   </div>
                 )}
               </div>
-
+              )}
 
               {/* Quantity Selector for products without variants */}
               {!hasVariants && mode !== 'wishlist' && (
@@ -455,18 +488,19 @@ export function ProductVariantModal({
                           >
                             <div className="flex items-center justify-between gap-3">
                               {/* Variant Image Thumbnail */}
-                              {variant.image_url && (
-                                <div className="relative w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
-                                  <img
-                                    src={variant.image_url}
-                                    alt={variant.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none'
-                                    }}
-                                  />
-                                </div>
-                              )}
+                              {(() => {
+                                const thumbUrl = parseImageField(variant.image_url)[0]
+                                return thumbUrl ? (
+                                  <div className="relative w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
+                                    <img
+                                      src={thumbUrl}
+                                      alt={variant.name}
+                                      className="w-full h-full object-contain p-1"
+                                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                                    />
+                                  </div>
+                                ) : null
+                              })()}
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-gray-900">{variant.name}</div>
                               </div>

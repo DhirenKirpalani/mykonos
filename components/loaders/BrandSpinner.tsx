@@ -84,11 +84,14 @@ export function InlineSpinner({ variant = 'gold' }: { variant?: 'gold' | 'navy' 
  */
 export function PageTransitionSpinner() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: '#071D49' }}>
       <div className="flex flex-col items-center gap-6">
         {/* Brand Name */}
         <div className="relative">
-          <h2 className="font-serif text-4xl font-medium tracking-[0.3em] text-luxury-gold md:text-5xl animate-pulse-subtle">
+          <h2
+            className="font-montserrat text-4xl font-normal tracking-[0.3em] md:text-5xl animate-pulse-subtle"
+            style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+          >
             MYKONOS
           </h2>
           <div className="absolute -inset-4 bg-luxury-gold/5 blur-2xl rounded-full" />

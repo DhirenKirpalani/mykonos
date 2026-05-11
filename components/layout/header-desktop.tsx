@@ -305,7 +305,10 @@ export function HeaderDesktop() {
           <div className="flex h-20 items-center justify-center">
             <div className="flex items-center gap-5 flex-1" />
             <Link href="/" className="static translate-x-0">
-              <span className="font-futura text-4xl font-medium tracking-normal text-luxury-gold transition-all duration-300 hover:opacity-90">
+              <span
+                className="font-montserrat text-4xl font-normal tracking-normal transition-all duration-300 hover:opacity-90"
+                style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+              >
                 MYKONOS
               </span>
             </Link>
@@ -326,7 +329,10 @@ export function HeaderDesktop() {
           </div>
           
           <Link href="/" className="static translate-x-0">
-            <span className="font-futura text-4xl font-medium tracking-normal text-luxury-gold transition-all duration-300 hover:opacity-90">
+            <span
+              className="font-montserrat text-4xl font-normal tracking-normal transition-all duration-300 hover:opacity-90"
+              style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+            >
               MYKONOS
             </span>
           </Link>

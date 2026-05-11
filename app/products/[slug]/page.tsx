@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase/client'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { ProductCarousel } from '@/components/product-carousel'
 import { Breadcrumb, BreadcrumbItem } from '@/components/breadcrumb'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Info, ChevronDown, Truck, Droplets } from 'lucide-react'
 import Link from 'next/link'
 import { ProductImageGallery } from '@/components/product-image-gallery'
 import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
@@ -64,7 +64,9 @@ export default function ProductDetailPage({
   const [relatedVouchers, setRelatedVouchers] = useState<any[]>([])
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
   const [popularProducts, setPopularProducts] = useState<Product[]>([])
-  const [showFullDescription, setShowFullDescription] = useState(false)
+  const [showDescription, setShowDescription] = useState(false)
+  const [showFragranceNotes, setShowFragranceNotes] = useState(false)
+  const [showShipping, setShowShipping] = useState(false)
 
   const handleVoucherExpire = () => {
     setVoucher(null)
@@ -168,7 +170,6 @@ export default function ProductDetailPage({
   // Build breadcrumb items following website route
   const breadcrumbItems: BreadcrumbItem[] = [
     { label: t.common.products, href: '/products' },
-    { label: fragranceFamily, href: `/products?category=${encodeURIComponent(fragranceFamily)}` },
     { label: product.name, href: `/products/${product.slug}` },
   ]
 
@@ -197,8 +198,8 @@ export default function ProductDetailPage({
                 const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
                 const variantImages = hasVariants 
                   ? (product as any).variants
-                      .map((v: any) => v.image_url)
-                      .filter((url: string) => url && url.trim() !== '')
+                      .flatMap((v: any) => Array.isArray(v.image_url) ? v.image_url : (v.image_url ? [v.image_url] : []))
+                      .filter((url: any) => typeof url === 'string' && url.trim() !== '')
                   : []
                 
                 // Combine variant images with product images
@@ -238,14 +239,14 @@ export default function ProductDetailPage({
                   {(product as any).brand}
                 </p>
               )}
-              <h1 className="mb-4 font-serif text-3xl md:text-4xl font-bold text-luxury-navy leading-tight">
+              <h1 className="mb-4 font-serif text-2xl md:text-4xl font-bold text-luxury-navy leading-tight">
                 {product.name}
               </h1>
               {((product as any).rating > 0 || (product as any).products_sold > 0) && (
-                <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-3 text-base">
                   {(product as any).rating > 0 && (
                     <div className="flex items-center gap-1.5">
-                      <svg className="h-4 w-4 text-luxury-gold fill-current" viewBox="0 0 20 20">
+                      <svg className="h-5 w-5 text-luxury-gold fill-current" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
                       <span className="font-semibold text-luxury-navy">{((product as any).rating as number).toFixed(1)}</span>
@@ -255,7 +256,7 @@ export default function ProductDetailPage({
                     <span className="text-luxury-gold/40">·</span>
                   )}
                   {(product as any).products_sold > 0 && (
-                    <span className="text-gray-500 text-xs tracking-wide">
+                    <span className="text-gray-500 text-sm tracking-wide">
                       {(product as any).products_sold >= 1000
                         ? `${Math.floor((product as any).products_sold / 1000)}k+`
                         : `${(product as any).products_sold}`} {productTranslations.sold}
@@ -295,75 +296,96 @@ export default function ProductDetailPage({
             {/* Thin divider */}
             <div className="h-px bg-gray-100 mb-6" />
 
-            {/* Description - collapsible */}
-            {product.description && (
-              <div className="pb-6">
-                <div
-                  className={`text-sm leading-7 text-gray-600 [&_p]:mb-3 [&_p:last-child]:mb-0 overflow-hidden transition-all duration-500 ${
-                    showFullDescription ? 'max-h-[2000px]' : 'max-h-[6rem]'
-                  }`}
-                  dangerouslySetInnerHTML={{ __html: product.description }}
-                />
-                {!showFullDescription && (
-                  <div className="relative -mt-4 pt-6 bg-gradient-to-t from-white via-white/90 to-transparent">
-                    <button
-                      onClick={() => setShowFullDescription(true)}
-                      className="text-xs font-semibold uppercase tracking-[0.15em] text-luxury-navy border-b border-luxury-navy/30 pb-px hover:border-luxury-navy transition-colors"
-                    >
-                      Read More
-                    </button>
+            {/* ── Accordion: Description / Fragrance Notes / Shipping ── */}
+            <div className="border-t border-gray-200 divide-y divide-gray-200 mb-6">
+
+              {/* Description */}
+              {product.description && (
+                <div>
+                  <button
+                    onClick={() => setShowDescription(v => !v)}
+                    className="w-full flex items-center gap-4 py-4 text-left"
+                  >
+                    <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                      <Info className="h-5 w-5 text-gray-500" strokeWidth={1.5} />
+                    </span>
+                    <span className="flex-1 text-sm font-medium text-gray-900">Description</span>
+                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showDescription ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showDescription && (
+                    <div
+                      className="pb-5 pl-12 pr-2 text-sm text-gray-600 leading-6 [&_p]:mb-2 [&_p:empty]:hidden [&_p:empty]:m-0 [&_br+br]:hidden"
+                      dangerouslySetInnerHTML={{
+                        __html: product.description
+                          .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '')
+                          .replace(/(<br\s*\/?>[\s\n]*){2,}/gi, '<br>')
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Fragrance Notes */}
+              {((product as any).top_notes || (product as any).middle_notes || (product as any).base_notes) && (
+                <div>
+                  <button
+                    onClick={() => setShowFragranceNotes(v => !v)}
+                    className="w-full flex items-center gap-4 py-4 text-left"
+                  >
+                    <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                      <Droplets className="h-5 w-5 text-gray-500" strokeWidth={1.5} />
+                    </span>
+                    <span className="flex-1 text-sm font-medium text-gray-900">Fragrance Notes</span>
+                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showFragranceNotes ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showFragranceNotes && (
+                    <div className="pb-5 pl-12 pr-2 space-y-2">
+                      {(product as any).top_notes && (
+                        <p className="text-sm text-gray-600">
+                          <span className="font-semibold text-gray-800">{productTranslations.topNotes}:</span>{' '}
+                          {(product as any).top_notes}
+                        </p>
+                      )}
+                      {(product as any).middle_notes && (
+                        <p className="text-sm text-gray-600">
+                          <span className="font-semibold text-gray-800">{productTranslations.middleNotes}:</span>{' '}
+                          {(product as any).middle_notes}
+                        </p>
+                      )}
+                      {(product as any).base_notes && (
+                        <p className="text-sm text-gray-600">
+                          <span className="font-semibold text-gray-800">{productTranslations.baseNotes}:</span>{' '}
+                          {(product as any).base_notes}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Shipping */}
+              <div>
+                <button
+                  onClick={() => setShowShipping(v => !v)}
+                  className="w-full flex items-center gap-4 py-4 text-left"
+                >
+                  <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                    <Truck className="h-5 w-5 text-gray-500" strokeWidth={1.5} />
+                  </span>
+                  <span className="flex-1 text-sm font-medium text-gray-900">Shipping</span>
+                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showShipping ? 'rotate-180' : ''}`} />
+                </button>
+                {showShipping && (
+                  <div className="pb-5 pl-12 pr-2">
+                    <ProductShippingInfo product={product} />
                   </div>
                 )}
-                {showFullDescription && (
-                  <button
-                    onClick={() => setShowFullDescription(false)}
-                    className="mt-3 text-xs font-semibold uppercase tracking-[0.15em] text-luxury-navy border-b border-luxury-navy/30 pb-px hover:border-luxury-navy transition-colors"
-                  >
-                    Show Less
-                  </button>
-                )}
               </div>
-            )}
 
-            {/* Fragrance Notes - always visible */}
-            {((product as any).top_notes || (product as any).middle_notes || (product as any).base_notes) && (
-              <div className="pb-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-luxury-navy">
-                    Perfume Notes
-                  </p>
-                  <div className="flex-1 h-px bg-gradient-to-r from-luxury-gold/40 to-transparent" />
-                </div>
-                <div className="space-y-2.5">
-                  {(product as any).top_notes && (
-                    <p className="text-sm text-gray-700">
-                      <span className="font-semibold text-luxury-navy">{productTranslations.topNotes}:</span>{' '}
-                      {(product as any).top_notes}
-                    </p>
-                  )}
-                  {(product as any).middle_notes && (
-                    <p className="text-sm text-gray-700">
-                      <span className="font-semibold text-luxury-navy">{productTranslations.middleNotes}:</span>{' '}
-                      {(product as any).middle_notes}
-                    </p>
-                  )}
-                  {(product as any).base_notes && (
-                    <p className="text-sm text-gray-700">
-                      <span className="font-semibold text-luxury-navy">{productTranslations.baseNotes}:</span>{' '}
-                      {(product as any).base_notes}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+            </div>
 
             {/* Specifications */}
             <ExpandableSpecifications product={product} fragranceFamily={fragranceFamily} />
-
-            {/* Shipping */}
-            <div className="pt-2 pb-6 border-t border-gray-100">
-              <ProductShippingInfo product={product} />
-            </div>
 
             {/* Action Buttons */}
             <div className="pb-6">

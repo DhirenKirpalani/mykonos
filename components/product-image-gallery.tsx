@@ -256,7 +256,7 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
       {/* Desktop: vertical thumbnails left + main image right */}
       <div className="hidden md:flex gap-3 w-full">
         {images.length > 1 && (
-          <div className="flex flex-col gap-2 w-[68px] flex-shrink-0 overflow-y-auto">
+          <div className="flex flex-col gap-2 w-[68px] flex-shrink-0 overflow-y-auto max-h-[600px] pr-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
             {images.map((url, index) => thumbnailsJSX(url, index))}
           </div>
         )}

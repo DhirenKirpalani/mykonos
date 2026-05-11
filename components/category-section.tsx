@@ -98,6 +98,7 @@ export function CategorySection() {
                     src={category.image_url || 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&q=80'}
                     alt={category.name}
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   {/* Photographic Gradient Overlay */}

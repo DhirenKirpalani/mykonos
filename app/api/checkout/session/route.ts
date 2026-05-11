@@ -12,9 +12,9 @@ export async function POST(request: Request) {
     console.log('🔵 [API] POST /api/checkout/session - Creating checkout session')
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
-    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0, item_discounts = [], tax: providedTax } = body
+    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0, item_discounts = [], tax: providedTax, exchange_rate } = body
     
-    console.log('📥 [API] Request body:', { user_id, session_id, items_count: items?.length, currency_code, region_code })
+    console.log('📥 [API] Request body:', { user_id, session_id, items_count: items?.length, currency_code, region_code, exchange_rate })
 
     if (!user_id && !session_id) {
       console.error('❌ [API] Missing user_id and session_id')
@@ -121,7 +121,8 @@ export async function POST(request: Request) {
       shipping: 0,
       tax,
       total: netAmount + tax,
-      currency_code: finalCurrencyCode
+      currency_code: finalCurrencyCode,
+      exchange_rate_to_usd: exchange_rate || null
     }
 
     console.log('📝 [API] Creating checkout session in database...')

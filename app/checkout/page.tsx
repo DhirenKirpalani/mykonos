@@ -35,6 +35,7 @@ const MapPicker = dynamic(() => import('@/components/map/MapPicker').then(mod =>
 import { useCurrency } from '@/hooks/useCurrency'
 import { formatPrice as formatCurrencyPrice } from '@/lib/utils/currency'
 import { formatPrice as formatRegionPrice } from '@/lib/utils/region'
+import { formatPrice } from '@/lib/utils'
 
 type CartItem = {
   id: string
@@ -1036,6 +1037,25 @@ export default function CheckoutPage() {
           })
           .filter(Boolean)
         
+        // Calculate exchange rate for non-USD currencies
+        let exchangeRate = null
+        if (region?.currency_code && region.currency_code !== 'USD') {
+          // Fetch current exchange rate
+          try {
+            const ratesResponse = await fetch('/api/exchange-rates')
+            if (ratesResponse.ok) {
+              const rates = await ratesResponse.json()
+              if (rates[region.currency_code]) {
+                // Store the rate from USD to local currency (e.g., 1 USD = 36 THB)
+                // But we want to store the reverse (1 THB = X USD) for historical accuracy
+                exchangeRate = 1 / rates[region.currency_code]
+              }
+            }
+          } catch (error) {
+            console.error('Failed to fetch exchange rates:', error)
+          }
+        }
+
         const sessionResponse = await fetch('/api/checkout/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1046,6 +1066,7 @@ export default function CheckoutPage() {
             voucher_discount: totalVoucherDiscount,
             item_discounts: itemDiscountsForSession,
             tax,
+            exchange_rate: exchangeRate,
           }),
         })
 
@@ -2152,6 +2173,19 @@ export default function CheckoutPage() {
   // Combine cart items and quick-added items for total calculation
   const allItems = [...cartItems, ...quickAddedItems]
   
+  // Helper to convert USD to local currency (matches formatPrice logic)
+  const convertToLocalCurrency = (usdAmount: number): number => {
+    const currencyCode = region?.currency_code || currency
+    if (currencyCode === 'USD') return usdAmount
+    if (currencyCode === 'IDR') return usdAmount // IDR prices are pre-converted
+    
+    // Parse the formatted price to extract the numeric value with conversion applied
+    // This ensures we use the same conversion logic as formatPrice
+    const formatted = formatPrice(usdAmount, currencyCode)
+    const numericValue = parseFloat(formatted.replace(/[^0-9.-]+/g, ''))
+    return isNaN(numericValue) ? usdAmount : numericValue
+  }
+  
   const subtotal = allItems.reduce((total, item) => {
     const basePrice = getBasePrice(item.product, (item as any).variant_sku)
     const salePrice = getEffectivePrice(basePrice, null)
@@ -2193,6 +2227,32 @@ export default function CheckoutPage() {
   const tax = taxableAmount * 0.1
   console.log(`💰 Total taxable amount: ${taxableAmount}, Tax (10%): ${tax}`)
   const total = netAmount + shipping + tax - discount
+  
+  // For display: calculate by summing converted individual items to match what customer sees
+  // This must exactly match what's displayed in the cart for each item
+  const displaySubtotal = allItems.reduce((total, item) => {
+    const basePrice = getBasePrice(item.product, (item as any).variant_sku)
+    const salePrice = getEffectivePrice(basePrice, null)
+    const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
+    const priceUSD = discounted !== null ? discounted : salePrice
+    
+    // Get the item total with voucher discount applied (matching what's displayed)
+    const itemTotalUSD = priceUSD * item.quantity
+    const voucherDiscount = voucherDiscounts.get(item.id) || 0
+    const netItemTotalUSD = itemTotalUSD - voucherDiscount
+    
+    // Convert to local currency (this matches formatPrice conversion)
+    const priceLocal = convertToLocalCurrency(netItemTotalUSD)
+    return total + priceLocal
+  }, 0)
+  
+  // Note: displaySubtotal already has voucher discounts applied per item
+  const displayVoucherDiscount = Math.round(convertToLocalCurrency(totalVoucherDiscount) * 100) / 100
+  const displayShipping = Math.round(convertToLocalCurrency(shipping) * 100) / 100
+  const displayTax = Math.round(convertToLocalCurrency(tax) * 100) / 100
+  const displayDiscount = Math.round(convertToLocalCurrency(discount) * 100) / 100
+  // displaySubtotal already has vouchers deducted, so don't subtract again
+  const displayTotal = Math.round((displaySubtotal + displayShipping + displayTax - displayDiscount) * 100) / 100
 
   if (isLoading) {
     return (
@@ -2303,26 +2363,38 @@ export default function CheckoutPage() {
                     {/* Product Image */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
                       {(() => {
-                        // Get variant image if item has variant
-                        let displayImage = null
-                        if ((item as any).variant_name && item.product.variants) {
-                          const variant = item.product.variants.find((v: any) => v.name === (item as any).variant_name)
-                          if (variant?.image_url) {
-                            displayImage = variant.image_url
+                        // Parse image field that may be a JSON string, array, or plain string
+                        const parseImg = (raw: any): string | null => {
+                          if (!raw) return null
+                          if (Array.isArray(raw)) return raw.filter(Boolean)[0] || null
+                          if (typeof raw === 'string') {
+                            try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean)[0] || null : raw } catch { return raw }
                           }
+                          return null
                         }
-                        
+
+                        // Prefer variant-specific image
+                        let displayImage: string | null = null
+                        if ((item as any).variant_name && item.product.variants) {
+                          const variants = Array.isArray(item.product.variants)
+                            ? item.product.variants
+                            : (() => { try { return JSON.parse(item.product.variants) } catch { return [] } })()
+                          const variant = variants.find((v: any) => v.name === (item as any).variant_name)
+                          if (variant?.image_url) displayImage = parseImg(variant.image_url)
+                        }
+
                         // Fallback to product images
                         if (!displayImage) {
-                          const validUrls = item.product.image_urls?.filter(url => url && !url.includes('placehold.co')) || []
-                          displayImage = validUrls[0]
+                          const raw = item.product.image_urls
+                          const urls: string[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw as any) } catch { return [] } })()
+                          displayImage = urls.find(u => u && !u.includes('placehold.co')) || null
                         }
-                        
+
                         return displayImage ? (
                           <img
                             src={displayImage}
                             alt={(item as any).variant_name || item.product.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain p-2"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none'
                             }}
@@ -2344,7 +2416,7 @@ export default function CheckoutPage() {
                             {(item as any).variant_name || item.product.name}
                           </h3>
                           <p className="text-xs text-gray-500 mt-1">
-                            {region ? formatRegionPrice(price, region) : formatCurrencyPrice(price, currency)} / {t.cart.item}
+                            {formatPrice(price, region?.currency_code || currency)} / {t.cart.item}
                           </p>
                         </div>
                         {item.id.startsWith('quick-') && (
@@ -2369,14 +2441,14 @@ export default function CheckoutPage() {
                           <div className="flex flex-col items-end">
                             {hasCampaignDiscount && (
                               <span className="text-xs text-gray-400 line-through">
-                                {region ? formatRegionPrice(basePrice * item.quantity, region) : formatCurrencyPrice(basePrice * item.quantity, currency)}
+                                {formatPrice(basePrice * item.quantity, region?.currency_code || currency)}
                               </span>
                             )}
                             <p className="text-sm sm:text-base font-bold text-gray-900">
                               {(() => {
                                 const itemTotal = price * item.quantity
                                 const voucherDiscount = voucherDiscounts.get(item.id) || 0
-                                return region ? formatRegionPrice(itemTotal - voucherDiscount, region) : formatCurrencyPrice(itemTotal - voucherDiscount, currency)
+                                return formatPrice(itemTotal - voucherDiscount, region?.currency_code || currency)
                               })()}
                             </p>
                           </div>
@@ -2387,7 +2459,7 @@ export default function CheckoutPage() {
                               <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
                             </svg>
                             <span className="text-xs text-orange-600 font-medium">
-                              Voucher: -{region ? formatRegionPrice(voucherDiscounts.get(item.id)!, region) : formatCurrencyPrice(voucherDiscounts.get(item.id)!, currency)}
+                              Voucher: -{formatPrice(voucherDiscounts.get(item.id)!, region?.currency_code || currency)}
                             </span>
                           </div>
                         )}
@@ -2685,7 +2757,12 @@ export default function CheckoutPage() {
                   <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-green-900">{appliedPromo.code}</p>
-                      <p className="text-xs text-green-700">-{region ? formatRegionPrice(discount, region) : formatCurrencyPrice(discount, currency)} {t.checkout.discountApplied}</p>
+                      <p className="text-xs text-green-700">-{new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: region?.currency_code || currency,
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(displayDiscount)} {t.checkout.discountApplied}</p>
                     </div>
                     <button
                       onClick={removePromoCode}
@@ -2720,7 +2797,14 @@ export default function CheckoutPage() {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>{t.checkout.subtotal}</span>
-                  <span className="font-medium text-gray-900">{region ? formatRegionPrice(subtotal, region) : formatCurrencyPrice(subtotal, currency)}</span>
+                  <span className="font-medium text-gray-900">
+                    {new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: region?.currency_code || currency,
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(displaySubtotal)}
+                  </span>
                 </div>
                 {totalVoucherDiscount > 0 && (
                   <div className="flex justify-between text-sm text-orange-600">
@@ -2730,13 +2814,23 @@ export default function CheckoutPage() {
                       </svg>
                       <span>Voucher Discount</span>
                     </div>
-                    <span className="font-medium">-{region ? formatRegionPrice(totalVoucherDiscount, region) : formatCurrencyPrice(totalVoucherDiscount, currency)}</span>
+                    <span className="font-medium">-{new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: region?.currency_code || currency,
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(displayVoucherDiscount)}</span>
                   </div>
                 )}
                 {discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>{t.checkout.discount}</span>
-                    <span className="font-medium">-{region ? formatRegionPrice(discount, region) : formatCurrencyPrice(discount, currency)}</span>
+                    <span className="font-medium">-{new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: region?.currency_code || currency,
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(displayDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-gray-600">
@@ -2747,32 +2841,45 @@ export default function CheckoutPage() {
                     ) : shippingCost === 0 ? (
                       <span className="text-green-600">{t.checkout.free}</span>
                     ) : (
-                      region ? formatRegionPrice(shippingCost, region) : formatCurrencyPrice(shippingCost, currency)
+                      new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: region?.currency_code || currency,
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(displayShipping)
                     )}
                   </span>
                 </div>
                 {tax > 0 && (
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>{t.checkout.tax}</span>
-                    <span className="font-medium text-gray-900">{region ? formatRegionPrice(tax, region) : formatCurrencyPrice(tax, currency)}</span>
+                    <span className="font-medium text-gray-900">{new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: region?.currency_code || currency,
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(displayTax)}</span>
                   </div>
                 )}
               </div>
 
               {/* Total */}
-              <div className="pt-4 mb-6 border-t-2 border-gray-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold text-gray-900">{t.checkout.total}</span>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-luxury-navy">{region ? formatRegionPrice(total, region) : formatCurrencyPrice(total, currency)}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
-                    </p>
-                  </div>
+              <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                <span className="text-base font-bold text-gray-900">{t.checkout.total}</span>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-luxury-navy">{new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: region?.currency_code || currency,
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(displayTotal)}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
+                  </p>
                 </div>
               </div>
-
               {/* Checkout Button - For both logged-in and guest users */}
+              <div className="mt-6">
               {!isGuest ? (
                 <>
                   <Button
@@ -2789,7 +2896,12 @@ export default function CheckoutPage() {
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         {!pendingOrder && <Lock className="h-5 w-5" />}
-                        {pendingOrder ? 'Continue Payment' : t.checkout.placeOrder} · {region ? formatRegionPrice(total, region) : formatCurrencyPrice(total, currency)}
+                        {pendingOrder ? 'Continue Payment' : t.checkout.placeOrder} · {new Intl.NumberFormat('en-US', {
+                          style: 'currency',
+                          currency: region?.currency_code || currency,
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }).format(displayTotal)}
                       </span>
                     )}
                   </Button>
@@ -2840,6 +2952,7 @@ export default function CheckoutPage() {
                     <span>{t.checkout.safePayment}</span>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>

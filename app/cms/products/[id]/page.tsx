@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, GripVertical, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -90,13 +90,95 @@ export default function EditProductPage() {
     in_stock: boolean
     min_purchase_quantity: string
     max_purchase_quantity: string
-    image_url: string
-    image_file?: File | null
-    video_file?: File | null
-    image_preview?: string
-    video_preview?: string
+    image_urls: string[]
+    image_files: File[]
+    image_previews: string[]
+    video_urls: string[]
+    video_files: File[]
+    video_previews: string[]
   }>>([])
   const [variantStockModalOpen, setVariantStockModalOpen] = useState(false)
+
+  const dragImgFrom = useRef<number | null>(null)
+  const dragImgOver = useRef<number | null>(null)
+  const [dragImgOverIdx, setDragImgOverIdx] = useState<number | null>(null)
+  const dragVidFrom = useRef<number | null>(null)
+  const dragVidOver = useRef<number | null>(null)
+  const [dragVidOverIdx, setDragVidOverIdx] = useState<number | null>(null)
+
+  const removeVariantExistingImage = (varIdx: number, imgIdx: number) => {
+    setVariants(prev => prev.map((v, i) =>
+      i === varIdx ? { ...v, image_urls: v.image_urls.filter((_, j) => j !== imgIdx) } : v
+    ))
+  }
+  const removeVariantNewImage = (varIdx: number, imgIdx: number) => {
+    setVariants(prev => prev.map((v, i) =>
+      i === varIdx ? { ...v, image_previews: v.image_previews.filter((_, j) => j !== imgIdx), image_files: v.image_files.filter((_, j) => j !== imgIdx) } : v
+    ))
+  }
+  const removeVariantExistingVideo = (varIdx: number, vidIdx: number) => {
+    setVariants(prev => prev.map((v, i) =>
+      i === varIdx ? { ...v, video_urls: v.video_urls.filter((_, j) => j !== vidIdx) } : v
+    ))
+  }
+  const removeVariantNewVideo = (varIdx: number, vidIdx: number) => {
+    setVariants(prev => prev.map((v, i) =>
+      i === varIdx ? { ...v, video_previews: v.video_previews.filter((_, j) => j !== vidIdx), video_files: v.video_files.filter((_, j) => j !== vidIdx) } : v
+    ))
+  }
+
+  const reorderVariantImages = (varIdx: number, from: number, to: number) => {
+    setVariants(prev => prev.map((v, i) => {
+      if (i !== varIdx) return v
+      const totalExisting = v.image_urls.length
+      if (from < totalExisting && to < totalExisting) {
+        const urls = [...v.image_urls]
+        const [url] = urls.splice(from, 1); urls.splice(to, 0, url)
+        return { ...v, image_urls: urls }
+      } else if (from >= totalExisting && to >= totalExisting) {
+        const previews = [...v.image_previews], files = [...v.image_files]
+        const fromIdx = from - totalExisting, toIdx = to - totalExisting
+        const [p] = previews.splice(fromIdx, 1); previews.splice(toIdx, 0, p)
+        const [f] = files.splice(fromIdx, 1); files.splice(toIdx, 0, f)
+        return { ...v, image_previews: previews, image_files: files }
+      }
+      return v
+    }))
+  }
+
+  const reorderVariantVideos = (varIdx: number, from: number, to: number) => {
+    setVariants(prev => prev.map((v, i) => {
+      if (i !== varIdx) return v
+      const totalExisting = v.video_urls.length
+      if (from < totalExisting && to < totalExisting) {
+        const urls = [...v.video_urls]
+        const [url] = urls.splice(from, 1); urls.splice(to, 0, url)
+        return { ...v, video_urls: urls }
+      } else if (from >= totalExisting && to >= totalExisting) {
+        const previews = [...v.video_previews], files = [...v.video_files]
+        const fromIdx = from - totalExisting, toIdx = to - totalExisting
+        const [p] = previews.splice(fromIdx, 1); previews.splice(toIdx, 0, p)
+        const [f] = files.splice(fromIdx, 1); files.splice(toIdx, 0, f)
+        return { ...v, video_previews: previews, video_files: files }
+      }
+      return v
+    }))
+  }
+
+  const reorderImages = (from: number, to: number) => {
+    const imgs = [...imagePreviews], files = [...imageFiles], alts = [...imageAltTexts]
+    const [img] = imgs.splice(from, 1); imgs.splice(to, 0, img)
+    const [file] = files.splice(from, 1); files.splice(to, 0, file)
+    const [alt] = alts.splice(from, 1); alts.splice(to, 0, alt)
+    setImagePreviews(imgs); setImageFiles(files); setImageAltTexts(alts)
+  }
+
+  const reorderVideos = (from: number, to: number) => {
+    const vids = [...videoPreviews], files = [...videoFiles]
+    const [vid] = vids.splice(from, 1); vids.splice(to, 0, vid)
+    const [file] = files.splice(from, 1); files.splice(to, 0, file)
+    setVideoPreviews(vids); setVideoFiles(files)
+  }
 
   useEffect(() => {
     fetchProduct()
@@ -182,27 +264,16 @@ export default function EditProductPage() {
         
         if (product.image_urls && Array.isArray(product.image_urls)) {
           console.log('Processing image_urls array:', product.image_urls)
-          // Separate images and videos
-          const images: string[] = []
-          const videos: string[] = []
-          
-          product.image_urls.forEach((url: string) => {
-            if (url && typeof url === 'string') {
-              if (url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')) {
-                videos.push(url)
-              } else {
-                images.push(url)
-              }
-            }
-          })
-          
-          console.log('Separated images:', images)
-          console.log('Separated videos:', videos)
-          
-          setImagePreviews(images)
-          setVideoPreviews(videos)
+          setImagePreviews(product.image_urls.filter(Boolean))
         } else {
           console.log('No image_urls found or not an array:', product.image_urls)
+        }
+        
+        if (product.video_urls && Array.isArray(product.video_urls)) {
+          console.log('Processing video_urls array:', product.video_urls)
+          setVideoPreviews(product.video_urls.filter(Boolean))
+        } else {
+          console.log('No video_urls found or not an array:', product.video_urls)
         }
         if (product.image_alt_texts && Array.isArray(product.image_alt_texts)) {
           setImageAltTexts(product.image_alt_texts)
@@ -218,7 +289,12 @@ export default function EditProductPage() {
             in_stock: v.in_stock !== undefined ? v.in_stock : true,
             min_purchase_quantity: v.min_purchase_quantity?.toString() || '1',
             max_purchase_quantity: v.max_purchase_quantity?.toString() || '',
-            image_url: v.image_url || ''
+            image_urls: Array.isArray(v.image_url) ? v.image_url.filter(Boolean) : (v.image_url ? [v.image_url] : []),
+            image_files: [],
+            image_previews: [],
+            video_urls: Array.isArray(v.video_url) ? v.video_url.filter(Boolean) : (v.video_url ? [v.video_url] : []),
+            video_files: [],
+            video_previews: []
           })))
         }
       } else {
@@ -321,42 +397,28 @@ export default function EditProductPage() {
     }
   }
 
-  const uploadVariantMedia = async (session: any, productName: string, variantName: string, imageFile?: File | null, videoFile?: File | null) => {
-    const files = []
-    if (imageFile) files.push(imageFile)
-    if (videoFile) files.push(videoFile)
-    
-    if (files.length === 0) return { imageUrl: '', videoUrl: '' }
-
+  const uploadVariantMedia = async (session: any, productName: string, variantName: string, imageFiles: File[], videoFiles: File[]) => {
+    const files = [...imageFiles, ...videoFiles]
+    if (files.length === 0) return { imageUrls: [], videoUrls: [] }
     try {
-      const formData = new FormData()
-      files.forEach(file => {
-        formData.append('files', file)
-      })
-      formData.append('productName', `${productName}-${variantName}`)
-
+      const fd = new FormData()
+      files.forEach(file => fd.append('files', file))
+      fd.append('productName', `${productName}-${variantName}`)
       const response = await fetch('/api/upload/product-media', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: formData,
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        body: fd,
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to upload variant media')
-      }
-
+      if (!response.ok) throw new Error('Failed to upload variant media')
       const data = await response.json()
       const urls = data.urls || []
-      
       return {
-        imageUrl: imageFile ? urls[0] || '' : '',
-        videoUrl: videoFile ? (imageFile ? urls[1] || '' : urls[0] || '') : ''
+        imageUrls: urls.slice(0, imageFiles.length) as string[],
+        videoUrls: urls.slice(imageFiles.length) as string[]
       }
     } catch (error) {
       console.error('Error uploading variant media:', error)
-      return { imageUrl: '', videoUrl: '' }
+      return { imageUrls: [], videoUrls: [] }
     }
   }
 
@@ -378,28 +440,28 @@ export default function EditProductPage() {
       // Upload new media files (pass product name for folder)
       const newMediaUrls = await uploadMedia(session, formData.name)
       
+      // Split uploaded URLs into images and videos based on file counts
+      const newImageUrls = newMediaUrls.slice(0, imageFiles.length)
+      const newVideoUrls = newMediaUrls.slice(imageFiles.length)
+      
       // Combine existing media URLs (from previews that are actual URLs) with newly uploaded ones
       const existingImageUrls = imagePreviews.filter(url => !url.startsWith('data:'))
       const existingVideoUrls = videoPreviews.filter(url => !url.startsWith('data:'))
-      const allMediaUrls = [...existingImageUrls, ...existingVideoUrls, ...newMediaUrls]
+      const allImageUrls = [...existingImageUrls, ...newImageUrls]
+      const allVideoUrls = [...existingVideoUrls, ...newVideoUrls]
 
       // Upload variant media files
       const variantsWithMedia = await Promise.all(
         variants.filter(v => v.name).map(async (v) => {
-          let imageUrl = v.image_url || ''
-          
-          // If there's a new image file to upload
-          if (v.image_file) {
-            const { imageUrl: uploadedImageUrl } = await uploadVariantMedia(
-              session,
-              formData.name,
-              v.name,
-              v.image_file,
-              v.video_file
+          let imageUrls = [...v.image_urls]
+          let videoUrls = [...v.video_urls]
+          if (v.image_files.length > 0 || v.video_files.length > 0) {
+            const { imageUrls: newImgs, videoUrls: newVids } = await uploadVariantMedia(
+              session, formData.name, v.name, v.image_files, v.video_files
             )
-            imageUrl = uploadedImageUrl
+            imageUrls = [...imageUrls, ...newImgs]
+            videoUrls = [...videoUrls, ...newVids]
           }
-          
           return {
             name: v.name,
             sku: v.sku,
@@ -410,7 +472,8 @@ export default function EditProductPage() {
             in_stock: v.in_stock !== undefined ? v.in_stock : true,
             min_purchase_quantity: v.min_purchase_quantity ? parseInt(v.min_purchase_quantity) : 1,
             max_purchase_quantity: v.max_purchase_quantity ? parseInt(v.max_purchase_quantity) : null,
-            image_url: imageUrl
+            image_url: imageUrls,
+            video_url: videoUrls
           }
         })
       )
@@ -477,7 +540,8 @@ export default function EditProductPage() {
         is_best_selling: Boolean(formData.is_best_selling),
         
         // Array/Object fields
-        image_urls: allMediaUrls,
+        image_urls: allImageUrls,
+        video_urls: allVideoUrls,
         image_alt_texts: imageAltTexts,
         variants: variantsWithMedia,
       }
@@ -1266,7 +1330,7 @@ export default function EditProductPage() {
                 )}
                 <Button
                   type="button"
-                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', stock_quantity: '', low_stock_threshold: '', in_stock: true, min_purchase_quantity: '1', max_purchase_quantity: '', image_url: '' }])}
+                  onClick={() => setVariants([...variants, { name: '', sku: '', price_usd: '', price_idr: '', stock_quantity: '', low_stock_threshold: '', in_stock: true, min_purchase_quantity: '1', max_purchase_quantity: '', image_urls: [], image_files: [], image_previews: [], video_urls: [], video_files: [], video_previews: [] }])}
                   variant="outline"
                   size="sm"
                 >
@@ -1451,38 +1515,65 @@ export default function EditProductPage() {
                           <input
                             type="file"
                             accept="image/*"
+                            multiple
                             onChange={(e) => {
-                              const file = e.target.files?.[0]
-                              if (file) {
+                              Array.from(e.target.files || []).forEach(file => {
                                 const reader = new FileReader()
                                 reader.onloadend = () => {
-                                  const newVariants = [...variants]
-                                  newVariants[index].image_file = file
-                                  newVariants[index].image_preview = reader.result as string
-                                  setVariants(newVariants)
+                                  setVariants(prev => prev.map((v, i) =>
+                                    i === index ? { ...v, image_files: [...v.image_files, file], image_previews: [...v.image_previews, reader.result as string] } : v
+                                  ))
                                 }
                                 reader.readAsDataURL(file)
-                              }
+                              })
                             }}
                             className="hidden"
                           />
                         </label>
-                        {(variant.image_preview || variant.image_url) && (
-                          <div className="mt-2 relative">
-                            <img src={variant.image_preview || variant.image_url} alt="Variant preview" className="h-20 w-20 rounded-lg object-cover" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newVariants = [...variants]
-                                newVariants[index].image_file = null
-                                newVariants[index].image_preview = undefined
-                                newVariants[index].image_url = ''
-                                setVariants(newVariants)
-                              }}
-                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-xs"
-                            >
-                              ×
-                            </button>
+                        {(variant.image_urls.length > 0 || variant.image_previews.length > 0) && (
+                          <div className="mt-2 grid grid-cols-5 gap-2">
+                            {variant.image_urls.map((url, imgIdx) => {
+                              const globalIdx = imgIdx
+                              return (
+                                <div key={`ex-${imgIdx}`} draggable
+                                  onDragStart={() => { dragImgFrom.current = globalIdx }}
+                                  onDragEnter={() => { dragImgOver.current = globalIdx; setDragImgOverIdx(globalIdx) }}
+                                  onDragEnd={() => {
+                                    if (dragImgFrom.current !== null && dragImgOver.current !== null && dragImgFrom.current !== dragImgOver.current)
+                                      reorderVariantImages(index, dragImgFrom.current, dragImgOver.current)
+                                    dragImgFrom.current = null; dragImgOver.current = null; setDragImgOverIdx(null)
+                                  }}
+                                  onDragOver={e => e.preventDefault()}
+                                  className={`relative group cursor-grab rounded-lg border-2 transition-all ${dragImgOverIdx === globalIdx ? 'border-luxury-gold ring-2 ring-luxury-gold/30 scale-105' : 'border-transparent'}`}>
+                                  <GripVertical className="absolute top-1 left-1 z-10 h-3 w-3 text-white drop-shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                  <span className="absolute top-1 right-6 z-10 bg-black/60 text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100">{globalIdx + 1}</span>
+                                  <img src={url} alt={`img ${imgIdx + 1}`} className="h-20 w-full rounded-lg object-cover" />
+                                  <button type="button" onClick={() => removeVariantExistingImage(index, imgIdx)}
+                                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-[10px] z-20">×</button>
+                                </div>
+                              )
+                            })}
+                            {variant.image_previews.map((preview, imgIdx) => {
+                              const globalIdx = variant.image_urls.length + imgIdx
+                              return (
+                                <div key={`new-${imgIdx}`} draggable
+                                  onDragStart={() => { dragImgFrom.current = globalIdx }}
+                                  onDragEnter={() => { dragImgOver.current = globalIdx; setDragImgOverIdx(globalIdx) }}
+                                  onDragEnd={() => {
+                                    if (dragImgFrom.current !== null && dragImgOver.current !== null && dragImgFrom.current !== dragImgOver.current)
+                                      reorderVariantImages(index, dragImgFrom.current, dragImgOver.current)
+                                    dragImgFrom.current = null; dragImgOver.current = null; setDragImgOverIdx(null)
+                                  }}
+                                  onDragOver={e => e.preventDefault()}
+                                  className={`relative group cursor-grab rounded-lg border-2 transition-all ${dragImgOverIdx === globalIdx ? 'border-luxury-gold ring-2 ring-luxury-gold/30 scale-105' : 'border-luxury-gold/40'}`}>
+                                  <GripVertical className="absolute top-1 left-1 z-10 h-3 w-3 text-white drop-shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                  <span className="absolute top-1 right-6 z-10 bg-luxury-gold/70 text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100">{globalIdx + 1}</span>
+                                  <img src={preview} alt={`new ${imgIdx + 1}`} className="h-20 w-full rounded-lg object-cover" />
+                                  <button type="button" onClick={() => removeVariantNewImage(index, imgIdx)}
+                                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-[10px] z-20">×</button>
+                                </div>
+                              )
+                            })}
                           </div>
                         )}
                       </div>
@@ -1497,37 +1588,65 @@ export default function EditProductPage() {
                           <input
                             type="file"
                             accept="video/*"
+                            multiple
                             onChange={(e) => {
-                              const file = e.target.files?.[0]
-                              if (file) {
+                              Array.from(e.target.files || []).forEach(file => {
                                 const reader = new FileReader()
                                 reader.onloadend = () => {
-                                  const newVariants = [...variants]
-                                  newVariants[index].video_file = file
-                                  newVariants[index].video_preview = reader.result as string
-                                  setVariants(newVariants)
+                                  setVariants(prev => prev.map((v, i) =>
+                                    i === index ? { ...v, video_files: [...v.video_files, file], video_previews: [...v.video_previews, reader.result as string] } : v
+                                  ))
                                 }
                                 reader.readAsDataURL(file)
-                              }
+                              })
                             }}
                             className="hidden"
                           />
                         </label>
-                        {variant.video_preview && (
-                          <div className="mt-2 relative">
-                            <video src={variant.video_preview} className="h-20 w-full rounded-lg object-cover" controls />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newVariants = [...variants]
-                                newVariants[index].video_file = null
-                                newVariants[index].video_preview = undefined
-                                setVariants(newVariants)
-                              }}
-                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-xs"
-                            >
-                              ×
-                            </button>
+                        {(variant.video_urls.length > 0 || variant.video_previews.length > 0) && (
+                          <div className="mt-2 grid grid-cols-3 gap-2">
+                            {variant.video_urls.map((url, vidIdx) => {
+                              const globalIdx = vidIdx
+                              return (
+                                <div key={`exv-${vidIdx}`} draggable
+                                  onDragStart={() => { dragVidFrom.current = globalIdx }}
+                                  onDragEnter={() => { dragVidOver.current = globalIdx; setDragVidOverIdx(globalIdx) }}
+                                  onDragEnd={() => {
+                                    if (dragVidFrom.current !== null && dragVidOver.current !== null && dragVidFrom.current !== dragVidOver.current)
+                                      reorderVariantVideos(index, dragVidFrom.current, dragVidOver.current)
+                                    dragVidFrom.current = null; dragVidOver.current = null; setDragVidOverIdx(null)
+                                  }}
+                                  onDragOver={e => e.preventDefault()}
+                                  className={`relative group cursor-grab rounded-lg border-2 transition-all ${dragVidOverIdx === globalIdx ? 'border-luxury-gold ring-2 ring-luxury-gold/30 scale-105' : 'border-transparent'}`}>
+                                  <GripVertical className="absolute top-1 left-1 z-10 h-3 w-3 text-white drop-shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                  <span className="absolute top-1 right-1 z-10 bg-black/60 text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100">{globalIdx + 1}</span>
+                                  <video src={url} className="h-24 w-full rounded-lg object-cover" controls />
+                                  <button type="button" onClick={() => removeVariantExistingVideo(index, vidIdx)}
+                                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-[10px] z-20">×</button>
+                                </div>
+                              )
+                            })}
+                            {variant.video_previews.map((preview, vidIdx) => {
+                              const globalIdx = variant.video_urls.length + vidIdx
+                              return (
+                                <div key={`newv-${vidIdx}`} draggable
+                                  onDragStart={() => { dragVidFrom.current = globalIdx }}
+                                  onDragEnter={() => { dragVidOver.current = globalIdx; setDragVidOverIdx(globalIdx) }}
+                                  onDragEnd={() => {
+                                    if (dragVidFrom.current !== null && dragVidOver.current !== null && dragVidFrom.current !== dragVidOver.current)
+                                      reorderVariantVideos(index, dragVidFrom.current, dragVidOver.current)
+                                    dragVidFrom.current = null; dragVidOver.current = null; setDragVidOverIdx(null)
+                                  }}
+                                  onDragOver={e => e.preventDefault()}
+                                  className={`relative group cursor-grab rounded-lg border-2 transition-all ${dragVidOverIdx === globalIdx ? 'border-luxury-gold ring-2 ring-luxury-gold/30 scale-105' : 'border-luxury-gold/40'}`}>
+                                  <GripVertical className="absolute top-1 left-1 z-10 h-3 w-3 text-white drop-shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                  <span className="absolute top-1 right-1 z-10 bg-luxury-gold/70 text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100">{globalIdx + 1}</span>
+                                  <video src={preview} className="h-24 w-full rounded-lg object-cover" controls />
+                                  <button type="button" onClick={() => removeVariantNewVideo(index, vidIdx)}
+                                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-[10px] z-20">×</button>
+                                </div>
+                              )
+                            })}
                           </div>
                         )}
                       </div>
@@ -1569,41 +1688,36 @@ export default function EditProductPage() {
               
               {/* Image Previews */}
               {imagePreviews.length > 0 && (
-                <div className="mt-4 space-y-4">
+                <div className="mt-4 grid grid-cols-4 gap-3 md:grid-cols-5">
                   {imagePreviews.map((preview, index) => (
-                    <div key={index} className="rounded-lg border border-gray-200 p-4">
-                      <div className="flex gap-4">
-                        <div className="relative flex-shrink-0">
-                          <img
-                            src={preview}
-                            alt={`Preview ${index + 1}`}
-                            className="h-24 w-24 rounded-lg object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                          >
-                            ×
-                          </button>
-                        </div>
-                        <div className="flex-1">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Alt Text (for SEO & Accessibility)
-                          </label>
-                          <input
-                            type="text"
-                            value={imageAltTexts[index] || ''}
-                            onChange={(e) => {
-                              const newAltTexts = [...imageAltTexts]
-                              newAltTexts[index] = e.target.value
-                              setImageAltTexts(newAltTexts)
-                            }}
-                            placeholder="e.g., Mykonos Oud Royale perfume bottle"
-                            className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-                          />
-                        </div>
-                      </div>
+                    <div
+                      key={index}
+                      draggable
+                      onDragStart={() => { dragImgFrom.current = index }}
+                      onDragEnter={() => { dragImgOver.current = index; setDragImgOverIdx(index) }}
+                      onDragEnd={() => {
+                        if (dragImgFrom.current !== null && dragImgOver.current !== null && dragImgFrom.current !== dragImgOver.current)
+                          reorderImages(dragImgFrom.current, dragImgOver.current)
+                        dragImgFrom.current = null; dragImgOver.current = null; setDragImgOverIdx(null)
+                      }}
+                      onDragOver={e => e.preventDefault()}
+                      className={`relative group cursor-grab rounded-lg border-2 transition-all duration-150 ${dragImgOverIdx === index ? 'border-luxury-gold ring-2 ring-luxury-gold/30 scale-105 opacity-75' : 'border-transparent'}`}
+                    >
+                      <GripVertical className="absolute top-1 left-1 z-10 h-4 w-4 text-white drop-shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      <span className="absolute top-1 right-6 z-10 bg-black/50 text-white text-[10px] px-1 rounded opacity-0 group-hover:opacity-100">{index + 1}</span>
+                      <img src={preview} alt={`Preview ${index + 1}`} className="h-28 w-full rounded-lg object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-xs z-20"
+                      >×</button>
+                      <input
+                        type="text"
+                        value={imageAltTexts[index] || ''}
+                        onChange={(e) => { const a = [...imageAltTexts]; a[index] = e.target.value; setImageAltTexts(a) }}
+                        placeholder="Alt text..."
+                        className="mt-1 w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-luxury-gold focus:outline-none"
+                      />
                     </div>
                   ))}
                 </div>
@@ -1634,21 +1748,29 @@ export default function EditProductPage() {
               
               {/* Video Previews */}
               {videoPreviews.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
+                <div className="mt-4 grid grid-cols-3 gap-3 md:grid-cols-4">
                   {videoPreviews.map((preview, index) => (
-                    <div key={index} className="relative">
-                      <video
-                        src={preview}
-                        className="h-32 w-full rounded-lg object-cover"
-                        controls
-                      />
+                    <div
+                      key={index}
+                      draggable
+                      onDragStart={() => { dragVidFrom.current = index }}
+                      onDragEnter={() => { dragVidOver.current = index; setDragVidOverIdx(index) }}
+                      onDragEnd={() => {
+                        if (dragVidFrom.current !== null && dragVidOver.current !== null && dragVidFrom.current !== dragVidOver.current)
+                          reorderVideos(dragVidFrom.current, dragVidOver.current)
+                        dragVidFrom.current = null; dragVidOver.current = null; setDragVidOverIdx(null)
+                      }}
+                      onDragOver={e => e.preventDefault()}
+                      className={`relative group cursor-grab rounded-lg border-2 transition-all duration-150 ${dragVidOverIdx === index ? 'border-luxury-gold ring-2 ring-luxury-gold/30 scale-105 opacity-75' : 'border-transparent'}`}
+                    >
+                      <GripVertical className="absolute top-1 left-1 z-10 h-4 w-4 text-white drop-shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      <span className="absolute top-1 right-1 z-10 bg-black/50 text-white text-[10px] px-1 rounded opacity-0 group-hover:opacity-100">{index + 1}</span>
+                      <video src={preview} className="h-28 w-full rounded-lg object-cover" controls />
                       <button
                         type="button"
                         onClick={() => removeVideo(index)}
-                        className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                      >
-                        ×
-                      </button>
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 text-xs z-20"
+                      >×</button>
                     </div>
                   ))}
                 </div>
@@ -1821,7 +1943,7 @@ export default function EditProductPage() {
               price_usd: parseFloat(v.price_usd) || 0,
               price_idr: parseFloat(v.price_idr) || 0,
               stock_quantity: parseInt(v.stock_quantity) || 0,
-              image_url: v.image_url
+              image_url: v.image_urls[0] || ''
             }))
           }}
           onUpdate={fetchProduct}
