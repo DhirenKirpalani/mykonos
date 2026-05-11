@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Lato, Libre_Caslon_Text, Montserrat } from 'next/font/google'
 import { Suspense } from 'react'
 import Script from 'next/script'
-import './globals.css'
+import './globals.css' assert { type: 'css' }
 import { Providers } from '@/components/providers'
 import { ConditionalLayout } from '@/components/conditional-layout'
 
