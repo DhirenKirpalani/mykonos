@@ -453,15 +453,13 @@ export function HeaderMobile() {
                 </div>
               </div>
 
-              {(role === 'admin' || role === 'staff') && (
-                <div className="flex items-center gap-3 px-4 py-3.5">
-                  <Globe className="h-4 w-4 flex-shrink-0 text-white/60" />
-                  <span className="text-sm font-medium uppercase tracking-[0.12em] text-white/60">{t.header.region}</span>
-                  <div className="ml-auto">
-                    <RegionCurrencySelector />
-                  </div>
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <Globe className="h-4 w-4 flex-shrink-0 text-white/60" />
+                <span className="text-sm font-medium uppercase tracking-[0.12em] text-white/60">{t.header.region}</span>
+                <div className="ml-auto">
+                  <RegionCurrencySelector />
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

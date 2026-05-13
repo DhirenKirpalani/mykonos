@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Package, CreditCard, Box, Truck, CheckCircle2 } from 'lucide-react'
+import { Check, Package, CreditCard, Box, Truck, CheckCircle2, ExternalLink } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +15,7 @@ interface OrderStatusTimelineProps {
   cancelledAt?: string | null
   expiryTime?: string | null
   trackingNumber?: string | null
+  trackingUrl?: string | null
   carrier?: string | null
   paymentMetadata?: any
 }
@@ -38,6 +39,7 @@ export function OrderStatusTimeline({
   cancelledAt,
   expiryTime,
   trackingNumber,
+  trackingUrl,
   carrier,
   paymentMetadata,
 }: OrderStatusTimelineProps) {
@@ -254,17 +256,6 @@ export function OrderStatusTimeline({
                 )
               })}
             </div>
-
-            {/* Tracking Info Below Timeline */}
-            {trackingNumber && (
-              <div className="mt-8 p-4 bg-blue-50 rounded-md border border-blue-100">
-                <p className="text-xs text-gray-600 mb-1">{t.account.trackingNumber}</p>
-                <p className="text-sm font-mono font-semibold text-blue-900">{trackingNumber}</p>
-                {carrier && (
-                  <p className="text-xs text-gray-600 mt-1">Carrier: {carrier}</p>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Mobile: Vertical Layout */}
@@ -320,17 +311,6 @@ export function OrderStatusTimeline({
                           {formatTimestamp(step.timestamp)}
                         </span>
                       )}
-
-                      {/* Tracking Info */}
-                      {step.id === 'shipped' && trackingNumber && (
-                        <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-100">
-                          <p className="text-xs text-gray-600 mb-1">{t.account.trackingNumber}</p>
-                          <p className="text-sm font-mono font-semibold text-blue-900">{trackingNumber}</p>
-                          {carrier && (
-                            <p className="text-xs text-gray-600 mt-1">Carrier: {carrier}</p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -343,11 +323,25 @@ export function OrderStatusTimeline({
         {(trackingNumber || carrier) && currentStatus === 'shipped' && (
           <div className="mt-6 pt-6 border-t border-gray-100">
             <div className="bg-luxury-navy/5 rounded-lg p-4">
-              <h4 className="font-semibold text-sm mb-2">{t.account.shippingInformation}</h4>
-              <div className="space-y-1 text-sm text-gray-600">
+              <h4 className="font-semibold text-sm mb-3">{t.account.shippingInformation}</h4>
+              <div className="space-y-2 text-sm text-gray-600">
                 {carrier && <p>Carrier: <span className="font-medium text-gray-900">{carrier}</span></p>}
                 {trackingNumber && (
-                  <p>Tracking: <span className="font-mono text-xs font-medium text-gray-900">{trackingNumber}</span></p>
+                  <div>
+                    <p className="mb-2">Tracking Number: <span className="font-mono text-xs font-medium text-gray-900">{trackingNumber}</span></p>
+                    {trackingUrl && (
+                      <a
+                        href={trackingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-luxury-gold text-white rounded-md hover:bg-luxury-gold/90 transition-colors text-sm font-medium"
+                      >
+                        <Truck className="w-4 h-4" />
+                        Track Shipment
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
