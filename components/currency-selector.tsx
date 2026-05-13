@@ -35,7 +35,7 @@ export function CurrencySelector() {
                 <button
                   key={curr.code}
                   onClick={() => {
-                    setCurrency(curr.code)
+                    setCurrency(curr.code as Currency)
                     setIsOpen(false)
                   }}
                   className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
