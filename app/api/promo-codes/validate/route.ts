@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
+import { isFeatureEnabled } from '@/lib/system-settings'
+
 export const dynamic = 'force-dynamic'
 
 /**
@@ -8,6 +10,15 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: Request) {
   try {
+    // Check if promo codes are enabled
+    const promoCodesEnabled = await isFeatureEnabled('promo_codes_enabled')
+    if (!promoCodesEnabled) {
+      return NextResponse.json(
+        { error: 'Promo codes are temporarily disabled' },
+        { status: 503 }
+      )
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     const supabase = createClient(supabaseUrl, supabaseAnonKey)

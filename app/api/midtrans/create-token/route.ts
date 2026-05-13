@@ -2,9 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 import { getMidtransSnapClient } from '@/lib/midtrans/config'
+import { isFeatureEnabled } from '@/lib/system-settings'
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if payment processing is enabled
+    const paymentsEnabled = await isFeatureEnabled('payments_enabled')
+    if (!paymentsEnabled) {
+      console.log('⚠️  Payment processing is disabled')
+      return NextResponse.json(
+        { error: 'Payment processing is temporarily disabled. Please try again later.' },
+        { status: 503 }
+      )
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     

@@ -587,3 +587,162 @@ export async function sendPaymentStatusUpdateEmail(data: {
     return { success: false, error: error.message }
   }
 }
+
+/**
+ * Send order shipped notification email
+ */
+export async function sendOrderShippedEmail(data: {
+  orderId: string
+  orderNumber: string
+  customerEmail: string
+  customerName: string
+  trackingNumber: string
+  trackingUrl: string
+}) {
+  try {
+    console.log('\n=== 📧 EMAIL SHIPMENT NOTIFICATION START ===')
+    console.log('📋 [EMAIL] Order Number:', data.orderNumber)
+    console.log('📋 [EMAIL] Order ID:', data.orderId)
+    console.log('📋 [EMAIL] Customer:', data.customerName, `<${data.customerEmail}>`)
+    console.log('📦 [EMAIL] Tracking Number:', data.trackingNumber)
+    console.log('🔗 [EMAIL] Tracking URL:', data.trackingUrl)
+    console.log('⏰ [EMAIL] Timestamp:', new Date().toISOString())
+    
+    // Fetch order details from database
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          id,
+          product_id,
+          quantity,
+          price_at_purchase,
+          variant_name,
+          product:products (
+            name,
+            image_urls
+          )
+        )
+      `)
+      .eq('id', data.orderId)
+      .single()
+
+    if (orderError || !order) {
+      console.error('❌ [EMAIL] Failed to fetch order:', orderError)
+      return { success: false, error: 'Order not found' }
+    }
+
+    // Get user's preferred language
+    let locale: 'en' | 'id' = 'id'
+    if (order.user_id) {
+      const { data: authUser } = await supabase.auth.admin.getUserById(order.user_id)
+      locale = (authUser?.user?.user_metadata?.preferred_language || 'id') as 'en' | 'id'
+    }
+
+    // Prepare email data
+    const items = order.order_items.map((item: any) => ({
+      name: item.product.name + (item.variant_name ? ` - ${item.variant_name}` : ''),
+      quantity: item.quantity,
+      price: item.price_at_purchase,
+      image: Array.isArray(item.product.image_urls) ? item.product.image_urls[0] : null
+    }))
+
+    const shippingAddress = order.shipping_address
+    const t = locale === 'id' ? {
+      title: 'Pesanan Anda Telah Dikirim!',
+      greeting: 'Halo',
+      intro: 'Kabar baik! Pesanan Anda telah dikirim dan sedang dalam perjalanan.',
+      trackingLabel: 'Nomor Resi',
+      trackButton: 'Lacak Paket Anda',
+      thanks: 'Terima kasih telah berbelanja di Mykonos!'
+    } : {
+      title: 'Your Order Has Been Shipped!',
+      greeting: 'Hello',
+      intro: 'Great news! Your order has been shipped and is on its way.',
+      trackingLabel: 'Tracking Number',
+      trackButton: 'Track Your Package',
+      thanks: 'Thank you for shopping with Mykonos!'
+    }
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #f3f4f6;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+          <div style="padding: 40px 30px;">
+            <h1 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 20px 0;">📦 ${t.title}</h1>
+            <p style="font-size: 16px; line-height: 24px; color: #374151; margin: 0 0 24px 0;">
+              ${t.greeting} <strong>${data.customerName}</strong>,
+            </p>
+            <p style="font-size: 16px; line-height: 24px; color: #374151; margin: 0 0 32px 0;">
+              ${t.intro}
+            </p>
+            <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 12px; padding: 24px; margin-bottom: 32px; text-align: center;">
+              <div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">
+                ${t.trackingLabel}
+              </div>
+              <div style="font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; color: #ffffff; margin-bottom: 20px;">
+                ${data.trackingNumber}
+              </div>
+              <a href="${data.trackingUrl}" style="background: #ffffff; color: #1e3a8a; display: inline-block; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                📦 ${t.trackButton}
+              </a>
+            </div>
+            <p style="font-size: 16px; line-height: 24px; color: #374151; margin: 0;">
+              ${t.thanks}
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    const subject = locale === 'id' 
+      ? `📦 Pesanan ${data.orderNumber} Telah Dikirim!`
+      : `📦 Order ${data.orderNumber} Has Been Shipped!`
+
+    // Send email via Resend
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      subject,
+      html: emailHtml
+    })
+
+    if (result.error) {
+      console.error('❌ [EMAIL] Resend error:', result.error)
+      return { success: false, error: result.error.message }
+    }
+
+    console.log('✅ [EMAIL] Email sent successfully!')
+    console.log('📧 [EMAIL] Resend ID:', result.data?.id)
+    console.log('=== 📧 EMAIL SHIPMENT NOTIFICATION END (SUCCESS) ===\n')
+
+    // Log email to database
+    await logEmail({
+      orderId: data.orderId,
+      userId: order.user_id,
+      type: 'order_status_update',
+      resendId: result.data?.id || '',
+      recipientEmail: data.customerEmail,
+      recipientName: data.customerName,
+      subject,
+      status: 'sent',
+      emailData: { trackingNumber: data.trackingNumber, trackingUrl: data.trackingUrl }
+    })
+
+    return { success: true, emailId: result.data?.id }
+  } catch (error: any) {
+    console.error('\n❌ [EMAIL] EXCEPTION in sendOrderShippedEmail')
+    console.error('❌ [EMAIL] Error:', error)
+    console.error('❌ [EMAIL] Stack:', error.stack)
+    console.error('=== 📧 EMAIL SHIPMENT NOTIFICATION END (EXCEPTION) ===\n')
+    return { success: false, error: error.message }
+  }
+}

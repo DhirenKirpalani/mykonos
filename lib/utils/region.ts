@@ -1,7 +1,7 @@
 import { Region, PriceDisplay } from '@/lib/types/region'
 
 /**
- * Format price with currency symbol and proper formatting
+ * Format price with currency code and proper formatting
  */
 export function formatPrice(
   amount: number,
@@ -46,20 +46,14 @@ export function formatPrice(
     }).format(amount)
   }
 
-  // Use Intl.NumberFormat for proper currency formatting
+  // Format the number without currency symbol
   const formatted = new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: region.currency_code,
     minimumFractionDigits: decimalPlaces,
     maximumFractionDigits: decimalPlaces,
   }).format(amount)
   
-  // For IDR, ensure it uses 'Rp.' with period instead of 'Rp' without period
-  if (region.currency_code === 'IDR') {
-    return formatted.replace(/^Rp\s/, 'Rp. ')
-  }
-  
-  return formatted
+  // Return with currency code prefix
+  return `${region.currency_code} ${formatted}`
 }
 
 /**
