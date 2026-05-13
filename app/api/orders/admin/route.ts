@@ -30,6 +30,8 @@ export async function GET(request: Request) {
         status,
         payment_status,
         total_amount,
+        currency_code,
+        payment_metadata,
         created_at,
         updated_at,
         shipping_address:shipping_addresses(full_name),

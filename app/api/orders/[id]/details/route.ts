@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -9,11 +12,17 @@ export async function GET(
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
     console.log('✅ [API ORDER DETAILS] Supabase client created with service role')
 
-    // Fetch order with full details
+    // Fetch order with full details including DHL tracking fields
     console.log('📡 [API ORDER DETAILS] Fetching order from database...')
+    console.log('📡 [API ORDER DETAILS] Order ID:', params.id)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('*')
@@ -27,6 +36,13 @@ export async function GET(
 
     console.log('✅ [API ORDER DETAILS] Order found:', (order as any).order_number)
     console.log('📍 [API ORDER DETAILS] Shipping address:', (order as any).shipping_address)
+    console.log('🚚 [API ORDER DETAILS] DHL Tracking:', {
+      tracking_number: (order as any).tracking_number,
+      tracking_url: (order as any).tracking_url,
+      dhl_shipment_number: (order as any).dhl_shipment_number,
+      dhl_tracking_url: (order as any).dhl_tracking_url,
+      shipped_at: (order as any).shipped_at
+    })
     
     // Fetch user data if user_id exists
     let userData = null

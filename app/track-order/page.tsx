@@ -57,6 +57,8 @@ type Order = {
   delivered_at?: string | null
   carrier_code?: string
   tracking_number?: string
+  tracking_url?: string
+  dhl_shipment_number?: string
   estimated_delivery_date?: string
   snap_token?: string
   stripe_session_id?: string
@@ -356,7 +358,7 @@ export default function TrackOrderPage() {
         console.log('🔍 [POLLING] Checking order status...')
         const { data, error } = await supabase
           .from('orders')
-          .select('payment_status, status, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, carrier_code')
+          .select('payment_status, status, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, tracking_url, carrier_code')
           .eq('order_number', order.order_number)
           .eq('customer_email', order.customer_email)
           .single()
@@ -995,11 +997,13 @@ export default function TrackOrderPage() {
                     cancelledAt={null}
                     expiryTime={order.expiry_time || null}
                     trackingNumber={order.tracking_number || null}
+                    trackingUrl={order.tracking_url || null}
                     carrier={order.carrier_code || null}
                     paymentMetadata={order.payment_metadata}
                   />
                 )
               })()}
+
 
               {/* Success Payment Alert */}
               {(order.payment_metadata?.transaction_status === 'settlement' || order.payment_metadata?.transaction_status === 'capture') && (

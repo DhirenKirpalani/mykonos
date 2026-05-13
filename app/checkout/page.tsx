@@ -33,6 +33,7 @@ const MapPicker = dynamic(() => import('@/components/map/MapPicker').then(mod =>
   loading: () => <div className="h-[400px] flex items-center justify-center bg-gray-100 rounded-lg">Loading map...</div>
 })
 import { useCurrency } from '@/hooks/useCurrency'
+import { useAddressValidation } from '@/hooks/useAddressValidation'
 import { formatPrice as formatCurrencyPrice } from '@/lib/utils/currency'
 import { formatPrice as formatRegionPrice } from '@/lib/utils/region'
 import { formatPrice } from '@/lib/utils'
@@ -74,6 +75,7 @@ export default function CheckoutPage() {
   const { currency } = useCurrency()
   const { region } = useRegion()
   const { t } = useLanguage()
+  const { validateAddress, isValidating, validationResult } = useAddressValidation()
   const wasAlreadySignedIn = useRef(false)
   const [userId, setUserId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
@@ -2067,8 +2069,38 @@ export default function CheckoutPage() {
     }
   }
 
+  const handleValidateAddress = async () => {
+    const result = await validateAddress({
+      countryCode: editForm.country === 'Indonesia' ? 'ID' : editForm.country === 'United States' ? 'US' : editForm.country === 'Singapore' ? 'SG' : 'ID',
+      postalCode: editForm.postal_code,
+      cityName: editForm.city,
+      addressLine1: editForm.address_line1,
+      full_name: editForm.full_name,
+      phone: editForm.phone,
+    })
+
+    if (!result.isValid && result.warnings && result.warnings.length > 0) {
+      const proceed = confirm(
+        `⚠️ Address Validation Warnings:\n\n${result.warnings.join('\n')}\n\nDo you want to proceed anyway?`
+      )
+      if (!proceed) {
+        return false
+      }
+    } else if (result.isValid) {
+      toast.success('✅ Address validated successfully!')
+    }
+    
+    return true
+  }
+
   const handleSaveAddress = async () => {
     try {
+      // Validate address before saving
+      const isValid = await handleValidateAddress()
+      if (!isValid) {
+        return
+      }
+
       // If setting as default, unset any existing default first
       if (editForm.is_default) {
         await supabase
@@ -2678,6 +2710,37 @@ export default function CheckoutPage() {
                         )}
                       </div>
 
+                      {/* Address Validation Status */}
+                      {validationResult && (
+                        <div className={`p-4 rounded-lg border ${
+                          validationResult.isValid 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-yellow-50 border-yellow-200'
+                        }`}>
+                          <div className="flex items-start gap-2">
+                            {validationResult.isValid ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <span className="text-yellow-600 font-bold flex-shrink-0">⚠️</span>
+                            )}
+                            <div className="flex-1">
+                              <p className={`font-medium ${
+                                validationResult.isValid ? 'text-green-800' : 'text-yellow-800'
+                              }`}>
+                                {validationResult.message}
+                              </p>
+                              {validationResult.warnings && validationResult.warnings.length > 0 && (
+                                <ul className="mt-2 space-y-1 text-sm text-yellow-700">
+                                  {validationResult.warnings.map((warning, idx) => (
+                                    <li key={idx}>• {warning}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex gap-3 pt-2">
                         <Button
                           type="button"
@@ -2689,7 +2752,17 @@ export default function CheckoutPage() {
                         </Button>
                         <Button
                           type="button"
+                          variant="outline"
+                          onClick={handleValidateAddress}
+                          disabled={isValidating || !editForm.postal_code || !editForm.city}
+                          className="flex-1"
+                        >
+                          {isValidating ? 'Validating...' : 'Validate Address'}
+                        </Button>
+                        <Button
+                          type="button"
                           onClick={handleSaveAddress}
+                          disabled={isValidating}
                           className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
                         >
                           {t.checkout.saveChanges}

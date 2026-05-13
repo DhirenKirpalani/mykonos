@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Power, ShieldAlert, Globe, Tag, Wrench, Save, AlertTriangle, ShoppingCart, X } from 'lucide-react'
+import { Power, ShieldAlert, Globe, Tag, Wrench, Save, AlertTriangle, ShoppingCart, X, Truck, UserPlus, Heart, Mail, Bell } from 'lucide-react'
 import { toast } from 'sonner'
 import { ReasonDialog } from '@/components/ui/reason-dialog'
 import { supabase } from '@/lib/supabase/client'
@@ -222,6 +222,46 @@ export default function SystemSettingsPage() {
       description: 'Allow customers to apply discount codes at checkout',
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
+    },
+    {
+      key: 'dhl_auto_pickup',
+      icon: Truck,
+      title: 'DHL Auto-Pickup',
+      description: 'Automatically request DHL pickup when creating shipments',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100'
+    },
+    {
+      key: 'user_registration_enabled',
+      icon: UserPlus,
+      title: 'User Registration',
+      description: 'Allow new users to create accounts',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100'
+    },
+    {
+      key: 'wishlist_enabled',
+      icon: Heart,
+      title: 'Wishlist',
+      description: 'Allow customers to add products to wishlist',
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-100'
+    },
+    {
+      key: 'email_notifications_enabled',
+      icon: Mail,
+      title: 'Email Notifications',
+      description: 'Send automated emails to customers (orders, shipping, etc)',
+      color: 'text-cyan-600',
+      bgColor: 'bg-cyan-100'
+    },
+    {
+      key: 'order_notifications_enabled',
+      icon: Bell,
+      title: 'Order Notifications',
+      description: 'Send order status update notifications to customers',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100'
     }
   ]
 
