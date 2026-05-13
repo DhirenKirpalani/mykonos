@@ -61,10 +61,10 @@ export async function POST(request: Request) {
             addressLine2: body.shipper.addressLine2,
           },
           contactInformation: {
-            personName: body.shipper.contactName,
+            fullName: body.shipper.contactName,
             companyName: body.shipper.companyName,
-            phoneNumber: body.shipper.phoneNumber,
-            emailAddress: body.shipper.emailAddress,
+            phone: body.shipper.phoneNumber,
+            email: body.shipper.emailAddress,
           },
         },
         receiverDetails: {
@@ -77,10 +77,10 @@ export async function POST(request: Request) {
             addressLine2: body.receiver.addressLine2,
           },
           contactInformation: {
-            personName: body.receiver.contactName,
+            fullName: body.receiver.contactName,
             companyName: body.receiver.companyName || body.receiver.contactName,
-            phoneNumber: body.receiver.phoneNumber,
-            emailAddress: body.receiver.emailAddress,
+            phone: body.receiver.phoneNumber,
+            email: body.receiver.emailAddress,
           },
         },
       },
