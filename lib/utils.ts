@@ -44,15 +44,15 @@ export async function loadExchangeRates(): Promise<void> {
 
 // ── formatPrice ────────────────────────────────────────────────────────────────
 /**
- * Format a price value for display.
- * - IDR prices are passed pre-converted (price_idr field) — format as Rp.
- * - USD is formatted as-is.
+ * Format a price value for display with currency code.
+ * - IDR prices are passed pre-converted (price_idr field) — format as IDR.
+ * - USD is formatted with USD prefix.
  * - Any other currency: multiply the USD value by the mid-market exchange rate
- *   (loaded from /api/exchange-rates), then format in that currency.
+ *   (loaded from /api/exchange-rates), then format with currency code.
  */
 export function formatPrice(price: number | undefined | null, currency: string = 'USD'): string {
   if (price === undefined || price === null || isNaN(price)) {
-    return '$0.00'
+    return 'USD 0.00'
   }
 
   // IDR — already the local price, just format it
@@ -61,7 +61,7 @@ export function formatPrice(price: number | undefined | null, currency: string =
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(price)
-    return `Rp. ${formatted}`
+    return `IDR ${formatted}`
   }
 
   // Non-USD: apply exchange rate (price is in USD)
@@ -73,16 +73,14 @@ export function formatPrice(price: number | undefined | null, currency: string =
   // Zero-decimal currencies (no cents)
   const zeroDecimal = ['JPY', 'KRW', 'VND', 'IDR'].includes(currency)
 
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: zeroDecimal ? 0 : 2,
-      maximumFractionDigits: zeroDecimal ? 0 : 2,
-    }).format(displayPrice)
-  } catch {
-    return `${currency} ${displayPrice.toFixed(2)}`
-  }
+  // Format the number without currency symbol
+  const formatted = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: zeroDecimal ? 0 : 2,
+    maximumFractionDigits: zeroDecimal ? 0 : 2,
+  }).format(displayPrice)
+  
+  // Return with currency code prefix
+  return `${currency} ${formatted}`
 }
 
 export function slugify(text: string): string {
