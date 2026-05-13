@@ -32,10 +32,10 @@ export async function POST(request: Request) {
             addressLine1: body.origin.addressLine1,
           },
           contactInformation: {
-            personName: body.origin.contactName || 'Shipper',
+            fullName: body.origin.contactName || 'Shipper',
             companyName: body.origin.companyName || 'Mykonos',
-            phoneNumber: body.origin.phoneNumber || '+1234567890',
-            emailAddress: body.origin.emailAddress,
+            phone: body.origin.phoneNumber || '+1234567890',
+            email: body.origin.emailAddress,
           },
         },
         receiverDetails: {
@@ -47,10 +47,10 @@ export async function POST(request: Request) {
             addressLine1: body.destination.addressLine1,
           },
           contactInformation: {
-            personName: body.destination.contactName || 'Receiver',
+            fullName: body.destination.contactName || 'Receiver',
             companyName: body.destination.companyName || 'Customer',
-            phoneNumber: body.destination.phoneNumber || '+1234567890',
-            emailAddress: body.destination.emailAddress,
+            phone: body.destination.phoneNumber || '+1234567890',
+            email: body.destination.emailAddress,
           },
         },
       },
