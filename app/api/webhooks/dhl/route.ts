@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendOrderShippedEmail } from '@/lib/email/order-emails'
+import {
+  sendOutForDeliveryEmail,
+  sendDeliveryAttemptedEmail,
+  sendShipmentDelayedEmail,
+  sendDeliveryExceptionEmail,
+  sendPackageReturnedEmail
+} from '@/lib/email/delivery-status-emails'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,7 +80,7 @@ export async function POST(request: Request) {
     }
     
     let shouldSendEmail = false
-    let emailType: 'shipped' | 'delivered' | 'exception' = 'shipped'
+    let emailType: 'shipped' | 'delivered' | 'out-for-delivery' | 'delivery-attempted' | 'delayed' | 'exception' | 'returned' = 'shipped'
     
     switch (event) {
       case 'shipment-picked-up':
@@ -97,7 +104,8 @@ export async function POST(request: Request) {
       case 'OUT_FOR_DELIVERY':
         console.log('🚛 Out for delivery')
         updateData.status = 'shipped'
-        // Could add a new status field for "out for delivery"
+        shouldSendEmail = true
+        emailType = 'out-for-delivery'
         break
         
       case 'shipment-delivered':
@@ -117,11 +125,29 @@ export async function POST(request: Request) {
         emailType = 'exception'
         break
         
+      case 'delivery-attempted':
+      case 'DELIVERY_ATTEMPTED':
+        console.log('📭 Delivery attempted')
+        updateData.internal_notes = `Delivery attempted: ${payload.description || 'No one available to receive'}`
+        shouldSendEmail = true
+        emailType = 'delivery-attempted'
+        break
+        
+      case 'shipment-delayed':
+      case 'DELAYED':
+        console.log('⏰ Shipment delayed')
+        updateData.internal_notes = `Shipment delayed: ${payload.description || 'Unknown reason'}`
+        shouldSendEmail = true
+        emailType = 'delayed'
+        break
+        
       case 'shipment-returned':
       case 'RETURNED':
         console.log('↩️  Package returned to sender')
         updateData.status = 'cancelled'
         updateData.internal_notes = `Package returned: ${payload.description || 'Unknown reason'}`
+        shouldSendEmail = true
+        emailType = 'returned'
         break
         
       default:
@@ -146,27 +172,102 @@ export async function POST(request: Request) {
     if (shouldSendEmail && order.customer_email) {
       console.log('📧 Sending email notification...')
       try {
-        if (emailType === 'delivered') {
-          // Send delivery confirmation email
-          await sendDeliveryConfirmationEmail({
-            orderId: order.id,
-            orderNumber: order.order_number,
-            customerEmail: order.customer_email,
-            customerName: order.shipping_address?.full_name || order.customer_email.split('@')[0],
-            trackingNumber: trackingNumber,
-            deliveredAt: timestamp
-          })
-        } else if (emailType === 'shipped' && !order.shipped_at) {
-          // Send shipping notification (if not already sent)
-          await sendOrderShippedEmail({
-            orderId: order.id,
-            orderNumber: order.order_number,
-            customerEmail: order.customer_email,
-            customerName: order.shipping_address?.full_name || order.customer_email.split('@')[0],
-            trackingNumber: trackingNumber,
-            trackingUrl: order.tracking_url || `https://www.dhl.com/en/express/tracking.html?AWB=${trackingNumber}&brand=DHL`
-          })
+        // Get customer name with proper fallback
+        console.log('📝 Customer name data:', {
+          shipping_name: order.shipping_address?.name,
+          shipping_full_name: order.shipping_address?.full_name,
+          first_name: order.customer_first_name,
+          last_name: order.customer_last_name,
+          email: order.customer_email,
+          user_id: order.user_id
+        })
+        
+        let customerName = order.shipping_address?.name 
+          || order.shipping_address?.full_name
+          || (order.customer_first_name && order.customer_last_name 
+              ? `${order.customer_first_name} ${order.customer_last_name}` 
+              : null)
+        
+        // If still no name, try to get from user profile
+        if (!customerName && order.user_id) {
+          console.log('🔍 Fetching user profile for name...')
+          const { data: authUser } = await supabase.auth.admin.getUserById(order.user_id)
+          if (authUser?.user?.user_metadata) {
+            const meta = authUser.user.user_metadata
+            customerName = meta.full_name 
+              || (meta.first_name && meta.last_name ? `${meta.first_name} ${meta.last_name}` : null)
+              || meta.name
+            console.log('✅ Found name in user profile:', customerName)
+          }
         }
+        
+        // Final fallback to email username
+        if (!customerName) {
+          customerName = order.customer_email.split('@')[0]
+        }
+        
+        console.log('✅ Using customer name:', customerName)
+        
+        const emailData = {
+          orderId: order.id,
+          orderNumber: order.order_number,
+          customerEmail: order.customer_email,
+          customerName: customerName,
+          trackingNumber: trackingNumber,
+          timestamp: timestamp,
+          description: payload.description,
+          location: payload.location,
+          estimatedDelivery: payload.estimatedDelivery,
+          attemptNumber: payload.attemptNumber,
+          reason: payload.reason
+        }
+        
+        switch (emailType) {
+          case 'delivered':
+            await sendDeliveryConfirmationEmail({
+              orderId: order.id,
+              orderNumber: order.order_number,
+              customerEmail: order.customer_email,
+              customerName: customerName,
+              trackingNumber: trackingNumber,
+              deliveredAt: timestamp
+            })
+            break
+            
+          case 'shipped':
+            if (!order.shipped_at) {
+              await sendOrderShippedEmail({
+                orderId: order.id,
+                orderNumber: order.order_number,
+                customerEmail: order.customer_email,
+                customerName: customerName,
+                trackingNumber: trackingNumber,
+                trackingUrl: order.tracking_url || `https://www.dhl.com/en/express/tracking.html?AWB=${trackingNumber}&brand=DHL`
+              })
+            }
+            break
+            
+          case 'out-for-delivery':
+            await sendOutForDeliveryEmail(emailData)
+            break
+            
+          case 'delivery-attempted':
+            await sendDeliveryAttemptedEmail(emailData)
+            break
+            
+          case 'delayed':
+            await sendShipmentDelayedEmail(emailData)
+            break
+            
+          case 'exception':
+            await sendDeliveryExceptionEmail(emailData)
+            break
+            
+          case 'returned':
+            await sendPackageReturnedEmail(emailData)
+            break
+        }
+        
         console.log('✅ Email sent successfully')
       } catch (emailError: any) {
         console.error('⚠️  Failed to send email:', emailError.message)
