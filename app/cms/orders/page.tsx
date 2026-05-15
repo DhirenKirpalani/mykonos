@@ -1192,10 +1192,15 @@ export default function OrdersPage() {
                                   </div>
                                   
                                   <div className="space-y-2 text-sm">
-                                    {details.order.dhl_tracking_url && (
+                                    {trackingNum && (
                                       <div>
                                         <span className="text-gray-600">API Tracking: </span>
-                                        <a href={details.order.dhl_tracking_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">
+                                        <a 
+                                          href={`/api/shipping/dhl/tracking?trackingNumber=${trackingNum}`} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer" 
+                                          className="text-blue-600 hover:underline text-xs"
+                                        >
                                           View API
                                         </a>
                                       </div>
@@ -1337,15 +1342,53 @@ export default function OrdersPage() {
                                     )
                                   }
 
-                                  if (tracking && tracking.events && tracking.events.length > 0) {
+                                  if (tracking) {
                                     return (
                                       <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                                         <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                           <Package className="h-5 w-5 text-gray-600" />
-                                          Shipment Timeline
+                                          {tracking.events && tracking.events.length > 0 ? 'Shipment Timeline' : 'Shipment Information'}
                                         </h4>
-                                        <div className="space-y-3">
-                                          {tracking.events.map((event: any, index: number) => {
+                                        
+                                        {/* Shipment Details */}
+                                        <div className="mb-4 space-y-2 text-sm">
+                                          {tracking.status && (
+                                            <div className="flex justify-between">
+                                              <span className="text-gray-600">Status:</span>
+                                              <span className="font-medium text-gray-900">{tracking.status}</span>
+                                            </div>
+                                          )}
+                                          {tracking.description && (
+                                            <div className="flex justify-between">
+                                              <span className="text-gray-600">Description:</span>
+                                              <span className="font-medium text-gray-900">{tracking.description}</span>
+                                            </div>
+                                          )}
+                                          {tracking.productCode && (
+                                            <div className="flex justify-between">
+                                              <span className="text-gray-600">Service:</span>
+                                              <span className="font-medium text-gray-900">DHL Express ({tracking.productCode})</span>
+                                            </div>
+                                          )}
+                                          {tracking.weight && (
+                                            <div className="flex justify-between">
+                                              <span className="text-gray-600">Weight:</span>
+                                              <span className="font-medium text-gray-900">{tracking.weight} kg</span>
+                                            </div>
+                                          )}
+                                          {tracking.numberOfPieces && (
+                                            <div className="flex justify-between">
+                                              <span className="text-gray-600">Pieces:</span>
+                                              <span className="font-medium text-gray-900">{tracking.numberOfPieces}</span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Events Timeline */}
+                                        {tracking.events && tracking.events.length > 0 && (
+                                          <div className="space-y-3 pt-4 border-t border-gray-200">
+                                            <h5 className="text-sm font-semibold text-gray-700">Tracking Events</h5>
+                                            {tracking.events.map((event: any, index: number) => {
                                             const isLatest = index === 0
                                             const isDelivered = event.description?.toLowerCase().includes('delivered')
                                             
@@ -1393,7 +1436,10 @@ export default function OrdersPage() {
                                               </div>
                                             )
                                           })}
-                                        </div>
+                                          </div>
+                                        )}
+
+                                        {/* Estimated Delivery */}
                                         {tracking.estimatedDeliveryDate && (
                                           <div className="mt-4 pt-4 border-t border-gray-200">
                                             <p className="text-sm text-gray-600">
@@ -1403,6 +1449,15 @@ export default function OrdersPage() {
                                                 day: 'numeric',
                                                 year: 'numeric'
                                               })}
+                                            </p>
+                                          </div>
+                                        )}
+                                        
+                                        {/* No Events Message */}
+                                        {(!tracking.events || tracking.events.length === 0) && (
+                                          <div className="mt-4 pt-4 border-t border-gray-200">
+                                            <p className="text-sm text-gray-500 italic">
+                                              No tracking events available yet. The shipment has been created and is awaiting pickup or first scan.
                                             </p>
                                           </div>
                                         )}
