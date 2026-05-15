@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/refresh-new-badges",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/update-tracking",
+      "schedule": "0,30 * * * *"
     }
   ]
 }

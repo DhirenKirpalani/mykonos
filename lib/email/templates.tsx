@@ -151,21 +151,21 @@ export function OrderConfirmationEmail({
       <Body style={{ margin: 0, padding: 0, backgroundColor: '#f8f9fa', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale' }}>
         <Container className="container" style={{ maxWidth: '600px', width: '100%', margin: '0 auto', backgroundColor: '#ffffff' }}>
           {/* Header with Mykonos Branding */}
-          <div className="header" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '40px 30px', textAlign: 'center' }}>
-            <Heading style={{ color: '#d4af37', fontSize: '32px', fontWeight: '700', margin: '0 0 10px 0', letterSpacing: '2px', fontFamily: 'Georgia, serif' }}>
+          <div className="header" style={{ background: '#071D49', padding: '40px 30px', textAlign: 'center' }}>
+            <Heading style={{ color: '#D9B25E', background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '36px', fontWeight: '400', margin: '0 0 8px 0', letterSpacing: '0.25em', fontFamily: 'Montserrat, sans-serif' }}>
               MYKONOS
             </Heading>
-            <Text style={{ color: '#e2e8f0', fontSize: '14px', margin: 0, letterSpacing: '1px' }}>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px', margin: 0, fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'Lato, "Gill Sans", sans-serif' }}>
               Modern & Vibrant Perfumery
             </Text>
           </div>
 
           {/* Order Banner */}
-          <div className="banner" style={{ background: paymentStatus === 'pending' ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(90deg, #d4af37 0%, #f4d03f 100%)', padding: '40px 30px', textAlign: 'center' }}>
-            <Text className="heading-large" style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '1px' }}>
+          <div className="banner" style={{ background: paymentStatus === 'pending' ? '#fbbf24' : '#B8985F', padding: '40px 30px', textAlign: 'center' }}>
+            <Text className="heading-large" style={{ fontSize: '32px', fontWeight: '700', color: '#071D49', margin: 0, letterSpacing: '1px' }}>
               {paymentStatus === 'pending' ? '⏳ Order Received - Payment Pending' : `✨ ${text.orderConfirmed}`}
             </Text>
-            <Text style={{ fontSize: '15px', color: '#1e293b', margin: '12px 0 0 0', lineHeight: '1.5' }}>
+            <Text style={{ fontSize: '15px', color: '#071D49', margin: '12px 0 0 0', lineHeight: '1.5' }}>
               {paymentStatus === 'pending' ? 'Your order has been created. Please complete payment to confirm your order.' : `${text.thankYou}`}<br />
               {paymentStatus === 'pending' ? '' : text.journeyBegins}
             </Text>
@@ -353,12 +353,21 @@ export function OrderConfirmationEmail({
           </div>
 
           {/* Footer */}
-          <div style={{ backgroundColor: '#0f172a', padding: '30px', textAlign: 'center' }}>
-            <Text style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 15px 0', lineHeight: '1.6' }}>
-              {text.contactUs}<br />
-              <a href={isIDR ? "https://wa.me/6285780218514?text=Hello!%20I%20would%20like%20to%20inquire%20about%20your%20products." : "https://wa.me/62816261783?text=Hello!%20I%20would%20like%20to%20inquire%20about%20your%20products."} style={{ color: '#d4af37', textDecoration: 'none', fontWeight: '600' }}>{contactNumber}</a>
+          <div style={{ backgroundColor: '#071D49', padding: '30px', textAlign: 'center', borderTop: '3px solid #B8985F' }}>
+            <Text style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 8px 0' }}>
+              {locale === 'id' ? 'Terima kasih telah berbelanja di' : 'Thank you for shopping with'}
             </Text>
-            <Text style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+            <Heading style={{ color: '#D9B25E', background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '20px', fontWeight: '400', margin: '0 0 4px 0', letterSpacing: '0.25em', fontFamily: 'Montserrat, sans-serif' }}>
+              MYKONOS
+            </Heading>
+            <Text style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 16px 0', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+              Modern & Vibrant Perfumery
+            </Text>
+            <Text style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 8px 0', lineHeight: '1.6' }}>
+              {text.contactUs}<br />
+              <a href={isIDR ? "https://wa.me/6285780218514?text=Hello!%20I%20would%20like%20to%20inquire%20about%20your%20products." : "https://wa.me/62816261783?text=Hello!%20I%20would%20like%20to%20inquire%20about%20your%20products."} style={{ color: '#B8985F', textDecoration: 'none', fontWeight: '600' }}>{contactNumber}</a>
+            </Text>
+            <Text style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', margin: 0 }}>
               {text.copyright}
             </Text>
           </div>

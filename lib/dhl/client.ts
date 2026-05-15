@@ -203,6 +203,12 @@ class DHLClient {
     trackingView?: 'all-checkpoints' | 'last-checkpoint' | 'shipment-details-only'
     levelOfDetail?: 'all' | 'shipment' | 'piece'
   }): Promise<DHLTrackingResponse> {
+    // Return mock data for test tracking numbers
+    if (trackingNumber.startsWith('TEST-') || trackingNumber.startsWith('7777')) {
+      console.log('🎭 Using mock tracking data for test number:', trackingNumber)
+      return this.getMockTrackingData(trackingNumber)
+    }
+
     const params = new URLSearchParams({
       shipmentTrackingNumber: trackingNumber,
     })
@@ -217,6 +223,141 @@ class DHLClient {
     return this.request<DHLTrackingResponse>(
       `${DHL_CONFIG.ENDPOINTS.TRACKING}?${params.toString()}`
     )
+  }
+
+  /**
+   * Get mock tracking data for testing
+   */
+  private getMockTrackingData(trackingNumber: string): DHLTrackingResponse {
+    const now = new Date()
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
+    
+    const formatDate = (date: Date) => date.toISOString().split('T')[0]
+    const formatTime = (date: Date) => date.toISOString().split('T')[1].substring(0, 8)
+
+    const baseShipment = {
+      shipperDetails: {
+        name: 'Mykonos Fragrance',
+        postalAddress: {
+          cityName: 'Jakarta',
+          postalCode: '13920',
+          countryCode: 'ID'
+        }
+      },
+      receiverDetails: {
+        name: 'Test Customer',
+        postalAddress: {
+          cityName: 'Jakarta',
+          postalCode: '12345',
+          countryCode: 'ID'
+        }
+      },
+      totalWeight: 0.5,
+      unitOfMeasurements: 'metric' as const,
+      numberOfPieces: 1
+    }
+
+    // Different mock data based on tracking number
+    if (trackingNumber === 'TEST-TRANSIT') {
+      return {
+        shipments: [{
+          ...baseShipment,
+          shipmentTrackingNumber: trackingNumber,
+          status: 'Success',
+          shipmentTimestamp: twoDaysAgo.toISOString(),
+          productCode: 'N',
+          description: 'Fragrance Products',
+          events: [
+            {
+              date: formatDate(yesterday),
+              time: formatTime(yesterday),
+              typeCode: 'PU',
+              description: 'Shipment picked up',
+              serviceArea: [{
+                code: 'JKT',
+                description: 'Jakarta-ID'
+              }]
+            },
+            {
+              date: formatDate(now),
+              time: formatTime(now),
+              typeCode: 'PL',
+              description: 'Processed at sort facility',
+              serviceArea: [{
+                code: 'JKT',
+                description: 'Jakarta-ID'
+              }]
+            }
+          ]
+        }]
+      }
+    }
+
+    // Default: Delivered status
+    return {
+      shipments: [{
+        ...baseShipment,
+        shipmentTrackingNumber: trackingNumber,
+        status: 'Success',
+        shipmentTimestamp: twoDaysAgo.toISOString(),
+        productCode: 'N',
+        description: 'Fragrance Products',
+        events: [
+          {
+            date: formatDate(twoDaysAgo),
+            time: '09:00:00',
+            typeCode: 'PU',
+            description: 'Shipment picked up',
+            serviceArea: [{
+              code: 'JKT',
+              description: 'Jakarta-ID'
+            }]
+          },
+          {
+            date: formatDate(twoDaysAgo),
+            time: '14:00:00',
+            typeCode: 'PL',
+            description: 'Processed at sort facility',
+            serviceArea: [{
+              code: 'JKT',
+              description: 'Jakarta-ID'
+            }]
+          },
+          {
+            date: formatDate(yesterday),
+            time: '23:00:00',
+            typeCode: 'DF',
+            description: 'Arrived at delivery facility',
+            serviceArea: [{
+              code: 'JKT',
+              description: 'Jakarta-ID'
+            }]
+          },
+          {
+            date: formatDate(now),
+            time: '08:30:00',
+            typeCode: 'WC',
+            description: 'With delivery courier',
+            serviceArea: [{
+              code: 'JKT',
+              description: 'Jakarta-ID'
+            }]
+          },
+          {
+            date: formatDate(now),
+            time: '10:00:00',
+            typeCode: 'OK',
+            description: 'Delivered',
+            serviceArea: [{
+              code: 'JKT',
+              description: 'Jakarta-ID'
+            }],
+            signedBy: 'Customer'
+          }
+        ]
+      }]
+    }
   }
 
   /**
