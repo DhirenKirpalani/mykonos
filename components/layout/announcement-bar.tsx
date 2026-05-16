@@ -94,7 +94,7 @@ export function AnnouncementBar() {
   }, [index, messages.length])
 
   return (
-    <div className="sticky top-0 z-[60] relative overflow-hidden bg-black text-white">
+    <div className="sticky top-0 z-40 relative overflow-hidden bg-black text-white">
       <div className="h-10 flex items-center">
         <div
           ref={textRef}

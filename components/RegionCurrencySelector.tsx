@@ -208,129 +208,13 @@ export function RegionCurrencySelector() {
   }
 
   return (
-    <>
-      {/* ── Trigger button ── */}
-      <button
-        onClick={() => setIsOpen(true)}
-        disabled={saving}
-        aria-label="Select shipping country"
-        className="flex items-center gap-1.5 text-white hover:text-luxury-gold transition-colors"
-      >
-        <Globe className="h-4 w-4 flex-shrink-0" />
-        <span className="text-sm font-medium">{selected.code}</span>
-        <span className="text-base leading-none">{selected.flag}</span>
-        <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-      </button>
-
-      {/* ── Modal ── */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Select your shipping country"
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setIsOpen(false)}
-          />
-
-          {/* Panel — bottom-sheet on mobile, compact card on desktop */}
-          <div className="relative z-10 w-full rounded-t-2xl sm:rounded-xl sm:max-w-3xl bg-white shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh]">
-            {/* Drag handle — mobile only */}
-            <div className="sm:hidden flex justify-center pt-3 pb-1 cursor-grab">
-              <div className="w-10 h-1 rounded-full bg-gray-300" />
-            </div>
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 sm:px-5 pt-2 sm:pt-4 pb-2 sm:pb-3">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Select shipping country</h2>
-                <p className="hidden sm:block mt-0.5 text-xs text-gray-500">Choose your location for pricing and delivery</p>
-                {/* Language toggle — shown when country has a non-English language */}
-                {selected.googleLang && (
-                  <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    <Languages className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                    <span className="text-xs text-gray-500">Page language:</span>
-                    <button
-                      onClick={() => setLanguage(selected.googleLang)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        currentLang === selected.googleLang
-                          ? 'bg-luxury-gold text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {LANG_NAMES[selected.googleLang]?.native ?? selected.googleLang}
-                    </button>
-                    <button
-                      onClick={() => setLanguage('')}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        !currentLang
-                          ? 'bg-luxury-gold text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      English
-                    </button>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="ml-4 mt-0.5 flex-shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Tabs */}
-            <div className="border-b border-gray-200 px-4 sm:px-5 overflow-x-auto scrollbar-hide">
-              <div className="flex gap-0 min-w-max">
-                {TABS.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-2.5 sm:px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-gray-900 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Country grid */}
-            <div className="overflow-y-auto flex-1 p-3 sm:p-4">
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-1.5 sm:gap-2">
-                {visible.map(country => {
-                  const isSelected = selected.code === country.code
-                  return (
-                    <button
-                      key={country.code}
-                      onClick={() => handleSelect(country)}
-                      disabled={saving}
-                      className={`flex flex-col items-center gap-0.5 sm:gap-1 rounded-lg px-1.5 py-2 sm:py-2.5 text-center transition-all active:scale-95 min-w-0 ${
-                        isSelected
-                          ? 'bg-gray-100 ring-2 ring-gray-900'
-                          : 'bg-gray-50 hover:bg-gray-100'
-                      }`}
-                    >
-                      <span className="text-xl sm:text-2xl leading-none">{country.flag}</span>
-                      <span className="text-[9px] sm:text-[10px] font-semibold text-gray-800 uppercase tracking-wide leading-tight mt-0.5">
-                        {country.name}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    <div
+      className="flex items-center gap-1.5 text-white/80"
+      title={`Detected region: ${selected.name}`}
+    >
+      <Globe className="h-4 w-4 flex-shrink-0" />
+      <span className="text-sm font-medium">{selected.code}</span>
+      <span className="text-base leading-none">{selected.flag}</span>
+    </div>
   )
 }
