@@ -6,7 +6,6 @@ import { AnnouncementBar } from '@/components/layout/announcement-bar'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { ScrollToTop } from '@/components/scroll-to-top'
-import { WhatsAppButton } from '@/components/WhatsAppButton'
 import NewsletterSubscription from '@/components/NewsletterSubscription'
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
@@ -27,7 +26,6 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
       {pathname === '/' && <NewsletterSubscription />}
       <Footer />
       <ScrollToTop />
-      <WhatsAppButton />
     </div>
   )
 }

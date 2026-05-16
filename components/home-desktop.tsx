@@ -5,18 +5,19 @@ import dynamic from 'next/dynamic'
 import { HeroCarousel } from '@/components/hero-carousel'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
+// Lazy load heavy components with better loading states
 const ProductCarousel = dynamic(() => import('@/components/product-carousel').then(mod => ({ default: mod.ProductCarousel })), {
   loading: () => <div className="h-96 animate-pulse bg-gradient-to-b from-gray-200 to-gray-100" />,
-  ssr: true
+  ssr: false // Disable SSR for carousels to reduce initial bundle
 })
 
 const ScrollReveal = dynamic(() => import('@/components/scroll-reveal').then(mod => ({ default: mod.ScrollReveal })), {
-  ssr: true
+  ssr: false,
+  loading: () => <div className="min-h-[200px]" />
 })
-
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 
 type Product = Database['public']['Tables']['products']['Row']
 type Collection = Database['public']['Tables']['collections']['Row']

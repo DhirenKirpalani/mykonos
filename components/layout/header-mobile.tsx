@@ -378,15 +378,23 @@ export function HeaderMobile() {
         </div>
       </nav>
 
-      {/* Full-width dropdown menu */}
+      {/* Mobile sidebar with backdrop */}
       {mobileMenuOpen && (
-        <div
-          id="mobile-menu"
-          className="absolute top-full left-0 right-0 z-[70] bg-luxury-navy border-t border-white/10 shadow-2xl overflow-y-auto"
-          style={{ maxHeight: 'calc(100vh - 3.5rem)' }}
-          role="navigation"
-          aria-label="Mobile navigation"
-        >
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          
+          {/* Sidebar */}
+          <div
+            id="mobile-menu"
+            className="fixed top-0 left-0 bottom-0 z-[70] w-[75vw] max-w-[320px] bg-luxury-navy shadow-2xl overflow-y-auto animate-in slide-in-from-left duration-300"
+            role="navigation"
+            aria-label="Mobile navigation"
+          >
           <div className="px-4 pt-4 pb-6">
             {/* Primary nav */}
             <nav role="menu">
@@ -463,6 +471,7 @@ export function HeaderMobile() {
             </div>
           </div>
         </div>
+        </>
       )}
 
       <NotificationDialog

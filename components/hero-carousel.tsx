@@ -164,9 +164,11 @@ export function HeroCarousel() {
                     alt={item.title || "Hero"}
                     fill
                     priority={index === 0}
-                    quality={90}
+                    fetchPriority={index === 0 ? "high" : "low"}
+                    quality={index === 0 ? 85 : 75}
                     sizes="100vw"
                     className="object-cover object-center"
+                    loading={index === 0 ? "eager" : "lazy"}
                     onLoad={() => {
                       setImagesLoaded(prev => new Set(prev).add(`${item.id}-desktop`))
                     }}
@@ -179,9 +181,11 @@ export function HeroCarousel() {
                     alt={item.title || "Hero"}
                     fill
                     priority={index === 0}
-                    quality={90}
+                    fetchPriority={index === 0 ? "high" : "low"}
+                    quality={index === 0 ? 85 : 75}
                     sizes="100vw"
                     className="object-cover object-center"
+                    loading={index === 0 ? "eager" : "lazy"}
                     onLoad={() => {
                       setImagesLoaded(prev => new Set(prev).add(`${item.id}-mobile`))
                     }}
@@ -240,7 +244,7 @@ export function HeroCarousel() {
             className="space-y-4"
           >
             {currentItem?.title && (
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white drop-shadow-lg">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white drop-shadow-lg" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
                 {currentItem.title}
               </h1>
             )}
@@ -253,6 +257,7 @@ export function HeroCarousel() {
               <Link
                 href={shopNowLink}
                 className="inline-block border-2 border-white bg-white/10 backdrop-blur-sm px-8 py-3 sm:px-12 sm:py-4 text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition-all hover:bg-white/25"
+                aria-label={`${buttonText} - Shop our collection`}
               >
                 {buttonText}
               </Link>
