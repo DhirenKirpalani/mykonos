@@ -175,20 +175,7 @@ export async function POST(request: Request) {
               console.warn('⚠️ [API] Cannot send email - missing customer_email or order_number')
             }
             
-            // Clear cart items for authenticated users when reusing existing order
-            if (user_id) {
-              console.log('🗑️ [API] Clearing cart items for existing order, user:', user_id)
-              const { error: clearCartError } = await supabase
-                .from('cart_items')
-                .delete()
-                .eq('user_id', user_id)
-              
-              if (clearCartError) {
-                console.error('❌ [API] Failed to clear cart:', clearCartError)
-              } else {
-                console.log('✅ [API] Cart cleared successfully')
-              }
-            }
+            // NOTE: Cart is NOT cleared here - it will be cleared after successful payment
             
             return NextResponse.json({
               order_id: typedOrder.id,

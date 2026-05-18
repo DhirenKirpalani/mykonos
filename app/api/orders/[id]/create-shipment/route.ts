@@ -99,6 +99,9 @@ export async function POST(
 
     // Fetch DHL auto-pickup setting
     let autoPickup = false
+    let pickupCloseTime = '18:00'
+    let pickupLocation = 'reception'
+    
     try {
       const { data: pickupSetting } = await supabase
         .from('system_settings')
@@ -107,9 +110,16 @@ export async function POST(
         .single()
       
       autoPickup = pickupSetting?.setting_value?.enabled ?? false
-      console.log('📦 DHL Auto-Pickup:', autoPickup ? 'Enabled' : 'Disabled')
+      pickupCloseTime = pickupSetting?.setting_value?.closeTime ?? '18:00'
+      pickupLocation = pickupSetting?.setting_value?.location ?? 'reception'
+      
+      console.log('📦 DHL Auto-Pickup Configuration:', {
+        enabled: autoPickup,
+        closeTime: pickupCloseTime,
+        location: pickupLocation
+      })
     } catch (error) {
-      console.log('⚠️  Could not fetch auto-pickup setting, using default (disabled)')
+      console.log('⚠️  Could not fetch auto-pickup setting, using defaults')
     }
 
     // Layer 3: Pre-shipment address validation
@@ -137,7 +147,11 @@ export async function POST(
 
     // Build DHL shipment request
     console.log('🔨 Building DHL shipment request...')
-    const baseRequest = orderToShipmentRequest(order, { autoPickup })
+    const baseRequest = orderToShipmentRequest(order, { 
+      autoPickup,
+      pickupCloseTime,
+      pickupLocation
+    })
     
     const shipmentRequest: DHLShipmentRequest = {
       ...baseRequest as DHLShipmentRequest,

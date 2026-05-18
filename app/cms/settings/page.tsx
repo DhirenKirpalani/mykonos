@@ -13,6 +13,8 @@ interface SystemSetting {
     enabled?: boolean
     message?: string
     regions?: string[]
+    closeTime?: string
+    location?: string
   }
   description: string
   updated_at: string
@@ -353,6 +355,75 @@ export default function SystemSettingsPage() {
           })}
         </div>
       </div>
+
+      {/* DHL Pickup Configuration */}
+      {settings.dhl_auto_pickup?.setting_value?.enabled && (
+        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <div className="flex items-start gap-4 mb-6">
+            <div className="rounded-full bg-orange-100 p-3">
+              <Truck className="h-6 w-6 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-gray-900">DHL Pickup Configuration</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Configure when and where DHL should pick up packages
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pickup Close Time
+              </label>
+              <input
+                type="time"
+                value={settings.dhl_auto_pickup?.setting_value?.closeTime || '18:00'}
+                onChange={(e) => {
+                  const newValue = {
+                    ...settings.dhl_auto_pickup.setting_value,
+                    closeTime: e.target.value
+                  }
+                  updateSetting('dhl_auto_pickup', newValue)
+                }}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Latest time DHL can arrive to pick up packages (24-hour format)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pickup Location
+              </label>
+              <input
+                type="text"
+                value={settings.dhl_auto_pickup?.setting_value?.location || 'reception'}
+                onChange={(e) => {
+                  const newValue = {
+                    ...settings.dhl_auto_pickup.setting_value,
+                    location: e.target.value
+                  }
+                  updateSetting('dhl_auto_pickup', newValue)
+                }}
+                maxLength={80}
+                placeholder="e.g., reception, warehouse, loading dock"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Where packages will be ready for DHL pickup (max 80 characters)
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-lg bg-orange-50 p-4 border border-orange-200">
+            <p className="text-sm text-orange-800">
+              <strong>Current Configuration:</strong> DHL will pick up packages from <strong>{settings.dhl_auto_pickup?.setting_value?.location || 'reception'}</strong> before <strong>{settings.dhl_auto_pickup?.setting_value?.closeTime || '18:00'}</strong> daily.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Audit Trail Link */}
       <div className="rounded-lg bg-gray-50 p-6">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Package, Truck, CheckCircle, Clock, ChevronDown, ChevronRight, MapPin, User, CreditCard, ExternalLink, Copy, Printer, Download, FileText } from 'lucide-react'
+import { Search, Package, Truck, CheckCircle, Clock, ChevronDown, ChevronRight, MapPin, User, CreditCard, ExternalLink, Copy, Download, FileText, AlertTriangle, RefreshCw, Mail, Phone, Home, CheckCircle2, Circle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AuditLogModal } from '@/components/AuditLogModal'
 import { toast } from 'sonner'
@@ -40,6 +40,9 @@ interface Order {
   internal_notes?: string
   currency_code?: string
   payment_metadata?: any
+  shipping_status?: string
+  tracking_events?: any[]
+  last_tracking_poll?: string
   user?: {
     first_name: string
     last_name: string
@@ -1078,14 +1081,39 @@ export default function OrdersPage() {
                               </div>
                             )}
                             
-                            {(details.order.tracking_number || details.order.dhl_shipment_number) && (() => {
+                            {(details.order.tracking_number || details.order.dhl_shipment_number) && 
+                             ['shipped', 'delivered', 'in_transit', 'out_for_delivery'].includes(order.status) && (() => {
                               const trackingNum = details.order.tracking_number || details.order.dhl_shipment_number
+                              const trackingEvents = details.order.tracking_events || []
+                              
+                              // Get status from real DHL events, not fake timestamps
                               const getDeliveryStatus = () => {
-                                if (details.order.delivered_at) return { label: 'Delivered', color: 'green' }
-                                if (details.order.shipped_at) return { label: 'In Transit', color: 'blue' }
-                                return { label: 'Pending', color: 'yellow' }
+                                if (trackingEvents.length === 0) {
+                                  return { label: 'Label Created - Awaiting Pickup', color: 'yellow' }
+                                }
+                                
+                                // Check latest event
+                                const latestEvent = trackingEvents[trackingEvents.length - 1]
+                                const typeCode = latestEvent?.typeCode?.toUpperCase()
+                                
+                                if (typeCode === 'OK') return { label: 'Delivered', color: 'green' }
+                                if (typeCode === 'WC') return { label: 'Out for Delivery', color: 'blue' }
+                                if (typeCode === 'RT') return { label: 'Returned to Sender', color: 'red' }
+                                if (['PL', 'DF', 'AF'].includes(typeCode || '')) return { label: 'In Transit', color: 'blue' }
+                                if (typeCode === 'PU') return { label: 'Picked Up', color: 'blue' }
+                                
+                                return { label: 'Processing', color: 'yellow' }
                               }
                               const status = getDeliveryStatus()
+                              
+                              // Get real timestamps from events
+                              const getEventTimestamp = (typeCode: string) => {
+                                const event = trackingEvents.find((e: any) => e.typeCode === typeCode)
+                                return event ? `${event.date}T${event.time}` : null
+                              }
+                              
+                              const shippedAt = getEventTimestamp('PU')
+                              const deliveredAt = getEventTimestamp('OK')
                               
                               return (
                               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1096,12 +1124,141 @@ export default function OrdersPage() {
                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                       status.color === 'green' ? 'bg-green-100 text-green-700' :
                                       status.color === 'blue' ? 'bg-blue-100 text-blue-700' :
+                                      status.color === 'red' ? 'bg-red-100 text-red-700' :
                                       'bg-yellow-100 text-yellow-700'
                                     }`}>
                                       {status.label}
                                     </span>
                                   </div>
+                                  {/* Last Updated */}
+                                  {details.order.last_tracking_poll && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                      <RefreshCw className="h-3 w-3" />
+                                      Last updated: {(() => {
+                                        const lastPoll = new Date(details.order.last_tracking_poll)
+                                        const now = new Date()
+                                        const diffMs = now.getTime() - lastPoll.getTime()
+                                        const diffMins = Math.floor(diffMs / 60000)
+                                        const diffHours = Math.floor(diffMins / 60)
+                                        
+                                        if (diffMins < 1) return 'just now'
+                                        if (diffMins < 60) return `${diffMins} min ago`
+                                        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+                                        return lastPoll.toLocaleDateString()
+                                      })()}
+                                    </div>
+                                  )}
                                 </div>
+
+                                {/* Visual Status Timeline */}
+                                <div className="mb-4 p-3 bg-white rounded-lg border border-blue-100">
+                                  <div className="flex items-center justify-between text-xs">
+                                    {[
+                                      { label: 'Label Created', icon: FileText, code: null, active: true },
+                                      { label: 'Picked Up', icon: Package, code: 'PU', active: !!shippedAt },
+                                      { label: 'In Transit', icon: Truck, code: 'PL', active: trackingEvents.some((e: any) => ['PL', 'DF', 'AF'].includes(e.typeCode)) },
+                                      { label: 'Out for Delivery', icon: Home, code: 'WC', active: trackingEvents.some((e: any) => e.typeCode === 'WC') },
+                                      { label: 'Delivered', icon: CheckCircle2, code: 'OK', active: !!deliveredAt }
+                                    ].map((stage, idx, arr) => {
+                                      const Icon = stage.icon
+                                      return (
+                                        <div key={idx} className="flex items-center flex-1">
+                                          <div className="flex flex-col items-center">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                              stage.active ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
+                                            }`}>
+                                              <Icon className="h-4 w-4" />
+                                            </div>
+                                            <span className={`mt-1 text-[10px] font-medium text-center ${
+                                              stage.active ? 'text-green-700' : 'text-gray-400'
+                                            }`}>
+                                              {stage.label}
+                                            </span>
+                                          </div>
+                                          {idx < arr.length - 1 && (
+                                            <div className={`flex-1 h-0.5 mx-1 ${
+                                              stage.active && arr[idx + 1].active ? 'bg-green-500' : 'bg-gray-200'
+                                            }`} />
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Smart Alerts */}
+                                {(() => {
+                                  const alerts = []
+                                  const createdAt = new Date(details.order.created_at)
+                                  const daysSinceCreated = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
+                                  
+                                  // Alert if label created but not picked up for 2+ days
+                                  if (trackingEvents.length === 0 && daysSinceCreated >= 2) {
+                                    alerts.push({
+                                      type: 'warning',
+                                      icon: AlertTriangle,
+                                      message: `Label created ${daysSinceCreated} days ago but not picked up yet`,
+                                      action: 'Contact DHL or schedule pickup'
+                                    })
+                                  }
+                                  
+                                  // Alert if returned
+                                  if (trackingEvents.some((e: any) => e.typeCode === 'RT')) {
+                                    alerts.push({
+                                      type: 'error',
+                                      icon: AlertTriangle,
+                                      message: 'Package returned to sender',
+                                      action: 'Contact customer to verify address'
+                                    })
+                                  }
+                                  
+                                  // Alert if exception
+                                  if (trackingEvents.some((e: any) => ['CM', 'CD', 'NH', 'OH'].includes(e.typeCode))) {
+                                    alerts.push({
+                                      type: 'warning',
+                                      icon: AlertTriangle,
+                                      message: 'Delivery exception detected',
+                                      action: 'Check tracking events for details'
+                                    })
+                                  }
+                                  
+                                  return alerts.length > 0 && (
+                                    <div className="mb-4 space-y-2">
+                                      {alerts.map((alert, idx) => {
+                                        const Icon = alert.icon
+                                        return (
+                                          <div key={idx} className={`p-3 rounded-lg border ${
+                                            alert.type === 'error' ? 'bg-red-50 border-red-200' :
+                                            'bg-yellow-50 border-yellow-200'
+                                          }`}>
+                                            <div className="flex items-start gap-2">
+                                              <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+                                                alert.type === 'error' ? 'text-red-600' : 'text-yellow-600'
+                                              }`} />
+                                              <div className="flex-1">
+                                                <p className={`text-sm font-medium ${
+                                                  alert.type === 'error' ? 'text-red-900' : 'text-yellow-900'
+                                                }`}>
+                                                  ⚠️ ATTENTION NEEDED
+                                                </p>
+                                                <p className={`text-xs mt-1 ${
+                                                  alert.type === 'error' ? 'text-red-700' : 'text-yellow-700'
+                                                }`}>
+                                                  {alert.message}
+                                                </p>
+                                                <p className={`text-xs mt-1 font-medium ${
+                                                  alert.type === 'error' ? 'text-red-800' : 'text-yellow-800'
+                                                }`}>
+                                                  → {alert.action}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  )
+                                })()}
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                   <div className="space-y-2 text-sm">
@@ -1125,19 +1282,76 @@ export default function OrdersPage() {
                                         </button>
                                       </div>
                                     </div>
-                                      {details.order.dhl_product_code && (
-                                        <div>
-                                          <span className="text-gray-600">Service: </span>
-                                          <span className="font-medium text-gray-900">
-                                            {details.order.dhl_service_name || details.order.dhl_product_code}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {details.order.shipped_at && (
+                                      {details.order.dhl_product_code && (() => {
+                                        const getServiceInfo = (code: string) => {
+                                          const services: Record<string, { name: string, features: string[], eta: string }> = {
+                                            'N': { 
+                                              name: 'DHL Express Domestic (N)', 
+                                              features: ['Door-to-door', 'Signature required', 'Insurance included'],
+                                              eta: '1-2 business days'
+                                            },
+                                            'P': { 
+                                              name: 'DHL Express Worldwide (P)', 
+                                              features: ['International', 'Customs clearance', 'Insurance included'],
+                                              eta: '2-5 business days'
+                                            },
+                                            'D': { 
+                                              name: 'DHL Express 12:00 (D)', 
+                                              features: ['Delivery by 12:00', 'Signature required', 'Premium service'],
+                                              eta: 'Next business day by 12:00'
+                                            },
+                                            'T': { 
+                                              name: 'DHL Express 10:30 (T)', 
+                                              features: ['Delivery by 10:30', 'Signature required', 'Priority service'],
+                                              eta: 'Next business day by 10:30'
+                                            },
+                                            'K': { 
+                                              name: 'DHL Express 9:00 (K)', 
+                                              features: ['Delivery by 9:00', 'Signature required', 'Fastest service'],
+                                              eta: 'Next business day by 9:00'
+                                            },
+                                          }
+                                          return services[code] || { 
+                                            name: `DHL Service (${code})`, 
+                                            features: ['Standard delivery'],
+                                            eta: '2-3 business days'
+                                          }
+                                        }
+                                        
+                                        const serviceInfo = getServiceInfo(details.order.dhl_product_code)
+                                        
+                                        return (
+                                          <div className="col-span-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                                            <div className="flex items-start gap-2">
+                                              <Package className="h-4 w-4 text-blue-600 mt-0.5" />
+                                              <div className="flex-1">
+                                                <p className="font-medium text-gray-900 text-sm">{serviceInfo.name}</p>
+                                                <div className="mt-2 space-y-1">
+                                                  <p className="text-xs text-gray-600">
+                                                    <span className="font-medium">Features:</span>
+                                                  </p>
+                                                  <ul className="text-xs text-gray-700 space-y-0.5 ml-4">
+                                                    {serviceInfo.features.map((feature, idx) => (
+                                                      <li key={idx} className="flex items-center gap-1">
+                                                        <CheckCircle className="h-3 w-3 text-green-600" />
+                                                        {feature}
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                  <p className="text-xs text-gray-600 mt-2">
+                                                    <span className="font-medium">Expected Delivery:</span> {serviceInfo.eta}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
+                                      {shippedAt && (
                                         <div>
                                           <span className="text-gray-600">Shipped: </span>
                                           <span className="text-gray-900">
-                                            {new Date(details.order.shipped_at).toLocaleDateString('en-US', { 
+                                            {new Date(shippedAt).toLocaleDateString('en-US', { 
                                               month: 'short', 
                                               day: 'numeric', 
                                               year: 'numeric',
@@ -1167,11 +1381,11 @@ export default function OrdersPage() {
                                         </span>
                                       </div>
                                     )}
-                                    {details.order.delivered_at && (
+                                    {deliveredAt && (
                                       <div>
                                         <span className="text-gray-600">Delivered: </span>
                                         <span className="text-green-700 font-medium">
-                                          {new Date(details.order.delivered_at).toLocaleDateString('en-US', { 
+                                          {new Date(deliveredAt).toLocaleDateString('en-US', { 
                                             month: 'short', 
                                             day: 'numeric', 
                                             year: 'numeric',
@@ -1281,39 +1495,9 @@ export default function OrdersPage() {
                                         <Download className="w-4 h-4" />
                                         Download Label
                                       </button>
-                                      <button
-                                        onClick={() => {
-                                          try {
-                                            if (!details.order.dhl_label_pdf) return
-                                            const blob = new Blob(
-                                              [Uint8Array.from(atob(details.order.dhl_label_pdf), c => c.charCodeAt(0))],
-                                              { type: 'application/pdf' }
-                                            )
-                                            const url = URL.createObjectURL(blob)
-                                            const iframe = document.createElement('iframe')
-                                            iframe.style.display = 'none'
-                                            iframe.src = url
-                                            document.body.appendChild(iframe)
-                                            iframe.onload = () => {
-                                              iframe.contentWindow?.print()
-                                              setTimeout(() => {
-                                                document.body.removeChild(iframe)
-                                                URL.revokeObjectURL(url)
-                                              }, 100)
-                                            }
-                                            toast.success('Opening print dialog...')
-                                          } catch (error) {
-                                            toast.error('Failed to print label')
-                                          }
-                                        }}
-                                        className="inline-flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-medium"
-                                      >
-                                        <Printer className="w-4 h-4" />
-                                        Print Label
-                                      </button>
                                     </>
                                   )}
-                                  {details.order.delivered_at && (
+                                  {deliveredAt && (
                                     <button
                                       onClick={async () => {
                                         toast.info('Proof of Delivery feature coming soon')
@@ -1342,7 +1526,11 @@ export default function OrdersPage() {
                                     )
                                   }
 
-                                  if (tracking) {
+                                  // Use real tracking events from database, or fetched tracking data
+                                  const hasEvents = trackingEvents.length > 0
+                                  const displayEvents = hasEvents ? trackingEvents : (tracking?.events || [])
+                                  
+                                  if (tracking || hasEvents) {
                                     return (
                                       <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                                         <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1385,23 +1573,69 @@ export default function OrdersPage() {
                                         </div>
 
                                         {/* Events Timeline */}
-                                        {tracking.events && tracking.events.length > 0 && (
+                                        {displayEvents.length > 0 ? (
                                           <div className="space-y-3 pt-4 border-t border-gray-200">
                                             <h5 className="text-sm font-semibold text-gray-700">Tracking Events</h5>
-                                            {tracking.events.map((event: any, index: number) => {
-                                            const isLatest = index === 0
-                                            const isDelivered = event.description?.toLowerCase().includes('delivered')
+                                            {displayEvents.map((event: any, index: number) => {
+                                            const isLatest = index === displayEvents.length - 1
+                                            const isDelivered = event.typeCode === 'OK'
+                                            const isException = ['CM', 'CD', 'NH', 'OH', 'RT'].includes(event.typeCode)
+                                            
+                                            // Get icon based on event type
+                                            const getEventIcon = (typeCode: string) => {
+                                              const icons: Record<string, any> = {
+                                                'PU': Package,
+                                                'PL': Truck,
+                                                'DF': Truck,
+                                                'AF': MapPin,
+                                                'WC': Home,
+                                                'OK': CheckCircle2,
+                                                'RT': AlertTriangle,
+                                                'CM': AlertTriangle,
+                                                'CD': AlertTriangle,
+                                                'NH': AlertTriangle,
+                                                'OH': Clock,
+                                              }
+                                              return icons[typeCode] || Circle
+                                            }
+                                            
+                                            const EventIcon = getEventIcon(event.typeCode)
+                                            
+                                            // Calculate time elapsed since previous event
+                                            const getTimeElapsed = () => {
+                                              if (index === displayEvents.length - 1) return null
+                                              const currentTime = new Date(`${event.date}T${event.time}`)
+                                              const nextEvent = displayEvents[index + 1]
+                                              const nextTime = new Date(`${nextEvent.date}T${nextEvent.time}`)
+                                              const diffMs = currentTime.getTime() - nextTime.getTime()
+                                              const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+                                              const diffDays = Math.floor(diffHours / 24)
+                                              
+                                              if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} later`
+                                              if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} later`
+                                              return 'Same time'
+                                            }
                                             
                                             return (
                                               <div key={index} className="flex gap-3">
                                                 <div className="flex flex-col items-center">
-                                                  <div className={`w-3 h-3 rounded-full ${
-                                                    isDelivered ? 'bg-green-500' :
-                                                    isLatest ? 'bg-blue-500' : 
-                                                    'bg-gray-300'
-                                                  }`} />
-                                                  {index < tracking.events.length - 1 && (
-                                                    <div className="w-0.5 h-full bg-gray-300 mt-1" />
+                                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                                    isDelivered ? 'bg-green-500 text-white' :
+                                                    isException ? 'bg-red-500 text-white' :
+                                                    isLatest ? 'bg-blue-500 text-white' : 
+                                                    'bg-gray-300 text-gray-600'
+                                                  }`}>
+                                                    <EventIcon className="h-4 w-4" />
+                                                  </div>
+                                                  {index < displayEvents.length - 1 && (
+                                                    <div className="flex flex-col items-center flex-1 py-1">
+                                                      <div className="w-0.5 h-full bg-gray-300" />
+                                                      {getTimeElapsed() && (
+                                                        <span className="text-[10px] text-gray-400 my-1 whitespace-nowrap">
+                                                          {getTimeElapsed()}
+                                                        </span>
+                                                      )}
+                                                    </div>
                                                   )}
                                                 </div>
                                                 <div className="flex-1 pb-4">
@@ -1409,24 +1643,27 @@ export default function OrdersPage() {
                                                     <div className="flex-1">
                                                       <p className={`text-sm font-medium ${
                                                         isDelivered ? 'text-green-700' :
+                                                        isException ? 'text-red-700' :
                                                         isLatest ? 'text-blue-700' : 
                                                         'text-gray-700'
                                                       }`}>
                                                         {event.description}
                                                       </p>
-                                                      {event.location && (
-                                                        <p className="text-xs text-gray-500 mt-0.5">
-                                                          {event.location}
+                                                      {event.serviceArea?.[0]?.description && (
+                                                        <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                                                          <MapPin className="h-3 w-3" />
+                                                          {event.serviceArea[0].description}
                                                         </p>
                                                       )}
                                                       {event.signedBy && (
-                                                        <p className="text-xs text-gray-600 mt-1">
+                                                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                                          <User className="h-3 w-3" />
                                                           Signed by: <span className="font-medium">{event.signedBy}</span>
                                                         </p>
                                                       )}
                                                     </div>
                                                     <div className="text-right">
-                                                      <p className="text-xs text-gray-600">{event.date}</p>
+                                                      <p className="text-xs font-medium text-gray-700">{event.date}</p>
                                                       {event.time && (
                                                         <p className="text-xs text-gray-500">{event.time}</p>
                                                       )}
@@ -1437,10 +1674,17 @@ export default function OrdersPage() {
                                             )
                                           })}
                                           </div>
+                                        ) : (
+                                          <div className="mt-4 pt-4 border-t border-gray-200">
+                                            <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 p-3 rounded-md">
+                                              <Clock className="h-4 w-4" />
+                                              <p>DHL label created. Awaiting pickup or first scan.</p>
+                                            </div>
+                                          </div>
                                         )}
 
                                         {/* Estimated Delivery */}
-                                        {tracking.estimatedDeliveryDate && (
+                                        {tracking?.estimatedDeliveryDate && (
                                           <div className="mt-4 pt-4 border-t border-gray-200">
                                             <p className="text-sm text-gray-600">
                                               <span className="font-medium">Estimated Delivery:</span>{' '}
@@ -1453,8 +1697,8 @@ export default function OrdersPage() {
                                           </div>
                                         )}
                                         
-                                        {/* No Events Message */}
-                                        {(!tracking.events || tracking.events.length === 0) && (
+                                        {/* Remove old no events message */}
+                                        {false && (
                                           <div className="mt-4 pt-4 border-t border-gray-200">
                                             <p className="text-sm text-gray-500 italic">
                                               No tracking events available yet. The shipment has been created and is awaiting pickup or first scan.

@@ -1,0 +1,41 @@
+name: Poll DHL Tracking
+
+on:
+  schedule:
+    # Runs every 2 hours at minute 0
+    - cron: '0 */2 * * *'
+  
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  poll-tracking:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Poll DHL Tracking API
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X GET "${{ secrets.APP_URL }}/api/cron/poll-dhl-tracking" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Poll failed with status $http_code"
+            exit 1
+          fi
+          
+          echo "✅ Poll completed successfully"
+      
+      - name: Log Completion
+        if: success()
+        run: echo "✅ DHL tracking poll completed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+      
+      - name: Log Failure
+        if: failure()
+        run: echo "❌ DHL tracking poll failed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
