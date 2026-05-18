@@ -77,6 +77,8 @@ export function orderToShipmentRequest(order: {
   region_code?: string
 }, options?: {
   autoPickup?: boolean
+  pickupCloseTime?: string
+  pickupLocation?: string
 }): Partial<DHLShipmentRequest> {
   const packages = calculatePackages(order.items)
   const isInternational = order.shipping_address.country !== (process.env.DHL_SHIPPER_COUNTRY || 'ID')
@@ -99,11 +101,18 @@ export function orderToShipmentRequest(order: {
   
   const plannedShippingDateAndTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds} ${timezone}`
   
+  // Prepare pickup details if auto-pickup is enabled
+  const pickup = options?.autoPickup ? {
+    isRequested: true,
+    closeTime: options.pickupCloseTime || '18:00', // Pickup close time from CMS settings
+    location: options.pickupLocation || 'reception', // Pickup location from CMS settings
+  } : {
+    isRequested: false,
+  }
+  
   return {
     plannedShippingDateAndTime,
-    pickup: {
-      isRequested: options?.autoPickup ?? false,
-    },
+    pickup,
     customerDetails: {
       shipperDetails: {
         postalAddress: {
