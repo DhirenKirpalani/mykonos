@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Globe, ChevronDown, X, Languages } from 'lucide-react'
 import { useRegion } from '@/contexts/RegionContext'
+import { useUserRole } from '@/hooks/useUserRole'
 
 // ─── Country data (maps to region for pricing) ────────────────────────────────
 
@@ -95,6 +96,7 @@ const COUNTRY_KEY = 'selected_country_code'
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function RegionCurrencySelector() {
+  const { role, isLoading: roleLoading } = useUserRole()
   const { setRegion, detectionResult, isLoading: regionLoading } = useRegion()
   const [isOpen, setIsOpen]       = useState(false)
   const [activeTab, setActiveTab] = useState<Group | 'all'>('all')
@@ -207,14 +209,88 @@ export function RegionCurrencySelector() {
     )
   }
 
+  // Non-admin: show static display only (IP-detected country)
+  const isAdmin = !roleLoading && (role === 'admin' || role === 'staff')
+
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center gap-1.5 text-white/80" title={`Region: ${selected.name}`}>
+        <Globe className="h-4 w-4 flex-shrink-0" />
+        <span className="text-sm font-medium">{selected.code}</span>
+        <span className="text-base leading-none">{selected.flag}</span>
+      </div>
+    )
+  }
+
   return (
-    <div
-      className="flex items-center gap-1.5 text-white/80"
-      title={`Detected region: ${selected.name}`}
-    >
-      <Globe className="h-4 w-4 flex-shrink-0" />
-      <span className="text-sm font-medium">{selected.code}</span>
-      <span className="text-base leading-none">{selected.flag}</span>
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors"
+        title={`Region: ${selected.name}`}
+      >
+        <Globe className="h-4 w-4 flex-shrink-0" />
+        <span className="text-sm font-medium">{selected.code}</span>
+        <span className="text-base leading-none">{selected.flag}</span>
+        <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+
+          {/* Dropdown panel */}
+          <div className="absolute left-0 top-full z-50 mt-2 w-80 rounded-xl border border-white/10 bg-luxury-navy shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <span className="text-sm font-semibold text-white">Select Region</span>
+              <button onClick={() => setIsOpen(false)} className="text-white/50 hover:text-white transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 px-3 pt-3 pb-2 overflow-x-auto">
+              {TABS.map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => setActiveTab(g.id as Group | 'all')}
+                  className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                    activeTab === g.id
+                      ? 'bg-luxury-gold text-luxury-navy'
+                      : 'text-white/50 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Country list */}
+            <div className="max-h-64 overflow-y-auto px-2 pb-3">
+              {visible.map(country => (
+                <button
+                  key={country.code}
+                  onClick={() => handleSelect(country)}
+                  disabled={saving}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all ${
+                    selected.code === country.code
+                      ? 'bg-luxury-gold/20 text-luxury-gold'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="text-lg leading-none">{country.flag}</span>
+                  <span className="text-sm font-medium flex-1">{country.name}</span>
+                  {selected.code === country.code && (
+                    <span className="text-[10px] font-bold text-luxury-gold">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

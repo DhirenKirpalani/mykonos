@@ -593,63 +593,6 @@ export default function OrderDetailsPage() {
             />
           </div>
 
-          {/* DHL Shipping Details for Shipped Orders */}
-          {order.status === 'shipped' && order.tracking_number && (
-            <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <div className="flex items-start gap-3">
-                <Package className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-blue-900 mb-3">
-                    {t.account.shippingInformation}
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-start">
-                      <span className="text-gray-600">Nomor Resi:</span>
-                      <span className="font-mono font-semibold text-gray-900">
-                        {order.tracking_number}
-                      </span>
-                    </div>
-                    {order.shipped_at && (
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600">Tanggal Kirim:</span>
-                        <span className="text-gray-900">
-                          {new Date(order.shipped_at).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    {order.estimated_delivery_date && (
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600">Estimasi Tiba:</span>
-                        <span className="text-gray-900">
-                          {new Date(order.estimated_delivery_date).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {order.tracking_url && (
-                    <a
-                      href={order.tracking_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-luxury-gold text-white rounded-md hover:bg-luxury-gold/90 transition-colors text-sm font-medium w-full justify-center"
-                    >
-                      <Package className="w-4 h-4" />
-                      Lacak Paket
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Order Details Grid - Same as Track Order Page */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
             <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
