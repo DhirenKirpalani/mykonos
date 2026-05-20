@@ -29,6 +29,13 @@ export async function POST(request: NextRequest) {
         const orderId = session.metadata?.order_id
 
         if (orderId) {
+          // Get order details to find user_id
+          const { data: order } = await supabase
+            .from('orders')
+            .select('user_id')
+            .eq('id', orderId)
+            .single()
+
           // Update order status to paid
           await supabase
             .from('orders')
@@ -40,6 +47,16 @@ export async function POST(request: NextRequest) {
             .eq('id', orderId)
 
           console.log(`✅ Order ${orderId} marked as paid via Stripe`)
+
+          // Clear cart items now that payment is successful
+          if (order?.user_id) {
+            console.log(`🗑️ Clearing cart for user ${order.user_id} after successful Stripe payment`)
+            await supabase
+              .from('cart_items')
+              .delete()
+              .eq('user_id', order.user_id)
+            console.log(`✅ Cart cleared for user ${order.user_id}`)
+          }
         }
         break
       }

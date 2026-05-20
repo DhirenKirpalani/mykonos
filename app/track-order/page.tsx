@@ -13,6 +13,8 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
+import { OrderDetailsModal } from '@/components/OrderDetailsModal'
+import { Breadcrumb } from '@/components/breadcrumb'
 
 type OrderItem = {
   id: string
@@ -98,6 +100,8 @@ export default function TrackOrderPage() {
   const [sessionOrders, setSessionOrders] = useState<Order[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalOrder, setModalOrder] = useState<Order | null>(null)
 
   // Fetch active discounts whenever order changes
   useEffect(() => {
@@ -730,6 +734,15 @@ export default function TrackOrderPage() {
 
   return (
     <div className={`min-h-screen bg-gray-50 py-12 ${order && order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && new Date(order.expiry_time) >= new Date() ? 'pb-28 sm:pb-12' : ''}`}>
+      {/* Breadcrumb - Desktop only */}
+      <div className="container mx-auto px-4 max-w-2xl mb-4 hidden md:block">
+        <Breadcrumb 
+          items={[
+            { label: t('trackOrder.title') || 'Track Order', href: '/track-order' }
+          ]} 
+        />
+      </div>
+      
       <div className="container mx-auto px-4 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
@@ -760,9 +773,6 @@ export default function TrackOrderPage() {
                   }`}
                   onClick={async () => {
                     setSelectedOrderId(sessionOrder.id)
-                    setEmail(sessionOrder.customer_email)
-                    setOrderNumber(sessionOrder.order_number)
-                    setNotFound(false)
                     setIsSearching(true)
                     try {
                       const res = await fetch(
@@ -770,50 +780,78 @@ export default function TrackOrderPage() {
                       )
                       const json = await res.json()
                       if (res.ok && json.order) {
-                        setOrder(json.order as Order)
-                        if (!user) setShowCreateAccount(true)
+                        setModalOrder(json.order as Order)
+                        setIsModalOpen(true)
                       } else {
-                        setNotFound(true)
+                        toast.error('Order not found')
                       }
                     } catch {
-                      setNotFound(true)
+                      toast.error('Failed to fetch order details')
                     } finally {
                       setIsSearching(false)
                     }
                   }}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-1">
-                        <p className="font-mono font-semibold text-xs sm:text-sm text-gray-900 truncate">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-mono font-semibold text-sm text-gray-900 mb-1.5">
                           {sessionOrder.order_number}
                         </p>
-                        <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ${
-                          sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
-                            ? 'bg-red-100 text-red-800'
-                            : getStatusColor(sessionOrder.status)
-                        }`}>
-                          {sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
-                            ? (lang === 'id' ? 'Kadaluarsa' : 'Expired')
-                            : getTranslatedStatus(sessionOrder.status)
-                          }
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
+                            sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
+                              ? 'bg-red-100 text-red-800'
+                              : sessionOrder.status === 'shipped' ? 'bg-indigo-100 text-indigo-800'
+                              : sessionOrder.status === 'delivered' ? 'bg-green-100 text-green-800'
+                              : sessionOrder.status === 'packed' ? 'bg-purple-100 text-purple-800'
+                              : sessionOrder.status === 'cancelled' ? 'bg-red-100 text-red-800'
+                              : sessionOrder.payment_status === 'completed' ? 'bg-blue-100 text-blue-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
+                              ? (lang === 'id' ? '⏰ Kadaluarsa' : '⏰ Expired')
+                              : sessionOrder.status === 'shipped' ? (lang === 'id' ? '🚚 Dikirim' : '🚚 Shipped')
+                              : sessionOrder.status === 'delivered' ? (lang === 'id' ? '✅ Terkirim' : '✅ Delivered')
+                              : sessionOrder.status === 'packed' ? (lang === 'id' ? '📦 Dikemas' : '📦 Packed')
+                              : sessionOrder.status === 'cancelled' ? (lang === 'id' ? '❌ Dibatalkan' : '❌ Cancelled')
+                              : sessionOrder.payment_status === 'completed' ? (lang === 'id' ? '⏳ Diproses' : '⏳ Processing')
+                              : (lang === 'id' ? '💳 Menunggu Pembayaran' : '💳 Awaiting Payment')
+                            }
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 font-semibold">
+                          {formatPrice(
+                            sessionOrder.total_amount, 
+                            ((sessionOrder.payment_metadata as any)?.currency_code || sessionOrder.currency_code) as any
+                          )}
+                        </p>
                       </div>
-                      <p className="text-xs sm:text-sm text-gray-600 font-medium">
-                        {formatPrice(sessionOrder.total_amount, sessionOrder.currency_code as any)}
-                      </p>
+                      <div className="flex flex-col items-end gap-1">
+                        <p className="text-xs text-gray-500">
+                          {new Date(sessionOrder.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(sessionOrder.created_at).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
-                      <p className="text-[10px] sm:text-xs text-gray-500">
-                        {new Date(sessionOrder.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
+                    {/* Action hint */}
+                    {sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) >= new Date() && (
+                      <div className="flex items-center gap-2 text-xs text-luxury-gold">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        <span className="font-medium">{lang === 'id' ? 'Klik untuk melanjutkan pembayaran' : 'Click to continue payment'}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1287,7 +1325,10 @@ export default function TrackOrderPage() {
                 <div>
                   <p className="text-gray-600 text-xs mb-1">{t('trackOrder.totalAmount')}</p>
                   <p className="font-semibold text-gray-900 text-xs">
-                    {formatPrice(order.total_amount, order.currency_code as any)}
+                    {formatPrice(
+                      order.total_amount, 
+                      ((order.payment_metadata as any)?.currency_code || order.currency_code) as any
+                    )}
                   </p>
                 </div>
                 {order.payment_gateway && (
@@ -1477,6 +1518,21 @@ export default function TrackOrderPage() {
           </Button>
         </div>
       )}
+
+      {/* Order Details Modal */}
+      <OrderDetailsModal
+        order={modalOrder}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setModalOrder(null)
+          setSelectedOrderId(null)
+        }}
+        lang={lang}
+        t={t}
+        onContinuePayment={() => modalOrder && handleContinuePayment(modalOrder)}
+        isProcessingPayment={isProcessingPayment}
+      />
     </div>
   )
 }

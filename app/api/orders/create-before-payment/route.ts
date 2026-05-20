@@ -335,9 +335,22 @@ export async function POST(request: Request) {
       console.warn('⚠️ [API] Cannot send email - missing customer_email or order_number')
     }
 
-    // Clear cart items for authenticated users after successful order creation
-    if (user_id) {
-      console.log('🗑️ [API] Clearing cart items for user:', user_id)
+    // NOTE: Cart is NOT cleared here for Stripe payments
+    // For Stripe: Cart will be cleared after successful payment via webhook
+    // For Midtrans: Cart is cleared here because payment happens immediately
+    // Check if this is a Stripe order by looking at the checkout session
+    const { data: sessionData } = await supabase
+      .from('checkout_sessions')
+      .select('pricing_snapshot')
+      .eq('id', checkout_session_id)
+      .single()
+    
+    const pricingSnapshot = sessionData?.pricing_snapshot as any
+    const isStripeOrder = pricingSnapshot?.currency_code && pricingSnapshot.currency_code !== 'IDR'
+    
+    // Only clear cart for Midtrans (IDR) orders, not for Stripe orders
+    if (user_id && !isStripeOrder) {
+      console.log('🗑️ [API] Clearing cart items for Midtrans order, user:', user_id)
       const { error: clearCartError } = await supabase
         .from('cart_items')
         .delete()
@@ -349,6 +362,8 @@ export async function POST(request: Request) {
       } else {
         console.log('✅ [API] Cart cleared successfully')
       }
+    } else if (isStripeOrder) {
+      console.log('💳 [API] Stripe order detected - cart will be cleared after payment confirmation')
     }
 
     console.log('✅ [API] Order created before payment successfully')

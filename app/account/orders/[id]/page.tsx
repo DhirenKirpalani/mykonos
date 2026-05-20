@@ -624,7 +624,10 @@ export default function OrderDetailsPage() {
                 <div>
                   <p className="text-gray-600 text-xs mb-1">{t.trackOrder.totalAmount}</p>
                   <p className="font-semibold text-gray-900 text-sm">
-                    {formatPrice(order.total_amount, order.currency_code)}
+                    {formatPrice(
+                      order.total_amount, 
+                      ((order.payment_metadata as any)?.currency_code || order.currency_code)
+                    )}
                   </p>
                 </div>
                 <div>
@@ -891,27 +894,42 @@ export default function OrderDetailsPage() {
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-700">
                   <span>{t.checkout.subtotal}</span>
-                  <span className="font-medium">{formatPrice(order.subtotal, order.currency_code)}</span>
+                  <span className="font-medium">{formatPrice(
+                    order.subtotal, 
+                    ((order.payment_metadata as any)?.currency_code || order.currency_code)
+                  )}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
                   <span>{t.checkout.shipping}</span>
-                  <span className="font-medium">{formatPrice(order.shipping_cost, order.currency_code)}</span>
+                  <span className="font-medium">{formatPrice(
+                    order.shipping_cost, 
+                    ((order.payment_metadata as any)?.currency_code || order.currency_code)
+                  )}</span>
                 </div>
                 {order.discount_amount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>{t.checkout.discount}</span>
-                    <span className="font-medium">-{formatPrice(order.discount_amount, order.currency_code)}</span>
+                    <span className="font-medium">-{formatPrice(
+                      order.discount_amount, 
+                      ((order.payment_metadata as any)?.currency_code || order.currency_code)
+                    )}</span>
                   </div>
                 )}
                 {order.tax_amount > 0 && (
                   <div className="flex justify-between text-gray-700">
                     <span>{t.checkout.tax}</span>
-                    <span className="font-medium">{formatPrice(order.tax_amount, order.currency_code)}</span>
+                    <span className="font-medium">{formatPrice(
+                      order.tax_amount, 
+                      ((order.payment_metadata as any)?.currency_code || order.currency_code)
+                    )}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xl font-bold pt-4 border-t-2 border-gray-200">
                   <span>{t.checkout.total}</span>
-                  <span>{formatPrice(order.total_amount, order.currency_code)}</span>
+                  <span>{formatPrice(
+                    order.total_amount, 
+                    ((order.payment_metadata as any)?.currency_code || order.currency_code)
+                  )}</span>
                 </div>
               </div>
               {order.payment_intent_id && (

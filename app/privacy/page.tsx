@@ -1,6 +1,7 @@
 'use client'
 
 import { useLanguage } from '@/contexts/LanguageContext'
+import { Breadcrumb } from '@/components/breadcrumb'
 
 export default function PrivacyPolicyPage() {
   const { t } = useLanguage()
@@ -9,6 +10,14 @@ export default function PrivacyPolicyPage() {
       {/* Header */}
       <div className="border-b border-border/40 bg-luxury-gray-light py-12 md:py-16 lg:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          {/* Breadcrumb - Desktop only */}
+          <div className="mb-6 hidden md:block">
+            <Breadcrumb 
+              items={[
+                { label: t.privacy?.title || 'Privacy Policy', href: '/privacy' }
+              ]} 
+            />
+          </div>
           <h1 className="font-serif text-3xl font-bold md:text-4xl lg:text-5xl">
             {t.privacy.title}
           </h1>

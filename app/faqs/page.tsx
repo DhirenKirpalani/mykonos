@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { Breadcrumb } from '@/components/breadcrumb'
 
 const faqsData = {
   en: [
@@ -139,6 +140,14 @@ export default function FAQsPage() {
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
+          {/* Breadcrumb - Desktop only */}
+          <div className="mb-6 hidden md:block">
+            <Breadcrumb 
+              items={[
+                { label: t.faqs?.title || 'Help Center', href: '/faqs' }
+              ]} 
+            />
+          </div>
           <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
             {t.faqs.title}
           </h1>

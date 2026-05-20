@@ -27,6 +27,7 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
   const lbContainerRef = useRef<HTMLDivElement>(null)
   const selectedIndexRef = useRef(selectedIndex)
   const imagesLengthRef = useRef(images.length)
+  const imageRefs = useRef<(HTMLDivElement | null)[]>([])
 
   useEffect(() => { selectedIndexRef.current = selectedIndex }, [selectedIndex])
   useEffect(() => { imagesLengthRef.current = images.length }, [images.length])
@@ -34,6 +35,14 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
   const handleSelect = (index: number) => {
     setDirection(index > selectedIndexRef.current ? 1 : -1)
     setSelectedIndex(index)
+    
+    // Scroll to the selected image in desktop view
+    if (imageRefs.current[index]) {
+      imageRefs.current[index]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      })
+    }
   }
 
   const attachSwipe = (el: HTMLElement | null) => {
@@ -85,7 +94,7 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
       {!isVideo(selectedMedia) && (
         <button
           onClick={() => setLightboxOpen(true)}
-          className="absolute top-3 right-3 z-40 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center hover:bg-white transition-colors"
+          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center hover:bg-white transition-colors"
           aria-label="Zoom image"
         >
           <svg className="h-4 w-4 text-gray-700" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -253,15 +262,82 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Desktop: vertical thumbnails left + main image right */}
-      <div className="hidden md:flex gap-3 w-full">
+      {/* Desktop: vertical thumbnails left + all images stacked vertically right */}
+      <div className="hidden md:flex gap-3 w-full max-h-[600px]">
         {images.length > 1 && (
           <div className="flex flex-col gap-2 w-[68px] flex-shrink-0 overflow-y-auto max-h-[600px] pr-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
             {images.map((url, index) => thumbnailsJSX(url, index))}
           </div>
         )}
-        <div className="flex-1">
-          {mainImageJSX()}
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+          <div className="flex flex-col gap-3">
+            {images.map((url, index) => (
+              <div 
+                key={index} 
+                ref={(el) => { imageRefs.current[index] = el }}
+                className="relative w-full bg-white rounded-xl overflow-hidden"
+              >
+                {/* Zoom button */}
+                {!isVideo(url) && (
+                  <button
+                    onClick={() => {
+                      setSelectedIndex(index)
+                      setLightboxOpen(true)
+                    }}
+                    className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center hover:bg-white transition-colors"
+                    aria-label="Zoom image"
+                  >
+                    <svg className="h-4 w-4 text-gray-700" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m21 21-4.35-4.35M11 8v6M8 11h6" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+                {isOutOfStock && index === 0 && (
+                  <div className="absolute inset-0 z-30 flex items-center justify-center">
+                    <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-black/70 flex items-center justify-center">
+                      <span className="text-white text-base md:text-lg font-bold">
+                        {locale === 'id' ? 'Habis' : 'Sold Out'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {isVideo(url) ? (
+                  <video src={url} controls className="w-full object-contain" autoPlay loop muted playsInline>
+                    Your browser does not support the video tag.
+                  </video>
+                ) : (
+                  <div className="relative w-full aspect-square">
+                    <Image
+                      src={url}
+                      alt={`${productName} - Image ${index + 1}`}
+                      fill
+                      className="object-contain"
+                      priority={index === 0}
+                      sizes="50vw"
+                    />
+                  </div>
+                )}
+                {voucher && index === 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 z-20 bg-luxury-gold px-3 py-2 shadow-lg">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <svg className="h-4 w-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
+                        </svg>
+                        <span className="text-white text-xs font-bold">
+                          Voucher Diskon {voucher.discount_type === 'percentage'
+                            ? `${voucher.discount_value}%`
+                            : `Rp${voucher.discount_value.toLocaleString('id-ID')}`}
+                        </span>
+                      </div>
+                      <VoucherCountdown validUntil={voucher.valid_until} onExpire={onVoucherExpire} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -6,15 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, X } from 'lucide-react'
 import { ProductCard } from '@/components/product-card'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { Database } from '@/lib/supabase/database.types'
 
-type Product = {
-  id: string
-  name: string
-  slug: string
-  price: number
-  image_urls: string[]
-  size: string
-}
+type Product = Database['public']['Tables']['products']['Row']
 
 type SearchModalProps = {
   isOpen: boolean
@@ -108,9 +102,14 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute top-full left-0 right-0 bg-[#F5EFE6] border-t border-luxury-gold/20 shadow-2xl z-50"
+            className="absolute top-full left-0 right-0 bg-gradient-to-br from-[#F8F5F0] via-white to-[#F5EFE6] border-t border-luxury-gold/20 shadow-2xl z-50 overflow-hidden"
           >
-            <div className="container mx-auto px-6 lg:px-8 py-8 lg:py-12">
+            {/* Decorative background pattern */}
+            <div className="absolute inset-0 opacity-[0.03]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(184,152,95,0.4)_1px,_transparent_0)] bg-[length:24px_24px]"></div>
+            </div>
+            
+            <div className="container mx-auto px-6 lg:px-8 py-8 lg:py-12 relative z-10">
               {/* Search Input */}
               <div className="flex items-center gap-4 mb-8">
                 <div className="relative flex-1">
@@ -141,23 +140,18 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             {/* Products Section */}
             <div>
               <h3 className="text-sm font-semibold text-luxury-navy uppercase tracking-widest mb-6">
-                {searchQuery.length > 2 ? t.searchModal.searchResults : t.searchModal.topProducts}
+                {searchQuery.length > 2 ? t.searchModal.searchResults : (t.home?.popular || 'POPULAR')}
               </h3>
               
               {loading ? (
                 <div className="text-center py-16 text-luxury-navy/60">{t.searchModal.searching}</div>
               ) : displayProducts.length > 0 ? (
-                <div className="overflow-x-auto -mx-6 px-6 lg:-mx-8 lg:px-8">
-                  <div className="flex gap-4 pb-4 min-w-max">
-                    {displayProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex-shrink-0 w-[160px] sm:w-[180px] lg:w-[200px]"
-                      >
-                        <ProductCard product={product as any} />
-                      </div>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
+                  {displayProducts.map((product) => (
+                    <div key={product.id} className="w-full">
+                      <ProductCard product={product} className="h-full" />
+                    </div>
+                  ))}
                 </div>
               ) : searchQuery.length > 2 ? (
                 <div className="text-center py-16 text-luxury-navy/60">{t.searchModal.noResults}</div>

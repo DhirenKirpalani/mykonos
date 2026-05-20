@@ -5,6 +5,7 @@ import { WhatsappLogo } from 'phosphor-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useRegion } from '@/contexts/RegionContext'
 import { toast } from 'sonner'
+import { Breadcrumb } from '@/components/breadcrumb'
 
 export default function ContactPage() {
   const { t } = useLanguage()
@@ -92,9 +93,20 @@ export default function ContactPage() {
   const whatsappNumber = clientRegion === 'ID' ? '+62 857-8021-8514' : '+62 816-261-783'
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Luxury Hero Header */}
-      <div className="bg-white border-b border-gray-100">
+      <div className="bg-white border-b border-gray-100 relative">
+        {/* Breadcrumb - Desktop only */}
+        <div className="border-b border-gray-100 hidden md:block">
+          <div className="container mx-auto px-4 lg:px-8 py-3">
+            <Breadcrumb 
+              items={[
+                { label: t.nav?.contact || 'Contact Us', href: '/contact' }
+              ]} 
+            />
+          </div>
+        </div>
+        
         <div className="container mx-auto px-4 lg:px-8 pt-12 pb-10 md:pt-16 md:pb-12 text-center">
           <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-[#B8985F] mb-3">MYKONOS</p>
           <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light uppercase tracking-[0.15em] text-luxury-navy mb-4">
