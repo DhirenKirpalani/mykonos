@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { Breadcrumb } from '@/components/breadcrumb'
 
 const GoldDivider = () => (
   <div className="flex items-center justify-center gap-4 my-10 sm:my-14">
@@ -20,31 +21,42 @@ export default function AboutPage() {
   const { t } = useLanguage()
   return (
     <div className="min-h-screen bg-white">
-
       {/* Hero Section */}
-      <div className="relative h-[340px] sm:h-[400px] md:h-[480px] overflow-hidden bg-luxury-navy">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0A1E3D] via-[#0F2347] to-[#051426]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(184,152,95,0.18)_0%,_transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(184,152,95,0.06)_1px,_transparent_0)] bg-[length:36px_36px]" />
-        {/* Gold accent lines */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-luxury-gold/50 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-luxury-gold/30 to-transparent" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <p className="mb-3 text-[10px] sm:text-xs font-medium uppercase tracking-[0.35em] text-luxury-gold/70">
+      <div className="bg-white border-b border-gray-200 relative">
+        {/* Breadcrumb - Desktop only */}
+        <div className="border-b border-gray-200 hidden md:block">
+          <div className="container mx-auto px-4 py-3">
+            <Breadcrumb 
+              items={[
+                { label: t.nav?.aboutUs || 'About Us', href: '/about' }
+              ]}
+            />
+          </div>
+        </div>
+        
+        {/* Hero Content */}
+        <div className="relative h-[340px] sm:h-[400px] md:h-[480px] overflow-hidden">
+          {/* Subtle background pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(184,152,95,0.04)_1px,_transparent_0)] bg-[length:36px_36px]" />
+          
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+          <p className="mb-3 text-[10px] sm:text-xs font-medium uppercase tracking-[0.35em] text-luxury-gold">
             MYKONOS
           </p>
-          <h1 className="mb-4 font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
+          <h1 className="mb-4 font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-luxury-navy leading-tight">
             {t.about.title}
           </h1>
           {/* Thin gold rule under title */}
           <div className="flex items-center gap-3 mb-5">
-            <div className="h-px w-12 sm:w-20 bg-luxury-gold/50" />
+            <div className="h-px w-12 sm:w-20 bg-luxury-gold" />
             <div className="w-1.5 h-1.5 rounded-full bg-luxury-gold" />
-            <div className="h-px w-12 sm:w-20 bg-luxury-gold/50" />
+            <div className="h-px w-12 sm:w-20 bg-luxury-gold" />
           </div>
-          <p className="max-w-xl text-base sm:text-lg text-white/75 leading-relaxed font-light tracking-wide">
+          <p className="max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed font-light tracking-wide">
             {t.about.subtitle}
           </p>
+          </div>
         </div>
       </div>
 

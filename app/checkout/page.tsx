@@ -2262,11 +2262,14 @@ export default function CheckoutPage() {
   
   // For display: calculate by summing converted individual items to match what customer sees
   // This must exactly match what's displayed in the cart for each item
+  console.log('💵 [DISPLAY SUBTOTAL] Calculating with allItems:', allItems.length, 'items')
   const displaySubtotal = allItems.reduce((total, item) => {
     const basePrice = getBasePrice(item.product, (item as any).variant_sku)
     const salePrice = getEffectivePrice(basePrice, null)
     const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
     const priceUSD = discounted !== null ? discounted : salePrice
+    
+    console.log(`  Item: ${item.product?.name || 'Unknown'}, basePrice: ${basePrice}, salePrice: ${salePrice}, priceUSD: ${priceUSD}, qty: ${item.quantity}`)
     
     // Get the item total with voucher discount applied (matching what's displayed)
     const itemTotalUSD = priceUSD * item.quantity
@@ -2275,8 +2278,10 @@ export default function CheckoutPage() {
     
     // Convert to local currency (this matches formatPrice conversion)
     const priceLocal = convertToLocalCurrency(netItemTotalUSD)
+    console.log(`  itemTotalUSD: ${itemTotalUSD}, voucherDiscount: ${voucherDiscount}, netItemTotalUSD: ${netItemTotalUSD}, priceLocal: ${priceLocal}`)
     return total + priceLocal
   }, 0)
+  console.log('💵 [DISPLAY SUBTOTAL] Final displaySubtotal:', displaySubtotal)
   
   // Note: displaySubtotal already has voucher discounts applied per item
   const displayVoucherDiscount = Math.round(convertToLocalCurrency(totalVoucherDiscount) * 100) / 100

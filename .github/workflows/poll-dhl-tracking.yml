@@ -14,16 +14,43 @@ jobs:
     
     steps:
       - name: Poll DHL Tracking API
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          response=$(curl -s -w "\n%{http_code}" -X GET "${{ secrets.APP_URL }}/api/cron/poll-dhl-tracking" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json")
+          # Verify environment variables
+          if [ -z "$APP_URL" ]; then
+            echo "❌ NEXT_PUBLIC_APP_URL is not set"
+            exit 1
+          fi
+          
+          if [ -z "$CRON_SECRET" ]; then
+            echo "❌ CRON_SECRET is not set"
+            exit 1
+          fi
+          
+          echo "🌐 Polling: $APP_URL/api/cron/poll-dhl-tracking"
+          echo "⏰ Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          
+          # Make request with error handling
+          response=$(curl -s -w "\n%{http_code}" -X GET "$APP_URL/api/cron/poll-dhl-tracking" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --max-time 120 \
+            --fail-with-body) || curl_exit_code=$?
+          
+          # Check if curl failed
+          if [ ! -z "$curl_exit_code" ]; then
+            echo "❌ Curl failed with exit code: $curl_exit_code"
+            echo "Response: $response"
+            exit 1
+          fi
           
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
           
-          echo "HTTP Status: $http_code"
-          echo "Response: $body"
+          echo "📊 HTTP Status: $http_code"
+          echo "📄 Response: $body"
           
           if [ "$http_code" -ne 200 ]; then
             echo "❌ Poll failed with status $http_code"

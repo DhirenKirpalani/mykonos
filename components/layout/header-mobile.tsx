@@ -335,7 +335,7 @@ export function HeaderMobile() {
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2">
             <span
-              className="font-montserrat text-base font-normal tracking-[0.25em] transition-opacity hover:opacity-80"
+              className="font-montserrat text-2xl font-normal tracking-normal transition-opacity hover:opacity-80"
               style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
             >
               MYKONOS
@@ -395,7 +395,28 @@ export function HeaderMobile() {
             role="navigation"
             aria-label="Mobile navigation"
           >
-          <div className="px-4 pt-4 pb-6">
+          <div className="px-4 pt-6 pb-6">
+            {/* MYKONOS Header */}
+            <div className="mb-6 pb-4 border-b border-white/10">
+              <Link 
+                href="/" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-4 py-4"
+              >
+                <span 
+                  className="font-montserrat text-2xl font-normal tracking-normal transition-opacity hover:opacity-80"
+                  style={{
+                    background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}
+                >
+                  MYKONOS
+                </span>
+              </Link>
+            </div>
+
             {/* Primary nav */}
             <nav role="menu">
               {[

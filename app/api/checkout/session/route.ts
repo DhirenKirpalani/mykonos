@@ -56,10 +56,20 @@ export async function POST(request: Request) {
       console.log('💰 [API] Calculated subtotal:', subtotal)
     } else {
       console.log('🛒 [API] Fetching items from cart_items table')
-      // Otherwise, fetch from cart_items table
+      // Fetch cart items with product details to get correct prices for target currency
       let cartQuery = supabase
         .from('cart_items')
-        .select('product_id, quantity, price_at_add, variant_name, variant_sku')
+        .select(`
+          product_id, 
+          quantity, 
+          variant_name, 
+          variant_sku,
+          products!inner(
+            price_usd,
+            price_idr,
+            variants
+          )
+        `)
       
       if (user_id) {
         cartQuery = cartQuery.eq('user_id', user_id)
@@ -83,26 +93,35 @@ export async function POST(request: Request) {
       }
       
       console.log('✅ [API] Found cart items:', cartItems.length)
+      console.log('💱 [API] Target currency:', finalCurrencyCode)
 
-      const typedCartItems = cartItems as Array<{
-        product_id: string
-        quantity: number
-        price_at_add: number | null
-        variant_name?: string | null
-        variant_sku?: string | null
-      }>
+      const typedCartItems = cartItems as any[]
 
       cartSnapshot = typedCartItems.map(item => {
-        // Use campaign-discounted price if provided, otherwise fall back to price_at_add
+        // Get base price based on target currency
+        let basePrice = finalCurrencyCode === 'IDR' ? item.products.price_idr : item.products.price_usd
+        
+        // If variant exists, use variant price
+        if (item.variant_sku && item.products.variants) {
+          const variant = item.products.variants.find((v: any) => v.sku === item.variant_sku)
+          if (variant) {
+            basePrice = finalCurrencyCode === 'IDR' ? variant.price_idr : variant.price_usd
+          }
+        }
+        
+        // Use campaign-discounted price if provided, otherwise use base price
         const discountEntry = (item_discounts as Array<{ product_id: string; variant_name: string | null; discounted_price: number }>)
           .find(d =>
             d.product_id === item.product_id &&
             (d.variant_name === item.variant_name || (!d.variant_name && !item.variant_name))
           )
+        
+        const finalPrice = discountEntry?.discounted_price ?? basePrice
+        
         return {
           product_id: item.product_id,
           quantity: item.quantity,
-          price: discountEntry?.discounted_price ?? item.price_at_add,
+          price: finalPrice,
           variant_name: item.variant_name || null,
           variant_sku: item.variant_sku || null,
         }
