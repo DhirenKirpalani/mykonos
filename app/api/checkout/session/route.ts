@@ -198,7 +198,8 @@ export async function PATCH(request: Request) {
       shipping_address_id, 
       shipping_method_id,
       payment_method_type,
-      new_address 
+      new_address,
+      shipping_address 
     } = body
     
     console.log('📥 [API] Update request:', { session_id, current_step, customer_email, shipping_address_id })
@@ -265,6 +266,7 @@ export async function PATCH(request: Request) {
     if (customer_email) updateData.customer_email = customer_email
     if (addressId) updateData.shipping_address_id = addressId
     if (guestAddressData) updateData.guest_shipping_address = guestAddressData
+    if (shipping_address) updateData.shipping_address = shipping_address
     if (shipping_method_id) updateData.shipping_method_id = shipping_method_id
     if (payment_method_type) updateData.payment_method_type = payment_method_type
     updateData.updated_at = new Date().toISOString()

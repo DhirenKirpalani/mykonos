@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 import { OrderDetailsModal } from '@/components/OrderDetailsModal'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 type OrderItem = {
   id: string
@@ -199,7 +199,7 @@ export default function TrackOrderPage() {
           // Fetch summary only — full detail loaded on-demand when user clicks
           const { data, error } = await supabase
             .from('orders')
-            .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata')
+            .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, shipping_address')
             .eq('customer_email', authenticatedEmail)
             .order('created_at', { ascending: false })
             .limit(5)
@@ -240,7 +240,7 @@ export default function TrackOrderPage() {
             // Fetch summary only — full detail loaded on-demand when user clicks
             const { data, error } = await supabase
               .from('orders')
-              .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata')
+              .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, shipping_address')
               .eq('customer_email', mostRecentEmail)
               .order('created_at', { ascending: false })
               .limit(5)
@@ -736,7 +736,7 @@ export default function TrackOrderPage() {
     <div className={`min-h-screen bg-gray-50 py-12 ${order && order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && new Date(order.expiry_time) >= new Date() ? 'pb-28 sm:pb-12' : ''}`}>
       {/* Breadcrumb - Desktop only */}
       <div className="container mx-auto px-4 max-w-2xl mb-4 hidden md:block">
-        <Breadcrumb 
+        <Breadcrumbs 
           items={[
             { label: t('trackOrder.title') || 'Track Order', href: '/track-order' }
           ]} 

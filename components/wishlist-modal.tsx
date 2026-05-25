@@ -54,6 +54,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
   const [addedToCart, setAddedToCart] = useState<Set<string>>(new Set())
+  const [cartItems, setCartItems] = useState<any[]>([])
   const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
 
@@ -70,7 +71,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   useEffect(() => {
     if (isOpen) {
       fetchWishlist()
-      setAddedToCart(new Set())
+      fetchCartItems()
     }
   }, [isOpen])
 
@@ -80,6 +81,38 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
       fetchWishlist()
     }
   }, [region])
+
+  // Listen for cart updates
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      if (isOpen) {
+        fetchCartItems()
+      }
+    }
+    
+    window.addEventListener('cart-updated', handleCartUpdate)
+    return () => window.removeEventListener('cart-updated', handleCartUpdate)
+  }, [isOpen])
+
+  const fetchCartItems = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setCartItems([])
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('cart_items')
+        .select('product_id, variant_sku')
+        .eq('user_id', session.user.id)
+
+      if (error) throw error
+      setCartItems(data || [])
+    } catch (error) {
+      console.error('Failed to fetch cart items:', error)
+    }
+  }
 
   const fetchWishlist = async () => {
     try {
@@ -306,7 +339,10 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
 
       if (response.ok) {
         setAddedToCart(prev => new Set(prev).add(itemId))
+        toast.success(t.wishlist.addedToCart || 'Added to cart!')
         window.dispatchEvent(new Event('cart-updated'))
+        // Refresh cart items to update button states
+        await fetchCartItems()
       } else {
         console.error('Cart API error:', data)
         toast.error(data.error || 'Failed to add to cart')
@@ -512,24 +548,49 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                         </div>
 
                         <div className="space-y-3">
-                          <button
-                            onClick={() => addToCart(
-                              item.id,
-                              item.product.id, 
-                              region?.code === 'ID' && (item.product as any).price_idr 
-                                ? (item.product as any).price_idr 
-                                : (item.product as any).price_usd || 0
-                            )}
-                            className="flex items-center justify-center gap-2 border border-black px-4 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 hover:bg-black hover:text-white w-full disabled:opacity-40 disabled:bg-gray-100 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed disabled:pointer-events-none"
-                            disabled={item.product.stock_quantity === 0 || addingToCart === item.id || addedToCart.has(item.id)}
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5" />
-                            {item.product.stock_quantity === 0 ? t.wishlist.outOfStock : addingToCart === item.id ? t.wishlist.adding : addedToCart.has(item.id) ? t.wishlist.added || 'Added' : t.wishlist.addToCart}
-                          </button>
+                          {(() => {
+                            // Check if item is already in cart
+                            const isInCart = cartItems.some(cartItem => 
+                              cartItem.product_id === item.product_id && 
+                              cartItem.variant_sku === item.variant_sku
+                            )
+                            const isOutOfStock = item.product.stock_quantity === 0
+                            const isAdding = addingToCart === item.id
+                            const isDisabled = isOutOfStock || isAdding || isInCart
+
+                            return (
+                              <button
+                                onClick={() => addToCart(
+                                  item.id,
+                                  item.product.id, 
+                                  region?.code === 'ID' && (item.product as any).price_idr 
+                                    ? (item.product as any).price_idr 
+                                    : (item.product as any).price_usd || 0
+                                )}
+                                className={`flex items-center justify-center gap-2 px-4 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 w-full ${
+                                  isInCart 
+                                    ? 'bg-green-50 border-2 border-green-500 text-green-700 cursor-default'
+                                    : isOutOfStock
+                                    ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed'
+                                    : 'border border-black hover:bg-black hover:text-white active:scale-[0.98]'
+                                }`}
+                                disabled={isDisabled}
+                              >
+                                <ShoppingBag className="h-3.5 w-3.5" />
+                                {isOutOfStock 
+                                  ? t.wishlist.outOfStock 
+                                  : isAdding 
+                                  ? t.wishlist.adding 
+                                  : isInCart 
+                                  ? '✓ In Cart' 
+                                  : t.wishlist.addToCart}
+                              </button>
+                            )
+                          })()}
                           
                           <button
                             onClick={() => removeItem(item.id)}
-                            className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors text-center w-full"
+                            className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors text-center w-full hover:underline"
                           >
                             {t.wishlist.remove || 'Remove'}
                           </button>
