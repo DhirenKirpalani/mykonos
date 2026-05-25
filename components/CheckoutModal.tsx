@@ -204,6 +204,7 @@ export function CheckoutModal({ isOpen, onClose, onSubmit }: CheckoutModalProps)
       if (error) {
         setPasswordError(error.message)
         toast.error(t.checkout?.invalidPassword || 'Invalid password')
+        setIsSubmitting(false)
         return
       }
 

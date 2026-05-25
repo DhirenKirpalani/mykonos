@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { PaymentMethods } from '@/components/PaymentMethods'
 import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/common'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown } from 'lucide-react'
@@ -1171,6 +1172,32 @@ export default function CheckoutPage() {
         }] : [])
       ]
 
+      // ⭐ CRITICAL: Save shipping address to checkout session BEFORE creating order
+      console.log('📍 [CHECKOUT] Saving shipping address to checkout session...')
+      try {
+        await fetch('/api/checkout/session', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionData.session_id,
+            shipping_address: {
+              full_name: selectedAddress.full_name,
+              phone: selectedAddress.phone,
+              address_line1: selectedAddress.address_line1,
+              address_line2: selectedAddress.address_line2 || '',
+              city: selectedAddress.city,
+              state_province: selectedAddress.state_province,
+              postal_code: selectedAddress.postal_code,
+              country: selectedAddress.country,
+            }
+          })
+        })
+        console.log('✅ [CHECKOUT] Shipping address saved to checkout session')
+      } catch (error) {
+        console.error('❌ [CHECKOUT] Failed to save shipping address:', error)
+        throw new Error('Failed to save shipping address')
+      }
+
       // ⭐ STEP 1: Create order FIRST (before token generation)
       console.log('📝 [ORDER] Creating order before payment...')
       const initialOrderResponse = await fetch('/api/orders/create-before-payment', {
@@ -2317,37 +2344,7 @@ export default function CheckoutPage() {
 
         {/* Breadcrumb - Desktop only */}
         <div className="mb-4 hidden md:block">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm flex-wrap">
-            <Link
-              href="/"
-              className="flex items-center gap-1 text-gray-500 transition-colors hover:text-gray-900"
-              aria-label="Home"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-            </Link>
-            {cartItems.length > 0 && (
-              <div className="flex items-center gap-2">
-                <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                <Link
-                  href={`/products/${cartItems[0].product.slug}`}
-                  className="text-gray-500 transition-colors hover:text-gray-900 truncate max-w-[150px]"
-                  title={cartItems[0].product.name}
-                >
-                  {cartItems[0].product.name}
-                </Link>
-              </div>
-            )}
-            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <span className="font-medium text-gray-900" aria-current="page">
-              Checkout
-            </span>
-          </nav>
+          <Breadcrumbs items={[{ label: t.checkout.checkout, href: '/checkout' }]} />
         </div>
 
         {/* Header */}

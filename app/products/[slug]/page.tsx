@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { ProductDetailClient } from '@/components/ProductDetailClient'
 import { ProductCarousel } from '@/components/product-carousel'
-import { Breadcrumb, BreadcrumbItem } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { ArrowLeft, Info, ChevronDown, Truck, Droplets } from 'lucide-react'
 import Link from 'next/link'
 import { ProductImageGallery } from '@/components/product-image-gallery'
@@ -168,7 +168,7 @@ export default function ProductDetailPage({
   const hasDiscount = product.sale_price && product.sale_price < product.price_idr
 
   // Build breadcrumb items following website route
-  const breadcrumbItems: BreadcrumbItem[] = [
+  const breadcrumbItems = [
     { label: t.common.products, href: '/products' },
     { label: product.name, href: `/products/${product.slug}` },
   ]
@@ -186,7 +186,7 @@ export default function ProductDetailPage({
 
         {/* Breadcrumb - Desktop only */}
         <div className="mb-6 hidden md:block">
-          <Breadcrumb items={breadcrumbItems} />
+          <Breadcrumbs items={breadcrumbItems} />
         </div>
 
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-16">
