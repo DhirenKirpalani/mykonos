@@ -373,7 +373,7 @@ export function ProductVariantModal({
             {/* Product Details */}
             <div className="flex flex-col">
               <div className="flex items-start gap-2 flex-wrap mb-2 pr-8 sm:pr-0">
-                <h2 className="text-sm sm:text-base md:text-2xl font-bold text-gray-900 leading-tight break-words flex-1">{product.name}</h2>
+                <h2 className="text-sm sm:text-base md:text-2xl font-montserrat font-bold text-gray-900 leading-tight break-words flex-1">{product.name}</h2>
                 {(product as any).in_stock && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     In Stock
@@ -465,7 +465,7 @@ export function ProductVariantModal({
               {/* Variant Selection */}
               {hasVariants && (
                 <div className="space-y-2 mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-montserrat font-medium text-gray-700 mb-2">
                     {t.product.selectVariants}
                   </label>
                   <div className="grid grid-cols-1 gap-2">
@@ -502,7 +502,7 @@ export function ProductVariantModal({
                                 ) : null
                               })()}
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900">{variant.name}</div>
+                                <div className="font-montserrat font-medium text-gray-900">{variant.name}</div>
                               </div>
                               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                 <div className="font-bold text-luxury-navy">
@@ -579,7 +579,7 @@ export function ProductVariantModal({
                   <Button
                     onClick={handleSubmit}
                     disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 md:py-6 text-sm md:text-base"
+                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider py-3 md:py-6 text-sm md:text-base"
                     size="lg"
                   >
                     {isProcessing ? (
@@ -598,7 +598,7 @@ export function ProductVariantModal({
                   <Button
                     onClick={handleSubmit}
                     disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-3 md:py-6 text-sm md:text-base"
+                    className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-montserrat font-semibold uppercase tracking-wider py-3 md:py-6 text-sm md:text-base"
                     size="lg"
                   >
                     {isProcessing ? (
@@ -640,7 +640,7 @@ export function ProductVariantModal({
                   <Button
                     onClick={handleSubmit}
                     disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 md:py-6 text-sm md:text-base"
+                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider py-3 md:py-6 text-sm md:text-base"
                     size="lg"
                   >
                     {isProcessing ? (

@@ -228,7 +228,7 @@ export default function RegisterPage() {
         <div className="mx-auto max-w-md">
           <div className="rounded-lg bg-white p-8 shadow-lg">
             <div className="mb-8 text-center">
-              <h1 className="mb-2 font-serif text-3xl font-bold">{t.auth.createAccountTitle}</h1>
+              <h1 className="mb-2 font-montserrat text-3xl font-bold">{t.auth.createAccountTitle}</h1>
               <p className="text-sm text-muted-foreground">
                 {t.auth.signUpSubtitle}
               </p>
@@ -362,7 +362,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading || isSubmitting}
-                className="w-full rounded-md bg-luxury-gold px-6 py-3 font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-md bg-luxury-gold px-6 py-3 font-montserrat font-semibold uppercase tracking-wider text-luxury-navy transition-all hover:bg-luxury-gold-light active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading || isSubmitting ? t.auth.registering : t.auth.createAccount}
               </button>

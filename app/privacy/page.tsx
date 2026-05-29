@@ -1,7 +1,7 @@
 'use client'
 
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 export default function PrivacyPolicyPage() {
   const { t } = useLanguage()
@@ -12,23 +12,23 @@ export default function PrivacyPolicyPage() {
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           {/* Breadcrumb - Desktop only */}
           <div className="mb-6 hidden md:block">
-            <Breadcrumb 
+            <Breadcrumbs 
               items={[
                 { label: t.privacy?.title || 'Privacy Policy', href: '/privacy' }
               ]} 
             />
           </div>
-          <h1 className="font-serif text-3xl font-bold md:text-4xl lg:text-5xl">
+          <h1 className="font-montserrat text-3xl font-bold md:text-4xl lg:text-5xl">
             {t.privacy.title}
           </h1>
-          <p className="mt-3 text-sm text-muted-foreground md:text-base">
+          <p className="mt-3 font-playfair text-sm text-muted-foreground md:text-base">
             {t.privacy.lastUpdated}
           </p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-4 py-12 md:px-6 md:py-16 lg:px-8 lg:py-20">
+      <div className="container mx-auto px-4 py-12 md:px-6 md:py-16 lg:px-8 lg:py-20 font-montserrat">
         <div className="prose prose-gray mx-auto max-w-4xl">
           {/* Introduction */}
           <section className="mb-12">
@@ -39,7 +39,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Information We Collect */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.infoWeCollect}
             </h2>
             
@@ -74,7 +74,7 @@ export default function PrivacyPolicyPage() {
 
           {/* How We Use Your Information */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.howWeUse}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -93,7 +93,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Information Sharing */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.infoSharing}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -108,7 +108,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Data Security */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.dataSecurity}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -125,7 +125,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Cookies */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.cookies}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -135,7 +135,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Your Rights */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.yourRights}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -155,7 +155,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Children's Privacy */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.childrenPrivacy}
             </h2>
             <p className="text-base leading-relaxed text-gray-700">
@@ -165,7 +165,7 @@ export default function PrivacyPolicyPage() {
 
           {/* International Transfers */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.intlTransfers}
             </h2>
             <p className="text-base leading-relaxed text-gray-700">
@@ -175,7 +175,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Updates */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.changes}
             </h2>
             <p className="text-base leading-relaxed text-gray-700">
@@ -185,7 +185,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Contact */}
           <section className="mb-12">
-            <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.contactUs}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -200,8 +200,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           {/* Consent */}
-          <section className="rounded-lg border-2 border-luxury-gold bg-luxury-gold/5 p-6">
-            <p className="text-base font-medium leading-relaxed text-gray-900">
+          <section className="rounded-lg bg-luxury-gold p-6">
+            <p className="text-base font-montserrat font-semibold leading-relaxed text-luxury-navy">
               {t.privacy.consent}
             </p>
           </section>

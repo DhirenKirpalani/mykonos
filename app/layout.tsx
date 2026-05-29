@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Lato, Libre_Caslon_Text, Montserrat } from 'next/font/google'
+import { Inter, Lato, Libre_Caslon_Text, Montserrat, Playfair_Display } from 'next/font/google'
 import { Suspense } from 'react'
 import Script from 'next/script'
 import './globals.css' assert { type: 'css' }
@@ -23,7 +23,21 @@ const caslon = Libre_Caslon_Text({
 const montserrat = Montserrat({
   subsets: ['latin'],
   variable: '--font-montserrat',
-  weight: ['400'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+})
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  weight: ['400', '500', '600', '700', '800', '900'],
   display: 'swap',
 })
 
@@ -116,7 +130,7 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${lato.variable} ${caslon.variable} ${montserrat.variable} bg-luxury-navy`}>
+    <html lang="en" className={`${lato.variable} ${caslon.variable} ${montserrat.variable} ${playfair.variable} ${inter.variable} bg-luxury-navy`}>
       <head>
         {/* Sets html lang BEFORE hydration so Chrome's translate bubble fires */}
         <script dangerouslySetInnerHTML={{ __html: `try{var l=localStorage.getItem('page_lang');if(l&&l!=='en')document.documentElement.lang=l;}catch(e){}` }} />

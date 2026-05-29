@@ -40,14 +40,14 @@ export function Footer() {
           <div className="overflow-hidden">
             <Link href="/" className="inline-block">
               <span
-                className="font-montserrat text-2xl sm:text-3xl font-normal tracking-normal"
+                className="font-montserrat text-2xl sm:text-3xl font-semibold tracking-normal"
                 style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
               >
                 MYKONOS
               </span>
             </Link>
             <div className="mt-4 sm:mt-6">
-              <p className="text-xs sm:text-sm font-medium text-white">{t.footer.followUs}</p>
+              <p className="text-xs sm:text-sm font-montserrat font-medium text-white">{t.footer.followUs}!</p>
               <div className="mt-2 sm:mt-3 flex gap-3">
                 <Link
                   href="https://www.instagram.com/officialmykonos/"
@@ -71,14 +71,14 @@ export function Footer() {
 
           {/* About Column */}
           <div>
-            <h3 className="text-xs sm:text-sm font-medium uppercase tracking-wider text-white">{t.footer.houseOfMykonos}</h3>
+            <h3 className="text-xs sm:text-sm font-montserrat font-medium uppercase tracking-wider text-white">{t.footer.about || 'About'}</h3>
             <ul className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
               {footerLinks.about.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
                     className={cn(
-                      "text-xs sm:text-sm transition-colors hover:text-luxury-gold",
+                      "text-xs sm:text-sm font-montserrat transition-colors hover:text-luxury-gold",
                       isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
                     )}
                   >
@@ -91,14 +91,14 @@ export function Footer() {
 
           {/* Customer Service Column */}
           <div>
-            <h3 className="text-xs sm:text-sm font-medium uppercase tracking-wider text-white">{t.footer.customerService}</h3>
+            <h3 className="text-xs sm:text-sm font-montserrat font-medium uppercase tracking-wider text-white">{t.footer.customerService}</h3>
             <ul className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
               {footerLinks.customerService.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
                     className={cn(
-                      "text-xs sm:text-sm transition-colors hover:text-luxury-gold",
+                      "text-xs sm:text-sm font-montserrat transition-colors hover:text-luxury-gold",
                       isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
                     )}
                   >
@@ -111,14 +111,14 @@ export function Footer() {
 
           {/* Legal Column */}
           <div>
-            <h3 className="text-xs sm:text-sm font-medium uppercase tracking-wider text-white">{t.footer.legal}</h3>
+            <h3 className="text-xs sm:text-sm font-montserrat font-medium uppercase tracking-wider text-white">{t.footer.legal}</h3>
             <ul className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
                     className={cn(
-                      "text-xs sm:text-sm transition-colors hover:text-luxury-gold",
+                      "text-xs sm:text-sm font-montserrat transition-colors hover:text-luxury-gold",
                       isActive(link.href) ? "text-luxury-gold" : "text-gray-300"
                     )}
                   >
@@ -132,7 +132,7 @@ export function Footer() {
 
         {/* Copyright Section */}
         <div className="mt-6 sm:mt-8 border-t border-white/10 pt-4 sm:pt-6">
-          <p className="text-center text-xs text-gray-400">
+          <p className="text-center text-xs font-montserrat text-gray-400">
             © {new Date().getFullYear()} {t.footer.copyright}
           </p>
         </div>

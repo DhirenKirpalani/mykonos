@@ -35,11 +35,11 @@ export function ProductFilters() {
       <div className="hidden space-y-6 lg:block">
         {/* Sort + Gender Section */}
         <div>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-700">FILTER</h3>
+          <h3 className="mb-4 text-sm font-montserrat font-semibold uppercase tracking-wider text-gray-700">FILTER</h3>
           <div className="space-y-2">
             <button
               onClick={() => updateFilter('filter', currentFilter === 'popular' ? '' : 'popular')}
-              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
+              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-montserrat font-semibold transition-all ${
                 currentFilter === 'popular'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -49,7 +49,7 @@ export function ProductFilters() {
             </button>
             <button
               onClick={() => updateFilter('filter', currentFilter === 'newest' ? '' : 'newest')}
-              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
+              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-montserrat font-semibold transition-all ${
                 currentFilter === 'newest'
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -66,7 +66,7 @@ export function ProductFilters() {
                   updateFilter('sort', 'price-asc')
                 }
               }}
-              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
+              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-montserrat font-semibold transition-all ${
                 searchParams.get('sort')?.startsWith('price-')
                   ? 'bg-[#C2A36B] text-white shadow-sm'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -79,7 +79,7 @@ export function ProductFilters() {
             <div className="pt-1 border-t border-gray-100" />
             <button
               onClick={() => updateFilter('gender', currentGender === 'male' ? '' : 'male')}
-              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
+              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-montserrat font-semibold transition-all ${
                 currentGender === 'male' ? 'bg-[#C2A36B] text-white shadow-sm' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -87,7 +87,7 @@ export function ProductFilters() {
             </button>
             <button
               onClick={() => updateFilter('gender', currentGender === 'female' ? '' : 'female')}
-              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
+              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-montserrat font-semibold transition-all ${
                 currentGender === 'female' ? 'bg-[#C2A36B] text-white shadow-sm' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -95,7 +95,7 @@ export function ProductFilters() {
             </button>
             <button
               onClick={() => updateFilter('gender', currentGender === 'unisex' ? '' : 'unisex')}
-              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all ${
+              className={`block w-full rounded-lg px-4 py-2.5 text-left text-sm font-montserrat font-semibold transition-all ${
                 currentGender === 'unisex' ? 'bg-[#C2A36B] text-white shadow-sm' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -105,7 +105,7 @@ export function ProductFilters() {
         </div>
 
         {(currentCategory || currentFilter !== 'all' || currentSort || currentGender) && (
-          <Button variant="outline" onClick={clearFilters} className="w-full">
+          <Button variant="outline" onClick={clearFilters} className="w-full font-montserrat">
             {t.productsPage.clearFilters}
           </Button>
         )}

@@ -380,7 +380,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-200 px-6 sm:px-8 py-6">
-              <h2 className="flex items-center gap-3 text-2xl font-semibold text-gray-900">
+              <h2 className="flex items-center gap-3 text-2xl font-montserrat font-bold text-gray-900">
                 <ShoppingBag className="h-6 w-6 stroke-[1.5]" />
                 {t.cart.title}
               </h2>

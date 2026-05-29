@@ -2327,32 +2327,38 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 sm:py-6 lg:py-8">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Back Button - Mobile only */}
-        <div className="mb-4 md:hidden">
-          <button 
-            onClick={() => router.back()} 
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span>{t.common.back}</span>
-          </button>
-        </div>
-
-        {/* Breadcrumb - Desktop only */}
-        <div className="mb-4 hidden md:block">
-          <Breadcrumbs items={[{ label: t.checkout.checkout, href: '/checkout' }]} />
-        </div>
-
-        {/* Header */}
-        <div className="mb-6 lg:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            {t.checkout.title} ({allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items})
+    <div className="min-h-screen bg-white font-montserrat">
+      {/* Hero Header */}
+      <div className="border-b border-border/40 bg-luxury-gray-light py-10 md:py-12">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="mb-6 hidden md:block">
+            <Breadcrumbs items={[
+              { label: 'Products', href: '/products' },
+              { label: t.checkout.title, href: '/checkout' },
+            ]} />
+          </div>
+          {/* Mobile back button inside hero */}
+          <div className="mb-4 md:hidden">
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>{t.common.back}</span>
+            </button>
+          </div>
+          <h1 className="mb-2 font-montserrat text-4xl font-bold lg:text-5xl">
+            {t.checkout.title}
           </h1>
+          <p className="font-playfair text-lg text-muted-foreground">
+            {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
+          </p>
         </div>
+      </div>
+
+      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
 
         <div className="grid lg:grid-cols-3 gap-4 lg:gap-8">
           {/* Cart Items List */}
@@ -2823,11 +2829,11 @@ export default function CheckoutPage() {
           {/* Order Summary Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 lg:sticky lg:top-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">{t.checkout.orderSummary}</h2>
+              <h2 className="text-xl font-montserrat font-bold text-gray-900 mb-4">{t.checkout.orderSummary}</h2>
 
               {/* Promo Code Section */}
               <div className="mb-4 pb-4 border-b border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">{t.checkout.promoCode}</h3>
+                <h3 className="text-sm font-montserrat font-semibold text-gray-900 mb-3">{t.checkout.promoCode}</h3>
                 {appliedPromo ? (
                   <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex-1">

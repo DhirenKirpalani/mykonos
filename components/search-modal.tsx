@@ -102,7 +102,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute top-full left-0 right-0 bg-gradient-to-br from-[#F8F5F0] via-white to-[#F5EFE6] border-t border-luxury-gold/20 shadow-2xl z-50 overflow-hidden"
+            className="absolute top-full left-0 right-0 bg-white border-t border-luxury-gold/20 shadow-2xl z-50 overflow-hidden"
           >
             {/* Decorative background pattern */}
             <div className="absolute inset-0 opacity-[0.03]">
@@ -120,7 +120,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     placeholder={t.searchModal.placeholder}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent border-0 border-b border-luxury-navy/20 py-3 pl-8 pr-4 text-lg lg:text-xl text-luxury-navy placeholder:text-luxury-navy/40 focus:outline-none focus:border-luxury-gold tracking-wide transition-colors"
+                    className="w-full bg-transparent border-0 border-b border-luxury-navy/20 py-3 pl-8 pr-4 text-lg lg:text-xl font-montserrat text-luxury-navy placeholder:text-luxury-navy/40 placeholder:font-montserrat focus:outline-none focus:border-luxury-gold tracking-wide transition-colors"
                   />
                 </div>
                 <button
@@ -139,7 +139,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               <div className="grid grid-cols-1 gap-8 lg:gap-12">
             {/* Products Section */}
             <div>
-              <h3 className="text-sm font-semibold text-luxury-navy uppercase tracking-widest mb-6">
+              <h3 className="text-sm font-montserrat font-semibold text-luxury-navy uppercase tracking-widest mb-6">
                 {searchQuery.length > 2 ? t.searchModal.searchResults : (t.home?.popular || 'POPULAR')}
               </h3>
               

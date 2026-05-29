@@ -11,6 +11,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
 import { getCountryName } from '@/lib/utils/country'
 import { Package } from 'lucide-react'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
   order_items: Array<{
@@ -475,20 +476,27 @@ export default function OrderDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-4 sm:py-8 md:py-12">
-        <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="mb-5 sm:mb-8">
-            <Link
-              href="/account/orders"
-              className="text-gray-600 hover:text-gray-900 mb-4 inline-flex items-center gap-2 text-sm font-medium transition-colors"
-            >
-              ← {t.account.backToOrders}
-            </Link>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif mb-1">{t.account.orderDetails}</h1>
-            <p className="text-gray-500 text-sm sm:text-base">Order #{order.order_number}</p>
+    <div className="min-h-screen bg-white font-montserrat">
+      {/* Hero Header */}
+      <div className="border-b border-border/40 bg-luxury-gray-light py-12">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="mb-6 hidden md:block">
+            <Breadcrumbs
+              items={[
+                { label: t.account.orders, href: '/account/orders' },
+                { label: order.order_number, href: `/account/orders/${order.id}` }
+              ]}
+            />
           </div>
+          <h1 className="mb-2 font-montserrat text-4xl font-bold lg:text-5xl">
+            {t.account.orderDetails}
+          </h1>
+          <p className="font-playfair text-lg text-muted-foreground">#{order.order_number}</p>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-6 sm:py-10 lg:px-8">
+        <div className="max-w-5xl mx-auto">
 
           {/* Payment Status Alert for Pending Orders */}
           {order.payment_status === 'pending' && (() => {
@@ -596,7 +604,7 @@ export default function OrderDetailsPage() {
           {/* Order Details Grid - Same as Track Order Page */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
             <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl sm:text-2xl font-serif">{t.trackOrder.orderDetails}</h2>
+              <h2 className="text-xl sm:text-2xl font-montserrat font-bold">{t.trackOrder.orderDetails}</h2>
             </div>
             <div className="p-4 sm:p-8">
               <div className="grid grid-cols-2 gap-3 sm:gap-4 text-sm">
@@ -742,7 +750,7 @@ export default function OrderDetailsPage() {
         {/* Order Items */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-5 sm:mb-8">
           <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-            <h2 className="text-xl sm:text-2xl font-serif">{t.trackOrder.products}</h2>
+            <h2 className="text-xl sm:text-2xl font-montserrat font-bold">{t.trackOrder.products}</h2>
           </div>
           <div className="p-4 sm:p-8">
             {order.order_items.map((item) => (
@@ -795,9 +803,9 @@ export default function OrderDetailsPage() {
                 })()}
                 <div className="flex-1 min-w-0">
                   {item.variant_name ? (
-                    <h3 className="font-semibold text-sm sm:text-base leading-snug mb-0.5 truncate">{item.variant_name}</h3>
+                    <h3 className="font-montserrat font-semibold text-sm sm:text-base leading-snug mb-0.5 truncate">{item.variant_name}</h3>
                   ) : (
-                    <h3 className="font-semibold text-sm sm:text-base leading-snug mb-0.5">{item.product.name}</h3>
+                    <h3 className="font-montserrat font-semibold text-sm sm:text-base leading-snug mb-0.5">{item.product.name}</h3>
                   )}
                   <p className="text-xs text-gray-500">{t.trackOrder.qty}: {item.quantity}</p>
                 </div>
@@ -828,7 +836,7 @@ export default function OrderDetailsPage() {
           {order.shipping_address && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-                <h2 className="text-xl sm:text-2xl font-serif">{t.trackOrder.shippingAddress}</h2>
+                <h2 className="text-xl sm:text-2xl font-montserrat font-bold">{t.trackOrder.shippingAddress}</h2>
               </div>
               <div className="p-4 sm:p-8">
                 {(() => {
@@ -888,7 +896,7 @@ export default function OrderDetailsPage() {
           {/* Order Summary */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl sm:text-2xl font-serif">{t.checkout.orderSummary}</h2>
+              <h2 className="text-xl sm:text-2xl font-montserrat font-bold">{t.checkout.orderSummary}</h2>
             </div>
             <div className="p-4 sm:p-8">
               <div className="space-y-3">

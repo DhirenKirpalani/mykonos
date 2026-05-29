@@ -256,7 +256,7 @@ export function HeroCarousel() {
             {(currentItem?.show_button !== false) && (
               <Link
                 href={shopNowLink}
-                className="inline-block border-2 border-white bg-white/10 backdrop-blur-sm px-8 py-3 sm:px-12 sm:py-4 text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition-all hover:bg-white/25"
+                className="inline-block border-2 border-white bg-white/10 backdrop-blur-sm px-8 py-3 sm:px-12 sm:py-4 text-xs sm:text-sm font-montserrat font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition-all hover:bg-white/25"
                 aria-label={`${buttonText} - Shop our collection`}
               >
                 {buttonText}

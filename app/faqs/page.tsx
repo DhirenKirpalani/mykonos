@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 const faqsData = {
   en: [
@@ -142,26 +142,26 @@ export default function FAQsPage() {
         <div className="container mx-auto px-4 lg:px-8">
           {/* Breadcrumb - Desktop only */}
           <div className="mb-6 hidden md:block">
-            <Breadcrumb 
+            <Breadcrumbs 
               items={[
-                { label: t.faqs?.title || 'Help Center', href: '/faqs' }
+                { label: t.footer?.helpCenter || 'Help Center', href: '/faqs' }
               ]} 
             />
           </div>
-          <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
+          <h1 className="mb-4 font-montserrat text-4xl font-bold lg:text-5xl">
             {t.faqs.title}
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="font-playfair text-lg text-muted-foreground">
             {t.faqs.subtitle}
           </p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 lg:px-8">
+      <div className="container mx-auto px-4 py-12 lg:px-8 font-montserrat">
         <div className="mx-auto max-w-4xl">
           {faqs.map((category, categoryIndex) => (
             <div key={categoryIndex} className="mb-12">
-              <h2 className="mb-6 font-serif text-2xl font-bold">
+              <h2 className="mb-6 font-montserrat text-2xl font-bold">
                 {category.category}
               </h2>
               <div className="space-y-4">
@@ -203,15 +203,15 @@ export default function FAQsPage() {
           ))}
 
           <div className="mt-12 rounded-lg bg-luxury-navy p-8 text-center text-white">
-            <h3 className="mb-4 font-serif text-2xl font-bold">
+            <h3 className="mb-4 font-montserrat text-2xl font-bold">
               {t.faqs.couldntFind}
             </h3>
-            <p className="mb-6 text-gray-300">
+            <p className="mb-6 font-inter text-gray-300">
               {t.faqs.helpText}
             </p>
             <a
               href="/contact"
-              className="inline-block rounded-md bg-luxury-gold px-8 py-3 font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light"
+              className="inline-block rounded-md bg-luxury-gold px-8 py-3 font-montserrat font-semibold uppercase tracking-wider text-luxury-navy transition-all hover:bg-luxury-gold-light"
             >
               {t.faqs.contactUs}
             </a>

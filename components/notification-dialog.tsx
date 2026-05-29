@@ -143,7 +143,7 @@ export function NotificationDialog({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
               <div>
-                <h2 className="text-lg font-semibold text-luxury-navy">{t.notifications.title}</h2>
+                <h2 className="text-lg font-montserrat font-bold text-luxury-navy">{t.notifications.title}</h2>
                 {unreadCount > 0 && (
                   <p className="text-sm text-gray-500">{unreadCount} {t.notifications.unread}</p>
                 )}
@@ -179,12 +179,12 @@ export function NotificationDialog({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h3 className={cn("text-sm font-semibold leading-tight", notification.read ? "text-gray-700" : "text-luxury-navy")}>
+                            <h3 className={cn("text-sm font-montserrat font-semibold leading-tight", notification.read ? "text-gray-700" : "text-luxury-navy")}>
                               {translateNotification(notification).title}
                             </h3>
                             {!notification.read && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-luxury-gold mt-1" />}
                           </div>
-                          <p className={cn("text-sm line-clamp-2 leading-relaxed", notification.read ? "text-gray-500" : "text-gray-700")}>
+                          <p className={cn("text-sm font-montserrat line-clamp-2 leading-relaxed", notification.read ? "text-gray-500" : "text-gray-700")}>
                             {translateNotification(notification).message}
                           </p>
                           <div className="flex items-center gap-2 mt-2">
@@ -218,7 +218,7 @@ export function NotificationDialog({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 p-4">
               <div>
-                <h2 className="text-lg font-semibold text-luxury-navy">
+                <h2 className="text-lg font-montserrat font-bold text-luxury-navy">
                   {t.notifications.title}
                 </h2>
                 {unreadCount > 0 && (
@@ -286,7 +286,7 @@ export function NotificationDialog({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <h3 className={cn(
-                              "text-sm font-semibold leading-tight",
+                              "text-sm font-montserrat font-semibold leading-tight",
                               notification.read ? "text-gray-700" : "text-luxury-navy"
                             )}>
                               {translateNotification(notification).title}
@@ -298,7 +298,7 @@ export function NotificationDialog({
                             )}
                           </div>
                           <p className={cn(
-                            "text-sm line-clamp-2 leading-relaxed",
+                            "text-sm font-montserrat line-clamp-2 leading-relaxed",
                             notification.read ? "text-gray-500" : "text-gray-700"
                           )}>
                             {translateNotification(notification).message}

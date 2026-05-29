@@ -304,7 +304,7 @@ export function HeaderMobile() {
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
             <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-              <span className="font-futura text-base font-medium tracking-[0.25em] text-luxury-gold">
+              <span className="font-montserrat text-base font-semibold tracking-[0.25em] text-luxury-gold">
                 MYKONOS
               </span>
             </Link>
@@ -335,7 +335,7 @@ export function HeaderMobile() {
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2">
             <span
-              className="font-montserrat text-2xl font-normal tracking-normal transition-opacity hover:opacity-80"
+              className="font-montserrat text-2xl font-semibold tracking-normal transition-opacity hover:opacity-80"
               style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
             >
               MYKONOS
@@ -404,7 +404,7 @@ export function HeaderMobile() {
                 className="block px-4 py-4"
               >
                 <span 
-                  className="font-montserrat text-2xl font-normal tracking-normal transition-opacity hover:opacity-80"
+                  className="font-montserrat text-2xl font-semibold tracking-normal transition-opacity hover:opacity-80"
                   style={{
                     background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)',
                     WebkitBackgroundClip: 'text',
@@ -432,7 +432,7 @@ export function HeaderMobile() {
                   role="menuitem"
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    "block px-4 py-4 text-base font-medium uppercase tracking-[0.12em] rounded-lg transition-colors mb-1",
+                    "block px-4 py-4 text-base font-montserrat font-medium uppercase tracking-[0.12em] rounded-lg transition-colors mb-1",
                     active
                       ? "text-luxury-gold bg-white/[0.07]"
                       : "text-white/80 hover:text-white hover:bg-white/[0.04]"

@@ -1,7 +1,7 @@
 'use client'
 
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 export default function ShippingPage() {
   const { t } = useLanguage()
@@ -11,22 +11,22 @@ export default function ShippingPage() {
         <div className="container mx-auto px-4 lg:px-8">
           {/* Breadcrumb - Desktop only */}
           <div className="mb-6 hidden md:block">
-            <Breadcrumb 
+            <Breadcrumbs 
               items={[
                 { label: t.shipping?.title || 'Shipping Policy', href: '/shipping' }
               ]} 
             />
           </div>
-          <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
+          <h1 className="mb-4 font-montserrat text-4xl font-bold lg:text-5xl">
             {t.shipping.title}
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="font-playfair text-lg text-muted-foreground">
             {t.shipping.subtitle}
           </p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 lg:px-8">
+      <div className="container mx-auto px-4 py-12 lg:px-8 font-montserrat">
         <div className="mx-auto max-w-4xl space-y-8">
           <section>
             <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.shipping.shippingMethod}</h2>
