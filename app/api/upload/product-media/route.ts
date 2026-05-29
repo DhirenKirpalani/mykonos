@@ -35,7 +35,9 @@ export async function POST(request: NextRequest) {
 
     // Get form data
     const formData = await request.formData()
-    const files = formData.getAll('files') as File[]
+    const files = formData.getAll('files').filter(
+      (f): f is File => f instanceof File && typeof (f as File).name === 'string' && (f as File).name.length > 0
+    )
     const productName = formData.get('productName') as string
 
     if (!files || files.length === 0) {
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
         // Generate unique filename
         const timestamp = Date.now()
         const randomString = Math.random().toString(36).substring(7)
-        const fileExt = file.name.split('.').pop()
+        const fileExt = file.name?.split('.').pop() || 'bin'
         const fileName = `${timestamp}-${randomString}.${fileExt}`
         const filePath = `${folderName}/${fileName}`
 

@@ -113,7 +113,7 @@ export function ProductCarousel({
             className="mb-8 md:mb-10 text-center"
           >
             {!hideSubtitle && (
-              <p className="mb-3 text-sm font-normal uppercase tracking-[0.3em] text-[#333] md:text-base">
+              <p className="mb-3 text-sm font-montserrat font-normal uppercase tracking-[0.3em] text-[#333] md:text-base">
                 MUST HAVE
               </p>
             )}

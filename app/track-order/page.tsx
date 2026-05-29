@@ -733,27 +733,28 @@ export default function TrackOrderPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 py-12 ${order && order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && new Date(order.expiry_time) >= new Date() ? 'pb-28 sm:pb-12' : ''}`}>
-      {/* Breadcrumb - Desktop only */}
-      <div className="container mx-auto px-4 max-w-2xl mb-4 hidden md:block">
-        <Breadcrumbs 
-          items={[
-            { label: t('trackOrder.title') || 'Track Order', href: '/track-order' }
-          ]} 
-        />
-      </div>
-      
-      <div className="container mx-auto px-4 max-w-2xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-luxury-navy/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Package className="h-8 w-8 text-luxury-navy" />
+    <div className={`min-h-screen bg-white ${order && order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && new Date(order.expiry_time) >= new Date() ? 'pb-28 sm:pb-0' : ''}`}>
+      {/* Hero Header */}
+      <div className="border-b border-border/40 bg-luxury-gray-light py-12">
+        <div className="container mx-auto px-4 lg:px-8">
+          {/* Breadcrumb - Desktop only */}
+          <div className="mb-6 hidden md:block">
+            <Breadcrumbs 
+              items={[
+                { label: t('trackOrder.title') || 'Track Order', href: '/track-order' }
+              ]} 
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('trackOrder.title')}</h1>
-          <p className="text-gray-600">
+          <h1 className="mb-4 font-montserrat text-4xl font-bold lg:text-5xl">
+            {t('trackOrder.title')}
+          </h1>
+          <p className="font-playfair text-lg text-muted-foreground">
             {t('trackOrder.subtitle')}
           </p>
         </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-12 max-w-2xl">
 
         {/* Session Order History */}
         {sessionOrders.length > 0 && (
@@ -874,7 +875,7 @@ export default function TrackOrderPage() {
 
         {/* Manual Search Form */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('trackOrder.searchForOrder')}</h2>
+          <h2 className="text-base sm:text-lg font-montserrat font-semibold uppercase tracking-wider text-gray-900 mb-3 sm:mb-4">{t('trackOrder.searchForOrder')}</h2>
           <form onSubmit={handleSearch} className="space-y-4">
             <div>
               <Label htmlFor="email">{t('trackOrder.emailLabel')} *</Label>
@@ -917,7 +918,7 @@ export default function TrackOrderPage() {
 
             <Button 
               type="submit" 
-              className="w-full bg-luxury-navy hover:bg-luxury-navy-light"
+              className="w-full bg-luxury-navy hover:bg-luxury-navy-light font-montserrat font-semibold uppercase tracking-wider"
               disabled={isSearching}
             >
               {isSearching ? t('common.loading') : t('trackOrder.button')}

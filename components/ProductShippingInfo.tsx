@@ -33,8 +33,8 @@ export function ProductShippingInfo({ product }: ProductShippingInfoProps) {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <div className="flex-1">
-        <p className="text-sm text-gray-600">
-          {t.products.preOrder} ({t.products.shippedIn} {preOrderDays} {t.products.days}). {t.products.estimatedArrival} {formatDate(estimateStartDate)} - {formatDate(estimateEndDate)}
+        <p className="text-sm font-montserrat font-bold text-gray-700">
+          {t.products.preOrder} ({t.products.shippedIn} {preOrderDays} {t.products.days}). {t.products.estimatedArrival}: {formatDate(estimateStartDate)} - {formatDate(estimateEndDate)}.
         </p>
       </div>
     </div>

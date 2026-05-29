@@ -142,7 +142,7 @@ export default function LoginPage() {
         <div className="mx-auto max-w-md">
           <div className="rounded-lg bg-white p-8 shadow-lg">
             <div className="mb-8 text-center">
-              <h1 className="mb-2 font-serif text-3xl font-bold">{t.auth.welcomeBack}</h1>
+              <h1 className="mb-2 font-montserrat text-3xl font-bold">{t.auth.welcomeBack}</h1>
               <p className="text-sm text-muted-foreground">
                 {t.auth.signInSubtitle}
               </p>
@@ -215,7 +215,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-md bg-luxury-gold px-6 py-3 font-medium text-luxury-navy transition-all hover:bg-luxury-gold-light active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-md bg-luxury-gold px-6 py-3 font-montserrat font-semibold uppercase tracking-wider text-luxury-navy transition-all hover:bg-luxury-gold-light active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? t.auth.signingIn : t.auth.signIn}
               </button>

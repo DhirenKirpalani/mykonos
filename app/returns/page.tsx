@@ -1,7 +1,7 @@
 'use client'
 
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 export default function ReturnsPage() {
   const { t } = useLanguage()
@@ -11,22 +11,22 @@ export default function ReturnsPage() {
         <div className="container mx-auto px-4 lg:px-8">
           {/* Breadcrumb - Desktop only */}
           <div className="mb-6 hidden md:block">
-            <Breadcrumb 
+            <Breadcrumbs 
               items={[
                 { label: t.returns?.title || 'Return Policy', href: '/returns' }
               ]} 
             />
           </div>
-          <h1 className="mb-4 font-serif text-4xl font-bold lg:text-5xl">
+          <h1 className="mb-4 font-montserrat text-4xl font-bold lg:text-5xl">
             {t.returns.title}
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="font-playfair text-lg text-muted-foreground">
             {t.returns.subtitle}
           </p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 lg:px-8">
+      <div className="container mx-auto px-4 py-12 lg:px-8 font-montserrat">
         <div className="mx-auto max-w-4xl space-y-8">
           <section>
             <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.returns.returnsExchanges}</h2>
@@ -49,7 +49,7 @@ export default function ReturnsPage() {
               <p>
                 {t.returns.inspectOrder}
               </p>
-              <p className="rounded-lg bg-amber-50 p-4 text-amber-900">
+              <p className="rounded-lg bg-blue-50 p-4 text-blue-900 font-inter">
                 <strong>{t.returns.unboxingRequired}</strong>
               </p>
             </div>

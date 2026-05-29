@@ -161,6 +161,33 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
   
   // Check if product has variants with different prices
   const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
+
+  // Compute the image index to show on hover:
+  // – with variants: first image of the second variant
+  // – without variants (or single variant): second image overall
+  const hoverIndex = useMemo(() => {
+    if (hasVariants) {
+      const variants = (product as any).variants as any[]
+      if (variants?.length >= 2) {
+        const firstVariantImgs = (
+          Array.isArray(variants[0].image_url)
+            ? variants[0].image_url.filter(Boolean)
+            : variants[0].image_url ? [variants[0].image_url] : []
+        ).filter((u: string) => typeof u === 'string' && u.trim() !== '' && !u.includes('placehold.co'))
+        return firstVariantImgs.length > 0 ? firstVariantImgs.length : 1
+      }
+    }
+    return 1
+  }, [hasVariants, product])
+
+  // On hover: jump to hoverIndex (no auto-cycle)
+  useEffect(() => {
+    if (!isHovering) return
+    const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+    if (validImages.length > 1) {
+      setCurrentImageIndex(Math.min(hoverIndex, validImages.length - 1))
+    }
+  }, [isHovering, hoverIndex, allProductImages])
   
   // Check if product is out of stock
   const isOutOfStock = useMemo(() => {
@@ -247,23 +274,32 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
     ? allMediaUrls.find(url => url && !isVideo(url)) || firstMedia
     : firstMedia
 
+  // Shared hover display URL (used by both card variants)
+  const validAllImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+  const displayThumbnailUrl = validAllImages[currentImageIndex] || thumbnailUrl
+
   // For bestselling cards, use minimal design matching reference image
   if (isBestsellingCard) {
     return (
-      <Link href={`/products/${product.slug}`} className="block h-full">
+      <Link
+        href={`/products/${product.slug}`}
+        className="block h-full"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => { setIsHovering(false); setCurrentImageIndex(0) }}
+      >
         <div className={`group relative w-full h-full flex flex-col bg-white ${noBorder ? '' : 'border border-[#e0e0e0] hover:border-[#c0c0c0] transition-colors duration-200'}`}>
           {/* Product Image - tall portrait ratio */}
           <div className="relative w-full bg-white" style={{ paddingBottom: '105%' }}>
-            {thumbnailUrl ? (
+            {displayThumbnailUrl ? (
               <Image
-                src={thumbnailUrl}
+                src={displayThumbnailUrl}
                 alt={product.name}
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw"
                 className="object-contain p-4 md:p-6 transition-transform duration-500 group-hover:scale-[1.03]"
                 quality={90}
                 loading="lazy"
-                unoptimized={thumbnailUrl.includes('supabase')}
+                unoptimized={displayThumbnailUrl.includes('supabase')}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-gray-300">
@@ -276,14 +312,14 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
 
           {/* Product Name + Price */}
           <div className="px-4 py-3 md:px-5 md:py-4 text-center">
-            <h3 className="text-[9px] sm:text-[10px] md:text-xs font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug">
+            <h3 className="text-[9px] sm:text-[10px] md:text-xs font-montserrat font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug">
               {product.name}
             </h3>
             {mounted && clientRegion && (() => {
               const basePrice = hasPriceRange ? minVariantPrice : originalPrice
               if (!basePrice) return null
               return (
-                <p className="mt-1 text-[10px] md:text-xs font-semibold text-[#B8985F]">
+                <p className="mt-1 text-[10px] md:text-xs font-montserrat font-semibold text-[#B8985F]">
                   {hasPriceRange ? 'From ' : ''}{formatPrice(basePrice, clientRegion.currency_code)}
                 </p>
               )
@@ -341,7 +377,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
           {isOutOfStock && (
             <div className="absolute inset-0 z-20 flex items-center justify-center">
               <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-black/70 flex items-center justify-center">
-                <span className="text-white text-sm md:text-base font-bold">
+                <span className="text-white text-sm md:text-base font-montserrat font-bold">
                   {locale === 'id' ? 'Habis' : 'Sold Out'}
                 </span>
               </div>
@@ -466,7 +502,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
         {/* Content — centered, matching bestselling style */}
         <div className="px-3 pt-3 pb-4 text-center md:px-4 md:pt-4">
           {/* Name */}
-          <h3 className="text-[9px] sm:text-[10px] md:text-xs font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug mb-2">
+          <h3 className="text-[9px] sm:text-[10px] md:text-xs font-montserrat font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug mb-2">
             {product.name}
           </h3>
 
@@ -494,7 +530,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
                 {hasActiveDiscount && (
                   <span className="text-[10px] text-gray-400 line-through">{formatPrice(originalPrice, clientRegion.currency_code)}</span>
                 )}
-                <span className="text-xs md:text-sm font-semibold text-[#B8985F]">
+                <span className="text-xs md:text-sm font-montserrat font-semibold text-[#B8985F]">
                   {hasPriceRange && !voucher ? 'From ' : ''}{formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code)}
                 </span>
                 {discountPct > 0 && !voucher && (
@@ -506,7 +542,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
 
           {/* Rating + Sold */}
           {mounted && (product.rating > 0 || product.products_sold > 0) && (
-            <div className="flex items-center justify-center gap-1.5 mt-1.5 text-xs md:text-sm text-gray-500">
+            <div className="flex items-center justify-center gap-1.5 mt-1.5 text-xs md:text-sm font-montserrat text-gray-500">
               {product.rating > 0 && (
                 <span className="flex items-center gap-0.5">
                   <svg className="h-3.5 w-3.5 md:h-4 md:w-4 fill-amber-400" viewBox="0 0 20 20">

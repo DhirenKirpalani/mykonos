@@ -155,7 +155,7 @@ export default function OrdersPage() {
     return (
       <div className="rounded-lg border border-border/40 p-12 text-center">
         <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-        <h3 className="font-serif text-2xl font-bold mb-2">{t.account.noOrdersYet}</h3>
+        <h3 className="font-montserrat text-2xl font-bold mb-2">{t.account.noOrdersYet}</h3>
         <p className="text-muted-foreground mb-6">{t.account.startShopping}</p>
         <Link href="/products" className="inline-block rounded-md bg-luxury-gold px-6 py-3 text-white hover:bg-luxury-gold/90 transition-colors">
           {t.account.browseProducts}
@@ -181,7 +181,7 @@ export default function OrdersPage() {
           <Link
             key={order.id}
             href={`/account/orders/${order.id}`}
-            className="block rounded-lg border border-border/40 hover:border-luxury-gold transition-all hover:shadow-md overflow-hidden"
+            className="group block rounded-lg border border-border/40 hover:border-luxury-gold hover:bg-luxury-gold/5 hover:shadow-md transition-all overflow-hidden cursor-pointer"
           >
             <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
               {firstProduct && (
@@ -238,7 +238,7 @@ export default function OrdersPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-1.5">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm sm:text-base mb-0.5">{order.order_number}</h3>
+                    <h3 className="font-montserrat font-semibold text-sm sm:text-base mb-0.5">{order.order_number}</h3>
                     {firstProduct && (
                       <p className="text-xs sm:text-sm text-gray-700 mb-1 line-clamp-2">
                         {firstProduct.name}
@@ -256,7 +256,7 @@ export default function OrdersPage() {
                       })} · {totalItems} {totalItems === 1 ? t.account.item : t.account.items}
                     </p>
                   </div>
-                  <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-luxury-gold flex-shrink-0 mt-0.5 group-hover:translate-x-1 transition-transform" />
                 </div>
 
                 <div className="flex items-center justify-between gap-2 mt-2">

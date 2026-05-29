@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/product-card'
 import { ProductFilters } from '@/components/product-filters'
 import { Pagination } from '@/components/Pagination'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useRegion } from '@/contexts/RegionContext'
@@ -347,8 +347,16 @@ function ProductsContent() {
     <div className="min-h-screen bg-white">
       {/* Luxury Header */}
       <div className="bg-white border-b border-gray-100">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-6 md:pt-12 md:pb-8">
-          <h1 className="font-serif text-3xl font-light uppercase tracking-[0.18em] text-luxury-navy md:text-4xl lg:text-5xl">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 pt-6 pb-6 md:pt-8 md:pb-8">
+          {/* Breadcrumb - Desktop only */}
+          <div className="mb-4 hidden md:block">
+            <Breadcrumbs
+              items={[
+                { label: t.common.products, href: '/products' }
+              ]}
+            />
+          </div>
+          <h1 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl">
             {t.productsPage.allFragrances}
           </h1>
 
@@ -368,7 +376,7 @@ function ProductsContent() {
                 placeholder={t.productsPage.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none tracking-wide"
+                className="flex-1 bg-transparent py-2 text-sm font-montserrat text-gray-700 placeholder:text-gray-400 placeholder:font-montserrat focus:outline-none tracking-wide"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 transition-colors ml-2">
@@ -383,15 +391,6 @@ function ProductsContent() {
       </div>
 
       <div className="container mx-auto px-4 py-3 md:px-6 md:py-4 lg:px-8 pb-20">
-        {/* Breadcrumb - Desktop only */}
-        <div className="mb-3 hidden md:block">
-          <Breadcrumb 
-            items={[
-              { label: t.common.products, href: '/products' }
-            ]} 
-          />
-        </div>
-
         {/* Filter Controls - Sticky (Mobile Only) */}
         <div className="sticky top-0 z-10 bg-white pt-3 pb-0 mb-4 lg:hidden">
           <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide border-b border-gray-100">
@@ -406,7 +405,7 @@ function ProductsContent() {
               <button
                 key={label}
                 onClick={onClick}
-                className={`relative flex-shrink-0 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all duration-200 whitespace-nowrap ${
+                className={`relative flex-shrink-0 px-4 py-1.5 text-[11px] font-montserrat font-semibold uppercase tracking-[0.12em] transition-all duration-200 whitespace-nowrap ${
                   active
                     ? 'text-[#B8985F] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#B8985F] after:rounded-full'
                     : 'text-gray-500 hover:text-luxury-navy'
@@ -473,10 +472,10 @@ function ProductsContent() {
                     {soldOutProducts.length > 0 && (
                       <div className="mt-12 md:mt-16">
                         <div className="mb-6 border-t border-gray-200 pt-8">
-                          <h2 className="text-xl font-bold uppercase tracking-wider text-luxury-navy md:text-2xl">
+                          <h2 className="font-playfair text-xl font-bold tracking-wider text-luxury-navy md:text-2xl">
                             {t.productsPage.soldOut}
                           </h2>
-                          <p className="mt-2 text-sm text-gray-600">
+                          <p className="mt-2 text-sm font-montserrat text-gray-600">
                             {t.productsPage.soldOutDescription}
                           </p>
                         </div>

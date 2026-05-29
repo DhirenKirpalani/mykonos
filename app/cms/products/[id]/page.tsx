@@ -166,18 +166,33 @@ export default function EditProductPage() {
   }
 
   const reorderImages = (from: number, to: number) => {
-    const imgs = [...imagePreviews], files = [...imageFiles], alts = [...imageAltTexts]
+    const imgs = [...imagePreviews], alts = [...imageAltTexts]
     const [img] = imgs.splice(from, 1); imgs.splice(to, 0, img)
-    const [file] = files.splice(from, 1); files.splice(to, 0, file)
     const [alt] = alts.splice(from, 1); alts.splice(to, 0, alt)
-    setImagePreviews(imgs); setImageFiles(files); setImageAltTexts(alts)
+    setImagePreviews(imgs)
+    setImageAltTexts(alts)
+    // Only reorder imageFiles when both indices are in the new-file zone (data: URIs)
+    const existingCount = imagePreviews.filter(u => !u.startsWith('data:')).length
+    if (from >= existingCount && to >= existingCount) {
+      const files = [...imageFiles]
+      const [f] = files.splice(from - existingCount, 1)
+      files.splice(to - existingCount, 0, f)
+      setImageFiles(files)
+    }
   }
 
   const reorderVideos = (from: number, to: number) => {
-    const vids = [...videoPreviews], files = [...videoFiles]
+    const vids = [...videoPreviews]
     const [vid] = vids.splice(from, 1); vids.splice(to, 0, vid)
-    const [file] = files.splice(from, 1); files.splice(to, 0, file)
-    setVideoPreviews(vids); setVideoFiles(files)
+    setVideoPreviews(vids)
+    // Only reorder videoFiles when both indices are in the new-file zone (data: URIs)
+    const existingCount = videoPreviews.filter(u => !u.startsWith('data:')).length
+    if (from >= existingCount && to >= existingCount) {
+      const files = [...videoFiles]
+      const [f] = files.splice(from - existingCount, 1)
+      files.splice(to - existingCount, 0, f)
+      setVideoFiles(files)
+    }
   }
 
   useEffect(() => {

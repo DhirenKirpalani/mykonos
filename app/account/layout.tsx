@@ -78,7 +78,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           <div className="hidden md:block">
             <Breadcrumbs items={getBreadcrumbs()} />
           </div>
-          <h1 className="mt-3 mb-0 font-serif text-3xl font-bold md:text-4xl lg:text-5xl">
+          <h1 className="mt-3 mb-0 font-montserrat text-3xl font-bold md:text-4xl lg:text-5xl">
             {getTitle()}
           </h1>
         </div>
@@ -111,7 +111,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
           {/* Desktop sidebar — hidden on mobile */}
           <aside className="hidden lg:block space-y-2">
-            <h2 className="mb-4 font-serif text-xl font-bold">{t.account.account}</h2>
+            <h2 className="mb-4 font-montserrat text-xl font-bold">{t.account.account}</h2>
             <nav className="space-y-1">
               {navItems.map((item) => (
                 <Link

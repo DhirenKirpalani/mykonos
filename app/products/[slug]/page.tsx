@@ -239,7 +239,7 @@ export default function ProductDetailPage({
                   {(product as any).brand}
                 </p>
               )}
-              <h1 className="mb-4 font-serif text-2xl md:text-4xl font-bold text-luxury-navy leading-tight">
+              <h1 className="mb-4 font-montserrat text-2xl md:text-4xl font-bold text-luxury-navy leading-tight">
                 {product.name}
               </h1>
               {((product as any).rating > 0 || (product as any).products_sold > 0) && (
@@ -309,12 +309,12 @@ export default function ProductDetailPage({
                     <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
                       <Info className="h-5 w-5 text-gray-500" strokeWidth={1.5} />
                     </span>
-                    <span className="flex-1 text-sm font-medium text-gray-900">Description</span>
+                    <span className="flex-1 text-sm font-medium font-montserrat text-gray-900">Description</span>
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showDescription ? 'rotate-180' : ''}`} />
                   </button>
                   {showDescription && (
                     <div
-                      className="pb-5 pl-12 pr-2 text-sm text-gray-600 leading-6 [&_p]:mb-2 [&_p:empty]:hidden [&_p:empty]:m-0 [&_br+br]:hidden"
+                      className="pb-5 pl-12 pr-2 text-sm font-montserrat text-gray-600 leading-6 [&_p]:mb-2 [&_p:empty]:hidden [&_p:empty]:m-0 [&_br+br]:hidden"
                       dangerouslySetInnerHTML={{
                         __html: product.description
                           .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '')
@@ -335,28 +335,28 @@ export default function ProductDetailPage({
                     <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
                       <Droplets className="h-5 w-5 text-gray-500" strokeWidth={1.5} />
                     </span>
-                    <span className="flex-1 text-sm font-medium text-gray-900">Fragrance Notes</span>
+                    <span className="flex-1 text-sm font-medium font-montserrat text-gray-900">Fragrance Notes</span>
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showFragranceNotes ? 'rotate-180' : ''}`} />
                   </button>
                   {showFragranceNotes && (
-                    <div className="pb-5 pl-12 pr-2 space-y-2">
+                    <div className="pb-5 pl-12 pr-2 divide-y divide-gray-100">
                       {(product as any).top_notes && (
-                        <p className="text-sm text-gray-600">
-                          <span className="font-semibold text-gray-800">{productTranslations.topNotes}:</span>{' '}
-                          {(product as any).top_notes}
-                        </p>
+                        <div className="flex gap-4 py-2.5">
+                          <span className="w-32 flex-shrink-0 text-xs uppercase tracking-[0.12em] font-montserrat text-gray-400 pt-0.5">{productTranslations.topNotes}</span>
+                          <span className="text-sm font-montserrat text-luxury-navy font-medium leading-relaxed">{(product as any).top_notes}</span>
+                        </div>
                       )}
                       {(product as any).middle_notes && (
-                        <p className="text-sm text-gray-600">
-                          <span className="font-semibold text-gray-800">{productTranslations.middleNotes}:</span>{' '}
-                          {(product as any).middle_notes}
-                        </p>
+                        <div className="flex gap-4 py-2.5">
+                          <span className="w-32 flex-shrink-0 text-xs uppercase tracking-[0.12em] font-montserrat text-gray-400 pt-0.5">{productTranslations.middleNotes}</span>
+                          <span className="text-sm font-montserrat text-luxury-navy font-medium leading-relaxed">{(product as any).middle_notes}</span>
+                        </div>
                       )}
                       {(product as any).base_notes && (
-                        <p className="text-sm text-gray-600">
-                          <span className="font-semibold text-gray-800">{productTranslations.baseNotes}:</span>{' '}
-                          {(product as any).base_notes}
-                        </p>
+                        <div className="flex gap-4 py-2.5">
+                          <span className="w-32 flex-shrink-0 text-xs uppercase tracking-[0.12em] font-montserrat text-gray-400 pt-0.5">{productTranslations.baseNotes}</span>
+                          <span className="text-sm font-montserrat text-luxury-navy font-medium leading-relaxed">{(product as any).base_notes}</span>
+                        </div>
                       )}
                     </div>
                   )}
@@ -372,7 +372,7 @@ export default function ProductDetailPage({
                   <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
                     <Truck className="h-5 w-5 text-gray-500" strokeWidth={1.5} />
                   </span>
-                  <span className="flex-1 text-sm font-medium text-gray-900">Shipping</span>
+                  <span className="flex-1 text-sm font-medium font-montserrat text-gray-900">Shipping</span>
                   <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showShipping ? 'rotate-180' : ''}`} />
                 </button>
                 {showShipping && (

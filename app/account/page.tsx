@@ -81,9 +81,9 @@ export default function AccountPage() {
   if (!user || user.is_anonymous) return null
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 font-montserrat">
       <div className="rounded-lg border border-border/40 p-6 md:p-8">
-        <h2 className="mb-6 font-serif text-2xl font-bold">{t.account.profileInformation}</h2>
+        <h2 className="mb-6 font-montserrat text-2xl font-bold">{t.account.profileInformation}</h2>
         <div className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div>
@@ -166,7 +166,7 @@ export default function AccountPage() {
       </div>
 
       <div className="rounded-lg border border-border/40 p-6 md:p-8">
-        <h2 className="mb-6 font-serif text-2xl font-bold">{t.account.shippingAddresses}</h2>
+        <h2 className="mb-6 font-montserrat text-2xl font-bold">{t.account.shippingAddresses}</h2>
         <ShippingAddresses userId={user.id} />
       </div>
     </div>

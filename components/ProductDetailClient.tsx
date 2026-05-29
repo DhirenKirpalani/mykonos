@@ -425,7 +425,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
       {/* Desktop Buttons */}
       <div className="hidden md:flex flex-col gap-3">
         <Button 
-          className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-medium py-3 text-base transition-all duration-300 border-0"
+          className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-montserrat font-semibold uppercase tracking-wider py-3 text-base transition-all duration-300 border-0"
           size="lg" 
           onClick={() => handleBuyNow(undefined, quantity)}
           disabled={isBuyingNow || isOutOfStock}
@@ -434,7 +434,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           {isBuyingNow ? t('common.loading') : t('product.buyNow')}
         </Button>
         <Button 
-          className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-medium py-3 text-base transition-all duration-300"
+          className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider py-3 text-base transition-all duration-300"
           size="lg" 
           onClick={async () => {
             try {

@@ -81,6 +81,8 @@ const config: Config = {
         lato: ['var(--font-lato)', 'Gill Sans', 'sans-serif'],
         futura: ['Futura PT', 'sans-serif'],
         montserrat: ['var(--font-montserrat)', 'sans-serif'],
+        playfair: ['var(--font-playfair)', 'Georgia', 'serif'],
+        inter: ['var(--font-inter)', 'sans-serif'],
       },
       keyframes: {
         'accordion-down': {

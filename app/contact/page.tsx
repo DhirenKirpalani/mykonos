@@ -5,7 +5,7 @@ import { WhatsappLogo } from 'phosphor-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useRegion } from '@/contexts/RegionContext'
 import { toast } from 'sonner'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 export default function ContactPage() {
   const { t } = useLanguage()
@@ -99,24 +99,23 @@ export default function ContactPage() {
         {/* Breadcrumb - Desktop only */}
         <div className="border-b border-gray-100 hidden md:block">
           <div className="container mx-auto px-4 lg:px-8 py-3">
-            <Breadcrumb 
+            <Breadcrumbs 
               items={[
-                { label: t.nav?.contact || 'Contact Us', href: '/contact' }
+                { label: t.contact.title, href: '/contact' }
               ]} 
             />
           </div>
         </div>
         
         <div className="container mx-auto px-4 lg:px-8 pt-12 pb-10 md:pt-16 md:pb-12 text-center">
-          <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-[#B8985F] mb-3">MYKONOS</p>
-          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-light uppercase tracking-[0.15em] text-luxury-navy mb-4">
+          <h1 className="font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-4">
             {t.contact.title}
           </h1>
-          <p className="text-sm text-gray-500 tracking-wide max-w-md mx-auto">{t.contact.subtitle}</p>
+          <p className="font-montserrat text-sm text-gray-500 tracking-wide max-w-md mx-auto">{t.contact.subtitle}</p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 sm:py-16 lg:px-8">
+      <div className="container mx-auto px-4 py-12 sm:py-16 lg:px-8 font-montserrat">
         <div className="flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-20 max-w-5xl mx-auto">
 
           {/* Left — WhatsApp & Business Hours */}
@@ -125,7 +124,7 @@ export default function ContactPage() {
             {/* WhatsApp */}
             <div>
               <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Direct Chat</p>
-              <h2 className="font-serif text-xl font-light uppercase tracking-[0.12em] text-luxury-navy mb-6">WhatsApp</h2>
+              <h2 className="font-playfair text-xl font-light text-luxury-navy mb-6">WhatsApp</h2>
               {clientRegion === null ? (
                 <div className="h-16 animate-pulse bg-gray-100 rounded" />
               ) : (
@@ -150,7 +149,7 @@ export default function ContactPage() {
             {/* Business Hours */}
             <div>
               <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Schedule</p>
-              <h2 className="font-serif text-xl font-light uppercase tracking-[0.12em] text-luxury-navy mb-6">{t.contact.businessHours}</h2>
+              <h2 className="font-playfair text-xl font-light text-luxury-navy mb-6">{t.contact.businessHours}</h2>
               <div className="space-y-0">
                 <div className="flex justify-between items-center py-3.5 border-b border-gray-100">
                   <span className="text-sm text-gray-500">{t.contact.mondayFriday}</span>
@@ -171,7 +170,7 @@ export default function ContactPage() {
           {/* Right — Email Form */}
           <div className="order-2 lg:order-none">
             <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Get In Touch</p>
-            <h2 className="font-serif text-xl font-light uppercase tracking-[0.12em] text-luxury-navy mb-8">Email</h2>
+            <h2 className="font-playfair text-xl font-light text-luxury-navy mb-8">Email</h2>
             <form onSubmit={handleSubmit} className="space-y-7">
               {[
                 { id: 'name', label: t.contact.name, placeholder: t.contact.yourName, value: formData.name, type: 'text', onChange: (v: string) => setFormData({ ...formData, name: v }) },
@@ -209,7 +208,7 @@ export default function ContactPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-luxury-navy text-white text-xs uppercase tracking-[0.2em] py-3.5 transition-all hover:bg-luxury-navy/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full bg-luxury-navy text-white text-xs font-montserrat font-semibold uppercase tracking-wider py-3.5 transition-all hover:bg-luxury-navy/90 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? t.contact.sending : t.contact.submit}
               </button>

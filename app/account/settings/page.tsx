@@ -43,11 +43,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-montserrat">
       <div className="rounded-lg border border-border/40 p-6">
         <div className="flex items-center gap-3 mb-4">
           <Lock className="h-5 w-5 text-luxury-gold" />
-          <h2 className="font-serif text-xl font-bold">{t.account.security}</h2>
+          <h2 className="font-montserrat text-xl font-bold">{t.account.security}</h2>
         </div>
         <div className="space-y-4">
           <div>

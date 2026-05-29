@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
 const GoldDivider = () => (
   <div className="flex items-center justify-center gap-4 my-10 sm:my-14">
@@ -26,9 +26,9 @@ export default function AboutPage() {
         {/* Breadcrumb - Desktop only */}
         <div className="border-b border-gray-200 hidden md:block">
           <div className="container mx-auto px-4 py-3">
-            <Breadcrumb 
+            <Breadcrumbs 
               items={[
-                { label: t.nav?.aboutUs || 'About Us', href: '/about' }
+                { label: 'About Us', href: '/about' }
               ]}
             />
           </div>
@@ -41,10 +41,7 @@ export default function AboutPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(184,152,95,0.04)_1px,_transparent_0)] bg-[length:36px_36px]" />
           
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <p className="mb-3 text-[10px] sm:text-xs font-medium uppercase tracking-[0.35em] text-luxury-gold">
-            MYKONOS
-          </p>
-          <h1 className="mb-4 font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-luxury-navy leading-tight">
+          <h1 className="mb-4 font-montserrat text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-luxury-navy leading-tight">
             {t.about.title}
           </h1>
           {/* Thin gold rule under title */}
@@ -53,7 +50,7 @@ export default function AboutPage() {
             <div className="w-1.5 h-1.5 rounded-full bg-luxury-gold" />
             <div className="h-px w-12 sm:w-20 bg-luxury-gold" />
           </div>
-          <p className="max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed font-light tracking-wide">
+          <p className="max-w-xl text-base sm:text-lg font-montserrat text-gray-600 leading-relaxed font-light tracking-wide">
             {t.about.subtitle}
           </p>
           </div>
@@ -85,11 +82,11 @@ export default function AboutPage() {
           {/* Art of Perfumery */}
           <section>
             <p className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold mb-3">01</p>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-6 leading-tight">
+            <h2 className="font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-6 leading-tight">
               {t.about.artOfPerfumery}
             </h2>
             <div className="w-12 h-0.5 bg-luxury-gold mb-8" />
-            <div className="space-y-5 text-base sm:text-lg leading-relaxed text-gray-600">
+            <div className="space-y-5 text-base sm:text-lg font-montserrat leading-relaxed text-gray-600">
               <p>{t.about.artPara1}</p>
               <p>{t.about.artPara2}</p>
             </div>
@@ -106,11 +103,11 @@ export default function AboutPage() {
           {/* Craftsmanship */}
           <section id="craftsmanship">
             <p className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold mb-3">02</p>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-6 leading-tight">
+            <h2 className="font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-6 leading-tight">
               {t.about.craftsmanship}
             </h2>
             <div className="w-12 h-0.5 bg-luxury-gold mb-8" />
-            <div className="space-y-5 text-base sm:text-lg leading-relaxed text-gray-600">
+            <div className="space-y-5 text-base sm:text-lg font-montserrat leading-relaxed text-gray-600">
               <p>{t.about.craftPara1}</p>
               <p>{t.about.craftPara2}</p>
             </div>
@@ -122,8 +119,8 @@ export default function AboutPage() {
               ].map((item) => (
                 <div key={item.title} className="bg-luxury-navy/3 border border-luxury-gold/20 rounded-xl p-5 sm:p-6">
                   <div className="w-6 h-px bg-luxury-gold mb-3" />
-                  <h4 className="font-serif text-base sm:text-lg font-semibold text-luxury-navy mb-2">{item.title}</h4>
-                  <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">{item.desc}</p>
+                  <h4 className="font-montserrat text-base sm:text-lg font-semibold text-luxury-navy mb-2">{item.title}</h4>
+                  <p className="text-xs sm:text-sm font-montserrat text-gray-500 leading-relaxed">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -134,11 +131,11 @@ export default function AboutPage() {
           {/* Sustainability */}
           <section id="sustainability">
             <p className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold mb-3">03</p>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-6 leading-tight">
+            <h2 className="font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-6 leading-tight">
               {t.about.sustainability}
             </h2>
             <div className="w-12 h-0.5 bg-luxury-gold mb-8" />
-            <div className="space-y-5 text-base sm:text-lg leading-relaxed text-gray-600">
+            <div className="space-y-5 text-base sm:text-lg font-montserrat leading-relaxed text-gray-600">
               <p>{t.about.sustainPara1}</p>
               <p>{t.about.sustainPara2}</p>
             </div>
@@ -152,10 +149,7 @@ export default function AboutPage() {
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(184,152,95,0.2)_0%,_transparent_60%)]" />
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-luxury-gold/60 to-transparent" />
               <div className="relative">
-                <p className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold/70 mb-4">
-                  EXPLORE THE COLLECTION
-                </p>
-                <h2 className="mb-4 font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight">
+                <h2 className="mb-4 font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight">
                   {t.about.experienceDiff}
                 </h2>
                 <div className="flex items-center justify-center gap-3 mb-6">
@@ -163,12 +157,12 @@ export default function AboutPage() {
                   <div className="w-1 h-1 rounded-full bg-luxury-gold" />
                   <div className="h-px w-10 bg-luxury-gold/50" />
                 </div>
-                <p className="mb-8 text-sm sm:text-base text-white/70 max-w-xl mx-auto leading-relaxed">
+                <p className="mb-8 text-sm sm:text-base font-inter text-white/70 max-w-xl mx-auto leading-relaxed">
                   {t.about.discoverCollection}
                 </p>
                 <Link href="/products">
                   <Button
-                    className="bg-luxury-gold text-luxury-navy hover:bg-luxury-gold-light font-semibold px-10 py-6 text-sm sm:text-base uppercase tracking-widest shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+                    className="bg-luxury-gold text-luxury-navy hover:bg-luxury-gold-light font-montserrat font-semibold px-10 py-6 text-sm sm:text-base uppercase tracking-widest shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
                     size="lg"
                   >
                     {t.about.shopNow}

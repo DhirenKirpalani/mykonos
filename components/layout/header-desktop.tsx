@@ -306,7 +306,7 @@ export function HeaderDesktop() {
             <div className="flex items-center gap-5 flex-1" />
             <Link href="/" className="static translate-x-0">
               <span
-                className="font-montserrat text-4xl font-normal tracking-normal transition-all duration-300 hover:opacity-90"
+                className="font-montserrat text-4xl font-semibold tracking-normal transition-all duration-300 hover:opacity-90"
                 style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
               >
                 MYKONOS
@@ -330,7 +330,7 @@ export function HeaderDesktop() {
           
           <Link href="/" className="static translate-x-0">
             <span
-              className="font-montserrat text-4xl font-normal tracking-normal transition-all duration-300 hover:opacity-90"
+              className="font-montserrat text-4xl font-semibold tracking-normal transition-all duration-300 hover:opacity-90"
               style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
             >
               MYKONOS
@@ -459,7 +459,7 @@ export function HeaderDesktop() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "text-sm font-medium uppercase tracking-wider transition-all hover:text-luxury-gold rounded px-2 py-1",
+                  "text-sm font-montserrat font-medium uppercase tracking-wider transition-all hover:text-luxury-gold rounded px-2 py-1",
                   isActive(item.href)
                     ? "text-luxury-gold"
                     : "text-white"
