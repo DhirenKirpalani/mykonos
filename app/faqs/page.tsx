@@ -161,7 +161,7 @@ export default function FAQsPage() {
         <div className="mx-auto max-w-4xl">
           {faqs.map((category, categoryIndex) => (
             <div key={categoryIndex} className="mb-12">
-              <h2 className="mb-6 font-montserrat text-2xl font-bold">
+              <h2 className="mb-6 font-playfair text-2xl font-bold">
                 {category.category}
               </h2>
               <div className="space-y-4">
@@ -206,7 +206,7 @@ export default function FAQsPage() {
             <h3 className="mb-4 font-montserrat text-2xl font-bold">
               {t.faqs.couldntFind}
             </h3>
-            <p className="mb-6 font-inter text-gray-300">
+            <p className="mb-6 font-playfair text-gray-300">
               {t.faqs.helpText}
             </p>
             <a

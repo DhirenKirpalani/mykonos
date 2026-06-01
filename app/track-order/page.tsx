@@ -735,7 +735,7 @@ export default function TrackOrderPage() {
   return (
     <div className={`min-h-screen bg-white ${order && order.payment_status === 'pending' && !order.payment_metadata?.transaction_status && order.expiry_time && new Date(order.expiry_time) >= new Date() ? 'pb-28 sm:pb-0' : ''}`}>
       {/* Hero Header */}
-      <div className="border-b border-border/40 bg-luxury-gray-light py-12">
+      <div className="border-b border-border/40 bg-white py-12">
         <div className="container mx-auto px-4 lg:px-8">
           {/* Breadcrumb - Desktop only */}
           <div className="mb-6 hidden md:block">

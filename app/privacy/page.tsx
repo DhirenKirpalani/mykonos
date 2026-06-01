@@ -39,11 +39,11 @@ export default function PrivacyPolicyPage() {
 
           {/* Information We Collect */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.infoWeCollect}
             </h2>
             
-            <h3 className="mb-3 mt-6 text-xl font-semibold text-gray-900">
+            <h3 className="mb-3 mt-6 text-xl font-bold text-gray-900">
               {t.privacy.personalInfo}
             </h3>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -57,7 +57,7 @@ export default function PrivacyPolicyPage() {
               <li>{t.locale === 'en' ? 'Account credentials (username and encrypted password)' : 'Kredensial akun (nama pengguna dan kata sandi terenkripsi)'}</li>
             </ul>
 
-            <h3 className="mb-3 mt-6 text-xl font-semibold text-gray-900">
+            <h3 className="mb-3 mt-6 text-xl font-bold text-gray-900">
               {t.privacy.autoCollected}
             </h3>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -74,7 +74,7 @@ export default function PrivacyPolicyPage() {
 
           {/* How We Use Your Information */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.howWeUse}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -93,7 +93,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Information Sharing */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.infoSharing}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -108,7 +108,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Data Security */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.dataSecurity}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -125,7 +125,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Cookies */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.cookies}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -135,7 +135,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Your Rights */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.yourRights}
             </h2>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
@@ -155,7 +155,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Children's Privacy */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.childrenPrivacy}
             </h2>
             <p className="text-base leading-relaxed text-gray-700">
@@ -165,7 +165,7 @@ export default function PrivacyPolicyPage() {
 
           {/* International Transfers */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.intlTransfers}
             </h2>
             <p className="text-base leading-relaxed text-gray-700">
@@ -175,7 +175,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Updates */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.changes}
             </h2>
             <p className="text-base leading-relaxed text-gray-700">
@@ -185,17 +185,16 @@ export default function PrivacyPolicyPage() {
 
           {/* Contact */}
           <section className="mb-12">
-            <h2 className="mb-4 font-montserrat text-2xl font-bold text-gray-900 md:text-3xl">
+            <h2 className="mb-4 font-playfair text-2xl font-bold text-gray-900 md:text-3xl">
               {t.privacy.contactUs}
             </h2>
-            <p className="mb-4 text-base leading-relaxed text-gray-700">
-              {t.privacy.contactDesc}
-            </p>
-            <div className="rounded-lg bg-luxury-gray-light p-6">
-              <p className="mb-2 text-base font-medium text-gray-900">Mykonos Luxury Fragrances</p>
-              <p className="text-base text-gray-700">{t.locale === 'en' ? 'Email' : 'Email'}: privacy@mykonos.com</p>
-              <p className="text-base text-gray-700">{t.locale === 'en' ? 'Phone' : 'Telepon'}: +62 857-8021-8514</p>
-              <p className="text-base text-gray-700">{t.locale === 'en' ? 'Address' : 'Alamat'}: Jakarta, Indonesia</p>
+            <div className="space-y-4 text-gray-700">
+              <div className="rounded-lg bg-blue-50 p-4 text-blue-900">
+                <p className="mb-2"><strong>Mykonos Luxury Fragrances</strong></p>
+                <p>{t.locale === 'en' ? 'Email' : 'Email'}: privacy@mykonos.com</p>
+                <p>{t.locale === 'en' ? 'Phone' : 'Telepon'}: +62 857-8021-8514</p>
+                <p>{t.locale === 'en' ? 'Address' : 'Alamat'}: Jakarta, Indonesia</p>
+              </div>
             </div>
           </section>
 

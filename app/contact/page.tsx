@@ -96,18 +96,16 @@ export default function ContactPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Luxury Hero Header */}
       <div className="bg-white border-b border-gray-100 relative">
-        {/* Breadcrumb - Desktop only */}
-        <div className="border-b border-gray-100 hidden md:block">
-          <div className="container mx-auto px-4 lg:px-8 py-3">
+        <div className="container mx-auto px-4 lg:px-8 pt-12 pb-10 md:pt-16 md:pb-12 text-center relative">
+          {/* Breadcrumb - Desktop only */}
+          <div className="absolute top-3 left-4 lg:left-8 hidden md:block">
             <Breadcrumbs 
               items={[
                 { label: t.contact.title, href: '/contact' }
               ]} 
             />
           </div>
-        </div>
-        
-        <div className="container mx-auto px-4 lg:px-8 pt-12 pb-10 md:pt-16 md:pb-12 text-center">
+          
           <h1 className="font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-4">
             {t.contact.title}
           </h1>

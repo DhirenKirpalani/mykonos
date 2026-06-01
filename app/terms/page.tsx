@@ -29,7 +29,7 @@ export default function TermsPage() {
       <div className="container mx-auto px-4 py-12 lg:px-8 font-montserrat">
         <div className="mx-auto max-w-4xl space-y-8">
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.generalTerms}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.generalTerms}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.generalPara1}
@@ -44,7 +44,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.changesModification}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.changesModification}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.changesPara1}
@@ -62,7 +62,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.privacyPolicy}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.privacyPolicy}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.privacyPara1}
@@ -80,7 +80,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.contentOwnership}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.contentOwnership}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.contentPara1}
@@ -92,7 +92,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.productInfo}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.productInfo}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.productPara1}
@@ -107,7 +107,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.orderingBilling}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.orderingBilling}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.orderPara1}
@@ -119,7 +119,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.thirdParty}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.thirdParty}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.thirdPartyPara}
@@ -128,7 +128,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.questionsFeedback}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.questionsFeedback}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.feedbackPara}
@@ -137,7 +137,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.terms.acceptance}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.terms.acceptance}</h2>
             <div className="space-y-4 text-gray-700">
               <p>
                 {t.terms.acceptancePara}

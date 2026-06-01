@@ -23,22 +23,22 @@ export default function AboutPage() {
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <div className="bg-white border-b border-gray-200 relative">
-        {/* Breadcrumb - Desktop only */}
-        <div className="border-b border-gray-200 hidden md:block">
-          <div className="container mx-auto px-4 py-3">
-            <Breadcrumbs 
-              items={[
-                { label: 'About Us', href: '/about' }
-              ]}
-            />
-          </div>
-        </div>
-        
         {/* Hero Content */}
         <div className="relative h-[340px] sm:h-[400px] md:h-[480px] overflow-hidden">
           {/* Subtle background pattern */}
           <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(184,152,95,0.04)_1px,_transparent_0)] bg-[length:36px_36px]" />
+          
+          {/* Breadcrumb - Desktop only */}
+          <div className="absolute top-0 left-0 right-0 z-10 hidden md:block">
+            <div className="container mx-auto px-4 py-3">
+              <Breadcrumbs 
+                items={[
+                  { label: 'About Us', href: '/about' }
+                ]}
+              />
+            </div>
+          </div>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
           <h1 className="mb-4 font-montserrat text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-luxury-navy leading-tight">
