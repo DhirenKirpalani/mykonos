@@ -117,7 +117,7 @@ export function ProductCarousel({
                 MUST HAVE
               </p>
             )}
-            <h2 className={`font-sans uppercase tracking-[0.18em] ${titleColor} ${
+            <h2 className={`font-montserrat uppercase tracking-[0.18em] ${titleColor} ${
               compactTitle
                 ? 'text-lg font-semibold md:text-xl'
                 : 'text-3xl font-bold md:text-4xl lg:text-5xl'
@@ -203,7 +203,7 @@ export function ProductCarousel({
               className="mt-10 md:mt-12 text-center"
             >
               <Link href={viewAllHref}>
-                <Button className="bg-[#1C2E4A] text-white px-10 py-3 text-xs font-medium uppercase tracking-[0.2em] hover:bg-[#1C2E4A]/90 transition-all rounded-none">
+                <Button className="bg-[#1C2E4A] text-white px-10 py-3 text-xs font-montserrat font-semibold uppercase tracking-[0.2em] hover:bg-[#1C2E4A]/90 transition-all rounded-none">
                   VIEW ALL PRODUCTS
                 </Button>
               </Link>

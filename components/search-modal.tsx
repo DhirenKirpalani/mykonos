@@ -102,7 +102,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute top-full left-0 right-0 bg-white border-t border-luxury-gold/20 shadow-2xl z-50 overflow-hidden"
+            className="absolute top-full left-0 right-0 bg-white border-t border-luxury-gold/20 shadow-2xl z-50 max-h-[80vh] overflow-y-auto"
           >
             {/* Decorative background pattern */}
             <div className="absolute inset-0 opacity-[0.03]">
@@ -123,17 +123,24 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     className="w-full bg-transparent border-0 border-b border-luxury-navy/20 py-3 pl-8 pr-4 text-lg lg:text-xl font-montserrat text-luxury-navy placeholder:text-luxury-navy/40 placeholder:font-montserrat focus:outline-none focus:border-luxury-gold tracking-wide transition-colors"
                   />
                 </div>
-                <button
-                  onClick={onClose}
-                  className="flex h-10 w-10 items-center justify-center text-luxury-navy/60 transition-colors hover:text-luxury-navy flex-shrink-0"
-                  aria-label="Close search"
-                >
-                  <X className="h-6 w-6" strokeWidth={1.5} />
-                </button>
+                {searchQuery ? (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="flex h-10 w-10 items-center justify-center text-luxury-navy/60 transition-colors hover:text-luxury-navy flex-shrink-0"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-6 w-6" strokeWidth={1.5} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={onClose}
+                    className="flex h-10 w-10 items-center justify-center text-luxury-navy/60 transition-colors hover:text-luxury-navy flex-shrink-0"
+                    aria-label="Close search"
+                  >
+                    <X className="h-6 w-6" strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
-
-              {/* Divider */}
-              <div className="h-px bg-luxury-navy/10 mb-8 lg:mb-12" />
 
               {/* Content Section */}
               <div className="grid grid-cols-1 gap-8 lg:gap-12">

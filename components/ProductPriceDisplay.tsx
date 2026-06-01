@@ -115,7 +115,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
         </div>
       )}
       <div className="flex items-baseline gap-3 flex-wrap">
-        <div className="text-3xl md:text-4xl font-bold text-luxury-navy">
+        <div className="text-3xl md:text-4xl font-bold font-montserrat text-luxury-navy">
           {hasPriceRange ? (
             voucher ? (
               <>From {formatPrice((minVariantPrice - voucherDiscount) * quantity, currencyCode)}</>

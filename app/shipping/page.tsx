@@ -29,7 +29,7 @@ export default function ShippingPage() {
       <div className="container mx-auto px-4 py-12 lg:px-8 font-montserrat">
         <div className="mx-auto max-w-4xl space-y-8">
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.shipping.shippingMethod}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.shipping.shippingMethod}</h2>
             <div className="space-y-4 text-gray-700">
               <p className="rounded-lg bg-blue-50 p-4 text-blue-900">
                 <strong>{t.shipping.preOrder}</strong>
@@ -41,7 +41,7 @@ export default function ShippingPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.shipping.processingNotes}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.shipping.processingNotes}</h2>
             <div className="space-y-4 text-gray-700">
               <ol className="ml-6 list-decimal space-y-4">
                 <li>
@@ -58,7 +58,7 @@ export default function ShippingPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-bold text-luxury-navy">{t.shipping.shippingSchedule}</h2>
+            <h2 className="mb-4 font-montserrat text-2xl font-bold text-luxury-navy">{t.shipping.shippingSchedule}</h2>
             <div className="space-y-6">
               <div>
                 <h3 className="mb-3 text-xl font-semibold text-luxury-navy">{t.shipping.domesticOrders}</h3>
