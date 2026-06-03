@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Package, Mail, MapPin, Calendar, Truck, CheckCircle2, Clock, UserPlus, LogIn } from 'lucide-react'
+import { Package, Mail, MapPin, Calendar, Truck, CheckCircle2, Clock, UserPlus, LogIn, ChevronRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils/currency'
 import { getCountryName } from '@/lib/utils/country'
 import { useTranslation } from '@/hooks/useTranslation'
@@ -828,20 +828,23 @@ export default function TrackOrderPage() {
                           )}
                         </p>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <p className="text-xs text-gray-500">
-                          {new Date(sessionOrder.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {new Date(sessionOrder.created_at).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="text-xs text-gray-500">
+                            {new Date(sessionOrder.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(sessionOrder.created_at).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
                       </div>
                     </div>
                     {/* Action hint */}

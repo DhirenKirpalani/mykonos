@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Minus, Plus, ShoppingBag } from 'lucide-react'
+import { X, Minus, Plus, ShoppingBag, Ticket } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -49,6 +49,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
   const [mounted, setMounted] = useState(false)
   const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
+  const [activeVoucher, setActiveVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number } | null>(null)
 
   const isVideo = (url: any): boolean => {
     if (!url || typeof url !== 'string') return false
@@ -157,10 +158,15 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
             )
             
             if (applicableVoucher) {
-              const price = region?.code === 'ID' && item.product.price_idr 
+              // Use variant price if a variant is selected, else fall back to product price
+              let unitPrice = region?.code === 'ID' && item.product.price_idr 
                 ? item.product.price_idr 
                 : item.product.price_usd || 0
-              const itemTotal = price * item.quantity
+              if (item.variant_sku && item.product.variants) {
+                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
+              }
+              const itemTotal = unitPrice * item.quantity
               
               const voucherDiscount = applicableVoucher.discount_type === 'percentage'
                 ? (itemTotal * applicableVoucher.discount_value / 100)
@@ -171,6 +177,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
           })
           
           setVoucherDiscounts(discountMap)
+          setActiveVoucher(activeVouchers[0] ? { discount_type: activeVouchers[0].discount_type, discount_value: activeVouchers[0].discount_value } : null)
         }
       }
     } catch (error) {
@@ -557,19 +564,14 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                               const voucherDiscount = voucherDiscounts.get(item.id) || 0
                               return (
                                 <>
-                                  {discounted !== null && discounted < basePrice && (
+                                  {(discounted !== null && discounted < basePrice) || voucherDiscount > 0 ? (
                                     <span className="text-sm text-gray-400 line-through">
-                                      {formatPrice(basePrice * item.quantity, region)}
+                                      {formatPrice(displayPrice * item.quantity, region)}
                                     </span>
-                                  )}
+                                  ) : null}
                                   <p className="text-lg font-bold text-gray-900">
                                     {formatPrice((displayPrice * item.quantity) - voucherDiscount, region)}
                                   </p>
-                                  {voucherDiscount > 0 && (
-                                    <span className="text-xs text-orange-600 font-semibold">
-                                      Voucher: -{formatPrice(voucherDiscount, region)}
-                                    </span>
-                                  )}
                                 </>
                               )
                             })() : '...'}
@@ -589,23 +591,28 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
               )}
             </div>
 
-            {/* Discount Section */}
-            {cartItems.length > 0 && totalVoucherDiscount > 0 && (
-              <div className="border-t border-black/5 px-8 py-6">
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-sm tracking-wide font-light">{t.cart.discount}</span>
-                  <span className="text-sm font-medium text-orange-600">
-                    -{region ? formatPrice(totalVoucherDiscount, region) : '...'}
-                  </span>
-                </div>
-              </div>
-            )}
-
             {/* Footer */}
             {cartItems.length > 0 && (
               <div className="border-t border-gray-200 px-6 sm:px-8 py-6">
-                <div className="mb-6 flex items-center justify-between">
-                  <span className="text-lg font-medium text-gray-700">{t.cart.subtotal}</span>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">{t.cart.subtotal}</span>
+                    <span className="text-sm font-medium text-gray-900">{region ? formatPrice(subtotal, region) : '...'}</span>
+                  </div>
+                  {totalVoucherDiscount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-orange-600 flex items-center gap-1">
+                        <Ticket className="h-3.5 w-3.5 flex-shrink-0" />
+                        Voucher{activeVoucher?.discount_type === 'percentage' ? ` (${activeVoucher.discount_value}%)` : ''}
+                      </span>
+                      <span className="text-sm font-medium text-orange-600">
+                        -{region ? formatPrice(totalVoucherDiscount, region) : '...'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="mb-6 flex items-center justify-between border-t border-gray-100 pt-3">
+                  <span className="text-lg font-semibold text-gray-900">{t.cart.total}</span>
                   <span className="text-2xl font-bold text-gray-900">{region ? formatPrice(total, region) : '...'}</span>
                 </div>
 

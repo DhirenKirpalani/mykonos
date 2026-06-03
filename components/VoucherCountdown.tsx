@@ -89,15 +89,15 @@ export function VoucherCountdown({ validUntil, className = '', onExpire }: Vouch
 
   // Full countdown format for product details voucher section
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
+    <div className={`flex items-center gap-0.5 ${className}`}>
       <div className="bg-gray-900 text-white px-1.5 py-0.5 rounded text-xs font-bold min-w-[1.5rem] text-center">
         {String(timeLeft.hours).padStart(2, '0')}
       </div>
-      <span className="text-white font-bold">:</span>
+      <span className="text-gray-700 font-bold text-xs px-0.5">:</span>
       <div className="bg-gray-900 text-white px-1.5 py-0.5 rounded text-xs font-bold min-w-[1.5rem] text-center">
         {String(timeLeft.minutes).padStart(2, '0')}
       </div>
-      <span className="text-white font-bold">:</span>
+      <span className="text-gray-700 font-bold text-xs px-0.5">:</span>
       <div className="bg-gray-900 text-white px-1.5 py-0.5 rounded text-xs font-bold min-w-[1.5rem] text-center">
         {String(timeLeft.seconds).padStart(2, '0')}
       </div>

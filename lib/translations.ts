@@ -92,7 +92,18 @@ export const translations = {
       countryOfOrigin: "Country of Origin",
       shipsFrom: "Ships From",
       bpomNumber: "BPOM No.",
-      months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+      months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      voucherDiscount: "Voucher Discount",
+      remaining: "Remaining",
+      hour: "hour",
+      hours: "hours",
+      minute: "minute",
+      minutes: "minutes",
+      lessThan: "Less than",
+      withVoucher: "With Voucher",
+      originalPrice: "Original Price",
+      voucherDiscountLabel: "Voucher Discount",
+      netPrice: "Net Price"
     },
     home: {
       shopNow: "Shop Now",
@@ -908,7 +919,18 @@ export const translations = {
       countryOfOrigin: "Negara Asal",
       shipsFrom: "Dikirim Dari",
       bpomNumber: "No. BPOM",
-      months: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+      months: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"],
+      voucherDiscount: "Diskon Voucher",
+      remaining: "Sisa",
+      hour: "jam",
+      hours: "jam",
+      minute: "menit",
+      minutes: "menit",
+      lessThan: "Kurang dari",
+      withVoucher: "Dengan Voucher",
+      originalPrice: "Harga Asli",
+      voucherDiscountLabel: "Diskon Voucher",
+      netPrice: "Harga Bersih"
     },
     home: {
       shopNow: "Belanja Sekarang",

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Heart, ShoppingBag, Minus, Plus } from 'lucide-react'
+import { X, Heart, ShoppingBag, Minus, Plus, Ticket } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -57,6 +57,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [cartItems, setCartItems] = useState<any[]>([])
   const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
+  const [activeVoucher, setActiveVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number } | null>(null)
 
   const isVideo = (url: any): boolean => {
     if (!url || typeof url !== 'string') return false
@@ -181,12 +182,17 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
             )
             
             if (applicableVoucher) {
-              const price = region?.code === 'ID' && item.product.price_idr 
+              // Use variant price if a variant is selected, else fall back to product price
+              let unitPrice = region?.code === 'ID' && item.product.price_idr 
                 ? item.product.price_idr 
                 : item.product.price_usd || 0
+              if (item.variant_sku && item.product.variants) {
+                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
+              }
               
               const voucherDiscount = applicableVoucher.discount_type === 'percentage'
-                ? (price * applicableVoucher.discount_value / 100)
+                ? (unitPrice * applicableVoucher.discount_value / 100)
                 : applicableVoucher.discount_value
               
               discountMap.set(item.id, voucherDiscount)
@@ -194,6 +200,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
           })
           
           setVoucherDiscounts(discountMap)
+          setActiveVoucher(activeVouchers[0] ? { discount_type: activeVouchers[0].discount_type, discount_value: activeVouchers[0].discount_value } : null)
         }
       }
       
@@ -473,51 +480,44 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                         })()}
                       </div>
 
-                      <div className="flex flex-1 flex-col justify-between">
-                        <div>
-                          <h3 className="text-base font-semibold text-gray-900 leading-snug">
-                            {(item as any).variant_name || item.product.name}
-                          </h3>
-                          {region && (() => {
-                            let unitPrice = region.code === 'ID' && (item.product as any).price_idr 
-                              ? (item.product as any).price_idr 
-                              : (item.product as any).price_usd || 0
-                            
-                            if ((item as any).variant_sku && item.product.variants) {
-                              const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
-                              if (variant) unitPrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
-                            }
-
-                            const variantName = (item as any).variant_name
-                            const discountKey = variantName ? `${item.product_id}-${variantName}` : item.product_id
-                            const campaignDiscount = activeDiscounts.get(discountKey) || activeDiscounts.get(item.product_id)
-                            const discounted = campaignDiscount?.discounted_price ?? null
-                            const displayUnitPrice = discounted !== null && discounted < unitPrice ? discounted : unitPrice
-
-                            return (
-                              <p className="text-sm text-gray-600 mt-1.5">
-                                {formatPrice(displayUnitPrice, region)} / {t.cart.item}
-                              </p>
-                            )
-                          })()}
-                          {!(item as any).variant_name && item.product.size && (
-                            <p className="mt-1 text-xs tracking-wide text-black/60">
-                              {item.product.size}
-                            </p>
-                          )}
-                          
-                          <div className="mt-2 flex flex-col gap-1">
-                            {region ? (() => {
-                              let basePrice = region.code === 'ID' && (item.product as any).price_idr 
-                                ? (item.product as any).price_idr 
+                      {/* Product info + price row */}
+                      <div className="flex flex-1 flex-col gap-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+                              {item.product.name}
+                            </h3>
+                            {(item as any).variant_name && (
+                              <p className="mt-0.5 text-xs text-gray-500">{(item as any).variant_name}</p>
+                            )}
+                            {region && (() => {
+                              let unitPrice = region.code === 'ID' && (item.product as any).price_idr
+                                ? (item.product as any).price_idr
                                 : (item.product as any).price_usd || 0
-                              
+                              if ((item as any).variant_sku && item.product.variants) {
+                                const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
+                                if (variant) unitPrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
+                              }
+                              const variantName = (item as any).variant_name
+                              const discountKey = variantName ? `${item.product_id}-${variantName}` : item.product_id
+                              const campaignDiscount = activeDiscounts.get(discountKey) || activeDiscounts.get(item.product_id)
+                              const discounted = campaignDiscount?.discounted_price ?? null
+                              const displayUnitPrice = discounted !== null && discounted < unitPrice ? discounted : unitPrice
+                              return (
+                                <p className="mt-1 text-xs text-gray-500">{formatPrice(displayUnitPrice, region)} / {t.cart.item}</p>
+                              )
+                            })()}
+                          </div>
+                          {/* Price column */}
+                          <div className="flex flex-col items-end flex-shrink-0">
+                            {region ? (() => {
+                              let basePrice = region.code === 'ID' && (item.product as any).price_idr
+                                ? (item.product as any).price_idr
+                                : (item.product as any).price_usd || 0
                               if ((item as any).variant_sku && item.product.variants) {
                                 const variant = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
                                 if (variant) basePrice = region.code === 'ID' ? variant.price_idr : variant.price_usd
                               }
-
-                              // Apply campaign discount
                               const variantName = (item as any).variant_name
                               const discountKey = variantName ? `${item.product_id}-${variantName}` : item.product_id
                               const campaignDiscount = activeDiscounts.get(discountKey) || activeDiscounts.get(item.product_id)
@@ -525,72 +525,54 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                               const displayPrice = discounted !== null && discounted < basePrice ? discounted : basePrice
                               const qty = quantities[item.id] || 1
                               const voucherDiscount = voucherDiscounts.get(item.id) || 0
-
                               return (
                                 <>
-                                  {discounted !== null && discounted < basePrice && (
-                                    <span className="text-sm text-gray-400 line-through">
-                                      {formatPrice(basePrice * qty, region)}
-                                    </span>
-                                  )}
-                                  <p className="text-lg font-bold text-gray-900">
-                                    {formatPrice((displayPrice * qty) - voucherDiscount, region)}
-                                  </p>
-                                  {voucherDiscount > 0 && (
-                                    <span className="text-xs text-orange-600 font-semibold">
-                                      Voucher: -{formatPrice(voucherDiscount, region)}
-                                    </span>
-                                  )}
+                                  {(discounted !== null && discounted < basePrice) || voucherDiscount > 0 ? (
+                                    <span className="text-xs text-gray-400 line-through">{formatPrice(displayPrice * qty, region)}</span>
+                                  ) : null}
+                                  <span className="text-sm font-bold text-gray-900">{formatPrice((displayPrice * qty) - voucherDiscount, region)}</span>
                                 </>
                               )
                             })() : '...'}
                           </div>
                         </div>
 
-                        <div className="space-y-3">
+                        {/* Actions row */}
+                        <div className="flex items-center gap-2">
                           {(() => {
-                            // Check if item is already in cart
-                            const isInCart = cartItems.some(cartItem => 
-                              cartItem.product_id === item.product_id && 
+                            const isInCart = cartItems.some(cartItem =>
+                              cartItem.product_id === item.product_id &&
                               cartItem.variant_sku === item.variant_sku
                             )
                             const isOutOfStock = item.product.stock_quantity === 0
                             const isAdding = addingToCart === item.id
                             const isDisabled = isOutOfStock || isAdding || isInCart
-
                             return (
                               <button
                                 onClick={() => addToCart(
                                   item.id,
-                                  item.product.id, 
-                                  region?.code === 'ID' && (item.product as any).price_idr 
-                                    ? (item.product as any).price_idr 
+                                  item.product.id,
+                                  region?.code === 'ID' && (item.product as any).price_idr
+                                    ? (item.product as any).price_idr
                                     : (item.product as any).price_usd || 0
                                 )}
-                                className={`flex items-center justify-center gap-2 px-4 py-2.5 text-xs tracking-wider font-medium uppercase transition-all duration-300 w-full ${
-                                  isInCart 
-                                    ? 'bg-green-50 border-2 border-green-500 text-green-700 cursor-default'
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold uppercase tracking-wider rounded transition-all duration-200 ${
+                                  isInCart
+                                    ? 'bg-green-50 border border-green-500 text-green-700 cursor-default'
                                     : isOutOfStock
-                                    ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed'
-                                    : 'border border-black hover:bg-black hover:text-white active:scale-[0.98]'
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-luxury-navy text-white hover:bg-luxury-navy/90 active:scale-[0.98]'
                                 }`}
                                 disabled={isDisabled}
                               >
                                 <ShoppingBag className="h-3.5 w-3.5" />
-                                {isOutOfStock 
-                                  ? t.wishlist.outOfStock 
-                                  : isAdding 
-                                  ? t.wishlist.adding 
-                                  : isInCart 
-                                  ? '✓ In Cart' 
-                                  : t.wishlist.addToCart}
+                                {isOutOfStock ? t.wishlist.outOfStock : isAdding ? t.wishlist.adding : isInCart ? '✓ In Cart' : t.wishlist.addToCart}
                               </button>
                             )
                           })()}
-                          
                           <button
                             onClick={() => removeItem(item.id)}
-                            className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors text-center w-full hover:underline"
+                            className="px-3 py-2 text-xs text-red-500 hover:text-red-700 font-medium transition-colors border border-red-200 hover:border-red-400 rounded"
                           >
                             {t.wishlist.remove || 'Remove'}
                           </button>
@@ -603,6 +585,47 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
             </div>
 
             {/* Footer */}
+            {wishlistItems.length > 0 && (() => {
+              const wishlistSubtotal = wishlistItems.reduce((sum, item) => {
+                let unitPrice = region?.code === 'ID' && (item.product as any).price_idr
+                  ? (item.product as any).price_idr
+                  : (item.product as any).price_usd || 0
+                if ((item as any).variant_sku && item.product.variants) {
+                  const v = item.product.variants.find((v: any) => v.sku === (item as any).variant_sku)
+                  if (v) unitPrice = region?.code === 'ID' ? v.price_idr : v.price_usd
+                }
+                const variantName = (item as any).variant_name
+                const discountKey = variantName ? `${item.product_id}-${variantName}` : item.product_id
+                const campaignDiscount = activeDiscounts.get(discountKey) || activeDiscounts.get(item.product_id)
+                const displayPrice = campaignDiscount?.discounted_price ?? unitPrice
+                return sum + displayPrice * (quantities[item.id] || 1)
+              }, 0)
+              const totalWishlistVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((s, d) => s + d, 0)
+              if (!region) return null
+              return (
+                <div className="border-t border-gray-200 px-6 sm:px-8 py-4">
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600">{t.cart.subtotal}</span>
+                      <span className="text-sm font-medium text-gray-900">{formatPrice(wishlistSubtotal, region)}</span>
+                    </div>
+                    {totalWishlistVoucherDiscount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-orange-600 flex items-center gap-1">
+                          <Ticket className="h-3.5 w-3.5 flex-shrink-0" />
+                          Voucher{activeVoucher?.discount_type === 'percentage' ? ` (${activeVoucher.discount_value}%)` : ''}
+                        </span>
+                        <span className="text-sm font-medium text-orange-600">-{formatPrice(totalWishlistVoucherDiscount, region)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                    <span className="text-base font-semibold text-gray-900">{t.cart.total}</span>
+                    <span className="text-xl font-bold text-gray-900">{formatPrice(wishlistSubtotal - totalWishlistVoucherDiscount, region)}</span>
+                  </div>
+                </div>
+              )
+            })()}
           </motion.div>
         </>
       )}

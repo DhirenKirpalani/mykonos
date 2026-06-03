@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRegion } from '@/contexts/RegionContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { formatPrice } from '@/lib/utils'
 
 interface ProductPriceDisplayProps {
@@ -17,6 +18,7 @@ interface ProductPriceDisplayProps {
 
 export function ProductPriceDisplay({ product, quantity = 1, showRange = false, voucher = null, activeDiscounts = null }: ProductPriceDisplayProps) {
   const { region, isLoading: regionLoading } = useRegion()
+  const { t } = useLanguage()
   const [showBreakdown, setShowBreakdown] = useState(false)
   
   // Show loading state while region is being determined to prevent price flash
@@ -94,11 +96,15 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
   const currencyCode = region?.currency_code || 'USD'
 
   // Calculate voucher discount
-  const voucherDiscount = voucher ? (
+  // For price ranges, use minVariantPrice as the base; otherwise use unitPrice
+  const voucherBasePrice = hasPriceRange ? minVariantPrice : unitPrice
+  const voucherDiscountPerUnit = voucher ? (
     voucher.discount_type === 'percentage' 
-      ? (totalPrice * voucher.discount_value / 100)
+      ? (voucherBasePrice * voucher.discount_value / 100)
       : voucher.discount_value
   ) : 0
+  
+  const voucherDiscount = voucherDiscountPerUnit * quantity
   const priceAfterVoucher = totalPrice - voucherDiscount
 
   return (
@@ -115,15 +121,15 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
         </div>
       )}
       <div className="flex items-baseline gap-3 flex-wrap">
-        <div className="text-3xl md:text-4xl font-bold font-montserrat text-luxury-navy">
+        <div className="text-3xl md:text-4xl font-bold font-montserrat text-luxury-navy flex items-baseline gap-2 flex-wrap">
           {hasPriceRange ? (
-            voucher ? (
-              <>From {formatPrice((minVariantPrice - voucherDiscount) * quantity, currencyCode)}</>
+            voucher && !hasVariantDiscount ? (
+              <>From <span className="line-through text-gray-400 font-normal">{formatPrice(minVariantPrice * quantity, currencyCode)}</span>{' '}{formatPrice((minVariantPrice - voucherDiscountPerUnit) * quantity, currencyCode)}</>
             ) : (
               <>From {formatPrice(minVariantPrice * quantity, currencyCode)}</>
             )
-          ) : voucher ? (
-            formatPrice(priceAfterVoucher, currencyCode)
+          ) : voucher && !hasVariantDiscount && !noVariantDiscount ? (
+            <><span className="text-lg text-gray-400 line-through font-normal">{formatPrice(totalPrice, currencyCode)}</span>{' '}{formatPrice(priceAfterVoucher, currencyCode)}</>
           ) : (
             formatPrice(totalPrice, currencyCode)
           )}
@@ -137,7 +143,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
               <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
               <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
             </svg>
-            Dengan Voucher
+            {t.products.withVoucher} ({voucher.discount_type === 'percentage' ? `${voucher.discount_value}%` : formatPrice(voucher.discount_value, currencyCode)})
             <svg className={`h-3 w-3 transition-transform ${showBreakdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
@@ -159,7 +165,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
       {showBreakdown && voucher && (
         <div className="mt-3 bg-luxury-gold/5 border border-luxury-gold/20 rounded-lg p-4 space-y-2.5 animate-in slide-in-from-top-2 duration-300">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Harga Asli</span>
+            <span className="text-gray-600">{t.products.originalPrice}</span>
             <span className="font-medium">
               {hasPriceRange 
                 ? `From ${formatPrice(minVariantPrice * quantity, currencyCode)}`
@@ -168,16 +174,16 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
             </span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-luxury-gold">Diskon Voucher</span>
+            <span className="text-luxury-gold">Voucher ({voucher.discount_type === 'percentage' ? `${voucher.discount_value}%` : formatPrice(voucher.discount_value, currencyCode)})</span>
             <span className="font-semibold text-luxury-gold">
               - {formatPrice(voucherDiscount, currencyCode)}
             </span>
           </div>
           <div className="border-t border-luxury-gold/20 pt-2.5 flex justify-between">
-            <span className="font-bold text-gray-900">Harga Bersih</span>
+            <span className="font-bold text-gray-900">{t.products.netPrice}</span>
             <span className="font-bold text-luxury-navy text-lg md:text-xl">
               {hasPriceRange
-                ? `From ${formatPrice((minVariantPrice - voucherDiscount) * quantity, currencyCode)}`
+                ? `From ${formatPrice((minVariantPrice - voucherDiscountPerUnit) * quantity, currencyCode)}`
                 : formatPrice(priceAfterVoucher, currencyCode)
               }
             </span>
