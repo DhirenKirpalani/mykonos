@@ -7,6 +7,7 @@ import { Search, X } from 'lucide-react'
 import { ProductCard } from '@/components/product-card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Database } from '@/lib/supabase/database.types'
+import { supabase } from '@/lib/supabase/client'
 
 type Product = Database['public']['Tables']['products']['Row']
 
@@ -20,6 +21,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [topProducts, setTopProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
+  const [activeVoucher, setActiveVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { t } = useLanguage()
   const pathname = usePathname()
@@ -28,8 +30,23 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     if (isOpen) {
       inputRef.current?.focus()
       fetchTopProducts()
+      fetchVoucher()
     }
   }, [isOpen])
+
+  const fetchVoucher = async () => {
+    try {
+      const now = new Date().toISOString()
+      const { data } = await supabase
+        .from('promo_codes')
+        .select('discount_type, discount_value, valid_until')
+        .eq('is_active', true)
+        .gt('valid_until', now)
+        .in('type', ['voucher'])
+        .limit(1)
+      if (data && data.length > 0) setActiveVoucher(data[0] as any)
+    } catch {}
+  }
 
   // Close search when the route changes (product clicked navigated away)
   useEffect(() => {
@@ -156,7 +173,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
                   {displayProducts.map((product) => (
                     <div key={product.id} className="w-full">
-                      <ProductCard product={product} className="h-full" />
+                      <ProductCard product={product} className="h-full" voucher={activeVoucher} />
                     </div>
                   ))}
                 </div>

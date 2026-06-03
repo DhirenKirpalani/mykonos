@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { VoucherCountdown } from '@/components/VoucherCountdown'
 
 interface ProductImageGalleryProps {
   images: string[]
@@ -139,23 +138,6 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
           )}
         </motion.div>
       </AnimatePresence>
-      {voucher && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 bg-luxury-gold px-3 py-2 shadow-lg">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <svg className="h-4 w-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
-              </svg>
-              <span className="text-white text-xs font-bold">
-                Voucher Diskon {voucher.discount_type === 'percentage'
-                  ? `${voucher.discount_value}%`
-                  : `Rp${voucher.discount_value.toLocaleString('id-ID')}`}
-              </span>
-            </div>
-            <VoucherCountdown validUntil={voucher.valid_until} onExpire={onVoucherExpire} />
-          </div>
-        </div>
-      )}
     </div>
   )
 
@@ -316,23 +298,6 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
                       priority={index === 0}
                       sizes="50vw"
                     />
-                  </div>
-                )}
-                {voucher && index === 0 && (
-                  <div className="absolute bottom-0 left-0 right-0 z-20 bg-luxury-gold px-3 py-2 shadow-lg">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <svg className="h-4 w-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
-                        </svg>
-                        <span className="text-white text-xs font-bold">
-                          Voucher Diskon {voucher.discount_type === 'percentage'
-                            ? `${voucher.discount_value}%`
-                            : `Rp${voucher.discount_value.toLocaleString('id-ID')}`}
-                        </span>
-                      </div>
-                      <VoucherCountdown validUntil={voucher.valid_until} onExpire={onVoucherExpire} />
-                    </div>
                   </div>
                 )}
               </div>

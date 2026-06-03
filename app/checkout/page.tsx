@@ -12,7 +12,7 @@ import { LoadingSpinner } from '@/components/common'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown } from 'lucide-react'
+import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown, Ticket } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CheckoutModal } from '@/components/CheckoutModal'
@@ -380,10 +380,15 @@ export default function CheckoutPage() {
             )
             
             if (applicableVoucher) {
-              const basePrice = region?.code === 'ID' && item.product.price_idr 
+              // Use variant price if a variant is selected, else fall back to product price
+              let unitPrice = region?.code === 'ID' && item.product.price_idr 
                 ? item.product.price_idr 
                 : item.product.price_usd || 0
-              const price = getEffectivePrice(basePrice, null)
+              if (item.variant_sku && item.product.variants) {
+                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
+              }
+              const price = getEffectivePrice(unitPrice, null)
               const itemTotal = price * item.quantity
               
               const voucherDiscount = applicableVoucher.discount_type === 'percentage'
@@ -493,10 +498,15 @@ export default function CheckoutPage() {
             )
             
             if (applicableVoucher) {
-              const basePrice = region?.code === 'ID' && item.product.price_idr 
+              // Use variant price if a variant is selected, else fall back to product price
+              let unitPrice = region?.code === 'ID' && item.product.price_idr 
                 ? item.product.price_idr 
                 : item.product.price_usd || 0
-              const price = getEffectivePrice(basePrice, null)
+              if (item.variant_sku && item.product.variants) {
+                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
+              }
+              const price = getEffectivePrice(unitPrice, null)
               const itemTotal = price * item.quantity
               
               const voucherDiscount = applicableVoucher.discount_type === 'percentage'
@@ -613,10 +623,15 @@ export default function CheckoutPage() {
               )
               
               if (applicableVoucher) {
-                const basePrice = region?.code === 'ID' && item.product.price_idr 
+                // Use variant price if a variant is selected, else fall back to product price
+                let unitPrice = region?.code === 'ID' && item.product.price_idr 
                   ? item.product.price_idr 
                   : item.product.price_usd || 0
-                const price = getEffectivePrice(basePrice, null)
+                if (item.variant_sku && item.product.variants) {
+                  const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
+                  if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
+                }
+                const price = getEffectivePrice(unitPrice, null)
                 const itemTotal = price * item.quantity
                 
                 const voucherDiscount = applicableVoucher.discount_type === 'percentage'
@@ -2296,27 +2311,17 @@ export default function CheckoutPage() {
     const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
     const priceUSD = discounted !== null ? discounted : salePrice
     
-    console.log(`  Item: ${item.product?.name || 'Unknown'}, basePrice: ${basePrice}, salePrice: ${salePrice}, priceUSD: ${priceUSD}, qty: ${item.quantity}`)
-    
-    // Get the item total with voucher discount applied (matching what's displayed)
+    // Subtotal = original price before voucher
     const itemTotalUSD = priceUSD * item.quantity
-    const voucherDiscount = voucherDiscounts.get(item.id) || 0
-    const netItemTotalUSD = itemTotalUSD - voucherDiscount
-    
-    // Convert to local currency (this matches formatPrice conversion)
-    const priceLocal = convertToLocalCurrency(netItemTotalUSD)
-    console.log(`  itemTotalUSD: ${itemTotalUSD}, voucherDiscount: ${voucherDiscount}, netItemTotalUSD: ${netItemTotalUSD}, priceLocal: ${priceLocal}`)
+    const priceLocal = convertToLocalCurrency(itemTotalUSD)
     return total + priceLocal
   }, 0)
-  console.log('💵 [DISPLAY SUBTOTAL] Final displaySubtotal:', displaySubtotal)
   
-  // Note: displaySubtotal already has voucher discounts applied per item
   const displayVoucherDiscount = Math.round(convertToLocalCurrency(totalVoucherDiscount) * 100) / 100
   const displayShipping = Math.round(convertToLocalCurrency(shipping) * 100) / 100
   const displayTax = Math.round(convertToLocalCurrency(tax) * 100) / 100
   const displayDiscount = Math.round(convertToLocalCurrency(discount) * 100) / 100
-  // displaySubtotal already has vouchers deducted, so don't subtract again
-  const displayTotal = Math.round((displaySubtotal + displayShipping + displayTax - displayDiscount) * 100) / 100
+  const displayTotal = Math.round((displaySubtotal - displayVoucherDiscount + displayShipping + displayTax - displayDiscount) * 100) / 100
 
   if (isLoading) {
     return (
@@ -2479,9 +2484,9 @@ export default function CheckoutPage() {
                             {t.trackOrder.qty}: {item.quantity}
                           </span>
                           <div className="flex flex-col items-end">
-                            {hasCampaignDiscount && (
+                            {(hasCampaignDiscount || (voucherDiscounts.get(item.id) || 0) > 0) && (
                               <span className="text-xs text-gray-400 line-through">
-                                {formatPrice(basePrice * item.quantity, region?.currency_code || currency)}
+                                {formatPrice(price * item.quantity, region?.currency_code || currency)}
                               </span>
                             )}
                             <p className="text-sm sm:text-base font-bold text-gray-900">
@@ -2493,16 +2498,6 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                         </div>
-                        {voucherDiscounts.has(item.id) && voucherDiscounts.get(item.id)! > 0 && (
-                          <div className="flex items-center gap-1.5 justify-end">
-                            <svg className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
-                            </svg>
-                            <span className="text-xs text-orange-600 font-medium">
-                              Voucher: -{formatPrice(voucherDiscounts.get(item.id)!, region?.currency_code || currency)}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -2890,10 +2885,8 @@ export default function CheckoutPage() {
                 {totalVoucherDiscount > 0 && (
                   <div className="flex justify-between text-sm text-orange-600">
                     <div className="flex items-center gap-1.5">
-                      <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
-                      </svg>
-                      <span>Voucher Discount</span>
+                      <Ticket className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>Voucher{vouchers.length > 0 && vouchers[0]?.discount_type === 'percentage' ? ` (${vouchers[0].discount_value}%)` : ''}</span>
                     </div>
                     <span className="font-medium">-{new Intl.NumberFormat('en-US', {
                       style: 'currency',

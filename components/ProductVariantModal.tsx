@@ -407,7 +407,12 @@ export function ProductVariantModal({
               {/* Price */}
               {!hasVariants && (
               <div className="mb-4 md:mb-6">
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  {voucher && (
+                    <span className="text-lg text-gray-400 line-through">
+                      {formatPrice(effectivePrice * quantity, currencyCode)}
+                    </span>
+                  )}
                   <span className="text-2xl md:text-3xl font-bold text-luxury-navy">
                     {(() => {
                       const price = effectivePrice * (!hasVariants ? quantity : 1)
@@ -426,7 +431,7 @@ export function ProductVariantModal({
                       <path d="M9 10h1a1 1 0 0 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2H9Zm12 5.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-1a1.5 1.5 0 0 0 0-3v-1a1.5 1.5 0 0 0 0-3v-1A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1a1.5 1.5 0 0 0 0 3v1a1.5 1.5 0 0 0 0 3v1ZM20 8.5h-1.5a1 1 0 0 1-1-1V7H4.5v.5a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3v1h.5a1 1 0 0 1 1 1v.5h15v-.5a1 1 0 0 1 1-1h.5v-1h-.5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h.5v-1Zm-2.5 4.5a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm-12 3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Zm0-3a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
                     </svg>
                     <span className="text-xs font-medium text-orange-600">
-                      Voucher Diskon {voucher.discount_type === 'percentage' 
+                      {t.products.voucherDiscount} {voucher.discount_type === 'percentage' 
                         ? `${voucher.discount_value}%`
                         : `Rp${voucher.discount_value.toLocaleString('id-ID')}`
                       }
@@ -517,15 +522,17 @@ export function ProductVariantModal({
                                     return formatPrice(discountedPrice - voucherDiscount, currencyCode)
                                   })()}
                                 </div>
-                                {/* Show original price strikethrough if discount or compare-at exists */}
-                                {!voucher && (() => {
+                                {/* Show original price strikethrough if discount, compare-at, or voucher exists */}
+                                {(() => {
                                   const qty = isSelected && selectedItem ? selectedItem.quantity : 1
                                   const originalPrice = getVariantOriginalPrice(variant)
                                   const discountedPrice = getVariantPrice(variant)
                                   const hasDiscount = activeDiscounts?.get(variant.name) && discountedPrice < originalPrice
                                   const compareAt = isIDR ? variant.compare_at_price_idr : variant.compare_at_price_usd
                                   const hasCompareAt = compareAt && compareAt > originalPrice
-                                  if (hasDiscount) {
+                                  if (voucher) {
+                                    return <div className="text-sm text-gray-400 line-through">{formatPrice(discountedPrice * qty, currencyCode)}</div>
+                                  } else if (hasDiscount) {
                                     return <div className="text-sm text-gray-400 line-through">{formatPrice(originalPrice * qty, currencyCode)}</div>
                                   } else if (hasCompareAt) {
                                     return <div className="text-sm text-gray-400 line-through">{formatPrice(compareAt! * qty, currencyCode)}</div>

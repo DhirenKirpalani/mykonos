@@ -282,13 +282,9 @@ export default function ProductDetailPage({
                 voucher={voucher}
                 activeDiscounts={activeDiscounts}
               />
-              {voucher && (
-                <div className="mt-3 inline-flex items-center gap-2 bg-luxury-gold/8 border border-luxury-gold/30 rounded px-3 py-1.5">
-                  <span className="text-xs font-semibold text-luxury-navy tracking-wide uppercase">
-                    Diskon {voucher.discount_type === 'percentage'
-                      ? `${voucher.discount_value}%`
-                      : `Rp${voucher.discount_value.toLocaleString('id-ID')}`}
-                  </span>
+              {voucher && voucher.valid_until && (
+                <div className="mt-2">
+                  <VoucherCountdown validUntil={voucher.valid_until} onExpire={() => setVoucher(null)} />
                 </div>
               )}
             </div>

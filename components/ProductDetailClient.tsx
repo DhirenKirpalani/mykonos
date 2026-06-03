@@ -452,7 +452,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         <Button 
           variant="outline" 
           size="lg" 
-          className="w-full"
+          className="w-full font-montserrat font-semibold uppercase tracking-wider py-3 text-base"
           onClick={() => handleAddToWishlist()}
           disabled={isAddingToWishlist || isOutOfStock}
           style={isOutOfStock ? { pointerEvents: 'none' } : {}}

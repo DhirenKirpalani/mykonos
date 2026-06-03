@@ -93,7 +93,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex-1 rounded-full py-2 text-center text-sm font-medium transition-colors',
+                  'flex-1 rounded-full py-2 text-center text-sm font-medium font-montserrat transition-colors',
                   item.active
                     ? 'bg-luxury-gold text-white'
                     : 'text-muted-foreground hover:bg-luxury-gray-light hover:text-foreground'
@@ -118,7 +118,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'block w-full rounded-md px-4 py-2.5 text-left text-sm transition-colors',
+                    'block w-full rounded-md px-4 py-2.5 text-left text-sm font-montserrat transition-colors',
                     item.active
                       ? 'bg-luxury-gold text-white font-medium'
                       : 'hover:bg-luxury-gray-light'

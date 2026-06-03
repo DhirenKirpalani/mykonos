@@ -95,19 +95,19 @@ export default function NewsletterSubscription() {
         </div>
         
         {/* Title with luxury typography */}
-        <h2 className="font-serif text-2xl sm:text-3xl font-bold text-luxury-navy mb-3 tracking-tight">
+        <h2 className="font-montserrat text-2xl sm:text-3xl font-bold text-luxury-navy mb-3 tracking-tight">
           {t.newsletter.title}
         </h2>
         
         {/* Description with refined spacing */}
-        <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
+        <p className="font-montserrat text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
           {t.newsletter.description}
         </p>
 
         {success ? (
           <div className="flex items-center justify-center gap-2.5 text-sm sm:text-base text-green-700 bg-green-50 border border-green-200 rounded-xl p-4 sm:p-5 max-w-lg mx-auto shadow-sm">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-            <span className="font-medium">{t.newsletter.successMessage}</span>
+            <span className="font-montserrat font-medium">{t.newsletter.successMessage}</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-4">
@@ -118,7 +118,7 @@ export default function NewsletterSubscription() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t.newsletter.placeholder}
-                className="w-full px-5 py-3.5 text-sm sm:text-base rounded-xl border-2 border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-luxury-gold/50 focus:border-luxury-gold transition-all duration-200 shadow-sm hover:border-gray-300"
+                className="font-montserrat w-full px-5 py-3.5 text-sm sm:text-base rounded-xl border-2 border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-luxury-gold/50 focus:border-luxury-gold transition-all duration-200 shadow-sm hover:border-gray-300"
                 disabled={loading}
                 required={false}
               />
@@ -135,7 +135,7 @@ export default function NewsletterSubscription() {
                 disabled={loading}
                 required={false}
               />
-              <span className="text-xs sm:text-sm text-gray-600 leading-relaxed group-hover:text-gray-900 transition-colors">
+              <span className="font-montserrat text-xs sm:text-sm text-gray-600 leading-relaxed group-hover:text-gray-900 transition-colors">
                 {t.newsletter.consent}{' '}
                 <a href="/privacy" className="text-luxury-gold hover:text-luxury-gold-light underline decoration-luxury-gold/30 hover:decoration-luxury-gold transition-colors">
                   {t.newsletter.privacyPolicy}
@@ -148,7 +148,7 @@ export default function NewsletterSubscription() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 text-sm sm:text-base bg-luxury-gold hover:bg-luxury-gold-light disabled:bg-gray-300 disabled:cursor-not-allowed text-luxury-navy font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0"
+              className="font-montserrat w-full py-3.5 text-sm sm:text-base bg-luxury-gold hover:bg-luxury-gold-light disabled:bg-gray-300 disabled:cursor-not-allowed text-luxury-navy font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0"
             >
               {loading ? (
                 <>
@@ -161,7 +161,7 @@ export default function NewsletterSubscription() {
             </button>
 
             {/* Privacy notice with subtle styling */}
-            <p className="text-xs text-gray-500 text-center pt-1">
+            <p className="font-montserrat text-xs text-gray-500 text-center pt-1">
               {t.newsletter.privacyNotice}
             </p>
           </form>

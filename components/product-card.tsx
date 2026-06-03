@@ -63,6 +63,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { BadgePercent, Ticket, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Database } from '@/lib/supabase/database.types'
+import { VoucherCountdown } from '@/components/VoucherCountdown'
 
 type Product = Database['public']['Tables']['products']['Row']
 
@@ -86,10 +87,10 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
   const { t, locale } = useLanguage()
   const [mounted, setMounted] = useState(false)
   const [clientRegion, setClientRegion] = useState<typeof region | null>(null)
-  const [timeRemaining, setTimeRemaining] = useState<string>('')
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isHovering, setIsHovering] = useState(false)
   const touchStartXRef = useRef(0)
+  const [voucherExpired, setVoucherExpired] = useState(false)
   
   // Check if this is a bestselling card (minimal design)
   const isBestsellingCard = className?.includes('bestselling') || false
@@ -112,38 +113,6 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
     setClientRegion(region)
   }, [region])
 
-  useEffect(() => {
-    if (!voucher?.valid_until || !mounted) return
-
-    const calculateTimeRemaining = () => {
-      const endDate = new Date(new Date(voucher.valid_until).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
-      const nowJakarta = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
-      const difference = endDate.getTime() - nowJakarta.getTime()
-
-      if (difference > 0) {
-        const totalMinutes = Math.floor(difference / (1000 * 60))
-        const hours = Math.floor(totalMinutes / 60)
-        const minutes = totalMinutes % 60
-        
-        if (hours > 0) {
-          return `Sisa ${hours} jam ${minutes} menit`
-        } else if (minutes > 0) {
-          return `Sisa ${minutes} menit`
-        } else {
-          return 'Sisa < 1 menit'
-        }
-      }
-      return ''
-    }
-
-    setTimeRemaining(calculateTimeRemaining())
-
-    const timer = setInterval(() => {
-      setTimeRemaining(calculateTimeRemaining())
-    }, 60000) // Update every minute
-
-    return () => clearInterval(timer)
-  }, [voucher?.valid_until, mounted])
   
   // Calculate days since product creation for debugging
   const daysSinceCreation = useMemo(() => {
@@ -310,18 +279,51 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
             )}
           </div>
 
+          {/* Voucher Discount Banner - Bestselling */}
+          {voucher && !voucherExpired && (
+            <div className="bg-luxury-gold px-2 py-1.5 flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="bg-white/20 rounded-sm px-1 py-0.5 flex items-center justify-center">
+                  <Ticket className="h-3 w-3 text-white" />
+                </div>
+                <span className="text-white text-[10px] md:text-xs font-bold">
+                  {voucher.discount_type === 'percentage' 
+                    ? `${voucher.discount_value}% Voucher`
+                    : `Rp${voucher.discount_value.toLocaleString('id-ID')} Voucher`
+                  }
+                </span>
+              </div>
+              {mounted && (
+                <VoucherCountdown validUntil={voucher.valid_until} onExpire={() => setVoucherExpired(true)} />
+              )}
+            </div>
+          )}
+
           {/* Product Name + Price */}
           <div className="px-4 py-3 md:px-5 md:py-4 text-center">
-            <h3 className="text-[9px] sm:text-[10px] md:text-xs font-montserrat font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug">
+            <h3 className="text-[9px] sm:text-[10px] md:text-xs font-montserrat font-normal uppercase tracking-[0.15em] text-[#1C2E4A] leading-snug mb-2">
               {product.name}
             </h3>
             {mounted && clientRegion && (() => {
-              const basePrice = hasPriceRange ? minVariantPrice : originalPrice
+              let basePrice = hasPriceRange ? minVariantPrice : originalPrice
+              if (hasActiveDiscount) basePrice = displayPrice
+              const voucherDiscount = voucher
+                ? voucher.discount_type === 'percentage'
+                  ? basePrice * voucher.discount_value / 100
+                  : voucher.discount_value
+                : 0
+              const netPrice = basePrice - voucherDiscount
               if (!basePrice) return null
+              
               return (
-                <p className="mt-1 text-[10px] md:text-xs font-montserrat font-semibold text-[#B8985F]">
-                  {hasPriceRange ? 'From ' : ''}{formatPrice(basePrice, clientRegion.currency_code)}
-                </p>
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                  {(hasActiveDiscount || voucher) && (
+                    <span className="text-[10px] text-gray-400 line-through">{formatPrice(basePrice, clientRegion.currency_code)}</span>
+                  )}
+                  <p className="text-[10px] md:text-xs font-montserrat font-semibold text-[#B8985F]">
+                    {hasPriceRange && !voucher ? 'From ' : ''}{formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code)}
+                  </p>
+                </div>
               )
             })()}
           </div>
@@ -477,7 +479,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
         </div>
 
         {/* Voucher Discount Banner - Mykonos Style */}
-        {voucher && (
+        {voucher && !voucherExpired && (
           <div className="bg-luxury-gold px-2 py-1.5 flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5">
               {/* Ticket icon */}
@@ -485,16 +487,14 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
                 <Ticket className="h-3 w-3 text-white" />
               </div>
               <span className="text-white text-[10px] md:text-xs font-bold">
-                Diskon Rp.{voucher.discount_type === 'percentage' 
-                  ? `${(voucher.discount_value * 1000).toLocaleString('id-ID')}`
-                  : `${voucher.discount_value.toLocaleString('id-ID')}`
-                }RB
+                {voucher.discount_type === 'percentage' 
+                  ? `${voucher.discount_value}% Voucher`
+                  : `Rp${voucher.discount_value.toLocaleString('id-ID')} Voucher`
+                }
               </span>
             </div>
-            {mounted && timeRemaining && (
-              <span className="text-white text-[10px] md:text-xs font-bold">
-                {timeRemaining}
-              </span>
+            {mounted && (
+              <VoucherCountdown validUntil={voucher.valid_until} onExpire={() => setVoucherExpired(true)} />
             )}
           </div>
         )}
@@ -527,8 +527,8 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
 
             return (
               <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                {hasActiveDiscount && (
-                  <span className="text-[10px] text-gray-400 line-through">{formatPrice(originalPrice, clientRegion.currency_code)}</span>
+                {(hasActiveDiscount || voucher) && (
+                  <span className="text-[10px] text-gray-400 line-through">{formatPrice(basePrice, clientRegion.currency_code)}</span>
                 )}
                 <span className="text-xs md:text-sm font-montserrat font-semibold text-[#B8985F]">
                   {hasPriceRange && !voucher ? 'From ' : ''}{formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code)}
