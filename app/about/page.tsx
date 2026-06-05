@@ -22,12 +22,12 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="bg-white border-b border-gray-200 relative">
+      <div className="bg-luxury-navy border-b border-luxury-gold/20 relative">
         {/* Hero Content */}
         <div className="relative h-[340px] sm:h-[400px] md:h-[480px] overflow-hidden">
           {/* Subtle background pattern */}
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(184,152,95,0.04)_1px,_transparent_0)] bg-[length:36px_36px]" />
+          <div className="absolute inset-0 bg-luxury-navy" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(184,152,95,0.08)_1px,_transparent_0)] bg-[length:36px_36px]" />
           
           {/* Breadcrumb - Desktop only */}
           <div className="absolute top-0 left-0 right-0 z-10 hidden md:block">
@@ -36,12 +36,16 @@ export default function AboutPage() {
                 items={[
                   { label: 'About Us', href: '/about' }
                 ]}
+                variant="light"
               />
             </div>
           </div>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <h1 className="mb-4 font-montserrat text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-luxury-navy leading-tight">
+          <h1 
+            className="mb-4 font-montserrat text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold tracking-normal leading-tight"
+            style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+          >
             {t.about.title}
           </h1>
           {/* Thin gold rule under title */}
@@ -50,8 +54,8 @@ export default function AboutPage() {
             <div className="w-1.5 h-1.5 rounded-full bg-luxury-gold" />
             <div className="h-px w-12 sm:w-20 bg-luxury-gold" />
           </div>
-          <p className="max-w-xl text-base sm:text-lg font-montserrat text-gray-600 leading-relaxed font-light tracking-wide">
-            {t.about.subtitle}
+          <p className="max-w-xl text-base sm:text-lg font-montserrat text-white leading-relaxed font-light tracking-wide">
+            Designed to be remembered
           </p>
           </div>
         </div>
@@ -149,16 +153,16 @@ export default function AboutPage() {
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(184,152,95,0.2)_0%,_transparent_60%)]" />
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-luxury-gold/60 to-transparent" />
               <div className="relative">
-                <h2 className="mb-4 font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight">
-                  {t.about.experienceDiff}
+                <h2 className="mb-4 font-playfair text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight">
+                  Luxury in Every Drop
                 </h2>
                 <div className="flex items-center justify-center gap-3 mb-6">
                   <div className="h-px w-10 bg-luxury-gold/50" />
                   <div className="w-1 h-1 rounded-full bg-luxury-gold" />
                   <div className="h-px w-10 bg-luxury-gold/50" />
                 </div>
-                <p className="mb-8 text-sm sm:text-base font-inter text-white/70 max-w-xl mx-auto leading-relaxed">
-                  {t.about.discoverCollection}
+                <p className="mb-8 text-sm sm:text-base font-montserrat text-white/70 max-w-xl mx-auto leading-relaxed">
+                  Enter the world of Mykonos fragrances
                 </p>
                 <Link href="/products">
                   <Button

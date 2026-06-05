@@ -148,10 +148,10 @@ export default function FAQsPage() {
               ]} 
             />
           </div>
-          <h1 className="mb-4 font-montserrat text-4xl font-bold lg:text-5xl">
+          <h1 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl mb-4">
             {t.faqs.title}
           </h1>
-          <p className="font-playfair text-lg text-muted-foreground">
+          <p className="font-montserrat text-sm text-gray-500 tracking-wide">
             {t.faqs.subtitle}
           </p>
         </div>
@@ -203,10 +203,10 @@ export default function FAQsPage() {
           ))}
 
           <div className="mt-12 rounded-lg bg-luxury-navy p-8 text-center text-white">
-            <h3 className="mb-4 font-montserrat text-2xl font-bold">
+            <h3 className="mb-4 font-playfair text-2xl font-bold">
               {t.faqs.couldntFind}
             </h3>
-            <p className="mb-6 font-playfair text-gray-300">
+            <p className="mb-6 font-montserrat text-gray-300">
               {t.faqs.helpText}
             </p>
             <a

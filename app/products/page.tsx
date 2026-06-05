@@ -472,10 +472,10 @@ function ProductsContent() {
                     {soldOutProducts.length > 0 && (
                       <div className="mt-12 md:mt-16">
                         <div className="mb-6 border-t border-gray-200 pt-8">
-                          <h2 className="font-playfair text-xl font-bold tracking-wider text-luxury-navy md:text-2xl">
+                          <h2 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl">
                             {t.productsPage.soldOut}
                           </h2>
-                          <p className="mt-2 text-sm font-montserrat text-gray-600">
+                          <p className="mt-2 text-sm font-montserrat text-gray-500 font-semibold">
                             {t.productsPage.soldOutDescription}
                           </p>
                         </div>

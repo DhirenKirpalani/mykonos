@@ -18,10 +18,10 @@ export default function PrivacyPolicyPage() {
               ]} 
             />
           </div>
-          <h1 className="font-montserrat text-3xl font-bold md:text-4xl lg:text-5xl">
+          <h1 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl">
             {t.privacy.title}
           </h1>
-          <p className="mt-3 font-playfair text-sm text-muted-foreground md:text-base">
+          <p className="mt-3 font-montserrat text-sm text-gray-500 tracking-wide">
             {t.privacy.lastUpdated}
           </p>
         </div>
@@ -43,32 +43,32 @@ export default function PrivacyPolicyPage() {
               {t.privacy.infoWeCollect}
             </h2>
             
-            <h3 className="mb-3 mt-6 text-xl font-bold text-gray-900">
+            <h3 className="mb-3 mt-6 text-2xl font-bold" style={{ color: '#071D49' }}>
               {t.privacy.personalInfo}
             </h3>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
               {t.privacy.personalInfoDesc}
             </p>
             <ul className="mb-6 ml-6 list-disc space-y-2 text-base text-gray-700">
-              <li>{t.locale === 'en' ? 'Name and contact information (email address, phone number)' : 'Nama dan informasi kontak (alamat email, nomor telepon)'}</li>
-              <li>{t.locale === 'en' ? 'Billing and shipping addresses' : 'Alamat penagihan dan pengiriman'}</li>
-              <li>{t.locale === 'en' ? 'Payment information (processed securely through our payment providers)' : 'Informasi pembayaran (diproses dengan aman melalui penyedia pembayaran kami)'}</li>
-              <li>{t.locale === 'en' ? 'Order history and preferences' : 'Riwayat pesanan dan preferensi'}</li>
-              <li>{t.locale === 'en' ? 'Account credentials (username and encrypted password)' : 'Kredensial akun (nama pengguna dan kata sandi terenkripsi)'}</li>
+              <li>Name and contact information (email address, phone number)</li>
+              <li>Billing and shipping addresses</li>
+              <li>Payment information (processed securely through our payment providers)</li>
+              <li>Order history and preferences</li>
+              <li>Account credentials (username and encrypted password)</li>
             </ul>
 
-            <h3 className="mb-3 mt-6 text-xl font-bold text-gray-900">
+            <h3 className="mb-3 mt-6 text-2xl font-bold" style={{ color: '#071D49' }}>
               {t.privacy.autoCollected}
             </h3>
             <p className="mb-4 text-base leading-relaxed text-gray-700">
               {t.privacy.autoCollectedDesc}
             </p>
             <ul className="mb-6 ml-6 list-disc space-y-2 text-base text-gray-700">
-              <li>{t.locale === 'en' ? 'Browser type and version' : 'Jenis dan versi browser'}</li>
-              <li>{t.locale === 'en' ? 'IP address and device information' : 'Alamat IP dan informasi perangkat'}</li>
-              <li>{t.locale === 'en' ? 'Pages visited and time spent on our site' : 'Halaman yang dikunjungi dan waktu yang dihabiskan di situs kami'}</li>
-              <li>{t.locale === 'en' ? 'Referring website addresses' : 'Alamat situs web rujukan'}</li>
-              <li>{t.locale === 'en' ? 'Cookies and similar tracking technologies' : 'Cookie dan teknologi pelacakan serupa'}</li>
+              <li>Browser type and version</li>
+              <li>IP address and device information</li>
+              <li>Pages visited and time spent on our site</li>
+              <li>Referring website addresses</li>
+              <li>Cookies and similar tracking technologies</li>
             </ul>
           </section>
 
@@ -81,13 +81,13 @@ export default function PrivacyPolicyPage() {
               {t.privacy.howWeUseDesc}
             </p>
             <ul className="mb-6 ml-6 list-disc space-y-2 text-base text-gray-700">
-              <li>{t.locale === 'en' ? 'Process and fulfill your orders' : 'Memproses dan memenuhi pesanan Anda'}</li>
-              <li>{t.locale === 'en' ? 'Communicate with you about your orders and account' : 'Berkomunikasi dengan Anda tentang pesanan dan akun Anda'}</li>
-              <li>{t.locale === 'en' ? 'Send promotional emails and marketing communications (with your consent)' : 'Mengirim email promosi dan komunikasi pemasaran (dengan persetujuan Anda)'}</li>
-              <li>{t.locale === 'en' ? 'Improve our website and customer experience' : 'Meningkatkan situs web dan pengalaman pelanggan kami'}</li>
-              <li>{t.locale === 'en' ? 'Prevent fraud and enhance security' : 'Mencegah penipuan dan meningkatkan keamanan'}</li>
-              <li>{t.locale === 'en' ? 'Comply with legal obligations' : 'Mematuhi kewajiban hukum'}</li>
-              <li>{t.locale === 'en' ? 'Analyze website usage and trends' : 'Menganalisis penggunaan dan tren situs web'}</li>
+              <li>Process and fulfill your orders</li>
+              <li>Communicate with you about your orders and account</li>
+              <li>Send promotional emails and marketing communications (with your consent)</li>
+              <li>Improve our website and customer experience</li>
+              <li>Prevent fraud and enhance security</li>
+              <li>Comply with legal obligations</li>
+              <li>Analyze website usage and trends</li>
             </ul>
           </section>
 
@@ -100,9 +100,9 @@ export default function PrivacyPolicyPage() {
               {t.privacy.infoSharingDesc}
             </p>
             <ul className="mb-6 ml-6 list-disc space-y-2 text-base text-gray-700">
-              <li><strong>{t.locale === 'en' ? 'Service Providers:' : 'Penyedia Layanan:'}</strong> {t.locale === 'en' ? 'Third-party companies that help us operate our business (payment processors, shipping companies, email service providers)' : 'Perusahaan pihak ketiga yang membantu kami mengoperasikan bisnis kami (pemroses pembayaran, perusahaan pengiriman, penyedia layanan email)'}</li>
-              <li><strong>{t.locale === 'en' ? 'Legal Requirements:' : 'Persyaratan Hukum:'}</strong> {t.locale === 'en' ? 'When required by law or to protect our rights and safety' : 'Ketika diwajibkan oleh hukum atau untuk melindungi hak dan keselamatan kami'}</li>
-              <li><strong>{t.locale === 'en' ? 'Business Transfers:' : 'Transfer Bisnis:'}</strong> {t.locale === 'en' ? 'In connection with a merger, acquisition, or sale of assets' : 'Sehubungan dengan merger, akuisisi, atau penjualan aset'}</li>
+              <li><strong>Service Providers:</strong> Third-party companies that help us operate our business (payment processors, shipping companies, email service providers)</li>
+              <li><strong>Legal Requirements:</strong> When required by law or to protect our rights and safety</li>
+              <li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of assets</li>
             </ul>
           </section>
 
@@ -115,11 +115,11 @@ export default function PrivacyPolicyPage() {
               {t.privacy.dataSecurityDesc}
             </p>
             <ul className="mb-6 ml-6 list-disc space-y-2 text-base text-gray-700">
-              <li>{t.locale === 'en' ? 'SSL encryption for data transmission' : 'Enkripsi SSL untuk transmisi data'}</li>
-              <li>{t.locale === 'en' ? 'Secure payment processing through trusted providers' : 'Pemrosesan pembayaran yang aman melalui penyedia terpercaya'}</li>
-              <li>{t.locale === 'en' ? 'Regular security assessments and updates' : 'Penilaian dan pembaruan keamanan secara berkala'}</li>
-              <li>{t.locale === 'en' ? 'Limited access to personal information by authorized personnel only' : 'Akses terbatas ke informasi pribadi hanya oleh personel yang berwenang'}</li>
-              <li>{t.locale === 'en' ? 'Password protection and authentication requirements' : 'Perlindungan kata sandi dan persyaratan autentikasi'}</li>
+              <li>SSL encryption for data transmission</li>
+              <li>Secure payment processing through trusted providers</li>
+              <li>Regular security assessments and updates</li>
+              <li>Limited access to personal information by authorized personnel only</li>
+              <li>Password protection and authentication requirements</li>
             </ul>
           </section>
 
@@ -142,14 +142,14 @@ export default function PrivacyPolicyPage() {
               {t.privacy.yourRightsDesc}
             </p>
             <ul className="mb-6 ml-6 list-disc space-y-2 text-base text-gray-700">
-              <li><strong>{t.locale === 'en' ? 'Access:' : 'Akses:'}</strong> {t.locale === 'en' ? 'Request a copy of the personal information we hold about you' : 'Minta salinan informasi pribadi yang kami miliki tentang Anda'}</li>
-              <li><strong>{t.locale === 'en' ? 'Correction:' : 'Koreksi:'}</strong> {t.locale === 'en' ? 'Request correction of inaccurate or incomplete information' : 'Minta koreksi informasi yang tidak akurat atau tidak lengkap'}</li>
-              <li><strong>{t.locale === 'en' ? 'Deletion:' : 'Penghapusan:'}</strong> {t.locale === 'en' ? 'Request deletion of your personal information' : 'Minta penghapusan informasi pribadi Anda'}</li>
-              <li><strong>{t.locale === 'en' ? 'Opt-out:' : 'Berhenti Berlangganan:'}</strong> {t.locale === 'en' ? 'Unsubscribe from marketing communications at any time' : 'Berhenti berlangganan komunikasi pemasaran kapan saja'}</li>
-              <li><strong>{t.locale === 'en' ? 'Data Portability:' : 'Portabilitas Data:'}</strong> {t.locale === 'en' ? 'Request transfer of your data to another service' : 'Minta transfer data Anda ke layanan lain'}</li>
+              <li><strong>Access:</strong> Request a copy of the personal information we hold about you</li>
+              <li><strong>Correction:</strong> Request correction of inaccurate or incomplete information</li>
+              <li><strong>Deletion:</strong> Request deletion of your personal information</li>
+              <li><strong>Opt-out:</strong> Unsubscribe from marketing communications at any time</li>
+              <li><strong>Data Portability:</strong> Request transfer of your data to another service</li>
             </ul>
             <p className="text-base leading-relaxed text-gray-700">
-              {t.locale === 'en' ? 'To exercise these rights, please contact us at privacy@mykonos.com' : 'Untuk menggunakan hak-hak ini, silakan hubungi kami di privacy@mykonos.com'}
+              To exercise these rights, please contact us at privacy@mykonos.com
             </p>
           </section>
 
@@ -191,9 +191,9 @@ export default function PrivacyPolicyPage() {
             <div className="space-y-4 text-gray-700">
               <div className="rounded-lg bg-blue-50 p-4 text-blue-900">
                 <p className="mb-2"><strong>Mykonos Luxury Fragrances</strong></p>
-                <p>{t.locale === 'en' ? 'Email' : 'Email'}: privacy@mykonos.com</p>
-                <p>{t.locale === 'en' ? 'Phone' : 'Telepon'}: +62 857-8021-8514</p>
-                <p>{t.locale === 'en' ? 'Address' : 'Alamat'}: Jakarta, Indonesia</p>
+                <p>Email: privacy@mykonos.com</p>
+                <p>Phone: +62 857-8021-8514</p>
+                <p>Address: Jakarta, Indonesia</p>
               </div>
             </div>
           </section>

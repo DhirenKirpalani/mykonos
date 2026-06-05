@@ -106,7 +106,7 @@ export default function ContactPage() {
             />
           </div>
           
-          <h1 className="font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-4">
+          <h1 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl mb-4">
             {t.contact.title}
           </h1>
           <p className="font-montserrat text-sm text-gray-500 tracking-wide max-w-md mx-auto">{t.contact.subtitle}</p>
@@ -122,7 +122,7 @@ export default function ContactPage() {
             {/* WhatsApp */}
             <div>
               <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Direct Chat</p>
-              <h2 className="font-playfair text-xl font-light text-luxury-navy mb-6">WhatsApp</h2>
+              <h2 className="font-playfair text-2xl font-bold text-black mb-6">WhatsApp</h2>
               {clientRegion === null ? (
                 <div className="h-16 animate-pulse bg-gray-100 rounded" />
               ) : (
@@ -147,7 +147,7 @@ export default function ContactPage() {
             {/* Business Hours */}
             <div>
               <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Schedule</p>
-              <h2 className="font-playfair text-xl font-light text-luxury-navy mb-6">{t.contact.businessHours}</h2>
+              <h2 className="font-playfair text-2xl font-bold text-black mb-6">{t.contact.businessHours}</h2>
               <div className="space-y-0">
                 <div className="flex justify-between items-center py-3.5 border-b border-gray-100">
                   <span className="text-sm text-gray-500">{t.contact.mondayFriday}</span>
@@ -168,7 +168,7 @@ export default function ContactPage() {
           {/* Right — Email Form */}
           <div className="order-2 lg:order-none">
             <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Get In Touch</p>
-            <h2 className="font-playfair text-xl font-light text-luxury-navy mb-8">Email</h2>
+            <h2 className="font-playfair text-2xl font-bold text-black mb-8">Email</h2>
             <form onSubmit={handleSubmit} className="space-y-7">
               {[
                 { id: 'name', label: t.contact.name, placeholder: t.contact.yourName, value: formData.name, type: 'text', onChange: (v: string) => setFormData({ ...formData, name: v }) },
