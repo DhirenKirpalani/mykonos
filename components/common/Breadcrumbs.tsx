@@ -11,34 +11,40 @@ interface BreadcrumbItem {
 
 interface BreadcrumbsProps {
   items?: BreadcrumbItem[]
+  variant?: 'light' | 'default'
 }
 
-export function Breadcrumbs({ items }: BreadcrumbsProps) {
+export function Breadcrumbs({ items, variant = 'default' }: BreadcrumbsProps) {
   const pathname = usePathname()
 
   // Auto-generate breadcrumbs from pathname if not provided
   const breadcrumbs = items || generateBreadcrumbs(pathname)
 
+  const isLight = variant === 'light'
+  const textColor = isLight ? 'text-white/60' : 'text-muted-foreground'
+  const textHoverColor = isLight ? 'hover:text-white' : 'hover:text-foreground'
+  const activeColor = isLight ? 'text-white' : 'text-foreground'
+
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
       <Link
         href="/"
-        className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+        className={`flex items-center gap-1 ${textColor} transition-colors ${textHoverColor}`}
         aria-label="Home"
       >
         <Home className="h-4 w-4" />
       </Link>
       {breadcrumbs.map((item, index) => (
         <div key={item.href} className="flex items-center gap-2">
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className={`h-4 w-4 ${textColor}`} />
           {index === breadcrumbs.length - 1 ? (
-            <span className="font-medium text-foreground" aria-current="page">
+            <span className={`font-medium ${activeColor}`} aria-current="page">
               {item.label}
             </span>
           ) : (
             <Link
               href={item.href}
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className={`${textColor} transition-colors ${textHoverColor}`}
             >
               {item.label}
             </Link>

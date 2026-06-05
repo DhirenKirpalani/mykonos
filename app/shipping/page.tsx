@@ -17,10 +17,10 @@ export default function ShippingPage() {
               ]} 
             />
           </div>
-          <h1 className="mb-4 font-montserrat text-4xl font-bold lg:text-5xl">
+          <h1 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl mb-4">
             {t.shipping.title}
           </h1>
-          <p className="font-playfair text-lg text-muted-foreground">
+          <p className="font-montserrat text-sm text-gray-500 tracking-wide">
             {t.shipping.subtitle}
           </p>
         </div>

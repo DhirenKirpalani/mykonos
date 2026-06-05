@@ -628,7 +628,7 @@ export const translations = {
       privacyPara4: "Your information will not be sold, misused, or shared with unrelated third parties. For full details, please refer to the Privacy Policy section on our website.",
       contentOwnership: "Content Ownership",
       contentPara1: "All content on this Site, including images, photographs, graphics, logos, descriptions, and data, belongs to Mykonos and is protected by copyright law.",
-      contentPara2: "You may not copy, reproduce, modify, distribute, or use any part of this Site for commercial purposes without written permission from MYKONOS.",
+      contentPara2: "You may not copy, reproduce, modify, distribute, or use any part of this Site for commercial purposes without written permission from Mykonos.",
       productInfo: "Product Information and Accuracy",
       productPara1: "We always try our best to display product details, descriptions, and colors accurately. However, we cannot guarantee that your device's display will perfectly reflect actual product colors. If any information on the Site contains errors or incomplete details, including pricing, product descriptions, promotions, or availability, we reserve the right to correct such errors and update information at any time, including after an order has been submitted.",
       productPara2: "Certain products may be available exclusively online and may have limited quantities.",

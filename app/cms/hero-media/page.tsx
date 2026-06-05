@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Upload, GripVertical, Trash2, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react'
+import { Upload, GripVertical, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, Monitor, Smartphone, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase/client'
@@ -64,9 +64,27 @@ function HeroItem({ item, onUpdate, onDelete, onToggleExpand, isExpanded }: Hero
   const [localItem, setLocalItem] = useState(item)
   const [uploadingDesktop, setUploadingDesktop] = useState(false)
   const [uploadingMobile, setUploadingMobile] = useState(false)
+  const [desktopDimensions, setDesktopDimensions] = useState<{width: number, height: number} | null>(null)
+  const [mobileDimensions, setMobileDimensions] = useState<{width: number, height: number} | null>(null)
+  const [desktopFileName, setDesktopFileName] = useState<string>('')
+  const [mobileFileName, setMobileFileName] = useState<string>('')
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
 
   useEffect(() => {
     setLocalItem(item)
+    // Load image dimensions
+    if (item.media_type === 'image') {
+      const img = new Image()
+      img.onload = () => setDesktopDimensions({width: img.width, height: img.height})
+      img.src = item.media_url
+      
+      if (item.mobile_media_url) {
+        const mobileImg = new Image()
+        mobileImg.onload = () => setMobileDimensions({width: mobileImg.width, height: mobileImg.height})
+        mobileImg.src = item.mobile_media_url
+      }
+    }
   }, [item])
 
   const handleFileUpload = async (file: File, isMobile: boolean) => {
@@ -78,8 +96,14 @@ function HeroItem({ item, onUpdate, onDelete, onToggleExpand, isExpanded }: Hero
       return
     }
 
-    if (isMobile) setUploadingMobile(true)
-    else setUploadingDesktop(true)
+    // Store filename
+    if (isMobile) {
+      setUploadingMobile(true)
+      setMobileFileName(file.name)
+    } else {
+      setUploadingDesktop(true)
+      setDesktopFileName(file.name)
+    }
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -107,6 +131,20 @@ function HeroItem({ item, onUpdate, onDelete, onToggleExpand, isExpanded }: Hero
 
       setLocalItem(prev => ({ ...prev, ...updates as any }))
       onUpdate(item.id, updates)
+      
+      // Load image dimensions for newly uploaded image
+      if (isImage) {
+        const img = new Image()
+        img.onload = () => {
+          if (isMobile) {
+            setMobileDimensions({width: img.width, height: img.height})
+          } else {
+            setDesktopDimensions({width: img.width, height: img.height})
+          }
+        }
+        img.src = publicUrl
+      }
+      
       toast.success(`${isMobile ? 'Mobile' : 'Desktop'} media uploaded successfully`)
     } catch (error) {
       console.error('Error uploading media:', error)
@@ -144,6 +182,13 @@ function HeroItem({ item, onUpdate, onDelete, onToggleExpand, isExpanded }: Hero
               {item.mobile_media_url ? ' Desktop + Mobile' : ' Desktop only'}
             </div>
           </div>
+          <button
+            onClick={() => setShowPreview(true)}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+            title="Preview on devices"
+          >
+            <Monitor className="h-4 w-4" />
+          </button>
         </div>
 
         <button
@@ -190,14 +235,34 @@ function HeroItem({ item, onUpdate, onDelete, onToggleExpand, isExpanded }: Hero
                     <img src={item.media_url} alt="" className="w-full h-full object-cover" />
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept="video/*,image/*"
-                  onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], false)}
-                  disabled={uploadingDesktop}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-luxury-gold file:text-luxury-navy hover:file:bg-luxury-gold/90"
-                />
-                <p className="text-xs text-gray-500">Recommended: 1920×800 (landscape)</p>
+                <div className="relative">
+                  <input
+                    type="file"
+                    id={`desktop-upload-${item.id}`}
+                    accept="video/*,image/*"
+                    onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], false)}
+                    disabled={uploadingDesktop}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor={`desktop-upload-${item.id}`}
+                    className="flex items-center justify-center w-full px-4 py-3 bg-luxury-gold text-luxury-navy rounded-lg font-semibold text-sm cursor-pointer hover:bg-luxury-gold/90 transition-colors"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadingDesktop ? 'Uploading...' : desktopFileName ? 'Change File' : 'Choose File'}
+                  </label>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-700">Recommended: 1920 × 1080px (16:9)</p>
+                  <p className="text-xs text-gray-500">Formats: JPG, PNG, WebP, MP4</p>
+                  <p className="text-xs text-gray-500">Max size: Images 2MB, Videos 10MB</p>
+                  {desktopFileName && (
+                    <p className="text-xs font-medium text-blue-600 truncate" title={desktopFileName}>File: {desktopFileName}</p>
+                  )}
+                  {desktopDimensions && (
+                    <p className="text-xs font-medium text-green-600">Uploaded: {desktopDimensions.width} × {desktopDimensions.height}px</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -219,14 +284,34 @@ function HeroItem({ item, onUpdate, onDelete, onToggleExpand, isExpanded }: Hero
                     </div>
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept="video/*,image/*"
-                  onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], true)}
-                  disabled={uploadingMobile}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-luxury-gold file:text-luxury-navy hover:file:bg-luxury-gold/90"
-                />
-                <p className="text-xs text-gray-500">Recommended: 1080×1350 (portrait)</p>
+                <div className="relative">
+                  <input
+                    type="file"
+                    id={`mobile-upload-${item.id}`}
+                    accept="video/*,image/*"
+                    onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], true)}
+                    disabled={uploadingMobile}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor={`mobile-upload-${item.id}`}
+                    className="flex items-center justify-center w-full px-4 py-3 bg-luxury-gold text-luxury-navy rounded-lg font-semibold text-sm cursor-pointer hover:bg-luxury-gold/90 transition-colors"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadingMobile ? 'Uploading...' : mobileFileName ? 'Change File' : 'Choose File'}
+                  </label>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-700">Recommended: 1080 × 1920px (9:16)</p>
+                  <p className="text-xs text-gray-500">Formats: JPG, PNG, WebP, MP4</p>
+                  <p className="text-xs text-gray-500">Max size: Images 2MB, Videos 10MB</p>
+                  {mobileFileName && (
+                    <p className="text-xs font-medium text-blue-600 truncate" title={mobileFileName}>File: {mobileFileName}</p>
+                  )}
+                  {mobileDimensions && (
+                    <p className="text-xs font-medium text-green-600">Uploaded: {mobileDimensions.width} × {mobileDimensions.height}px</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -321,6 +406,108 @@ function HeroItem({ item, onUpdate, onDelete, onToggleExpand, isExpanded }: Hero
               className="w-full"
             />
             <p className="text-xs text-gray-500 mt-1">Dark overlay for better text readability</p>
+          </div>
+        </div>
+      )}
+
+      {/* Device Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setShowPreview(false)}>
+          <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="text-lg font-semibold text-gray-900">Device Preview</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    previewDevice === 'desktop' 
+                      ? 'bg-luxury-navy text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Monitor className="h-4 w-4" />
+                  Desktop
+                </button>
+                <button
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    previewDevice === 'mobile' 
+                      ? 'bg-luxury-navy text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Smartphone className="h-4 w-4" />
+                  Mobile
+                </button>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 ml-2"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Preview Content */}
+            <div className="p-6">
+              {previewDevice === 'desktop' ? (
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-600 mb-2">
+                    Desktop Preview (1920 × 1080px recommended)
+                  </div>
+                  <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-luxury-navy shadow-xl">
+                    {localItem.media_type === 'video' ? (
+                      <video src={localItem.media_url} className="w-full h-full object-cover object-center" autoPlay loop muted />
+                    ) : (
+                      <img src={localItem.media_url} alt="Desktop preview" className="w-full h-full object-cover object-center" />
+                    )}
+                    <div className="absolute inset-0 bg-black" style={{ opacity: localItem.overlay_opacity / 100 }} />
+                    {localItem.title && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                        <h2 className="text-4xl font-bold text-white mb-2">{localItem.title}</h2>
+                        {localItem.subtitle && <p className="text-lg text-white/90">{localItem.subtitle}</p>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 flex flex-col items-center">
+                  <div className="text-sm text-gray-600 mb-2">
+                    Mobile Preview (1080 × 1920px recommended)
+                  </div>
+                  <div className="relative w-full max-w-sm aspect-[9/16] rounded-lg overflow-hidden bg-luxury-navy shadow-xl">
+                    {localItem.media_type === 'video' ? (
+                      <video 
+                        src={localItem.mobile_media_url || localItem.media_url} 
+                        className="w-full h-full object-cover object-center" 
+                        autoPlay 
+                        loop 
+                        muted 
+                      />
+                    ) : (
+                      <img 
+                        src={localItem.mobile_media_url || localItem.media_url} 
+                        alt="Mobile preview" 
+                        className="w-full h-full object-cover object-center" 
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-black" style={{ opacity: localItem.overlay_opacity / 100 }} />
+                    {localItem.title && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                        <h2 className="text-2xl font-bold text-white mb-2">{localItem.title}</h2>
+                        {localItem.subtitle && <p className="text-sm text-white/90">{localItem.subtitle}</p>}
+                      </div>
+                    )}
+                  </div>
+                  {!localItem.mobile_media_url && (
+                    <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                      No mobile media uploaded. Showing desktop version.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
