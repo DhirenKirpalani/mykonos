@@ -633,7 +633,7 @@ export default function OrderDetailsPage() {
                   <p className="text-gray-600 text-xs mb-1">{t.trackOrder.totalAmount}</p>
                   <p className="font-semibold text-gray-900 text-sm">
                     {formatPrice(
-                      order.total_amount, 
+                      ((order as any).subtotal_amount ?? 0) - (order.discount_amount ?? 0) + ((order as any).shipping_amount ?? 0) + (order.tax_amount ?? 0),
                       ((order.payment_metadata as any)?.currency_code || order.currency_code)
                     )}
                   </p>
@@ -899,47 +899,52 @@ export default function OrderDetailsPage() {
               <h2 className="text-xl sm:text-2xl font-montserrat font-bold">{t.checkout.orderSummary}</h2>
             </div>
             <div className="p-4 sm:p-8">
+              {(() => {
+                const currency = (order.payment_metadata as any)?.currency_code || order.currency_code
+                const subtotal = (order as any).subtotal_amount ?? 0
+                const shipping = (order as any).shipping_amount ?? 0
+                const discount = order.discount_amount ?? 0
+                const tax = order.tax_amount ?? 0
+                const discountPct = subtotal > 0 && discount > 0
+                  ? Math.round((discount / subtotal) * 100)
+                  : 0
+                return (
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-700">
                   <span>{t.checkout.subtotal}</span>
-                  <span className="font-medium">{formatPrice(
-                    order.subtotal, 
-                    ((order.payment_metadata as any)?.currency_code || order.currency_code)
-                  )}</span>
+                  <span className="font-medium">{formatPrice(subtotal, currency)}</span>
                 </div>
+                {shipping >= 0 && (
                 <div className="flex justify-between text-gray-700">
                   <span>{t.checkout.shipping}</span>
-                  <span className="font-medium">{formatPrice(
-                    order.shipping_cost, 
-                    ((order.payment_metadata as any)?.currency_code || order.currency_code)
-                  )}</span>
+                  <span className="font-medium">{formatPrice(shipping, currency)}</span>
                 </div>
-                {order.discount_amount > 0 && (
+                )}
+                {discount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>{t.checkout.discount}</span>
-                    <span className="font-medium">-{formatPrice(
-                      order.discount_amount, 
-                      ((order.payment_metadata as any)?.currency_code || order.currency_code)
-                    )}</span>
+                    <span>
+                      {t.checkout.discount}
+                      {discountPct > 0 && <span className="ml-1 text-xs font-normal bg-green-100 text-green-700 px-1.5 py-0.5 rounded">-{discountPct}%</span>}
+                    </span>
+                    <span className="font-medium">-{formatPrice(discount, currency)}</span>
                   </div>
                 )}
-                {order.tax_amount > 0 && (
+                {tax > 0 && (
                   <div className="flex justify-between text-gray-700">
                     <span>{t.checkout.tax}</span>
-                    <span className="font-medium">{formatPrice(
-                      order.tax_amount, 
-                      ((order.payment_metadata as any)?.currency_code || order.currency_code)
-                    )}</span>
+                    <span className="font-medium">{formatPrice(tax, currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xl font-bold pt-4 border-t-2 border-gray-200">
                   <span>{t.checkout.total}</span>
                   <span>{formatPrice(
-                    order.total_amount, 
+                    subtotal - discount + shipping + tax,
                     ((order.payment_metadata as any)?.currency_code || order.currency_code)
                   )}</span>
                 </div>
               </div>
+              )
+            })()}
               {order.payment_intent_id && (
                 <div className="mt-4">
                   <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">ID Transaksi</p>

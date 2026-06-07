@@ -1008,8 +1008,8 @@ export default function CheckoutPage() {
         }, 0)
         const manualTax = manualTaxableAmount * 0.1
         console.log(`💰 [BUY NOW] Taxable amount: ${manualTaxableAmount}, Tax (10%): ${manualTax}`)
-        const manualShipping = 0 // Courier API not yet integrated
-        
+        const manualShipping = shippingCost ?? 0
+
         const sessionResponse = await fetch('/api/checkout/session/manual', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1021,7 +1021,7 @@ export default function CheckoutPage() {
               discount: voucherDiscountTotal,
               shipping: manualShipping,
               tax: manualTax,
-              total: subtotal + manualShipping + manualTax,
+              total: subtotal - voucherDiscountTotal + manualShipping + manualTax,
               currency_code: region?.currency_code || 'USD'
             }
           }),
@@ -1085,6 +1085,7 @@ export default function CheckoutPage() {
             item_discounts: itemDiscountsForSession,
             tax,
             exchange_rate: exchangeRate,
+            shipping: shippingCost ?? 0,
           }),
         })
 
@@ -1239,7 +1240,8 @@ export default function CheckoutPage() {
       if (!isIDRegion) {
         console.log('💳 [STRIPE] Creating Stripe checkout session for non-ID region...')
         
-        const itemsForStripe = cartItems.map(item => {
+        // Compute Stripe line items ensuring they sum exactly to checkout total
+        const rawStripeItems = cartItems.map(item => {
           const itemWithVariant = item as any
           let basePrice = (item.product as any).price_usd || 0
           
@@ -1252,17 +1254,33 @@ export default function CheckoutPage() {
           
           const discounted = getDiscountedPrice(item.product, item.product_id, itemWithVariant.variant_name)
           const price = discounted !== null ? discounted : basePrice
-          const voucherDiscount = voucherDiscounts.get(item.id) || 0
-          const netPrice = price - (voucherDiscount / item.quantity)
+          const rawVoucherDiscount = voucherDiscounts.get(item.id) || 0
+          const netPrice = price - (rawVoucherDiscount / item.quantity)
           
           return {
             name: itemWithVariant.variant_name ? `${item.product.name} - ${itemWithVariant.variant_name}` : item.product.name,
-            price: netPrice,
+            netPrice,
             quantity: item.quantity,
             variant_name: itemWithVariant.variant_name,
             image_url: item.product.image_urls?.[0],
           }
         })
+
+        // Round each item price
+        const roundedItems = rawStripeItems.map(item => ({
+          ...item,
+          price: Math.round(item.netPrice * 100) / 100,
+        }))
+
+        // Ensure sum of rounded items matches desired item total (subtotal - voucher discount)
+        const roundedItemsTotal = roundedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        const desiredItemsTotal = subtotal - totalVoucherDiscount
+        const diff = Math.round((desiredItemsTotal - roundedItemsTotal) * 100) / 100
+        if (diff !== 0 && roundedItems.length > 0) {
+          roundedItems[0].price = Math.round((roundedItems[0].price + diff / roundedItems[0].quantity) * 100) / 100
+        }
+
+        const itemsForStripe = roundedItems.map(({ netPrice, ...item }) => item)
         
         const stripeResponse = await fetch('/api/stripe/create-checkout-session', {
           method: 'POST',
@@ -1595,6 +1613,11 @@ export default function CheckoutPage() {
       console.log('🔵 [GUEST] Session:', session)
       console.log('🔵 [GUEST] Is anonymous?', session.user.is_anonymous)
 
+      // Fetch DHL shipping cost for guest address
+      console.log('🚀 [GUEST] Fetching shipping cost for guest address...')
+      const guestShippingCost = await fetchShippingCost(guestData)
+      const guestShipping = guestShippingCost ?? 0
+
       // Prepare session data based on user type
       const sessionPayload: any = {}
       if (session.user.is_anonymous) {
@@ -1636,13 +1659,14 @@ export default function CheckoutPage() {
         }
       })
 
-      // Build pricing snapshot
+      // Build pricing snapshot using the freshly fetched guest shipping cost
+      const guestTotal = subtotal - totalVoucherDiscount + guestShipping + tax - discount
       const pricing_snapshot = {
         subtotal,
         discount: totalVoucherDiscount,
-        shipping,
+        shipping: guestShipping,
         tax,
-        total,
+        total: guestTotal,
         currency_code: region?.currency_code || 'USD'
       }
 
@@ -2122,12 +2146,9 @@ export default function CheckoutPage() {
     })
 
     if (!result.isValid && result.warnings && result.warnings.length > 0) {
-      const proceed = confirm(
-        `⚠️ Address Validation Warnings:\n\n${result.warnings.join('\n')}\n\nDo you want to proceed anyway?`
-      )
-      if (!proceed) {
-        return false
-      }
+      result.warnings.forEach((warning: string) => {
+        toast.warning(warning, { duration: 8000 })
+      })
     } else if (result.isValid) {
       toast.success('✅ Address validated successfully!')
     }
@@ -2137,11 +2158,9 @@ export default function CheckoutPage() {
 
   const handleSaveAddress = async () => {
     try {
-      // Validate address before saving
-      const isValid = await handleValidateAddress()
-      if (!isValid) {
-        return
-      }
+      // Auto-validate with DHL before saving
+      // Warnings are non-blocking — address still saves, user sees toast warnings
+      await handleValidateAddress()
 
       // If setting as default, unset any existing default first
       if (editForm.is_default) {
@@ -2186,17 +2205,86 @@ export default function CheckoutPage() {
     }
   }
 
-  // Fetch shipping cost when address is selected
+  // Fetch shipping cost when address is selected (wait for region to load)
   useEffect(() => {
-    if (selectedAddressId && savedAddresses.length > 0) {
+    if (selectedAddressId && savedAddresses.length > 0 && region) {
       fetchShippingCost()
     }
-  }, [selectedAddressId])
+  }, [selectedAddressId, region])
 
-  const fetchShippingCost = async () => {
-    // TODO: Integrate KirimAja / DHL courier API here.
-    // When integrated, call the API and setShippingCost(result).
-    // Until then, leave shippingCost as null so the UI shows "Calculated at checkout".
+  const fetchShippingCost = async (address?: any): Promise<number | null> => {
+    setIsLoadingShipping(true)
+    try {
+      const targetAddress = address || savedAddresses.find(a => a.id === selectedAddressId)
+      if (!targetAddress) {
+        console.log('⚠️ [SHIPPING] No address available for rate calculation')
+        setShippingCost(null)
+        return null
+      }
+
+      console.log('🚀 [SHIPPING] Fetching DHL rates for address:', targetAddress.city, targetAddress.postal_code)
+
+      const res = await fetch('/api/shipping/dhl/rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origin: {
+            postalCode: process.env.NEXT_PUBLIC_DHL_SHIPPER_POSTAL_CODE || '13920',
+            cityName: process.env.NEXT_PUBLIC_DHL_SHIPPER_CITY || 'Jakarta',
+            countryCode: process.env.NEXT_PUBLIC_DHL_SHIPPER_COUNTRY || 'ID',
+            addressLine1: (process.env.NEXT_PUBLIC_DHL_SHIPPER_ADDRESS || 'Kawasan Industri Pulogadung').substring(0, 45),
+          },
+          destination: {
+            postalCode: targetAddress.postal_code,
+            cityName: targetAddress.city,
+            countryCode: targetAddress.country === 'Indonesia' ? 'ID' : targetAddress.country === 'United States' ? 'US' : targetAddress.country === 'Singapore' ? 'SG' : 'ID',
+            addressLine1: targetAddress.address_line1 ? targetAddress.address_line1.substring(0, 45) : undefined,
+          },
+          packages: [{ weight: 1, dimensions: { length: 10, width: 10, height: 10 } }],
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok || !data.success || !data.rates?.length) {
+        console.error('❌ [SHIPPING] DHL rates failed:', data.error || 'No rates returned')
+        // Keep as null so UI shows "Calculated at checkout" instead of "FREE"
+        setShippingCost(null)
+        return null
+      }
+
+      // Pick the cheapest rate
+      const cheapest = data.rates.reduce((min: any, r: any) => r.totalPrice < min.totalPrice ? r : min, data.rates[0])
+      console.log('✅ [SHIPPING] Cheapest DHL rate:', cheapest.serviceType, cheapest.totalPrice, cheapest.currency)
+
+      // Convert DHL rate to match checkout base currency
+      // DHL returns IDR for Indonesia domestic; checkout base is IDR if region=ID, else USD
+      const dhlCurrency = cheapest.currency
+      const dhlPrice = cheapest.totalPrice
+      const isIDRegion = region?.code === 'ID'
+      const displayCurrency = isIDRegion ? 'IDR' : 'USD'
+      let convertedShipping = dhlPrice
+      const USD_TO_IDR = 15000
+
+      if (dhlCurrency === 'IDR' && !isIDRegion) {
+        convertedShipping = dhlPrice / USD_TO_IDR
+        console.log('💱 [SHIPPING] Converted', dhlPrice, 'IDR →', convertedShipping.toFixed(2), 'USD')
+      } else if (dhlCurrency === 'USD' && isIDRegion) {
+        convertedShipping = dhlPrice * USD_TO_IDR
+        console.log('💱 [SHIPPING] Converted', dhlPrice, 'USD →', convertedShipping.toFixed(0), 'IDR')
+      } else {
+        console.log('💱 [SHIPPING] No conversion needed:', dhlPrice, dhlCurrency)
+      }
+
+      const roundedShipping = Math.round(convertedShipping * 100) / 100
+      setShippingCost(roundedShipping)
+      return roundedShipping
+    } catch (error: any) {
+      console.error('❌ [SHIPPING] Error fetching rates:', error.message)
+      setShippingCost(null)
+      return null
+    } finally {
+      setIsLoadingShipping(false)
+    }
   }
 
   // Helper function to format address name (avoid showing email username)
@@ -2269,8 +2357,9 @@ export default function CheckoutPage() {
     return total + (price * item.quantity)
   }, 0)
 
-  // Calculate total voucher discount
-  const totalVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((sum, discount) => sum + discount, 0)
+  // Calculate total voucher discount (round to 2 decimals to match display and avoid float drift)
+  const rawVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((sum, discount) => sum + discount, 0)
+  const totalVoucherDiscount = Math.round(rawVoucherDiscount * 100) / 100
 
   // Calculate net amount after voucher discount for tax calculation
   const netAmount = subtotal - totalVoucherDiscount
@@ -2298,9 +2387,9 @@ export default function CheckoutPage() {
     return total
   }, 0)
   
-  const tax = taxableAmount * 0.1
+  const tax = Math.round(taxableAmount * 0.1 * 100) / 100
   console.log(`💰 Total taxable amount: ${taxableAmount}, Tax (10%): ${tax}`)
-  const total = netAmount + shipping + tax - discount
+  const total = Math.round((netAmount + shipping + tax - discount) * 100) / 100
   
   // For display: calculate by summing converted individual items to match what customer sees
   // This must exactly match what's displayed in the cart for each item
@@ -2461,7 +2550,22 @@ export default function CheckoutPage() {
                             {(item as any).variant_name || item.product.name}
                           </h3>
                           <p className="text-xs text-gray-500 mt-1">
-                            {formatPrice(price, region?.currency_code || currency)} / {t.cart.item}
+                            {(voucherDiscounts.get(item.id) || 0) > 0 || discount > 0 ? (
+                              <>
+                                <span className="line-through text-gray-400">
+                                  {formatPrice(basePrice, region?.currency_code || currency)}
+                                </span>
+                                {' '}
+                                <span className="text-green-600 font-medium">
+                                  {formatPrice(price - (voucherDiscounts.get(item.id) || 0) / item.quantity, region?.currency_code || currency)}
+                                </span>
+                                {' / '}{t.cart.item}
+                              </>
+                            ) : (
+                              <>
+                                {formatPrice(price, region?.currency_code || currency)} / {t.cart.item}
+                              </>
+                            )}
                           </p>
                         </div>
                         {item.id.startsWith('quick-') && (
@@ -2484,9 +2588,9 @@ export default function CheckoutPage() {
                             {t.trackOrder.qty}: {item.quantity}
                           </span>
                           <div className="flex flex-col items-end">
-                            {(hasCampaignDiscount || (voucherDiscounts.get(item.id) || 0) > 0) && (
+                            {(hasCampaignDiscount || (voucherDiscounts.get(item.id) || 0) > 0 || discount > 0) && (
                               <span className="text-xs text-gray-400 line-through">
-                                {formatPrice(price * item.quantity, region?.currency_code || currency)}
+                                {formatPrice(basePrice * item.quantity, region?.currency_code || currency)}
                               </span>
                             )}
                             <p className="text-sm sm:text-base font-bold text-gray-900">
@@ -2547,7 +2651,14 @@ export default function CheckoutPage() {
                           value={editForm.address_line1}
                           onChange={(e) => setEditForm({...editForm, address_line1: e.target.value})}
                           required
+                          className={editForm.address_line1.length > 45 ? 'border-red-500 focus-visible:ring-red-500' : ''}
                         />
+                        {editForm.address_line1.length > 45 && (
+                          <p className="text-xs text-red-500 mt-1">Address must be less than 45 characters (DHL limit)</p>
+                        )}
+                        {editForm.address_line1.length > 0 && editForm.address_line1.length < 5 && (
+                          <p className="text-xs text-red-500 mt-1">Address must be at least 5 characters</p>
+                        )}
                       </div>
 
                       {/* Address Line 2 */}
@@ -2600,7 +2711,7 @@ export default function CheckoutPage() {
                               value={editForm.city}
                               onValueChange={(value) => setEditForm({ ...editForm, city: value })}
                             >
-                              <SelectTrigger className="w-full">
+                              <SelectTrigger className={`w-full ${!editForm.city ? 'border-red-500 focus:ring-red-500' : ''}`}>
                                 <SelectValue placeholder={t.account.selectCity} />
                               </SelectTrigger>
                               <SelectContent>
@@ -2616,7 +2727,11 @@ export default function CheckoutPage() {
                               onChange={(e) => setEditForm({...editForm, city: e.target.value})}
                               placeholder={t.account.enterCity}
                               required
+                              className={!editForm.city ? 'border-red-500 focus-visible:ring-red-500' : ''}
                             />
+                          )}
+                          {!editForm.city && (
+                            <p className="text-xs text-red-500 mt-1">City is required</p>
                           )}
                         </div>
                       </div>
@@ -2630,7 +2745,11 @@ export default function CheckoutPage() {
                             value={editForm.postal_code}
                             onChange={(e) => setEditForm({...editForm, postal_code: e.target.value})}
                             required
+                            className={!editForm.postal_code ? 'border-red-500 focus-visible:ring-red-500' : ''}
                           />
+                          {!editForm.postal_code && (
+                            <p className="text-xs text-red-500 mt-1">Postal code is required</p>
+                          )}
                         </div>
                         <div>
                           <Label htmlFor="edit-country">{t.shippingModal.country} *</Label>
@@ -2681,7 +2800,7 @@ export default function CheckoutPage() {
                           {t.shippingModal.pickLocation}
                         </button>
                         {showEditMap && (
-                          <div className="mt-2 space-y-2">
+                          <div className="mt-2 space-y-2 relative z-[1]">
                             <MapPicker
                               onLocationSelect={(location) => {
                                 const provinces = getProvinces(editForm.country)
@@ -2755,17 +2874,8 @@ export default function CheckoutPage() {
                         </Button>
                         <Button
                           type="button"
-                          variant="outline"
-                          onClick={handleValidateAddress}
-                          disabled={isValidating || !editForm.postal_code || !editForm.city}
-                          className="flex-1"
-                        >
-                          {isValidating ? 'Validating...' : 'Validate Address'}
-                        </Button>
-                        <Button
-                          type="button"
                           onClick={handleSaveAddress}
-                          disabled={isValidating}
+                          disabled={isValidating || !editForm.postal_code || !editForm.city || !editForm.address_line1}
                           className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
                         >
                           {t.checkout.saveChanges}
@@ -2833,12 +2943,7 @@ export default function CheckoutPage() {
                   <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-green-900">{appliedPromo.code}</p>
-                      <p className="text-xs text-green-700">-{new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: region?.currency_code || currency,
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }).format(displayDiscount)} {t.checkout.discountApplied}</p>
+                      <p className="text-xs text-green-700">-{formatCurrencyPrice(displayDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })} {t.checkout.discountApplied}</p>
                     </div>
                     <button
                       onClick={removePromoCode}
@@ -2874,12 +2979,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>{t.checkout.subtotal}</span>
                   <span className="font-medium text-gray-900">
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: region?.currency_code || currency,
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }).format(displaySubtotal)}
+                    {formatCurrencyPrice(displaySubtotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}
                   </span>
                 </div>
                 {totalVoucherDiscount > 0 && (
@@ -2888,51 +2988,39 @@ export default function CheckoutPage() {
                       <Ticket className="h-3.5 w-3.5 flex-shrink-0" />
                       <span>Voucher{vouchers.length > 0 && vouchers[0]?.discount_type === 'percentage' ? ` (${vouchers[0].discount_value}%)` : ''}</span>
                     </div>
-                    <span className="font-medium">-{new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: region?.currency_code || currency,
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }).format(displayVoucherDiscount)}</span>
+                    <span className="font-medium">-{formatCurrencyPrice(displayVoucherDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</span>
                   </div>
                 )}
                 {discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>{t.checkout.discount}</span>
-                    <span className="font-medium">-{new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: region?.currency_code || currency,
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }).format(displayDiscount)}</span>
+                    <span className="font-medium">-{formatCurrencyPrice(displayDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>{t.checkout.shipping}</span>
+                  <span className="flex items-center gap-2">
+                    {t.checkout.shipping}
+                    {isLoadingShipping && (
+                      <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Calculating...
+                      </span>
+                    )}
+                  </span>
                   <span className={`font-medium ${shippingCost === null || shippingCost === 0 ? 'text-gray-500' : 'text-gray-900'}`}>
                     {shippingCost === null ? (
                       <span className="text-xs italic">{t.checkout.shippingCalculated}</span>
                     ) : shippingCost === 0 ? (
                       <span className="text-green-600">{t.checkout.free}</span>
                     ) : (
-                      new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: region?.currency_code || currency,
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }).format(displayShipping)
+                      formatCurrencyPrice(displayShipping, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })
                     )}
                   </span>
                 </div>
                 {tax > 0 && (
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>{t.checkout.tax}</span>
-                    <span className="font-medium text-gray-900">{new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: region?.currency_code || currency,
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }).format(displayTax)}</span>
+                    <span className="font-medium text-gray-900">{formatCurrencyPrice(displayTax, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</span>
                   </div>
                 )}
               </div>
@@ -2941,12 +3029,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between items-center pt-4 border-t border-gray-200">
                 <span className="text-base font-bold text-gray-900">{t.checkout.total}</span>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-luxury-navy">{new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: region?.currency_code || currency,
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }).format(displayTotal)}</p>
+                  <p className="text-xl font-bold text-luxury-navy">{formatCurrencyPrice(displayTotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
                   </p>
@@ -2970,12 +3053,7 @@ export default function CheckoutPage() {
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         {!pendingOrder && <Lock className="h-5 w-5" />}
-                        {pendingOrder ? 'Continue Payment' : t.checkout.placeOrder} · {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: region?.currency_code || currency,
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }).format(displayTotal)}
+                        {pendingOrder ? 'Continue Payment' : t.checkout.placeOrder} · {formatCurrencyPrice(displayTotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}
                       </span>
                     )}
                   </Button>

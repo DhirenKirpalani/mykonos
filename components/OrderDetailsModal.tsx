@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
-import { Clock, CheckCircle2, Package, X, MapPin } from 'lucide-react'
+import { Clock, CheckCircle2, Package, X, MapPin, Tag } from 'lucide-react'
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 import { formatPrice } from '@/lib/utils'
 import { getCountryName } from '@/lib/utils/country'
@@ -14,6 +14,10 @@ interface Order {
   status: string
   payment_status: string
   total_amount: number
+  subtotal_amount?: number
+  discount_amount?: number
+  shipping_amount?: number
+  tax_amount?: number
   currency_code: string
   created_at: string
   customer_email: string
@@ -222,14 +226,51 @@ export function OrderDetailsModal({ order, isOpen, onClose, lang = 'id', t, onCo
           <p className="text-gray-600 text-xs mb-1">Email</p>
           <p className="font-semibold text-gray-900 text-xs truncate">{order.customer_email}</p>
         </div>
-        <div>
-          <p className="text-gray-600 text-xs mb-1">{lang === 'id' ? 'Total' : 'Total'}</p>
-          <p className="font-semibold text-gray-900 text-xs">
-            {formatPrice(
-              order.total_amount, 
-              ((order.payment_metadata as any)?.currency_code || order.currency_code) as any
-            )}
-          </p>
+        <div className="col-span-2">
+          {(() => {
+            const currency = ((order.payment_metadata as any)?.currency_code || order.currency_code) as any
+            const subtotal = order.subtotal_amount ?? 0
+            const shipping = order.shipping_amount ?? 0
+            const discount = order.discount_amount ?? 0
+            const tax = order.tax_amount ?? 0
+            const discountPct = subtotal > 0 && discount > 0
+              ? Math.round((discount / subtotal) * 100)
+              : 0
+            return (
+              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                {subtotal > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">{lang === 'id' ? 'Subtotal' : 'Subtotal'}</span>
+                    <span className="font-medium text-gray-900">{formatPrice(subtotal, currency)}</span>
+                  </div>
+                )}
+                {discount > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-green-600 flex items-center gap-1">
+                      <Tag className="h-3 w-3" />
+                      {lang === 'id' ? 'Voucher Diskon' : 'Voucher Discount'}
+                      {discountPct > 0 && <span className="bg-green-100 text-green-700 px-1 rounded">-{discountPct}%</span>}
+                    </span>
+                    <span className="font-medium text-green-600">-{formatPrice(discount, currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600">{lang === 'id' ? 'Pengiriman' : 'Shipping'}</span>
+                  <span className="font-medium text-gray-900">{shipping > 0 ? formatPrice(shipping, currency) : (lang === 'id' ? 'Gratis' : 'Free')}</span>
+                </div>
+                {tax > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">{lang === 'id' ? 'Pajak' : 'Tax'}</span>
+                    <span className="font-medium text-gray-900">{formatPrice(tax, currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs pt-2 border-t border-gray-200">
+                  <span className="font-semibold text-gray-900">{lang === 'id' ? 'Total' : 'Total'}</span>
+                  <span className="font-bold text-gray-900">{formatPrice(subtotal - discount + shipping + tax, currency)}</span>
+                </div>
+              </div>
+            )
+          })()}
         </div>
         {order.payment_gateway && (
           <div>

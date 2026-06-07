@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Package, Mail, MapPin, Calendar, Truck, CheckCircle2, Clock, UserPlus, LogIn, ChevronRight } from 'lucide-react'
+import { Package, Mail, MapPin, Calendar, Truck, CheckCircle2, Clock, UserPlus, LogIn, ChevronRight, Tag } from 'lucide-react'
 import { formatPrice } from '@/lib/utils/currency'
 import { getCountryName } from '@/lib/utils/country'
 import { useTranslation } from '@/hooks/useTranslation'
@@ -51,6 +51,10 @@ type Order = {
     country: string
   }
   total_amount: number
+  subtotal_amount?: number
+  discount_amount?: number
+  shipping_amount?: number
+  tax_amount?: number
   currency_code: string
   created_at: string
   completed_at: string | null
@@ -199,7 +203,7 @@ export default function TrackOrderPage() {
           // Fetch summary only — full detail loaded on-demand when user clicks
           const { data, error } = await supabase
             .from('orders')
-            .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, shipping_address')
+            .select('id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, shipping_address')
             .eq('customer_email', authenticatedEmail)
             .order('created_at', { ascending: false })
             .limit(5)
@@ -240,7 +244,7 @@ export default function TrackOrderPage() {
             // Fetch summary only — full detail loaded on-demand when user clicks
             const { data, error } = await supabase
               .from('orders')
-              .select('id, order_number, status, payment_status, total_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, shipping_address')
+              .select('id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, shipping_address')
               .eq('customer_email', mostRecentEmail)
               .order('created_at', { ascending: false })
               .limit(5)
@@ -823,7 +827,7 @@ export default function TrackOrderPage() {
                         </div>
                         <p className="text-sm text-gray-600 font-semibold">
                           {formatPrice(
-                            sessionOrder.total_amount, 
+                            (sessionOrder.subtotal_amount ?? 0) - (sessionOrder.discount_amount ?? 0) + (sessionOrder.shipping_amount ?? 0) + (sessionOrder.tax_amount ?? 0),
                             ((sessionOrder.payment_metadata as any)?.currency_code || sessionOrder.currency_code) as any
                           )}
                         </p>
@@ -1326,14 +1330,51 @@ export default function TrackOrderPage() {
                   <p className="text-gray-600 text-xs mb-1">Email</p>
                   <p className="font-semibold text-gray-900 text-xs truncate">{order.customer_email}</p>
                 </div>
-                <div>
-                  <p className="text-gray-600 text-xs mb-1">{t('trackOrder.totalAmount')}</p>
-                  <p className="font-semibold text-gray-900 text-xs">
-                    {formatPrice(
-                      order.total_amount, 
-                      ((order.payment_metadata as any)?.currency_code || order.currency_code) as any
-                    )}
-                  </p>
+                <div className="col-span-2">
+                  {(() => {
+                    const currency = ((order.payment_metadata as any)?.currency_code || order.currency_code) as any
+                    const subtotal = (order as any).subtotal_amount ?? 0
+                    const shipping = (order as any).shipping_amount ?? 0
+                    const discount = (order as any).discount_amount ?? 0
+                    const tax = (order as any).tax_amount ?? 0
+                    const discountPct = subtotal > 0 && discount > 0
+                      ? Math.round((discount / subtotal) * 100)
+                      : 0
+                    return (
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                        {subtotal > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">{lang === 'id' ? 'Subtotal' : 'Subtotal'}</span>
+                            <span className="font-medium text-gray-900">{formatPrice(subtotal, currency)}</span>
+                          </div>
+                        )}
+                        {discount > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-green-600 flex items-center gap-1">
+                              <Tag className="h-3 w-3" />
+                              {lang === 'id' ? 'Voucher Diskon' : 'Voucher Discount'}
+                              {discountPct > 0 && <span className="bg-green-100 text-green-700 px-1 rounded">-{discountPct}%</span>}
+                            </span>
+                            <span className="font-medium text-green-600">-{formatPrice(discount, currency)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-600">{lang === 'id' ? 'Pengiriman' : 'Shipping'}</span>
+                          <span className="font-medium text-gray-900">{shipping > 0 ? formatPrice(shipping, currency) : (lang === 'id' ? 'Gratis' : 'Free')}</span>
+                        </div>
+                        {tax > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">{lang === 'id' ? 'Pajak' : 'Tax'}</span>
+                            <span className="font-medium text-gray-900">{formatPrice(tax, currency)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xs pt-2 border-t border-gray-200">
+                          <span className="font-semibold text-gray-900">{t('trackOrder.totalAmount')}</span>
+                          <span className="font-bold text-gray-900">{formatPrice(subtotal - discount + shipping + tax, currency)}</span>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
                 {order.payment_gateway && (
                   <div>
