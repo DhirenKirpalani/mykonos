@@ -414,6 +414,9 @@ class DHLClient {
     postalCode: string
     cityName: string
     countyName?: string
+    addressLine1?: string
+    full_name?: string
+    phone?: string
     strictValidation?: boolean
   }): Promise<{
     warnings?: string[]

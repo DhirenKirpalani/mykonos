@@ -46,6 +46,10 @@ export async function GET(request: Request) {
         payment_metadata,
         packed_at,
         shipped_at,
+        subtotal_amount,
+        discount_amount,
+        shipping_amount,
+        tax_amount,
         order_items (
           id,
           product_id,

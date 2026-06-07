@@ -14,6 +14,10 @@ type Order = {
   order_number: string
   status: string
   total_amount: number
+  subtotal_amount?: number
+  discount_amount?: number
+  shipping_amount?: number
+  tax_amount?: number
   currency_code: string
   created_at: string
   order_items: Array<{
@@ -271,11 +275,14 @@ export default function OrdersPage() {
                     }
                   </span>
                   <span className="font-semibold text-xs sm:text-sm whitespace-nowrap">
-                    {order.currency_code === 'IDR'
-                      ? `Rp. ${order.total_amount.toLocaleString('id-ID')}`
-                      : order.currency_code === 'USD'
-                      ? `$${order.total_amount.toFixed(2)}`
-                      : `${order.currency_code} ${order.total_amount.toFixed(2)}`}
+                    {(() => {
+                      const computedTotal = (order.subtotal_amount ?? 0) - (order.discount_amount ?? 0) + (order.shipping_amount ?? 0) + (order.tax_amount ?? 0)
+                      return order.currency_code === 'IDR'
+                        ? `Rp. ${computedTotal.toLocaleString('id-ID')}`
+                        : order.currency_code === 'USD'
+                        ? `$${computedTotal.toFixed(2)}`
+                        : `${order.currency_code} ${computedTotal.toFixed(2)}`
+                    })()}
                   </span>
                 </div>
               </div>

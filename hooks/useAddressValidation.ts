@@ -106,13 +106,23 @@ export function useAddressValidation() {
           countryCode: address.countryCode,
           postalCode: address.postalCode,
           cityName: address.cityName,
+          addressLine1: address.addressLine1,
+          full_name: address.full_name,
+          phone: address.phone,
           strictValidation: true,
         }),
       })
 
       const data = await response.json()
-      setValidationResult(data)
-      return data
+      // Normalize: API errors (404/500) return {error, details} without message/warnings
+      const normalized = {
+        isValid: data.isValid ?? false,
+        warnings: data.warnings ?? (data.error ? [data.error] : []),
+        suggestions: data.suggestions ?? [],
+        message: data.message || data.error || (data.isValid ? 'Address validated' : 'Address validation failed'),
+      }
+      setValidationResult(normalized)
+      return normalized
     } catch (error) {
       console.error('DHL address validation failed:', error)
       const fallbackResult = {

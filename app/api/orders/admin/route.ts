@@ -30,6 +30,10 @@ export async function GET(request: Request) {
         status,
         payment_status,
         total_amount,
+        subtotal_amount,
+        discount_amount,
+        shipping_amount,
+        tax_amount,
         currency_code,
         payment_metadata,
         created_at,
@@ -106,7 +110,14 @@ export async function GET(request: Request) {
           user_id: order.user_id,
           status: order.status,
           payment_status: order.payment_status,
-          total_amount: order.total_amount,
+          total_amount: order.subtotal_amount != null
+            ? (order.subtotal_amount ?? 0) - (order.discount_amount ?? 0) + (order.shipping_amount ?? 0) + (order.tax_amount ?? 0)
+            : order.total_amount,
+          raw_total_amount: order.total_amount,
+          subtotal_amount: order.subtotal_amount,
+          discount_amount: order.discount_amount,
+          shipping_amount: order.shipping_amount,
+          tax_amount: order.tax_amount,
           created_at: order.created_at,
           updated_at: order.updated_at,
           customer_name: order.user_id 

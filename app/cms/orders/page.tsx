@@ -15,6 +15,10 @@ interface Order {
   user_id: string
   status: string
   total_amount: number
+  subtotal_amount?: number
+  discount_amount?: number
+  shipping_amount?: number
+  tax_amount?: number
   created_at: string
   updated_at: string
   customer_name?: string
@@ -757,15 +761,6 @@ export default function OrdersPage() {
             Pending Payment <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.pending_payment}</span>
           </button>
           <button
-            onClick={() => setStatusFilter('pending')}
-            disabled={loading}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              statusFilter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-            }`}
-          >
-            Pending <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{statusCounts.pending}</span>
-          </button>
-          <button
             onClick={() => setStatusFilter('processing')}
             disabled={loading}
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -986,23 +981,22 @@ export default function OrdersPage() {
                               </div>
                               <div>
                                 <p className="text-gray-500 mb-1">Payment</p>
-                                <p className={`font-medium ${order.payment_status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>
-                                  {order.payment_status || 'pending'}
+                                <p className={`font-medium ${
+                                  order.payment_status === 'completed' ? 'text-green-600' :
+                                  order.payment_status === 'failed' ? 'text-red-600' :
+                                  order.payment_status === 'refunded' ? 'text-purple-600' :
+                                  'text-orange-600'
+                                }`}>
+                                  {order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : 'Pending'}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-gray-500 mb-1">Discounts</p>
-                                {details.discount && (
+                                {order.discount_amount && order.discount_amount > 0 ? (
                                   <p className="text-green-600 font-medium">
-                                    Discount: -Rp{details.discount.amount.toLocaleString('id-ID')}
+                                    Discount: -{formatPrice(order.discount_amount, getRegionFromOrder(order))}
                                   </p>
-                                )}
-                                {details.voucher && (
-                                  <p className="text-blue-600 font-medium">
-                                    Voucher ({details.voucher.code}): -Rp{details.voucher.amount.toLocaleString('id-ID')}
-                                  </p>
-                                )}
-                                {!details.discount && !details.voucher && (
+                                ) : (
                                   <p className="text-gray-500">No discounts</p>
                                 )}
                               </div>
@@ -1720,6 +1714,7 @@ export default function OrdersPage() {
                               <p className="text-gray-500 text-sm mb-2">Items ({details.items.length})</p>
                               <div className="space-y-2">
                                 {(() => {
+                                  const itemRegion = getRegionFromOrder(details.order)
                                   // Group items by product name
                                   const grouped = details.items.reduce((acc: any, item) => {
                                     if (!acc[item.product_name]) {
@@ -1754,7 +1749,7 @@ export default function OrdersPage() {
                                                 <p className="text-gray-700">{item.variant_name}</p>
                                               </div>
                                               <p className="text-gray-600">×{item.quantity}</p>
-                                              <p className="font-medium">Rp{(item.price * item.quantity).toLocaleString('id-ID')}</p>
+                                              <p className="font-medium">{formatPrice(item.price * item.quantity, itemRegion)}</p>
                                             </div>
                                           ))}
                                         </div>
@@ -1778,7 +1773,7 @@ export default function OrdersPage() {
                                             <p className="font-medium text-gray-900">{item.product_name}</p>
                                           </div>
                                           <p className="text-gray-600">×{item.quantity}</p>
-                                          <p className="font-medium">Rp{(item.price * item.quantity).toLocaleString('id-ID')}</p>
+                                          <p className="font-medium">{formatPrice(item.price * item.quantity, itemRegion)}</p>
                                         </div>
                                       ))
                                     }

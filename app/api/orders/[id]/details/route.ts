@@ -93,18 +93,29 @@ export async function GET(
           if (product) {
             productName = product.name
             
+            // Parse variants if stored as JSON string
+            let variants = product.variants
+            if (typeof variants === 'string') {
+              try { variants = JSON.parse(variants) } catch { variants = null }
+            }
+            
             // Check for variant image first
-            if (item.variant_name && product.variants) {
-              const variant = product.variants.find((v: any) => v.name === item.variant_name)
+            if (item.variant_name && Array.isArray(variants)) {
+              const variant = variants.find((v: any) => v.name === item.variant_name)
               if (variant?.image_url) {
                 imageUrl = variant.image_url
                 console.log(`✅ [API ORDER DETAILS] Using variant image for:`, item.variant_name)
               }
             }
             
-            // Fallback to product images
+            // Fallback to product images (parse if JSON string)
             if (!imageUrl) {
-              const validUrls = product.image_urls?.filter((url: string) => url && !url.includes('placehold.co')) || []
+              let imageUrls = product.image_urls
+              if (typeof imageUrls === 'string') {
+                try { imageUrls = JSON.parse(imageUrls) } catch { imageUrls = [] }
+              }
+              const urls = Array.isArray(imageUrls) ? imageUrls : []
+              const validUrls = urls.filter((url: string) => url && !url.includes('placehold.co'))
               imageUrl = validUrls[0] || null
             }
             

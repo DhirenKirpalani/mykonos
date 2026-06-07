@@ -12,9 +12,9 @@ export async function POST(request: Request) {
     console.log('🔵 [API] POST /api/checkout/session - Creating checkout session')
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
-    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0, item_discounts = [], tax: providedTax, exchange_rate } = body
-    
-    console.log('📥 [API] Request body:', { user_id, session_id, items_count: items?.length, currency_code, region_code, exchange_rate })
+    const { user_id, session_id, items, currency_code, region_code, voucher_discount = 0, item_discounts = [], tax: providedTax, exchange_rate, shipping = 0 } = body
+
+    console.log('📥 [API] Request body:', { user_id, session_id, items_count: items?.length, currency_code, region_code, exchange_rate, shipping })
 
     if (!user_id && !session_id) {
       console.error('❌ [API] Missing user_id and session_id')
@@ -137,9 +137,9 @@ export async function POST(request: Request) {
     const pricingSnapshot = {
       subtotal,
       discount: voucher_discount,
-      shipping: 0,
+      shipping,
       tax,
-      total: netAmount + tax,
+      total: netAmount + shipping + tax,
       currency_code: finalCurrencyCode,
       exchange_rate_to_usd: exchange_rate || null
     }
@@ -197,6 +197,7 @@ export async function PATCH(request: Request) {
       customer_email, 
       shipping_address_id, 
       shipping_method_id,
+      shipping_cost,
       payment_method_type,
       new_address,
       shipping_address 
@@ -311,6 +312,31 @@ export async function PATCH(request: Request) {
             .update({ pricing_snapshot: pricing } as any)
             .eq('id', session_id)
         }
+      }
+    }
+
+    // Direct shipping cost update (e.g. from DHL rates API)
+    if (shipping_cost !== undefined && shipping_cost !== null) {
+      console.log('📝 [API] Updating pricing_snapshot with direct shipping_cost:', shipping_cost)
+      const { data: session } = await supabase
+        .from('checkout_sessions')
+        .select('pricing_snapshot')
+        .eq('id', session_id)
+        .single()
+
+      const typedSession = session as any
+
+      if (typedSession?.pricing_snapshot) {
+        const pricing = typedSession.pricing_snapshot as any
+        pricing.shipping = Number(shipping_cost)
+        pricing.total = pricing.subtotal - pricing.discount + pricing.shipping + pricing.tax
+
+        await supabase
+          .from('checkout_sessions')
+          .update({ pricing_snapshot: pricing } as any)
+          .eq('id', session_id)
+
+        console.log('✅ [API] pricing_snapshot updated with shipping_cost:', pricing)
       }
     }
 
