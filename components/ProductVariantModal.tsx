@@ -204,8 +204,8 @@ export function ProductVariantModal({
           await onAddToWishlist?.({} as any)
           onClose()
         } else if (mode === 'buy-now') {
+          onClose() // close first for smooth navigation
           await onBuyNow?.(product.id, quantity, {} as any)
-          // Don't close modal - let redirect happen
         } else {
           await onAddToCart(product.id, quantity, {} as any)
           onClose()
@@ -223,6 +223,7 @@ export function ProductVariantModal({
           variant_sku: variant.sku,
           quantity: quantity
         }))
+        onClose() // close first for smooth navigation
         await onBuyNow(product.id, 1, variantsData as any)
       } else {
         // For Add to Cart and Wishlist, process each variant separately
@@ -507,7 +508,14 @@ export function ProductVariantModal({
                                 ) : null
                               })()}
                               <div className="flex-1 min-w-0">
-                                <div className="font-montserrat font-medium text-gray-900">{variant.name}</div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-montserrat font-medium text-gray-900">{variant.name}</span>
+                                  {variant.stock_quantity === 0 && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-100 text-red-700 border border-red-200 leading-none">
+                                      Sold Out
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                 <div className="font-bold text-luxury-navy">
@@ -591,7 +599,7 @@ export function ProductVariantModal({
                   >
                     {isProcessing ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="animate-spin">⏳</span>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
                         {t.common.loading}
                       </span>
                     ) : (
@@ -610,7 +618,7 @@ export function ProductVariantModal({
                   >
                     {isProcessing ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="animate-spin">⏳</span>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
                         {t.common.loading}
                       </span>
                     ) : (
@@ -652,7 +660,7 @@ export function ProductVariantModal({
                   >
                     {isProcessing ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="animate-spin">⏳</span>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
                         {t.common.loading}
                       </span>
                     ) : (

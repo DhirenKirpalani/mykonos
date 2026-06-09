@@ -157,30 +157,41 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const { filePath } = await request.json()
+    const body = await request.json()
+    const urls: string[] = body.urls || (body.filePath ? [body.filePath] : [])
 
-    if (!filePath) {
-      return NextResponse.json(
-        { error: 'File path is required' },
-        { status: 400 }
-      )
+    if (urls.length === 0) {
+      return NextResponse.json({ message: 'No files to delete' })
     }
 
-    // Delete from Supabase Storage
-    const { error } = await supabase.storage
-      .from('product-media')
-      .remove([filePath])
+    const bucketName = 'product-media'
+    const marker = `/storage/v1/object/public/${bucketName}/`
+
+    // Extract storage paths from full public URLs (or use raw paths directly)
+    const paths = urls
+      .map(url => {
+        const idx = url.indexOf(marker)
+        return idx !== -1 ? decodeURIComponent(url.slice(idx + marker.length)) : url
+      })
+      .filter(p => p && p.trim() !== '')
+
+    if (paths.length === 0) {
+      return NextResponse.json({ message: 'No valid paths to delete' })
+    }
+
+    const { error } = await supabase.storage.from(bucketName).remove(paths)
 
     if (error) {
       console.error('Delete error:', error)
       return NextResponse.json(
-        { error: 'Failed to delete file' },
+        { error: 'Failed to delete files' },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
-      message: 'File deleted successfully',
+      message: `Deleted ${paths.length} file(s) successfully`,
+      deleted: paths,
     })
   } catch (error: any) {
     console.error('Delete error:', error)

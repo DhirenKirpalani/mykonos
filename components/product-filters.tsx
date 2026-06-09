@@ -83,7 +83,7 @@ export function ProductFilters() {
                 currentGender === 'male' ? 'bg-[#C2A36B] text-white shadow-sm' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              For Men
+              Men
             </button>
             <button
               onClick={() => updateFilter('gender', currentGender === 'female' ? '' : 'female')}
@@ -91,7 +91,7 @@ export function ProductFilters() {
                 currentGender === 'female' ? 'bg-[#C2A36B] text-white shadow-sm' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              For Women
+              Women
             </button>
             <button
               onClick={() => updateFilter('gender', currentGender === 'unisex' ? '' : 'unisex')}
