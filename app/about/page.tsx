@@ -61,24 +61,6 @@ export default function AboutPage() {
         </div>
       </div>
 
-      {/* Pillars / Stats Bar */}
-      <div className="bg-luxury-navy/5 border-y border-luxury-gold/15">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid grid-cols-3 divide-x divide-luxury-gold/15">
-            {[
-              { number: '100%', label: 'Handcrafted' },
-              { number: 'Rare', label: 'Ingredients' },
-              { number: 'Timeless', label: 'Fragrance' },
-            ].map((stat) => (
-              <div key={stat.label} className="py-6 sm:py-8 text-center px-2">
-                <p className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-luxury-navy mb-1">{stat.number}</p>
-                <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-luxury-gold font-medium">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Content Sections */}
       <div className="container mx-auto px-4 py-14 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-3xl">

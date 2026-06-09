@@ -90,7 +90,7 @@ export default function ContactPage() {
   }
 
   const whatsappHref = clientRegion === 'ID' ? whatsappUrlID : whatsappUrlInternational
-  const whatsappNumber = clientRegion === 'ID' ? '+62 857-8021-8514' : '+62 816-261-783'
+  const whatsappNumber = clientRegion === 'ID' ? '+62 816-261-783' : '+62 816-261-783'
 
   return (
     <div className="min-h-screen bg-gray-50">

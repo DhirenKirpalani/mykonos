@@ -151,6 +151,7 @@ function SizeCarouselSection({ products15ml, products50ml, products100ml, vouche
           vouchers={vouchers}
           activeDiscounts={activeDiscounts}
           hideHeader={true}
+          sizeHint={active.replace(/[^0-9]/g, '')}
         />
       )}
     </section>

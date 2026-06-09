@@ -556,7 +556,7 @@ export const translations = {
     about: {
       title: "MYKONOS",
       subtitle: "Designed to be remembered",
-      artOfPerfumery: "Our Beginning",
+      artOfPerfumery: "Our Story",
       artPara1: "Founded in 2019, MYKONOS is an Indonesian perfume house that was born out of a desire to turn emotions into fragrance. We believe that every scent tells a story — one that speaks to memory, identity, and imagination. Every MYKONOS perfume is more than just a scent — it's a moment captured in high quality materials in affordable price range.",
       artPara2: "In the past 7 years, MYKONOS keep on learning, creating and innovating by pushing boundaries through bold & creative bottle designs, immersive campaigns, and conceptual scent narratives. Whether it's a glow-in-the-dark perfume that celebrates inner light, or a scent inspired by specific moment and childhood desserts, MYKONOS thrives in the space where story, scent, and creativity collide — turning feelings into fragrances that linger beyond time.",
       craftsmanship: "Global Recognition",
@@ -591,8 +591,8 @@ export const translations = {
       subtitle: "Your satisfaction is our priority",
       returnsExchanges: "Returns and Exchanges",
       returnPolicy: "We have a 3-day return policy, which means you have 3 days after receiving your item to request a return.",
-      returnContact: "To return, contact us at +62 857-8021-8514. If your return is accepted, we will send you a return shipping label, as well as instructions on how and where to send your package. Items sent back to us without first requesting a return will not be accepted.",
-      exchangeProcess: "For the quickest exchange process, please return the item you have. Once your return is accepted, you can place a new order for the item you want. If you have further questions, kindly message us at +62 857-8021-8514.",
+      returnContact: "To return, contact us at +62 816-261-783. If your return is accepted, we will send you a return shipping label, as well as instructions on how and where to send your package. Items sent back to us without first requesting a return will not be accepted.",
+      exchangeProcess: "For the quickest exchange process, please return the item you have. Once your return is accepted, you can place a new order for the item you want. If you have further questions, kindly message us at +62 816-261-783.",
       damagesIssues: "Damages and Issues",
       inspectOrder: "Upon receiving your order, please inspect the items and record an unboxing video. If you find any defects, damage, or receive the wrong item, contact us right away so we can help fix the issue.",
       unboxingRequired: "Important: An unboxing video is required to claim a return or refund.",
@@ -607,7 +607,7 @@ export const translations = {
       refunds: "Refunds",
       refundProcess: "After your return arrives and has been inspected, we'll let you know whether your refund is approved.",
       refundTiming: "If it is approved, we will process your refund to your original payment method within 10 business days. Please note that your bank or card provider might need extra time to complete the refund.",
-      refundContact: "If you have not received your refund after 15 business days from approval, please reach out to us at +62 857-8021-8514."
+      refundContact: "If you have not received your refund after 15 business days from approval, please reach out to us at +62 816-261-783."
     },
     terms: {
       title: "Terms of Service",
@@ -639,7 +639,7 @@ export const translations = {
       thirdParty: "Third-Party Services and Tools",
       thirdPartyPara: "We may provide access to third-party tools or external websites. These are offered \"as is\" without warranties or control from us. We are not responsible for content, accuracy, or services provided by third-party websites.",
       questionsFeedback: "Questions and Feedback",
-      feedbackPara: "We welcome your questions, comments, and concerns about privacy or any of the information collected from you or about you. Questions about the Terms of Service should be sent to our WhatsApp +62 857-8021-8514. We are not required to maintain confidentiality, provide compensation, or respond to any submissions.",
+      feedbackPara: "We welcome your questions, comments, and concerns about privacy or any of the information collected from you or about you. Questions about the Terms of Service should be sent to our WhatsApp +62 816-261-783. We are not required to maintain confidentiality, provide compensation, or respond to any submissions.",
       acceptance: "Your Acceptance of Terms",
       acceptancePara: "By using this Site and providing us with your information, you agree to the Site's Privacy Policy. If you do not agree to this policy, please do not use the Site."
     },
@@ -1372,7 +1372,7 @@ export const translations = {
     about: {
       title: "MYKONOS",
       subtitle: "Dirancang untuk dikenang",
-      artOfPerfumery: "Awal Kami",
+      artOfPerfumery: "Kisah Kami",
       artPara1: "Didirikan pada tahun 2019, MYKONOS adalah rumah parfum Indonesia yang lahir dari keinginan untuk mengubah emosi menjadi wewangian. Kami percaya bahwa setiap aroma menceritakan sebuah kisah — yang berbicara tentang memori, identitas, dan imajinasi. Setiap parfum MYKONOS lebih dari sekadar aroma — ini adalah momen yang ditangkap dalam bahan berkualitas tinggi dengan harga terjangkau.",
       artPara2: "Dalam 7 tahun terakhir, MYKONOS terus belajar, berkreasi, dan berinovasi dengan mendorong batasan melalui desain botol yang berani & kreatif, kampanye yang imersif, dan narasi aroma konseptual. Baik itu parfum glow-in-the-dark yang merayakan cahaya batin, atau aroma yang terinspirasi dari momen spesifik dan makanan penutup masa kecil, MYKONOS berkembang di ruang di mana cerita, aroma, dan kreativitas bertabrakan — mengubah perasaan menjadi wewangian yang bertahan melampaui waktu.",
       craftsmanship: "Pengakuan Global",
@@ -1407,8 +1407,8 @@ export const translations = {
       subtitle: "Kepuasan Anda adalah prioritas kami",
       returnsExchanges: "Pengembalian dan Penukaran",
       returnPolicy: "Kami memiliki kebijakan pengembalian 3 hari, yang berarti Anda memiliki 3 hari setelah menerima barang Anda untuk meminta pengembalian.",
-      returnContact: "Untuk mengembalikan, hubungi kami di +62 857-8021-8514. Jika pengembalian Anda diterima, kami akan mengirimkan label pengiriman pengembalian, serta instruksi tentang cara dan tempat mengirim paket Anda. Barang yang dikirim kembali kepada kami tanpa terlebih dahulu meminta pengembalian tidak akan diterima.",
-      exchangeProcess: "Untuk proses penukaran tercepat, silakan kembalikan barang yang Anda miliki. Setelah pengembalian Anda diterima, Anda dapat melakukan pemesanan baru untuk barang yang Anda inginkan. Jika Anda memiliki pertanyaan lebih lanjut, silakan hubungi kami di +62 857-8021-8514.",
+      returnContact: "Untuk mengembalikan, hubungi kami di +62 816-261-783. Jika pengembalian Anda diterima, kami akan mengirimkan label pengiriman pengembalian, serta instruksi tentang cara dan tempat mengirim paket Anda. Barang yang dikirim kembali kepada kami tanpa terlebih dahulu meminta pengembalian tidak akan diterima.",
+      exchangeProcess: "Untuk proses penukaran tercepat, silakan kembalikan barang yang Anda miliki. Setelah pengembalian Anda diterima, Anda dapat melakukan pemesanan baru untuk barang yang Anda inginkan. Jika Anda memiliki pertanyaan lebih lanjut, silakan hubungi kami di +62 816-261-783.",
       damagesIssues: "Kerusakan dan Masalah",
       inspectOrder: "Setelah menerima pesanan Anda, harap periksa barang dan rekam video unboxing. Jika Anda menemukan cacat, kerusakan, atau menerima barang yang salah, hubungi kami segera agar kami dapat membantu memperbaiki masalahnya.",
       unboxingRequired: "Penting: Video unboxing diperlukan untuk mengklaim pengembalian atau pengembalian dana.",
@@ -1423,7 +1423,7 @@ export const translations = {
       refunds: "Pengembalian Dana",
       refundProcess: "Setelah pengembalian Anda tiba dan telah diperiksa, kami akan memberi tahu Anda apakah pengembalian dana Anda disetujui.",
       refundTiming: "Jika disetujui, kami akan memproses pengembalian dana Anda ke metode pembayaran asli Anda dalam 10 hari kerja. Harap dicatat bahwa bank atau penyedia kartu Anda mungkin memerlukan waktu tambahan untuk menyelesaikan pengembalian dana.",
-      refundContact: "Jika Anda belum menerima pengembalian dana Anda setelah 15 hari kerja dari persetujuan, silakan hubungi kami di +62 857-8021-8514."
+      refundContact: "Jika Anda belum menerima pengembalian dana Anda setelah 15 hari kerja dari persetujuan, silakan hubungi kami di +62 816-261-783."
     },
     terms: {
       title: "Syarat Layanan",
@@ -1455,7 +1455,7 @@ export const translations = {
       thirdParty: "Layanan dan Alat Pihak Ketiga",
       thirdPartyPara: "Kami dapat menyediakan akses ke alat pihak ketiga atau situs web eksternal. Ini ditawarkan \"sebagaimana adanya\" tanpa jaminan atau kontrol dari kami. Kami tidak bertanggung jawab atas konten, akurasi, atau layanan yang disediakan oleh situs web pihak ketiga.",
       questionsFeedback: "Pertanyaan dan Umpan Balik",
-      feedbackPara: "Kami menyambut pertanyaan, komentar, dan kekhawatiran Anda tentang privasi atau informasi apa pun yang dikumpulkan dari Anda atau tentang Anda. Pertanyaan tentang Syarat Layanan harus dikirim ke WhatsApp kami +62 857-8021-8514. Kami tidak diwajibkan untuk menjaga kerahasiaan, memberikan kompensasi, atau menanggapi pengiriman apa pun.",
+      feedbackPara: "Kami menyambut pertanyaan, komentar, dan kekhawatiran Anda tentang privasi atau informasi apa pun yang dikumpulkan dari Anda atau tentang Anda. Pertanyaan tentang Syarat Layanan harus dikirim ke WhatsApp kami +62 816-261-783. Kami tidak diwajibkan untuk menjaga kerahasiaan, memberikan kompensasi, atau menanggapi pengiriman apa pun.",
       acceptance: "Penerimaan Syarat Anda",
       acceptancePara: "Dengan menggunakan Situs ini dan memberikan informasi Anda kepada kami, Anda setuju dengan Kebijakan Privasi Situs. Jika Anda tidak setuju dengan kebijakan ini, harap jangan gunakan Situs."
     },
