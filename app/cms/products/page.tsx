@@ -34,6 +34,7 @@ interface Product {
 }
 
 type StockFilter = 'all' | 'low_stock' | 'out_of_stock'
+type SizeFilter = 'all' | 'all_three' | '100' | '50' | '50_100' | '15_100' | '15_50' | 'body_mist' | 'travel'
 
 interface ExpandedRows {
   [key: string]: boolean
@@ -51,6 +52,7 @@ export default function ProductsPage() {
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [auditProduct, setAuditProduct] = useState<Product | null>(null)
   const [expandedRows, setExpandedRows] = useState<ExpandedRows>({})
+  const [sizeFilter, setSizeFilter] = useState<SizeFilter>('all')
 
   const toggleRow = (productId: string) => {
     setExpandedRows(prev => ({
@@ -153,6 +155,35 @@ export default function ProductsPage() {
     }
   }
 
+  const getProductSizes = (product: Product): Set<string> => {
+    const sizes = new Set<string>()
+    const checkText = (text: string) => {
+      const t = text.toLowerCase().replace(/\s+/g, '')
+      if (t.includes('15ml')) sizes.add('15')
+      if (t.includes('50ml')) sizes.add('50')
+      if (t.includes('100ml')) sizes.add('100')
+      if (text.toLowerCase().includes('body mist')) sizes.add('body_mist')
+      if (text.toLowerCase().includes('travel')) sizes.add('travel')
+    }
+    checkText(product.name)
+    product.variants?.forEach(v => checkText(v.name))
+    return sizes
+  }
+
+  const matchesSizeFilter = (product: Product): boolean => {
+    if (sizeFilter === 'all') return true
+    const s = getProductSizes(product)
+    if (sizeFilter === 'all_three') return s.has('15') && s.has('50') && s.has('100')
+    if (sizeFilter === '100') return s.has('100') && !s.has('15') && !s.has('50')
+    if (sizeFilter === '50') return s.has('50') && !s.has('15') && !s.has('100')
+    if (sizeFilter === '50_100') return s.has('50') && s.has('100') && !s.has('15')
+    if (sizeFilter === '15_100') return s.has('15') && s.has('100') && !s.has('50')
+    if (sizeFilter === '15_50') return s.has('15') && s.has('50') && !s.has('100')
+    if (sizeFilter === 'body_mist') return s.has('body_mist')
+    if (sizeFilter === 'travel') return s.has('travel')
+    return true
+  }
+
   // Helper function to check if product or any variant is low stock
   const isLowStock = (product: Product): boolean => {
     // If product has variants, check each variant
@@ -178,17 +209,12 @@ export default function ProductsPage() {
   }
 
   const filteredProducts = products.filter(product => {
-    // Search filter
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.slug.toLowerCase().includes(searchQuery.toLowerCase())
-    
     if (!matchesSearch) return false
-    
-    // Stock filter
-    if (stockFilter === 'all') return true
-    if (stockFilter === 'out_of_stock') return isOutOfStock(product)
-    if (stockFilter === 'low_stock') return isLowStock(product)
-    
+    if (stockFilter === 'out_of_stock' && !isOutOfStock(product)) return false
+    if (stockFilter === 'low_stock' && !isLowStock(product)) return false
+    if (!matchesSizeFilter(product)) return false
     return true
   })
   
@@ -205,7 +231,7 @@ export default function ProductsPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, stockFilter])
+  }, [searchQuery, stockFilter, sizeFilter])
 
   const handleStockClick = (product: Product) => {
     setSelectedProduct(product)
@@ -273,7 +299,7 @@ export default function ProductsPage() {
 
       <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
         {/* Stock Filter Tabs */}
-        <div className="mb-4 sm:mb-6 border-b border-gray-200">
+        <div className="mb-3 border-b border-gray-200">
           <div className="flex gap-2 sm:gap-4 overflow-x-auto">
             <button
               onClick={() => setStockFilter('all')}
@@ -318,6 +344,35 @@ export default function ProductsPage() {
                 </span>
               )}
             </button>
+          </div>
+        </div>
+
+        {/* Size Filter Tabs */}
+        <div className="mb-4 sm:mb-6 border-b border-gray-200">
+          <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-px">
+            {([
+              { key: 'all', label: 'All Sizes' },
+              { key: 'all_three', label: '15, 50 & 100ml' },
+              { key: '100', label: '100ml' },
+              { key: '50', label: '50ml' },
+              { key: '50_100', label: '50 & 100ml' },
+              { key: '15_100', label: '15 & 100ml' },
+              { key: '15_50', label: '15 & 50ml' },
+              { key: 'body_mist', label: 'Body Mist' },
+              { key: 'travel', label: 'Travel Size' },
+            ] as { key: SizeFilter; label: string }[]).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setSizeFilter(key)}
+                className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                  sizeFilter === key
+                    ? 'border-luxury-gold text-luxury-gold'
+                    : 'border-transparent text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 

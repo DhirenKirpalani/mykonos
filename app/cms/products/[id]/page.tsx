@@ -99,6 +99,11 @@ export default function EditProductPage() {
   }>>([])
   const [variantStockModalOpen, setVariantStockModalOpen] = useState(false)
 
+  const originalProductImgUrls = useRef<string[]>([])
+  const originalProductVidUrls = useRef<string[]>([])
+  const originalVariantImgUrls = useRef<string[][]>([])
+  const originalVariantVidUrls = useRef<string[][]>([])
+
   const dragImgFrom = useRef<number | null>(null)
   const dragImgOver = useRef<number | null>(null)
   const [dragImgOverIdx, setDragImgOverIdx] = useState<number | null>(null)
@@ -277,24 +282,23 @@ export default function EditProductPage() {
           tax_enabled: product.tax_enabled ?? true,
         })
         
-        if (product.image_urls && Array.isArray(product.image_urls)) {
-          console.log('Processing image_urls array:', product.image_urls)
-          setImagePreviews(product.image_urls.filter(Boolean))
-        } else {
-          console.log('No image_urls found or not an array:', product.image_urls)
-        }
-        
-        if (product.video_urls && Array.isArray(product.video_urls)) {
-          console.log('Processing video_urls array:', product.video_urls)
-          setVideoPreviews(product.video_urls.filter(Boolean))
-        } else {
-          console.log('No video_urls found or not an array:', product.video_urls)
-        }
+        const loadedImgUrls = product.image_urls && Array.isArray(product.image_urls)
+          ? product.image_urls.filter(Boolean)
+          : []
+        setImagePreviews(loadedImgUrls)
+        originalProductImgUrls.current = loadedImgUrls
+
+        const loadedVidUrls = product.video_urls && Array.isArray(product.video_urls)
+          ? product.video_urls.filter(Boolean)
+          : []
+        setVideoPreviews(loadedVidUrls)
+        originalProductVidUrls.current = loadedVidUrls
+
         if (product.image_alt_texts && Array.isArray(product.image_alt_texts)) {
           setImageAltTexts(product.image_alt_texts)
         }
         if (product.variants && Array.isArray(product.variants)) {
-          setVariants(product.variants.map((v: any) => ({
+          const mappedVariants = product.variants.map((v: any) => ({
             name: v.name || '',
             sku: v.sku || '',
             price_usd: v.price_usd?.toString() || '',
@@ -310,7 +314,10 @@ export default function EditProductPage() {
             video_urls: Array.isArray(v.video_url) ? v.video_url.filter(Boolean) : (v.video_url ? [v.video_url] : []),
             video_files: [],
             video_previews: []
-          })))
+          }))
+          setVariants(mappedVariants)
+          originalVariantImgUrls.current = mappedVariants.map((v: { image_urls: string[] }) => [...v.image_urls])
+          originalVariantVidUrls.current = mappedVariants.map((v: { video_urls: string[] }) => [...v.video_urls])
         }
       } else {
         toast.error('Failed to load product')
@@ -450,6 +457,31 @@ export default function EditProductPage() {
         })
         setLoading(false)
         return
+      }
+
+      // Compute which existing URLs have been removed by the user
+      const keptImgUrls = imagePreviews.filter(url => !url.startsWith('data:'))
+      const keptVidUrls = videoPreviews.filter(url => !url.startsWith('data:'))
+      const removedImgUrls = originalProductImgUrls.current.filter(url => !keptImgUrls.includes(url))
+      const removedVidUrls = originalProductVidUrls.current.filter(url => !keptVidUrls.includes(url))
+      const removedVariantImgUrls: string[] = []
+      const removedVariantVidUrls: string[] = []
+      variants.forEach((v, idx) => {
+        const origImgs = originalVariantImgUrls.current[idx] || []
+        const origVids = originalVariantVidUrls.current[idx] || []
+        origImgs.forEach(url => { if (!v.image_urls.includes(url)) removedVariantImgUrls.push(url) })
+        origVids.forEach(url => { if (!v.video_urls.includes(url)) removedVariantVidUrls.push(url) })
+      })
+      const allRemovedUrls = [...removedImgUrls, ...removedVidUrls, ...removedVariantImgUrls, ...removedVariantVidUrls]
+      if (allRemovedUrls.length > 0) {
+        await fetch('/api/upload/product-media', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ urls: allRemovedUrls }),
+        })
       }
 
       // Upload new media files (pass product name for folder)

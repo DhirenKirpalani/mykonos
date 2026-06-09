@@ -204,8 +204,8 @@ export function HomeDesktop({ products, collections, newArrivals, bestSelling, v
       ) : (
         <GenderCarouselSection
           genders={[
-            { label: (t.home as any).forMen || "Men's Collection", tabLabel: (t.home as any).forMenTab || 'For Men', products: maleProducts, href: '/products?gender=male' },
-            { label: (t.home as any).forWomen || "Women's Collection", tabLabel: (t.home as any).forWomenTab || 'For Women', products: femaleProducts, href: '/products?gender=female' },
+            { label: (t.home as any).forMen || "Men's Collection", tabLabel: (t.home as any).forMenTab || 'Men', products: maleProducts, href: '/products?gender=male' },
+            { label: (t.home as any).forWomen || "Women's Collection", tabLabel: (t.home as any).forWomenTab || 'Women', products: femaleProducts, href: '/products?gender=female' },
             { label: (t.home as any).forUnisex || 'Unisex Collection', tabLabel: (t.home as any).forUnisexTab || 'Unisex', products: unisexProducts, href: '/products?gender=unisex' },
           ]}
           vouchers={vouchers}
