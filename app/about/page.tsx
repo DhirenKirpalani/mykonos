@@ -22,43 +22,31 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="bg-luxury-navy border-b border-luxury-gold/20 relative">
-        {/* Hero Content */}
-        <div className="relative h-[340px] sm:h-[400px] md:h-[480px] overflow-hidden">
-          {/* Subtle background pattern */}
-          <div className="absolute inset-0 bg-luxury-navy" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(184,152,95,0.08)_1px,_transparent_0)] bg-[length:36px_36px]" />
-          
-          {/* Breadcrumb - Desktop only */}
-          <div className="absolute top-0 left-0 right-0 z-10 hidden md:block">
-            <div className="container mx-auto px-4 py-3">
-              <Breadcrumbs 
-                items={[
-                  { label: 'About Us', href: '/about' }
-                ]}
-                variant="light"
-              />
-            </div>
-          </div>
-          
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <h1 
-            className="mb-4 font-montserrat text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold tracking-normal leading-tight"
-            style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
-          >
-            {t.about.title}
-          </h1>
-          {/* Thin gold rule under title */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="h-px w-12 sm:w-20 bg-luxury-gold" />
-            <div className="w-1.5 h-1.5 rounded-full bg-luxury-gold" />
-            <div className="h-px w-12 sm:w-20 bg-luxury-gold" />
-          </div>
-          <p className="max-w-xl text-base sm:text-lg font-montserrat text-white leading-relaxed font-light tracking-wide">
-            Designed to be remembered
-          </p>
+      <div className="relative border-b border-luxury-gold/20 overflow-hidden">
+        {/* Breadcrumb - Desktop only */}
+        <div className="absolute top-0 left-0 right-0 z-10 hidden md:block">
+          <div className="container mx-auto px-4 py-3">
+            <Breadcrumbs 
+              items={[
+                { label: 'About Us', href: '/about' }
+              ]}
+              variant="light"
+            />
           </div>
         </div>
+
+        {/* Desktop banner */}
+        <img
+          src="/assets/images/web about us banner.jpg"
+          alt="About Mykonos"
+          className="hidden sm:block w-full h-[340px] sm:h-[400px] md:h-[480px] object-cover"
+        />
+        {/* Mobile banner */}
+        <img
+          src="/assets/images/mobile about us banner.jpg"
+          alt="About Mykonos"
+          className="block sm:hidden w-full h-[280px] object-cover"
+        />
       </div>
 
       {/* Content Sections */}
@@ -86,29 +74,23 @@ export default function AboutPage() {
 
           <GoldDivider />
 
-          {/* Craftsmanship */}
-          <section id="craftsmanship">
+          {/* Global Recognition */}
+          <section id="global-recognition">
             <p className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.3em] text-luxury-gold mb-3">02</p>
             <h2 className="font-montserrat text-3xl sm:text-4xl md:text-5xl font-bold text-luxury-navy mb-6 leading-tight">
               {t.about.craftsmanship}
             </h2>
             <div className="w-12 h-0.5 bg-luxury-gold mb-8" />
             <div className="space-y-5 text-base sm:text-lg font-montserrat leading-relaxed text-gray-600">
-              <p>{t.about.craftPara1}</p>
               <p>{t.about.craftPara2}</p>
+              <p>{t.about.craftPara1}</p>
             </div>
-            {/* Feature highlight cards */}
-            <div className="mt-10 grid grid-cols-2 gap-4">
-              {[
-                { title: 'Rare Oud Wood', desc: 'Sourced from the finest forests across the Middle East' },
-                { title: 'Rose Absolutes', desc: 'Precious petals harvested at dawn for maximum potency' },
-              ].map((item) => (
-                <div key={item.title} className="bg-luxury-navy/3 border border-luxury-gold/20 rounded-xl p-5 sm:p-6">
-                  <div className="w-6 h-px bg-luxury-gold mb-3" />
-                  <h4 className="font-montserrat text-base sm:text-lg font-semibold text-luxury-navy mb-2">{item.title}</h4>
-                  <p className="text-xs sm:text-sm font-montserrat text-gray-500 leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
+            <div className="mt-8">
+              <img
+                src="/assets/images/INDONESIA.png"
+                alt="Indonesia and global presence"
+                className="w-full max-w-xl rounded-xl object-contain"
+              />
             </div>
           </section>
 
@@ -135,8 +117,8 @@ export default function AboutPage() {
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(184,152,95,0.2)_0%,_transparent_60%)]" />
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-luxury-gold/60 to-transparent" />
               <div className="relative">
-                <h2 className="mb-4 font-playfair text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight">
-                  Luxury in Every Drop
+                <h2 className="mb-4 font-playfair text-xl sm:text-2xl md:text-3xl font-bold text-white leading-tight">
+                  Designed to be Remembered
                 </h2>
                 <div className="flex items-center justify-center gap-3 mb-6">
                   <div className="h-px w-10 bg-luxury-gold/50" />
@@ -144,7 +126,7 @@ export default function AboutPage() {
                   <div className="h-px w-10 bg-luxury-gold/50" />
                 </div>
                 <p className="mb-8 text-sm sm:text-base font-montserrat text-white/70 max-w-xl mx-auto leading-relaxed">
-                  Enter the world of Mykonos fragrances
+                  Enter the world of MYKONOS fragrances
                 </p>
                 <Link href="/products">
                   <Button

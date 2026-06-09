@@ -18,6 +18,30 @@ body {
 }
 
 @font-face {
+  font-family: 'Adobe Caslon Pro';
+  src: local('Adobe Caslon Pro Semibold'), local('AdobeCaslonPro-Semibold'), local('ACaslonPro-Semibold');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Adobe Caslon Pro';
+  src: local('Adobe Caslon Pro Regular'), local('AdobeCaslonPro-Regular'), local('ACaslonPro-Regular');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Adobe Caslon Pro';
+  src: local('Adobe Caslon Pro Bold'), local('AdobeCaslonPro-Bold'), local('ACaslonPro-Bold');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Futura PT';
   src: local('Futura PT Book'), local('FuturaPT-Book');
   font-weight: 400;
@@ -549,4 +573,9 @@ img::after {
   -moz-user-select: none !important;
   user-select: none !important;
   -webkit-touch-callout: none !important;
+}
+
+/* Adobe Caslon Semibold override — replaces Playfair Display */
+.font-playfair {
+  font-family: "Adobe Caslon Pro", var(--font-caslon), "Libre Caslon Text", Georgia, serif;
 }

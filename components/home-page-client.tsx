@@ -112,7 +112,7 @@ export function HomePageClient() {
           .from('products')
           .select('*')
           .eq('is_visible', true)
-          .eq('is_best_selling', true)
+          .eq('is_popular', true)
           .gt('stock_quantity', 0)
           .limit(8),
         supabase
