@@ -126,7 +126,7 @@ export default function UnsubscribePage() {
               </button>
 
               <p className="text-xs text-center text-gray-500 dark:text-gray-500">
-                By unsubscribing, you will no longer receive promotional emails, product updates, or special offers from Mykonos.
+                By unsubscribing, you will no longer receive promotional emails, product updates, or special offers from MYKONOS.
               </p>
             </form>
           )}

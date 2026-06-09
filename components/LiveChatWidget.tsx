@@ -439,7 +439,7 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
             <MessageCircle className="h-4 w-4 text-luxury-gold sm:h-5 sm:w-5" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white sm:text-base">Mykonos Assistant</h3>
+            <h3 className="text-sm font-semibold text-white sm:text-base">MYKONOS Assistant</h3>
             <p className="text-xs text-luxury-gold/80">
               {isAgentOnline ? (
                 <>
@@ -514,7 +514,7 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
                       >
                         {message.sender_type !== 'customer' && (
                           <p className="text-xs font-semibold mb-1">
-                            Mykonos Support
+                            MYKONOS Support
                           </p>
                         )}
                         <p className="text-sm whitespace-pre-wrap">{message.message_text}</p>

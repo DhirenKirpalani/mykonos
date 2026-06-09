@@ -19,7 +19,7 @@ export const translations = {
       legal: "LEGAL",
       termsConditions: "Terms of Service",
       privacyPolicy: "Privacy Policy",
-      copyright: "Mykonos. All rights reserved."
+      copyright: "MYKONOS. All rights reserved."
     },
     contact: {
       title: "Contact Us",
@@ -126,7 +126,7 @@ export const translations = {
       experienceLuxury: "Experience Luxury",
       experienceLuxuryDesc: "Each fragrance is a masterpiece, meticulously crafted to evoke emotions and create lasting memories.",
       discoverStory: "Discover Our Story",
-      whyChooseMykonos: "Why Choose Mykonos",
+      whyChooseMykonos: "Why Choose MYKONOS",
       uncompromisingExcellence: "Uncompromising Excellence",
       premiumQuality: "Premium Quality",
       premiumQualityDesc: "Only the finest ingredients sourced from around the world",
@@ -220,9 +220,9 @@ export const translations = {
     },
     auth: {
       welcomeBack: "Welcome Back",
-      signInSubtitle: "Sign in to your Mykonos account",
+      signInSubtitle: "Sign in to your MYKONOS account",
       createAccountTitle: "Create Account",
-      signUpSubtitle: "Join Mykonos and discover luxury fragrances",
+      signUpSubtitle: "Join MYKONOS and discover luxury fragrances",
       emailAddress: "Email Address",
       password: "Password",
       forgotPassword: "Forgot password?",
@@ -566,7 +566,7 @@ export const translations = {
       sustainPara1: "We believe in making luxury accessible. High quality materials meet affordable pricing, allowing everyone to experience the art of fine perfumery.",
       sustainPara2: "Each bottle is designed to be more than just packaging — it's part of the experience, from glow-in-the-dark designs to conceptual art that tells a story before you even smell the fragrance.",
       experienceDiff: "Luxury in Every Drop",
-      discoverCollection: "Enter the world of mykonos fragrances",
+      discoverCollection: "Enter the world of MYKONOS fragrances",
       shopNow: "Shop Now"
     },
     shipping: {
@@ -574,10 +574,10 @@ export const translations = {
       subtitle: "Fast and secure delivery worldwide",
       shippingMethod: "Shipping Method",
       preOrder: "Pre-Order System (3–14 working days)",
-      preOrderDesc: "At Mykonos, every order is prepared with precision and care to ensure that your fragrance arrives in perfect condition, elegantly packaged and delicately presented.",
+      preOrderDesc: "At MYKONOS, every order is prepared with precision and care to ensure that your fragrance arrives in perfect condition, elegantly packaged and delicately presented.",
       processingNotes: "Order Processing Notes",
       note1: "Orders are processed from Monday to Saturday. Payment confirmations made on weekends or public holidays will be verified on the next business day. We do not ship on Sundays or public holidays.",
-      note2: "Orders will only be dispatched once full payment has been received and confirmed. We work closely with trusted courier partners to ensure your order arrives safely. However, Mykonos is not responsible for any delays caused by courier services. Once your package has been handed over to the couriers, the risk of loss or damage becomes the responsibility of the courier and the recipient's address provided.",
+      note2: "Orders will only be dispatched once full payment has been received and confirmed. We work closely with trusted courier partners to ensure your order arrives safely. However, MYKONOS is not responsible for any delays caused by courier services. Once your package has been handed over to the couriers, the risk of loss or damage becomes the responsibility of the courier and the recipient's address provided.",
       note3: "You will receive an email confirmation and tracking number once your order has been shipped.",
       shippingSchedule: "Shipping Schedule",
       domesticOrders: "Domestic Orders (Indonesia)",
@@ -617,9 +617,9 @@ export const translations = {
       generalPara2: "By using this Site, making a purchase, or participating in any promotions, you acknowledge that you are at least the age of majority in your jurisdiction, or that you have given consent for any minor dependents to use this Site.",
       generalPara3: "You may not use our products or services for any unlawful or unauthorized purpose. Any breach of these Terms may result in immediate termination of your access to the Service.",
       changesModification: "Changes and Modification",
-      changesPara1: "Mykonos reserves the right to update, modify, or discontinue any part of the Site, including prices, content, terms, and services, at any time without prior notice.",
+      changesPara1: "MYKONOS reserves the right to update, modify, or discontinue any part of the Site, including prices, content, terms, and services, at any time without prior notice.",
       changesPara2: "Your continued use of the Site after any changes signifies your acceptance of those updates.",
-      changesPara3: "If a pricing error occurs, Mykonos reserves the right to correct the price and cancel or refuse any orders affected by the error.",
+      changesPara3: "If a pricing error occurs, MYKONOS reserves the right to correct the price and cancel or refuse any orders affected by the error.",
       changesPara4: "These Terms of Service are effective unless terminated by either you or us. We may terminate this agreement at any time without notice.",
       privacyPolicy: "Privacy Policy",
       privacyPara1: "Your use of the Site signifies your agreement to our Privacy Policy.",
@@ -627,8 +627,8 @@ export const translations = {
       privacyPara3: "Personal information may be collected when you browse the Site, create an account, make a purchase, contact us, or follow us on social media.",
       privacyPara4: "Your information will not be sold, misused, or shared with unrelated third parties. For full details, please refer to the Privacy Policy section on our website.",
       contentOwnership: "Content Ownership",
-      contentPara1: "All content on this Site, including images, photographs, graphics, logos, descriptions, and data, belongs to Mykonos and is protected by copyright law.",
-      contentPara2: "You may not copy, reproduce, modify, distribute, or use any part of this Site for commercial purposes without written permission from Mykonos.",
+      contentPara1: "All content on this Site, including images, photographs, graphics, logos, descriptions, and data, belongs to MYKONOS and is protected by copyright law.",
+      contentPara2: "You may not copy, reproduce, modify, distribute, or use any part of this Site for commercial purposes without written permission from MYKONOS.",
       productInfo: "Product Information and Accuracy",
       productPara1: "We always try our best to display product details, descriptions, and colors accurately. However, we cannot guarantee that your device's display will perfectly reflect actual product colors. If any information on the Site contains errors or incomplete details, including pricing, product descriptions, promotions, or availability, we reserve the right to correct such errors and update information at any time, including after an order has been submitted.",
       productPara2: "Certain products may be available exclusively online and may have limited quantities.",
@@ -646,7 +646,7 @@ export const translations = {
     privacy: {
       title: "Privacy Policy",
       lastUpdated: "Last updated: December 25, 2025",
-      intro: "At Mykonos, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or make a purchase from our store.",
+      intro: "At MYKONOS, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or make a purchase from our store.",
       infoWeCollect: "1. Information We Collect",
       personalInfo: "Personal Information",
       personalInfoDesc: "When you make a purchase or create an account, we may collect the following information:",
@@ -798,7 +798,7 @@ export const translations = {
     },
     email: {
       orderConfirmed: 'Order Confirmed',
-      thankYou: 'Thank you for choosing Mykonos.',
+      thankYou: 'Thank you for choosing MYKONOS.',
       journeyBegins: 'Your fragrance journey begins with us.',
       dear: 'Dear',
       orderReceived: 'Your order has been received and is being prepared with care. We\'re excited to share our luxury fragrances with you.',
@@ -823,7 +823,7 @@ export const translations = {
       orderExpire: 'This order will expire if payment is not completed in time.',
       secureYourOrder: 'Secure Your Order',
       contactUs: 'If you have any questions, please contact us at:',
-      copyright: ' 2026 Mykonos Modern & Vibrant Perfumery. All rights reserved.'
+      copyright: ' 2026 MYKONOS Modern & Vibrant Perfumery. All rights reserved.'
     }
   },
   id: {
@@ -846,7 +846,7 @@ export const translations = {
       legal: "HUKUM",
       termsConditions: "Syarat Layanan",
       privacyPolicy: "Kebijakan Privasi",
-      copyright: "Mykonos. Hak cipta dilindungi."
+      copyright: "MYKONOS. Hak cipta dilindungi."
     },
     contact: {
       title: "Hubungi Kami",
@@ -953,7 +953,7 @@ export const translations = {
       experienceLuxury: "Rasakan Kemewahan",
       experienceLuxuryDesc: "Setiap wewangian adalah mahakarya, dibuat dengan cermat untuk membangkitkan emosi dan menciptakan kenangan abadi.",
       discoverStory: "Temukan Cerita Kami",
-      whyChooseMykonos: "Mengapa Memilih Mykonos",
+      whyChooseMykonos: "Mengapa Memilih MYKONOS",
       uncompromisingExcellence: "Keunggulan Tanpa Kompromi",
       premiumQuality: "Kualitas Premium",
       premiumQualityDesc: "Hanya bahan-bahan terbaik yang bersumber dari seluruh dunia",
@@ -1036,9 +1036,9 @@ export const translations = {
     },
     auth: {
       welcomeBack: "Selamat Datang Kembali",
-      signInSubtitle: "Masuk ke akun Mykonos Anda",
+      signInSubtitle: "Masuk ke akun MYKONOS Anda",
       createAccountTitle: "Buat Akun",
-      signUpSubtitle: "Bergabunglah dengan Mykonos dan temukan wewangian mewah",
+      signUpSubtitle: "Bergabunglah dengan MYKONOS dan temukan wewangian mewah",
       emailAddress: "Alamat Email",
       password: "Kata Sandi",
       forgotPassword: "Lupa kata sandi?",
@@ -1382,7 +1382,7 @@ export const translations = {
       sustainPara1: "Kami percaya dalam membuat kemewahan dapat diakses. Bahan berkualitas tinggi bertemu dengan harga terjangkau, memungkinkan semua orang untuk merasakan seni parfum berkualitas tinggi.",
       sustainPara2: "Setiap botol dirancang untuk lebih dari sekadar kemasan — ini adalah bagian dari pengalaman, dari desain glow-in-the-dark hingga seni konseptual yang menceritakan kisah bahkan sebelum Anda mencium wewangiannya.",
       experienceDiff: "Kemewahan di setiap tetes",
-      discoverCollection: "Masuki dunia wewangian mykonos",
+      discoverCollection: "Masuki dunia wewangian MYKONOS",
       shopNow: "Belanja Sekarang"
     },
     shipping: {
@@ -1390,10 +1390,10 @@ export const translations = {
       subtitle: "Pengiriman cepat dan aman ke seluruh dunia",
       shippingMethod: "Metode Pengiriman",
       preOrder: "Sistem Pre-Order (3–14 hari kerja)",
-      preOrderDesc: "Di Mykonos, setiap pesanan disiapkan dengan presisi dan perhatian untuk memastikan wewangian Anda tiba dalam kondisi sempurna, dikemas dengan elegan dan disajikan dengan halus.",
+      preOrderDesc: "Di MYKONOS, setiap pesanan disiapkan dengan presisi dan perhatian untuk memastikan wewangian Anda tiba dalam kondisi sempurna, dikemas dengan elegan dan disajikan dengan halus.",
       processingNotes: "Catatan Pemrosesan Pesanan",
       note1: "Pesanan diproses dari Senin hingga Sabtu. Konfirmasi pembayaran yang dilakukan pada akhir pekan atau hari libur akan diverifikasi pada hari kerja berikutnya. Kami tidak mengirim pada hari Minggu atau hari libur.",
-      note2: "Pesanan hanya akan dikirim setelah pembayaran penuh diterima dan dikonfirmasi. Kami bekerja sama dengan mitra kurir terpercaya untuk memastikan pesanan Anda tiba dengan aman. Namun, Mykonos tidak bertanggung jawab atas keterlambatan yang disebabkan oleh layanan kurir. Setelah paket Anda diserahkan ke kurir, risiko kehilangan atau kerusakan menjadi tanggung jawab kurir dan alamat penerima yang diberikan.",
+      note2: "Pesanan hanya akan dikirim setelah pembayaran penuh diterima dan dikonfirmasi. Kami bekerja sama dengan mitra kurir terpercaya untuk memastikan pesanan Anda tiba dengan aman. Namun, MYKONOS tidak bertanggung jawab atas keterlambatan yang disebabkan oleh layanan kurir. Setelah paket Anda diserahkan ke kurir, risiko kehilangan atau kerusakan menjadi tanggung jawab kurir dan alamat penerima yang diberikan.",
       note3: "Anda akan menerima konfirmasi email dan nomor pelacakan setelah pesanan Anda dikirim.",
       shippingSchedule: "Jadwal Pengiriman",
       domesticOrders: "Pesanan Domestik (Indonesia)",
@@ -1433,9 +1433,9 @@ export const translations = {
       generalPara2: "Dengan menggunakan Situs ini, melakukan pembelian, atau berpartisipasi dalam promosi apa pun, Anda mengakui bahwa Anda setidaknya berusia dewasa di yurisdiksi Anda, atau bahwa Anda telah memberikan persetujuan untuk tanggungan kecil apa pun untuk menggunakan Situs ini.",
       generalPara3: "Anda tidak boleh menggunakan produk atau layanan kami untuk tujuan yang melanggar hukum atau tidak sah. Setiap pelanggaran terhadap Syarat ini dapat mengakibatkan penghentian segera akses Anda ke Layanan.",
       changesModification: "Perubahan dan Modifikasi",
-      changesPara1: "Mykonos berhak untuk memperbarui, memodifikasi, atau menghentikan bagian mana pun dari Situs, termasuk harga, konten, syarat, dan layanan, kapan saja tanpa pemberitahuan sebelumnya.",
+      changesPara1: "MYKONOS berhak untuk memperbarui, memodifikasi, atau menghentikan bagian mana pun dari Situs, termasuk harga, konten, syarat, dan layanan, kapan saja tanpa pemberitahuan sebelumnya.",
       changesPara2: "Penggunaan Situs Anda yang berkelanjutan setelah perubahan apa pun menandakan penerimaan Anda terhadap pembaruan tersebut.",
-      changesPara3: "Jika terjadi kesalahan harga, Mykonos berhak untuk memperbaiki harga dan membatalkan atau menolak pesanan apa pun yang terpengaruh oleh kesalahan.",
+      changesPara3: "Jika terjadi kesalahan harga, MYKONOS berhak untuk memperbaiki harga dan membatalkan atau menolak pesanan apa pun yang terpengaruh oleh kesalahan.",
       changesPara4: "Syarat Layanan ini berlaku kecuali diakhiri oleh Anda atau kami. Kami dapat mengakhiri perjanjian ini kapan saja tanpa pemberitahuan.",
       privacyPolicy: "Kebijakan Privasi",
       privacyPara1: "Penggunaan Situs Anda menandakan persetujuan Anda terhadap Kebijakan Privasi kami.",
@@ -1443,7 +1443,7 @@ export const translations = {
       privacyPara3: "Informasi pribadi dapat dikumpulkan saat Anda menjelajahi Situs, membuat akun, melakukan pembelian, menghubungi kami, atau mengikuti kami di media sosial.",
       privacyPara4: "Informasi Anda tidak akan dijual, disalahgunakan, atau dibagikan dengan pihak ketiga yang tidak terkait. Untuk detail lengkap, silakan lihat bagian Kebijakan Privasi di situs web kami.",
       contentOwnership: "Kepemilikan Konten",
-      contentPara1: "Semua konten di Situs ini, termasuk gambar, foto, grafik, logo, deskripsi, dan data, milik Mykonos dan dilindungi oleh hukum hak cipta.",
+      contentPara1: "Semua konten di Situs ini, termasuk gambar, foto, grafik, logo, deskripsi, dan data, milik MYKONOS dan dilindungi oleh hukum hak cipta.",
       contentPara2: "Anda tidak boleh menyalin, mereproduksi, memodifikasi, mendistribusikan, atau menggunakan bagian mana pun dari Situs ini untuk tujuan komersial tanpa izin tertulis dari MYKONOS.",
       productInfo: "Informasi dan Akurasi Produk",
       productPara1: "Kami selalu berusaha sebaik mungkin untuk menampilkan detail produk, deskripsi, dan warna secara akurat. Namun, kami tidak dapat menjamin bahwa tampilan perangkat Anda akan mencerminkan warna produk yang sebenarnya dengan sempurna. Jika informasi apa pun di Situs berisi kesalahan atau detail yang tidak lengkap, termasuk harga, deskripsi produk, promosi, atau ketersediaan, kami berhak untuk memperbaiki kesalahan tersebut dan memperbarui informasi kapan saja, termasuk setelah pesanan dikirimkan.",
@@ -1462,7 +1462,7 @@ export const translations = {
     privacy: {
       title: "Kebijakan Privasi",
       lastUpdated: "Terakhir diperbarui: 25 Desember 2025",
-      intro: "Di Mykonos, kami berkomitmen untuk melindungi privasi Anda dan memastikan keamanan informasi pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, mengungkapkan, dan melindungi informasi Anda saat Anda mengunjungi situs web kami atau melakukan pembelian dari toko kami.",
+      intro: "Di MYKONOS, kami berkomitmen untuk melindungi privasi Anda dan memastikan keamanan informasi pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, mengungkapkan, dan melindungi informasi Anda saat Anda mengunjungi situs web kami atau melakukan pembelian dari toko kami.",
       infoWeCollect: "1. Informasi yang Kami Kumpulkan",
       personalInfo: "Informasi Pribadi",
       personalInfoDesc: "Saat Anda melakukan pembelian atau membuat akun, kami dapat mengumpulkan informasi berikut:",

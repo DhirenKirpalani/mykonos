@@ -24,7 +24,7 @@ export function AssistantWidget() {
     setMessages([
       {
         id: '1',
-        text: "Hello! I'm your Mykonos shopping assistant. How can I help you find the perfect fragrance today?",
+        text: "Hello! I'm your MYKONOS shopping assistant. How can I help you find the perfect fragrance today?",
         sender: 'assistant',
         timestamp: new Date(),
       },
@@ -100,7 +100,7 @@ export function AssistantWidget() {
                 <div className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-green-500 ring-2 ring-white"></div>
               </div>
               <div>
-                <h3 className="font-semibold text-white">Mykonos Assistant</h3>
+                <h3 className="font-semibold text-white">MYKONOS Assistant</h3>
                 <p className="text-xs text-luxury-gold">Online • Ready to help</p>
               </div>
             </div>

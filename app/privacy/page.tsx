@@ -190,7 +190,7 @@ export default function PrivacyPolicyPage() {
             </h2>
             <div className="space-y-4 text-gray-700">
               <div className="rounded-lg bg-blue-50 p-4 text-blue-900">
-                <p className="mb-2"><strong>Mykonos Luxury Fragrances</strong></p>
+                <p className="mb-2"><strong>MYKONOS Luxury Fragrances</strong></p>
                 <p>Email: privacy@mykonos.com</p>
                 <p>Phone: +62 816-261-783</p>
                 <p>Address: Jakarta, Indonesia</p>

@@ -29,7 +29,7 @@ const faqsData = {
       questions: [
         {
           q: 'WHY IS MY DELIVERY STATUS PENDING OR DELAYED?',
-          a: 'Delivery delays can occur due to courier services, weather conditions, or high order volumes. We work closely with trusted courier partners, but once your package has been handed over to the courier, Mykonos is not responsible for delays. Please contact us at +62 816-261-783 for assistance.',
+          a: 'Delivery delays can occur due to courier services, weather conditions, or high order volumes. We work closely with trusted courier partners, but once your package has been handed over to the courier, MYKONOS is not responsible for delays. Please contact us at +62 816-261-783 for assistance.',
         },
         {
           q: 'DO YOU SHIP WORLDWIDE?',
@@ -55,7 +55,7 @@ const faqsData = {
       questions: [
         {
           q: 'DO YOU HAVE OFFLINE STORE?',
-          a: 'Currently, Mykonos operates exclusively online to provide you with the best prices and widest selection. All orders are processed through our website.',
+          a: 'Currently, MYKONOS operates exclusively online to provide you with the best prices and widest selection. All orders are processed through our website.',
         },
         {
           q: 'WILL THERE BE RESTOCKS FOR THE SOLD OUT ITEMS?',
@@ -87,7 +87,7 @@ const faqsData = {
       questions: [
         {
           q: 'MENGAPA STATUS PENGIRIMAN SAYA TERTUNDA ATAU TERLAMBAT?',
-          a: 'Keterlambatan pengiriman dapat terjadi karena layanan kurir, kondisi cuaca, atau volume pesanan yang tinggi. Kami bekerja sama dengan mitra kurir terpercaya, tetapi setelah paket Anda diserahkan ke kurir, Mykonos tidak bertanggung jawab atas keterlambatan. Silakan hubungi kami di +62 816-261-783 untuk bantuan.',
+          a: 'Keterlambatan pengiriman dapat terjadi karena layanan kurir, kondisi cuaca, atau volume pesanan yang tinggi. Kami bekerja sama dengan mitra kurir terpercaya, tetapi setelah paket Anda diserahkan ke kurir, MYKONOS tidak bertanggung jawab atas keterlambatan. Silakan hubungi kami di +62 816-261-783 untuk bantuan.',
         },
         {
           q: 'APAKAH ANDA MENGIRIM KE SELURUH DUNIA?',
@@ -113,7 +113,7 @@ const faqsData = {
       questions: [
         {
           q: 'APAKAH ANDA MEMILIKI TOKO OFFLINE?',
-          a: 'Saat ini, Mykonos beroperasi secara eksklusif online untuk memberikan Anda harga terbaik dan pilihan terluas. Semua pesanan diproses melalui situs web kami.',
+          a: 'Saat ini, MYKONOS beroperasi secara eksklusif online untuk memberikan Anda harga terbaik dan pilihan terluas. Semua pesanan diproses melalui situs web kami.',
         },
         {
           q: 'APAKAH AKAN ADA RESTOCK UNTUK BARANG YANG HABIS?',
