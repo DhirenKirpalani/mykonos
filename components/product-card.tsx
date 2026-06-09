@@ -80,9 +80,10 @@ interface ProductCardProps {
     discounted_price: number
     variant_id?: string
   } | null
+  sizeHint?: string
 }
 
-export function ProductCard({ product, className, noBorder = false, voucher, activeDiscount }: ProductCardProps) {
+export function ProductCard({ product, className, noBorder = false, voucher, activeDiscount, sizeHint }: ProductCardProps) {
   const { region } = useRegion()
   const { t, locale } = useLanguage()
   const [mounted, setMounted] = useState(false)
@@ -131,10 +132,42 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
   // Check if product has variants with different prices
   const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
 
-  // Compute the image index to show on hover:
-  // – with variants: first image of the second variant
-  // – without variants (or single variant): second image overall
+  // Reorder images so the selected size variant's image is first when sizeHint is provided
+  // Also track which images belong to the matching variant for hover logic
+  const { orderedImages, matchingVariantImgs } = useMemo(() => {
+    if (!sizeHint || !hasVariants) {
+      return { orderedImages: allProductImages, matchingVariantImgs: new Set<string>() }
+    }
+    const variants = (product as any).variants as any[]
+    const sizeNum = sizeHint.replace(/[^0-9]/g, '')
+    const matchingVariant = variants.find((v: any) => {
+      const vname = (v.name || '').toLowerCase().replace(/\s+/g, '')
+      return vname.includes(`${sizeNum}ml`) || vname === sizeNum
+    })
+    if (!matchingVariant) {
+      return { orderedImages: allProductImages, matchingVariantImgs: new Set<string>() }
+    }
+    const matchingImgs = (
+      Array.isArray(matchingVariant.image_url)
+        ? matchingVariant.image_url
+        : matchingVariant.image_url ? [matchingVariant.image_url] : []
+    ).filter((url: string) => typeof url === 'string' && url.trim() !== '' && !url.includes('placehold.co'))
+    if (matchingImgs.length === 0) {
+      return { orderedImages: allProductImages, matchingVariantImgs: new Set<string>() }
+    }
+    const otherImgs = allProductImages.filter((url: string) => !matchingImgs.includes(url))
+    return {
+      orderedImages: [...matchingImgs, ...otherImgs],
+      matchingVariantImgs: new Set(matchingImgs),
+    }
+  }, [sizeHint, hasVariants, allProductImages, product])
+
+  // Compute hover target: first image from a *different* variant when sizeHint is active
   const hoverIndex = useMemo(() => {
+    if (sizeHint && matchingVariantImgs.size > 0) {
+      const idx = orderedImages.findIndex(url => url && !url.includes('placehold.co') && !matchingVariantImgs.has(url))
+      return idx >= 0 ? idx : 1
+    }
     if (hasVariants) {
       const variants = (product as any).variants as any[]
       if (variants?.length >= 2) {
@@ -147,16 +180,21 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
       }
     }
     return 1
-  }, [hasVariants, product])
+  }, [hasVariants, product, sizeHint, orderedImages, matchingVariantImgs])
+
+  // Reset to first image whenever the size hint changes
+  useEffect(() => {
+    setCurrentImageIndex(0)
+  }, [sizeHint])
 
   // On hover: jump to hoverIndex (no auto-cycle)
   useEffect(() => {
     if (!isHovering) return
-    const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+    const validImages = orderedImages.filter(url => url && !url.includes('placehold.co'))
     if (validImages.length > 1) {
       setCurrentImageIndex(Math.min(hoverIndex, validImages.length - 1))
     }
-  }, [isHovering, hoverIndex, allProductImages])
+  }, [isHovering, hoverIndex, orderedImages])
   
   // Check if product is out of stock
   const isOutOfStock = useMemo(() => {
@@ -244,7 +282,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
     : firstMedia
 
   // Shared hover display URL (used by both card variants)
-  const validAllImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+  const validAllImages = orderedImages.filter(url => url && !url.includes('placehold.co'))
   const displayThumbnailUrl = validAllImages[currentImageIndex] || thumbnailUrl
 
   // For bestselling cards, use minimal design matching reference image
@@ -354,7 +392,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
           onTouchEnd={(e) => {
             const diff = touchStartXRef.current - e.changedTouches[0].clientX
             if (Math.abs(diff) > 40) {
-              const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+              const validImages = orderedImages.filter(url => url && !url.includes('placehold.co'))
               if (diff > 0 && currentImageIndex < validImages.length - 1) {
                 setCurrentImageIndex(prev => prev + 1)
               } else if (diff < 0 && currentImageIndex > 0) {
@@ -387,7 +425,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
           )}
           {/* Image Navigation Arrows */}
           {(() => {
-            const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+            const validImages = orderedImages.filter(url => url && !url.includes('placehold.co'))
             return validImages.length > 1 && (
               <>
                 {/* Left Arrow */}
@@ -425,7 +463,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
           })()}
           
           {(() => {
-            const validImages = allProductImages.filter(url => url && !url.includes('placehold.co'))
+            const validImages = orderedImages.filter(url => url && !url.includes('placehold.co'))
             const displayUrl = validImages[currentImageIndex] || thumbnailUrl
             return displayUrl ? (
               isVideo(displayUrl) ? (

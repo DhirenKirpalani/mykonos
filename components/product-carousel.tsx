@@ -24,6 +24,7 @@ interface ProductCarouselProps {
   hideViewAll?: boolean
   noBorders?: boolean
   hideHeader?: boolean
+  sizeHint?: string
 }
 
 export function ProductCarousel({ 
@@ -39,7 +40,8 @@ export function ProductCarousel({
   compactTitle = false,
   hideViewAll = false,
   noBorders = false,
-  hideHeader = false
+  hideHeader = false,
+  sizeHint
 }: ProductCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -185,6 +187,7 @@ export function ProductCarousel({
                     voucher={voucherData}
                     activeDiscount={activeDiscounts?.get(product.id) || null}
                     className="bestselling bg-white"
+                    sizeHint={sizeHint}
                   />
                 </div>
               )

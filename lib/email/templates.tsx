@@ -69,7 +69,7 @@ export function OrderConfirmationEmail({
   // Determine currency symbol and contact number based on currency code
   const isIDR = currencyCode === 'IDR'
   const currencySymbol = isIDR ? 'Rp' : '$'
-  const contactNumber = isIDR ? '+62 857-8021-8514' : '+62 816-261-783'
+  const contactNumber = isIDR ? '+62 816-261-783' : '+62 816-261-783'
   
   return (
     <Html>

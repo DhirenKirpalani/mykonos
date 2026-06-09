@@ -20,7 +20,7 @@ const faqsData = {
         },
         {
           q: 'CAN I EDIT MY ORDER?',
-          a: 'Once an order has been placed and payment confirmed, we cannot guarantee changes. Please contact us immediately at +62 857-8021-8514 if you need to modify your order.',
+          a: 'Once an order has been placed and payment confirmed, we cannot guarantee changes. Please contact us immediately at +62 816-261-783 if you need to modify your order.',
         },
       ],
     },
@@ -29,7 +29,7 @@ const faqsData = {
       questions: [
         {
           q: 'WHY IS MY DELIVERY STATUS PENDING OR DELAYED?',
-          a: 'Delivery delays can occur due to courier services, weather conditions, or high order volumes. We work closely with trusted courier partners, but once your package has been handed over to the courier, Mykonos is not responsible for delays. Please contact us at +62 857-8021-8514 for assistance.',
+          a: 'Delivery delays can occur due to courier services, weather conditions, or high order volumes. We work closely with trusted courier partners, but once your package has been handed over to the courier, Mykonos is not responsible for delays. Please contact us at +62 816-261-783 for assistance.',
         },
         {
           q: 'DO YOU SHIP WORLDWIDE?',
@@ -42,11 +42,11 @@ const faqsData = {
       questions: [
         {
           q: 'I RECEIVED DAMAGED OR WRONG ITEM.',
-          a: 'Upon receiving your order, please inspect the items and record an unboxing video. If you find any defects, damage, or receive the wrong item, contact us right away at +62 857-8021-8514. Please note that an unboxing video is required to claim a return or refund.',
+          a: 'Upon receiving your order, please inspect the items and record an unboxing video. If you find any defects, damage, or receive the wrong item, contact us right away at +62 816-261-783. Please note that an unboxing video is required to claim a return or refund.',
         },
         {
           q: 'I ORDERED THE WRONG ITEM.',
-          a: 'We have a 3-day return policy. Contact us at +62 857-8021-8514 to request a return. If accepted, we will send you a return shipping label and instructions. For the quickest exchange, return the item and place a new order for the correct item.',
+          a: 'We have a 3-day return policy. Contact us at +62 816-261-783 to request a return. If accepted, we will send you a return shipping label and instructions. For the quickest exchange, return the item and place a new order for the correct item.',
         },
       ],
     },
@@ -59,7 +59,7 @@ const faqsData = {
         },
         {
           q: 'WILL THERE BE RESTOCKS FOR THE SOLD OUT ITEMS?',
-          a: 'We regularly restock popular items. Please contact us at +62 857-8021-8514 or follow our social media for restock announcements.',
+          a: 'We regularly restock popular items. Please contact us at +62 816-261-783 or follow our social media for restock announcements.',
         },
       ],
     },
@@ -78,7 +78,7 @@ const faqsData = {
         },
         {
           q: 'BISAKAH SAYA MENGEDIT PESANAN SAYA?',
-          a: 'Setelah pesanan dilakukan dan pembayaran dikonfirmasi, kami tidak dapat menjamin perubahan. Silakan hubungi kami segera di +62 857-8021-8514 jika Anda perlu mengubah pesanan Anda.',
+          a: 'Setelah pesanan dilakukan dan pembayaran dikonfirmasi, kami tidak dapat menjamin perubahan. Silakan hubungi kami segera di +62 816-261-783 jika Anda perlu mengubah pesanan Anda.',
         },
       ],
     },
@@ -87,7 +87,7 @@ const faqsData = {
       questions: [
         {
           q: 'MENGAPA STATUS PENGIRIMAN SAYA TERTUNDA ATAU TERLAMBAT?',
-          a: 'Keterlambatan pengiriman dapat terjadi karena layanan kurir, kondisi cuaca, atau volume pesanan yang tinggi. Kami bekerja sama dengan mitra kurir terpercaya, tetapi setelah paket Anda diserahkan ke kurir, Mykonos tidak bertanggung jawab atas keterlambatan. Silakan hubungi kami di +62 857-8021-8514 untuk bantuan.',
+          a: 'Keterlambatan pengiriman dapat terjadi karena layanan kurir, kondisi cuaca, atau volume pesanan yang tinggi. Kami bekerja sama dengan mitra kurir terpercaya, tetapi setelah paket Anda diserahkan ke kurir, Mykonos tidak bertanggung jawab atas keterlambatan. Silakan hubungi kami di +62 816-261-783 untuk bantuan.',
         },
         {
           q: 'APAKAH ANDA MENGIRIM KE SELURUH DUNIA?',
@@ -100,11 +100,11 @@ const faqsData = {
       questions: [
         {
           q: 'SAYA MENERIMA BARANG YANG RUSAK ATAU SALAH.',
-          a: 'Setelah menerima pesanan Anda, harap periksa barang dan rekam video unboxing. Jika Anda menemukan cacat, kerusakan, atau menerima barang yang salah, hubungi kami segera di +62 857-8021-8514. Harap dicatat bahwa video unboxing diperlukan untuk mengklaim pengembalian atau pengembalian dana.',
+          a: 'Setelah menerima pesanan Anda, harap periksa barang dan rekam video unboxing. Jika Anda menemukan cacat, kerusakan, atau menerima barang yang salah, hubungi kami segera di +62 816-261-783. Harap dicatat bahwa video unboxing diperlukan untuk mengklaim pengembalian atau pengembalian dana.',
         },
         {
           q: 'SAYA MEMESAN BARANG YANG SALAH.',
-          a: 'Kami memiliki kebijakan pengembalian 3 hari. Hubungi kami di +62 857-8021-8514 untuk meminta pengembalian. Jika diterima, kami akan mengirimkan label pengiriman pengembalian dan instruksi. Untuk penukaran tercepat, kembalikan barang dan lakukan pemesanan baru untuk barang yang benar.',
+          a: 'Kami memiliki kebijakan pengembalian 3 hari. Hubungi kami di +62 816-261-783 untuk meminta pengembalian. Jika diterima, kami akan mengirimkan label pengiriman pengembalian dan instruksi. Untuk penukaran tercepat, kembalikan barang dan lakukan pemesanan baru untuk barang yang benar.',
         },
       ],
     },
@@ -117,7 +117,7 @@ const faqsData = {
         },
         {
           q: 'APAKAH AKAN ADA RESTOCK UNTUK BARANG YANG HABIS?',
-          a: 'Kami secara teratur melakukan restock barang populer. Silakan hubungi kami di +62 857-8021-8514 atau ikuti media sosial kami untuk pengumuman restock.',
+          a: 'Kami secara teratur melakukan restock barang populer. Silakan hubungi kami di +62 816-261-783 atau ikuti media sosial kami untuk pengumuman restock.',
         },
       ],
     },
