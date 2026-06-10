@@ -704,12 +704,29 @@ export default function EditProductPage() {
                 className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
               >
                 <option value="">Select Category</option>
-                <option value="Citrus">Citrus</option>
-                <option value="Floral">Floral</option>
-                <option value="Fruity">Fruity</option>
-                <option value="Woody & Vanilla">Woody & Vanilla</option>
-                <option value="Gourmand">Gourmand</option>
-                <option value="Musky">Musky</option>
+                <option value="Fruity Floral">Fruity Floral</option>
+                <option value="Smoky Citrus">Smoky Citrus</option>
+                <option value="Tropical Gourmand">Tropical Gourmand</option>
+                <option value="Musky Powdery">Musky Powdery</option>
+                <option value="Citrus Aromatic">Citrus Aromatic</option>
+                <option value="Spicy Gourmand">Spicy Gourmand</option>
+                <option value="Sweet Gourmand">Sweet Gourmand</option>
+                <option value="Fruity Clean">Fruity Clean</option>
+                <option value="Fruity Ambery">Fruity Ambery</option>
+                <option value="Tropical Fruity">Tropical Fruity</option>
+                <option value="Citrus Clean">Citrus Clean</option>
+                <option value="Milky Musky">Milky Musky</option>
+                <option value="Milky Fruity">Milky Fruity</option>
+                <option value="Milky Sweet">Milky Sweet</option>
+                <option value="Spicy Vanilla">Spicy Vanilla</option>
+                <option value="Citrus Floral">Citrus Floral</option>
+                <option value="Floral Musky">Floral Musky</option>
+                <option value="Fruity Woody">Fruity Woody</option>
+                <option value="Citrus Aquatic">Citrus Aquatic</option>
+                <option value="Citrus Spicy">Citrus Spicy</option>
+                <option value="Floral Vanilla">Floral Vanilla</option>
+                <option value="Floral Woody">Floral Woody</option>
+                <option value="Smoky Floral">Smoky Floral</option>
               </select>
             </div>
 
