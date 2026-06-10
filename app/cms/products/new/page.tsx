@@ -425,12 +425,12 @@ export default function NewProductPage() {
                   className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
                 >
                   <option value="">Select Category</option>
-                  <option value="Aqua & Aromatic">Aqua & Aromatic</option>
-                  <option value="Floral Fantasy">Floral Fantasy</option>
-                  <option value="Oriental">Oriental</option>
-                  <option value="Fresh Fruity">Fresh Fruity</option>
-                  <option value="Powdery Elegance">Powdery Elegance</option>
-                  <option value="Gourmand Galore">Gourmand Galore</option>
+                  <option value="Citrus">Citrus</option>
+                  <option value="Floral">Floral</option>
+                  <option value="Fruity">Fruity</option>
+                  <option value="Woody & Vanilla">Woody & Vanilla</option>
+                  <option value="Gourmand">Gourmand</option>
+                  <option value="Musky">Musky</option>
                 </select>
               </div>
 

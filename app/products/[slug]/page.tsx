@@ -309,14 +309,21 @@ export default function ProductDetailPage({
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showDescription ? 'rotate-180' : ''}`} />
                   </button>
                   {showDescription && (
-                    <div
-                      className="pb-5 pl-12 pr-2 text-sm font-montserrat text-gray-600 leading-6 [&_p]:mb-2 [&_p:empty]:hidden [&_p:empty]:m-0 [&_br+br]:hidden"
-                      dangerouslySetInnerHTML={{
-                        __html: product.description
-                          .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '')
-                          .replace(/(<br\s*\/?>[\s\n]*){2,}/gi, '<br>')
-                      }}
-                    />
+                    <div className="pb-5 pl-12 pr-2">
+                      {product.fragrance_family && (
+                        <span className="inline-block mb-3 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] bg-luxury-gold/10 text-luxury-gold rounded-full border border-luxury-gold/20">
+                          {product.fragrance_family}
+                        </span>
+                      )}
+                      <div
+                        className="text-sm font-montserrat text-gray-600 leading-6 [&_p]:mb-2 [&_p:empty]:hidden [&_p:empty]:m-0 [&_br+br]:hidden"
+                        dangerouslySetInnerHTML={{
+                          __html: product.description
+                            .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '')
+                            .replace(/(<br\s*\/?>[\s\n]*){2,}/gi, '<br>')
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               )}

@@ -131,7 +131,7 @@ export default function BulkUploadWithMediaPage() {
     ]
 
     const exampleRow = [
-      'Mykonos - Inception Extrait de Parfum 50ml & 100ml', '', 'Oriental', 'Extrait de Parfum', 'Unisex',
+      'Mykonos - Inception Extrait de Parfum 50ml & 100ml', '', 'Woody & Vanilla', 'Extrait de Parfum', 'Unisex',
       'The fragrance begins with the sharp clarity of Bergamot, Ginger, and bright citrus notes',
       '', '', '', '', 'TRUE',
       '', '', 'TRUE', '1', '2',
