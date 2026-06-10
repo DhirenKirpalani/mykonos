@@ -74,7 +74,9 @@ export function HomePageClient() {
           .from('products')
           .select('*')
           .eq('is_visible', true)
+          .eq('status', 'active')
           .gt('stock_quantity', 0)
+          .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${new Date().toISOString()}`)
           .limit(50),
         supabase
           .from('collections')
@@ -114,6 +116,7 @@ export function HomePageClient() {
           .eq('is_visible', true)
           .eq('is_popular', true)
           .gt('stock_quantity', 0)
+          .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${new Date().toISOString()}`)
           .limit(8),
         supabase
           .from('promo_codes')
