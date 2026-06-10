@@ -81,7 +81,7 @@ export default function EditProductPage() {
     products_sold: '',
     is_popular: false,
     is_best_selling: false,
-    new_product_duration_days: '30',
+    new_product_duration_days: '0',
     tax_enabled: true,
   })
   const [imageAltTexts, setImageAltTexts] = useState<string[]>([])
@@ -283,7 +283,7 @@ export default function EditProductPage() {
           products_sold: product.products_sold?.toString() || '',
           is_popular: product.is_popular ?? false,
           is_best_selling: product.is_best_selling ?? false,
-          new_product_duration_days: product.new_product_duration_days?.toString() || '30',
+          new_product_duration_days: product.new_product_duration_days?.toString() || '0',
           tax_enabled: product.tax_enabled ?? true,
         })
         
@@ -572,7 +572,7 @@ export default function EditProductPage() {
         pre_order_duration_days: formData.pre_order_duration_days ? parseInt(formData.pre_order_duration_days) : null,
         rating: formData.rating ? parseFloat(formData.rating) : null,
         products_sold: formData.products_sold ? parseInt(formData.products_sold) : null,
-        new_product_duration_days: formData.new_product_duration_days ? parseInt(formData.new_product_duration_days.toString()) : 30,
+        new_product_duration_days: formData.new_product_duration_days ? parseInt(formData.new_product_duration_days.toString()) : 0,
         shipping_period_days: formData.shipping_period_days ? parseInt(formData.shipping_period_days) : null,
         
         // Date fields — convert local datetime-local string to UTC ISO before saving
@@ -1349,13 +1349,13 @@ export default function EditProductPage() {
               <input
                 type="number"
                 name="new_product_duration_days"
-                value={formData.new_product_duration_days || 30}
+                value={formData.new_product_duration_days || 0}
                 onChange={handleChange}
                 min="0"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Number of days this product shows the "NEW" badge after creation (default: 30 days)
+                Number of days this product shows the "NEW" badge after creation (default: 0 days)
               </p>
             </div>
           </div>

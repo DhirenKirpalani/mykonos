@@ -127,7 +127,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
     }
   }, [product?.created_at])
   
-  const newBadgeDuration = (product as any)?.new_product_duration_days || 30
+  const newBadgeDuration = (product as any)?.new_product_duration_days ?? 30
   
   // Check if product has variants with different prices
   const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
@@ -403,7 +403,7 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
           }}
         >
           {/* NEW badge */}
-          {daysSinceCreation <= newBadgeDuration && (
+          {daysSinceCreation < newBadgeDuration && (
             <span className="absolute right-2 top-2 z-10 bg-luxury-gold text-white text-[9px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5">
               NEW
             </span>
