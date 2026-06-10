@@ -81,7 +81,7 @@ export default function AboutPage() {
             </div>
             <div className="mt-8">
               <img
-                src="/assets/images/indonesia.jpg"
+                src="/assets/images/INDONESIA.jpg"
                 alt="Indonesia and global presence"
                 className="w-full max-w-xl rounded-xl object-contain"
               />
