@@ -116,8 +116,7 @@ export function HomePageClient() {
           .eq('is_visible', true)
           .eq('is_popular', true)
           .gt('stock_quantity', 0)
-          .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${new Date().toISOString()}`)
-          .limit(8),
+          .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${new Date().toISOString()}`),
         supabase
           .from('promo_codes')
           .select('discount_type, discount_value, scope, applicable_product_ids, valid_until')
