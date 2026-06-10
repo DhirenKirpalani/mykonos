@@ -18,7 +18,7 @@ const GoldDivider = () => (
 )
 
 export default function AboutPage() {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -64,12 +64,6 @@ export default function AboutPage() {
               <p>{t.about.artPara1}</p>
               <p>{t.about.artPara2}</p>
             </div>
-            {/* Pull quote */}
-            <blockquote className="mt-8 border-l-2 border-luxury-gold pl-6 py-1">
-              <p className="font-serif text-xl sm:text-2xl italic text-luxury-navy/80 leading-relaxed">
-                "Each scent is a masterpiece, crafted to evoke emotions and create lasting memories."
-              </p>
-            </blockquote>
           </section>
 
           <GoldDivider />
@@ -87,7 +81,7 @@ export default function AboutPage() {
             </div>
             <div className="mt-8">
               <img
-                src="/assets/images/INDONESIA.png"
+                src="/assets/images/indonesia.jpg"
                 alt="Indonesia and global presence"
                 className="w-full max-w-xl rounded-xl object-contain"
               />
@@ -104,7 +98,7 @@ export default function AboutPage() {
             </h2>
             <div className="w-12 h-0.5 bg-luxury-gold mb-8" />
             <div className="space-y-5 text-base sm:text-lg font-montserrat leading-relaxed text-gray-600">
-              <p>{t.about.sustainPara1}</p>
+              <p>{t.about.sustainPara1} <strong>{locale === 'id' ? 'berani menjadi berbeda.' : 'dare to be different.'}</strong></p>
               <p>{t.about.sustainPara2}</p>
             </div>
           </section>

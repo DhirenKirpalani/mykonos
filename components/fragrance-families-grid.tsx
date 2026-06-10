@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { ChevronRight } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { motion } from 'framer-motion'
-import { Droplets, Flower2, Sparkles, Wind, Leaf, Coffee, Apple, Flame } from 'lucide-react'
+import { Droplets, Flower2, Sparkles, Wind, Leaf, Coffee, Apple, Flame, Sun } from 'lucide-react'
 
 type FragranceFamily = {
   id: string
@@ -18,6 +18,13 @@ type FragranceFamily = {
 }
 
 const fragranceIcons: Record<string, any> = {
+  'Citrus': Sun,
+  'Floral': Flower2,
+  'Fruity': Apple,
+  'Woody & Vanilla': Leaf,
+  'Gourmand': Coffee,
+  'Musky': Sparkles,
+  // Legacy mappings for backward compatibility
   'Aqua & Aromatic': Droplets,
   'Floral Fantasy': Flower2,
   'Oriental': Sparkles,
