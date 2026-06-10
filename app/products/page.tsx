@@ -158,11 +158,14 @@ function ProductsContent() {
         }
       }
 
+      const now = new Date().toISOString()
+
       let query = supabase.from('products').select('*', { count: 'exact' })
         .eq('is_visible', true)
         .eq('is_archived', false)
         .eq('status', 'active')
         .gt('stock_quantity', 0)
+        .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${now}`)
 
       // Apply filter (like homepage)
       if (filter === 'popular') {
@@ -232,11 +235,14 @@ function ProductsContent() {
     async function fetchSoldOutProducts() {
       setIsSoldOutLoading(true)
 
+      const now = new Date().toISOString()
+
       let query = supabase.from('products').select('*')
         .eq('is_visible', true)
         .eq('is_archived', false)
         .eq('status', 'active')
         .eq('stock_quantity', 0)
+        .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${now}`)
 
       if (category) {
         query = query.eq('fragrance_family', category)

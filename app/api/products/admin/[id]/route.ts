@@ -119,7 +119,7 @@ export async function PATCH(
     // Map of allowed fields to update
     const allowedFields = [
       'name', 'slug', 'sku', 'description', 'brand',
-      'price_usd', 'price_idr', 'cost_price', 'cost_price_idr', 'compare_at_price', 'compare_at_price_idr',
+      'price_usd', 'price_idr', 'cost_price', 'cost_price_idr',
       'stock_quantity', 'low_stock_threshold', 'allow_backorder', 'in_stock',
       'volume_ml', 'weight_grams', 'shipping_weight_grams',
       'package_length_cm', 'package_width_cm', 'package_height_cm',

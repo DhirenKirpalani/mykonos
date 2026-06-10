@@ -157,6 +157,7 @@ export default function NewProductPage() {
       }
       reader.readAsDataURL(file)
     })
+    e.target.value = ''
   }
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,6 +172,7 @@ export default function NewProductPage() {
       }
       reader.readAsDataURL(file)
     })
+    e.target.value = ''
   }
 
   const removeImage = (index: number) => {
@@ -312,7 +314,7 @@ export default function NewProductPage() {
           min_purchase_quantity: parseInt(formData.min_purchase_quantity) || 1,
           max_purchase_quantity: formData.max_purchase_quantity ? parseInt(formData.max_purchase_quantity) : null,
           pre_order_duration_days: formData.pre_order_duration_days ? parseInt(formData.pre_order_duration_days) : null,
-          scheduled_publish_date: formData.scheduled_publish_date || null,
+          scheduled_publish_date: formData.scheduled_publish_date ? new Date(formData.scheduled_publish_date).toISOString() : null,
           manufacturing_date: formData.manufacturing_date || null,
           expiration_date: formData.expiration_date || null,
           allow_backorder: Boolean(formData.allow_backorder),
@@ -1281,6 +1283,7 @@ export default function NewProductPage() {
                                 }
                                 reader.readAsDataURL(file)
                               })
+                              e.target.value = ''
                             }}
                             className="hidden"
                           />
@@ -1330,6 +1333,7 @@ export default function NewProductPage() {
                                 }
                                 reader.readAsDataURL(file)
                               })
+                              e.target.value = ''
                             }}
                             className="hidden"
                           />

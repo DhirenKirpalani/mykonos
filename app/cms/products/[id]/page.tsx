@@ -12,6 +12,11 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { VariantStockModal } from '@/components/VariantStockModal'
 import { LoadingSpinner } from '@/components/common'
 
+const toLocalDatetimeInput = (isoString: string) => {
+  const d = new Date(isoString.replace(' ', 'T'))
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
 export default function EditProductPage() {
   const router = useRouter()
   const params = useParams()
@@ -267,8 +272,8 @@ export default function EditProductPage() {
           max_purchase_quantity: product.max_purchase_quantity?.toString() || '',
           is_pre_order: product.is_pre_order ?? true,
           pre_order_duration_days: product.pre_order_duration_days?.toString() || '30',
-          pre_order_release_date: product.pre_order_release_date || '',
-          scheduled_publish_date: product.scheduled_publish_date || '',
+          pre_order_release_date: product.pre_order_release_date ? toLocalDatetimeInput(product.pre_order_release_date) : '',
+          scheduled_publish_date: product.scheduled_publish_date ? toLocalDatetimeInput(product.scheduled_publish_date) : '',
           meta_title: product.meta_title || '',
           meta_description: product.meta_description || '',
           meta_keywords: product.meta_keywords || '',
@@ -570,11 +575,11 @@ export default function EditProductPage() {
         new_product_duration_days: formData.new_product_duration_days ? parseInt(formData.new_product_duration_days.toString()) : 30,
         shipping_period_days: formData.shipping_period_days ? parseInt(formData.shipping_period_days) : null,
         
-        // Date fields
-        scheduled_publish_date: formData.scheduled_publish_date || null,
+        // Date fields — convert local datetime-local string to UTC ISO before saving
+        scheduled_publish_date: formData.scheduled_publish_date ? new Date(formData.scheduled_publish_date).toISOString() : null,
         manufacturing_date: formData.manufacturing_date || null,
         expiration_date: formData.expiration_date || null,
-        pre_order_release_date: formData.pre_order_release_date || null,
+        pre_order_release_date: formData.pre_order_release_date ? new Date(formData.pre_order_release_date).toISOString() : null,
         
         // Boolean fields
         allow_backorder: Boolean(formData.allow_backorder),

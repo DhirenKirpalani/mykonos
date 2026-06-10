@@ -113,10 +113,15 @@ export async function POST(request: Request) {
       priceIDR = 0
     }
 
+    // Auto-generate slug from name if not provided
+    const generateSlug = (name: string) =>
+      name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') +
+      '-' + Date.now().toString(36)
+
     // Prepare product data with all new fields
     const productData: any = {
       name: body.name,
-      slug: body.slug,
+      slug: body.slug || generateSlug(body.name),
       description: body.description || '',
       price_usd: priceUSD,
       price_idr: priceIDR,
@@ -145,8 +150,6 @@ export async function POST(request: Request) {
       brand: body.brand || null,
       cost_price: body.cost_price || null,
       cost_price_idr: body.cost_price_idr || null,
-      compare_at_price: body.compare_at_price || null,
-      compare_at_price_idr: body.compare_at_price_idr || null,
       low_stock_threshold: body.low_stock_threshold || null,
       allow_backorder: body.allow_backorder || false,
       weight_grams: body.weight_grams || null,

@@ -190,11 +190,12 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
   // On hover: jump to hoverIndex (no auto-cycle)
   useEffect(() => {
     if (!isHovering) return
+    if (!hasVariants) return // keep same image for products without variants
     const validImages = orderedImages.filter(url => url && !url.includes('placehold.co'))
     if (validImages.length > 1) {
       setCurrentImageIndex(Math.min(hoverIndex, validImages.length - 1))
     }
-  }, [isHovering, hoverIndex, orderedImages])
+  }, [isHovering, hoverIndex, orderedImages, hasVariants])
   
   // Check if product is out of stock
   const isOutOfStock = useMemo(() => {

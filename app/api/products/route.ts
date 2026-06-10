@@ -33,6 +33,8 @@ export async function GET(request: Request) {
     // Sorting
     const sort = searchParams.get('sort') || 'editorial' // editorial, price-asc, price-desc, new-arrivals
 
+    const now = new Date().toISOString()
+
     // Build query
     let query = supabase
       .from('products')
@@ -40,6 +42,7 @@ export async function GET(request: Request) {
       .eq('is_visible', true)
       .eq('is_archived', false)
       .eq('status', 'active')
+      .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${now}`)
 
     // Apply filter (best-selling, popular, newest)
     if (filter === 'best-selling') {
