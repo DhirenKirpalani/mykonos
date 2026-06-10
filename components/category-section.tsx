@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
-import { Flower2, Apple, Cake, Sparkles, Waves, Star, Leaf, Sun, Wind } from 'lucide-react'
+import { Flower2, Apple, Cake, Sparkles, Waves, Star, Leaf, Sun, Wind, Flame, Coffee } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 type FragranceFamily = {
@@ -16,22 +16,45 @@ type FragranceFamily = {
 }
 
 const iconMap: Record<string, any> = {
+  'Fruity Floral': Flower2,
+  'Smoky Citrus': Flame,
+  'Tropical Gourmand': Coffee,
+  'Musky Powdery': Sparkles,
+  'Citrus Aromatic': Sun,
+  'Spicy Gourmand': Flame,
+  'Sweet Gourmand': Coffee,
+  'Fruity Clean': Apple,
+  'Fruity Ambery': Apple,
+  'Tropical Fruity': Apple,
+  'Citrus Clean': Sun,
+  'Milky Musky': Sparkles,
+  'Milky Fruity': Apple,
+  'Milky Sweet': Coffee,
+  'Spicy Vanilla': Flame,
+  'Citrus Floral': Flower2,
+  'Floral Musky': Flower2,
+  'Fruity Woody': Leaf,
+  'Citrus Aquatic': Waves,
+  'Citrus Spicy': Sun,
+  'Floral Vanilla': Flower2,
+  'Floral Woody': Leaf,
+  'Smoky Floral': Flame,
+  // Legacy mappings for backward compatibility
   'Citrus': Sun,
   'Floral': Flower2,
   'Fruity': Apple,
   'Woody & Vanilla': Leaf,
-  'Gourmand': Cake,
+  'Gourmand': Coffee,
   'Musky': Sparkles,
-  // Legacy mappings for backward compatibility
   'Aqua & Aromatic': Waves,
   'Floral Fantasy': Flower2,
   'Oriental': Star,
   'Fresh Fruity': Apple,
   'Powdery Elegance': Sparkles,
-  'Gourmand Galore': Cake,
+  'Gourmand Galore': Coffee,
   'Aquatic Aromatic': Waves,
-  'Woody': Leaf,
-  'Fresh': Wind,
+  'Woody': Flame,
+  'Fresh': Leaf,
 }
 
 export function CategorySection() {
