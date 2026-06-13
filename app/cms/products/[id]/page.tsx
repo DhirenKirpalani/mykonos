@@ -727,6 +727,7 @@ export default function EditProductPage() {
                 <option value="Floral Vanilla">Floral Vanilla</option>
                 <option value="Floral Woody">Floral Woody</option>
                 <option value="Smoky Floral">Smoky Floral</option>
+                <option value="Woody Gourmand">Woody Gourmand</option>
                 <option value="Musky">Musky</option>
                 <option value="Gourmand">Gourmand</option>
               </select>
