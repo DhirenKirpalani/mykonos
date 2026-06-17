@@ -2247,6 +2247,7 @@ export default function CheckoutPage() {
       const data = await res.json()
       if (!res.ok || !data.success || !data.rates?.length) {
         console.error('❌ [SHIPPING] DHL rates failed:', data.error || 'No rates returned')
+        if (data.dhlDetail) console.error('❌ [SHIPPING] DHL detail:', data.dhlDetail)
         // Keep as null so UI shows "Calculated at checkout" instead of "FREE"
         setShippingCost(null)
         return null

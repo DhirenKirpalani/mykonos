@@ -81,18 +81,20 @@ class DHLClient {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
       if (!response.ok) {
-        const error = data as DHLError
+        const error = data as any
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
         console.error(`❌ DHL API Error [${requestId}]`)
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
         console.error('🔴 Status:', response.status)
-        console.error('💬 Message:', error.message || error.detail)
-        console.error('📋 Title:', error.title)
-        console.error('🔍 Instance:', error.instance)
         console.error('📝 Full Error:', JSON.stringify(error, null, 2))
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-        
-        throw new Error(error.message || error.detail || 'DHL API request failed')
+
+        // DHL uses several error formats: message, detail, title, or reasons[].msg
+        const reasonMsg = Array.isArray(error.reasons) && error.reasons[0]?.msg
+        const errMsg = error.message || error.detail || error.title || reasonMsg || `DHL API error ${response.status}`
+        const err = new Error(errMsg) as any
+        err.dhlDetail = JSON.stringify(error)
+        throw err
       }
 
       return data as T
