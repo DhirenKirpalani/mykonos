@@ -20,27 +20,30 @@ export async function POST(request: Request) {
       )
     }
 
-    // Build flat DHL POST /rates request body
+    // DHL requires format: "2019-08-04 14:00:00 GMT+07:00"
+    const nextDay = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const dhlDate = `${nextDay.getUTCFullYear()}-${pad(nextDay.getUTCMonth() + 1)}-${pad(nextDay.getUTCDate())} 10:00:00 GMT+07:00`
+
+    // Build flat DHL POST /rates request body (omit undefined fields)
+    const shipperDetails: any = {
+      postalCode: body.origin.postalCode,
+      cityName: body.origin.cityName,
+      countryCode: body.origin.countryCode,
+    }
+    if (body.origin.addressLine1) shipperDetails.addressLine1 = body.origin.addressLine1
+
+    const receiverDetails: any = {
+      postalCode: body.destination.postalCode,
+      cityName: body.destination.cityName,
+      countryCode: body.destination.countryCode,
+    }
+    if (body.destination.addressLine1) receiverDetails.addressLine1 = body.destination.addressLine1
+
     const rateRequest = {
       customerDetails: {
-        shipperDetails: {
-          postalCode: body.origin.postalCode,
-          cityName: body.origin.cityName,
-          countryCode: body.origin.countryCode,
-          addressLine1: body.origin.addressLine1,
-          addressLine2: body.origin.addressLine2,
-          addressLine3: body.origin.addressLine3,
-          countyName: body.origin.countyName,
-        },
-        receiverDetails: {
-          postalCode: body.destination.postalCode,
-          cityName: body.destination.cityName,
-          countryCode: body.destination.countryCode,
-          addressLine1: body.destination.addressLine1,
-          addressLine2: body.destination.addressLine2,
-          addressLine3: body.destination.addressLine3,
-          countyName: body.destination.countyName,
-        },
+        shipperDetails,
+        receiverDetails,
       },
       accounts: [
         {
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
           number: body.accountNumber || process.env.DHL_ACCOUNT_NUMBER || '',
         },
       ],
-      plannedShippingDateAndTime: body.plannedShippingDate || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      plannedShippingDateAndTime: body.plannedShippingDate || dhlDate,
       unitOfMeasurement: body.unitOfMeasurement || 'metric',
       isCustomsDeclarable: body.isCustomsDeclarable ?? false,
       packages: body.packages.map((pkg: any) => ({
@@ -101,14 +104,14 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error('❌ DHL Rates API Error:', error.message)
-    console.error('📋 Details:', error.toString())
+    console.error('❌ DHL Detail:', error.dhlDetail)
     return NextResponse.json(
       {
         success: false,
         error: error.message || 'Failed to get shipping rates',
-        details: error.toString(),
+        dhlDetail: error.dhlDetail || null,
       },
-      { status: 200 } // Return 200 so client can read the JSON body
+      { status: 200 }
     )
   }
 }

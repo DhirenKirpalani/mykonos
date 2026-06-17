@@ -37,9 +37,12 @@ export const DHL_CONFIG = {
  * Get DHL API base URL based on environment
  */
 export function getDHLBaseUrl(): string {
-  return process.env.NODE_ENV === 'production' 
-    ? DHL_CONFIG.PRODUCTION_URL 
-    : DHL_CONFIG.SANDBOX_URL
+  // Explicit override
+  if (process.env.DHL_ENVIRONMENT === 'production') {
+    return process.env.DHL_PRODUCTION_API_URL || DHL_CONFIG.PRODUCTION_URL
+  }
+  // Default to sandbox (matches DHL_SANDBOX_API_URL env var if present)
+  return process.env.DHL_SANDBOX_API_URL || DHL_CONFIG.SANDBOX_URL
 }
 
 /**
