@@ -39,7 +39,6 @@ const iconMap: Record<string, any> = {
   'Floral Vanilla': Flower2,
   'Floral Woody': Leaf,
   'Smoky Floral': Flame,
-  'Woody Gourmand': Leaf,
   // Legacy mappings for backward compatibility
   'Citrus': Sun,
   'Floral': Flower2,
