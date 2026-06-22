@@ -2,9 +2,17 @@
 
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
+import { usePageContent } from '@/hooks/usePageContent'
+import { PolicyPageRenderer } from '@/components/PolicyPageRenderer'
 
 export default function ReturnsPage() {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
+  const { content } = usePageContent('returns', locale)
+
+  if (content) {
+    return <PolicyPageRenderer content={content} breadcrumbHref="/returns" />
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">

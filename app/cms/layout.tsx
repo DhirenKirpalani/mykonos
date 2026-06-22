@@ -20,7 +20,8 @@ import {
   MessageCircle,
   Mail,
   Percent,
-  Film
+  Film,
+  FileText
 } from 'lucide-react'
 import { useUserRole } from '@/hooks/useUserRole'
 import { canManageProducts, canManagePromotions, canManageOrders, canAccessCMS } from '@/lib/utils/permissions'
@@ -103,6 +104,12 @@ export default function CMSLayout({
       name: 'Hero Media', 
       href: '/cms/hero-media', 
       icon: Film,
+      show: role === 'admin'
+    },
+    { 
+      name: 'Page Content', 
+      href: '/cms/page-content', 
+      icon: FileText,
       show: role === 'admin'
     },
     { 
