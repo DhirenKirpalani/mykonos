@@ -2,9 +2,17 @@
 
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
+import { usePageContent } from '@/hooks/usePageContent'
+import { PolicyPageRenderer } from '@/components/PolicyPageRenderer'
 
 export default function PrivacyPolicyPage() {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
+  const { content } = usePageContent('privacy', locale)
+
+  if (content) {
+    return <PolicyPageRenderer content={content} breadcrumbHref="/privacy" />
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}

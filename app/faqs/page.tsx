@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
+import { usePageContent } from '@/hooks/usePageContent'
 
 const faqsData = {
   en: [
@@ -127,8 +128,13 @@ const faqsData = {
 export default function FAQsPage() {
   const { t, locale } = useLanguage()
   const [openItems, setOpenItems] = useState<string[]>([])
-  
-  const faqs = faqsData[locale as keyof typeof faqsData] || faqsData.en
+  const { content: cmsContent } = usePageContent('faqs', locale)
+
+  const faqs = cmsContent?.categories ||
+    (faqsData[locale as keyof typeof faqsData] || faqsData.en)
+
+  const pageTitle = cmsContent?.title || t.faqs.title
+  const pageSubtitle = cmsContent?.subtitle || t.faqs.subtitle
 
   const toggleItem = (id: string) => {
     setOpenItems((prev) =>
@@ -149,23 +155,23 @@ export default function FAQsPage() {
             />
           </div>
           <h1 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl mb-4">
-            {t.faqs.title}
+            {pageTitle}
           </h1>
           <p className="font-montserrat text-sm text-gray-500 tracking-wide">
-            {t.faqs.subtitle}
+            {pageSubtitle}
           </p>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-12 lg:px-8 font-montserrat">
         <div className="mx-auto max-w-4xl">
-          {faqs.map((category, categoryIndex) => (
+          {faqs.map((category: any, categoryIndex: number) => (
             <div key={categoryIndex} className="mb-12">
               <h2 className="mb-6 font-playfair text-2xl font-bold">
-                {category.category}
+                {category.name || category.category}
               </h2>
               <div className="space-y-4">
-                {category.questions.map((faq, faqIndex) => {
+                {category.questions.map((faq: any, faqIndex: number) => {
                   const id = `${categoryIndex}-${faqIndex}`
                   const isOpen = openItems.includes(id)
                   return (
@@ -187,7 +193,7 @@ export default function FAQsPage() {
                       {isOpen && (
                         <div className="border-t border-border/40 p-6">
                           <div className="prose prose-sm max-w-none text-muted-foreground">
-                            {faq.a.split('\n\n').map((paragraph, idx) => (
+                            {faq.a.split('\n\n').map((paragraph: string, idx: number) => (
                               <p key={idx} className="mb-3 last:mb-0 leading-relaxed">
                                 {paragraph}
                               </p>
