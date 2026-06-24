@@ -23,6 +23,7 @@ interface PromoCode {
   scope: 'all' | 'specific_products' | 'categories'
   applicable_product_ids: string[] | null
   applicable_category: string | null
+  visibility: 'public' | 'private'
 }
 
 export default function PromoCodesPage() {
@@ -229,6 +230,7 @@ export default function PromoCodesPage() {
                 <th className="pb-3">Total Limit</th>
                 <th className="pb-3">Times Used</th>
                 <th className="pb-3">Validity Period</th>
+                <th className="pb-3">Visibility</th>
                 <th className="pb-3">Status</th>
                 <th className="pb-3">Actions</th>
               </tr>
@@ -264,6 +266,13 @@ export default function PromoCodesPage() {
                         : promo.valid_until
                         ? `Until ${new Date(promo.valid_until).toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '').replace(/\//g, '/').replace(' ', ', ')}`
                         : 'No expiry'}
+                    </td>
+                    <td className="py-4">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                        promo.visibility === 'public' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {promo.visibility === 'public' ? 'Public' : 'Private'}
+                      </span>
                     </td>
                     <td className="py-4">
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${status.color}`}>

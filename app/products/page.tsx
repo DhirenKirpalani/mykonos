@@ -27,7 +27,6 @@ function ProductsContent() {
   const [isSoldOutLoading, setIsSoldOutLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [mounted, setMounted] = useState(false)
-  const [productVouchers, setProductVouchers] = useState<Map<string, { discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string }>>(new Map())
   const [productDiscounts, setProductDiscounts] = useState<Map<string, any>>(new Map())
 
   useEffect(() => {
@@ -35,41 +34,6 @@ function ProductsContent() {
   }, [])
 
   useEffect(() => {
-    async function fetchActiveVouchers() {
-      try {
-        const { data: vouchers, error } = await supabase
-          .from('promo_codes')
-          .select('discount_type, discount_value, scope, applicable_product_ids, valid_until')
-          .eq('is_active', true)
-          .lte('valid_from', new Date().toISOString())
-          .gte('valid_until', new Date().toISOString())
-
-        if (!error && vouchers) {
-          const voucherMap = new Map()
-          vouchers.forEach(voucher => {
-            if (voucher.scope === 'all') {
-              voucherMap.set('__all__', {
-                discount_type: voucher.discount_type,
-                discount_value: voucher.discount_value,
-                valid_until: voucher.valid_until
-              })
-            } else if (voucher.scope === 'specific_products' && voucher.applicable_product_ids) {
-              voucher.applicable_product_ids.forEach((productId: string) => {
-                voucherMap.set(productId, {
-                  discount_type: voucher.discount_type,
-                  discount_value: voucher.discount_value,
-                  valid_until: voucher.valid_until
-                })
-              })
-            }
-          })
-          setProductVouchers(voucherMap)
-        }
-      } catch (error) {
-        console.error('Error fetching vouchers:', error)
-      }
-    }
-
     async function fetchActiveDiscounts() {
       try {
         const now = new Date().toISOString()
@@ -120,7 +84,6 @@ function ProductsContent() {
     }
 
     if (mounted) {
-      fetchActiveVouchers()
       fetchActiveDiscounts()
     }
   }, [mounted])
@@ -439,13 +402,11 @@ function ProductsContent() {
                   <>
                     <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
                       {allProductsSorted.map((product: Product) => {
-                        const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
                         const discount = productDiscounts.get(product.id)
                         return (
                           <ProductCard 
                             key={product.id} 
                             product={product}
-                            voucher={voucher || null}
                             activeDiscount={discount || null}
                             noBorder
                           />
@@ -459,13 +420,11 @@ function ProductsContent() {
                   <>
                     <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
                       {products.map((product: Product) => {
-                        const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
                         const discount = productDiscounts.get(product.id)
                         return (
                           <ProductCard 
                             key={product.id} 
                             product={product}
-                            voucher={voucher || null}
                             activeDiscount={discount || null}
                             noBorder
                           />
@@ -492,13 +451,11 @@ function ProductsContent() {
                         ) : (
                           <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
                             {soldOutProducts.map((product: Product) => {
-                              const voucher = productVouchers.get(product.id) || productVouchers.get('__all__')
                               const discount = productDiscounts.get(product.id)
                               return (
                                 <ProductCard 
                                   key={product.id} 
                                   product={product}
-                                  voucher={voucher || null}
                                   activeDiscount={discount || null}
                                   noBorder
                                 />

@@ -12,7 +12,6 @@ import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
 import { ProductShippingInfo } from '@/components/ProductShippingInfo'
 import { ExpandableSpecifications } from '@/components/ExpandableSpecifications'
 import { LoadingSpinner } from '@/components/common'
-import { VoucherCountdown } from '@/components/VoucherCountdown'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useState, useEffect } from 'react'
@@ -60,17 +59,11 @@ export default function ProductDetailPage({
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [voucher, setVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string } | null>(null)
-  const [relatedVouchers, setRelatedVouchers] = useState<any[]>([])
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
   const [popularProducts, setPopularProducts] = useState<Product[]>([])
   const [showDescription, setShowDescription] = useState(false)
   const [showFragranceNotes, setShowFragranceNotes] = useState(false)
   const [showShipping, setShowShipping] = useState(false)
-
-  const handleVoucherExpire = () => {
-    setVoucher(null)
-  }
 
   useEffect(() => {
     async function loadProduct() {
@@ -123,36 +116,6 @@ export default function ProductDetailPage({
         }
       } catch (error) {
         console.error('Error fetching discount:', error)
-      }
-      
-      // Fetch active vouchers for this product and related products
-      try {
-        const { data: vouchers, error } = await supabase
-          .from('promo_codes')
-          .select('discount_type, discount_value, scope, applicable_product_ids, valid_until')
-          .eq('is_active', true)
-          .lte('valid_from', new Date().toISOString())
-          .gte('valid_until', new Date().toISOString())
-
-        if (!error && vouchers && vouchers.length > 0) {
-          // Find voucher for current product
-          const applicableVoucher = vouchers.find(v => 
-            v.scope === 'all' || 
-            (v.scope === 'specific_products' && v.applicable_product_ids?.includes(productData.id))
-          )
-          if (applicableVoucher) {
-            setVoucher({
-              discount_type: applicableVoucher.discount_type as 'percentage' | 'fixed',
-              discount_value: applicableVoucher.discount_value,
-              valid_until: applicableVoucher.valid_until
-            })
-          }
-          
-          // Set vouchers for related products (for ProductCarousel)
-          setRelatedVouchers(vouchers)
-        }
-      } catch (error) {
-        console.error('Error fetching vouchers:', error)
       }
       
       setLoading(false)
@@ -209,9 +172,7 @@ export default function ProductDetailPage({
                 
                 return allImages
               })()} 
-              productName={product.name} 
-              voucher={voucher} 
-              onVoucherExpire={handleVoucherExpire}
+              productName={product.name}
               isOutOfStock={(() => {
                 // Check if product has variants
                 const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
@@ -279,14 +240,8 @@ export default function ProductDetailPage({
               <ProductPriceDisplay
                 product={product}
                 showRange={true}
-                voucher={voucher}
                 activeDiscounts={activeDiscounts}
               />
-              {voucher && voucher.valid_until && (
-                <div className="mt-2">
-                  <VoucherCountdown validUntil={voucher.valid_until} onExpire={() => setVoucher(null)} />
-                </div>
-              )}
             </div>
 
             {/* Thin divider */}
@@ -396,7 +351,6 @@ export default function ProductDetailPage({
                 price={(product as any).price_usd}
                 priceIdr={(product as any).price_idr}
                 compareAtPrice={(product as any).compare_at_price}
-                voucher={voucher}
                 activeDiscounts={activeDiscounts}
                 productData={{
                   id: product.id,
@@ -424,7 +378,6 @@ export default function ProductDetailPage({
             backgroundColor="bg-white"
             titleColor="text-luxury-navy"
             variant="bestselling"
-            vouchers={relatedVouchers}
             hideSubtitle={true}
             compactTitle={true}
             hideViewAll={true}

@@ -16,7 +16,6 @@ interface ProductCarouselProps {
   backgroundColor?: string
   titleColor?: string
   variant?: 'new' | 'popular' | 'bestselling'
-  vouchers?: any[]
   activeDiscounts?: Map<string, any>
   viewAllHref?: string
   hideSubtitle?: boolean
@@ -33,7 +32,6 @@ export function ProductCarousel({
   backgroundColor = 'bg-gradient-to-b from-[#C2A36B] to-[#B8945E]',
   titleColor = 'text-[#1C2E4A]',
   variant = 'new',
-  vouchers = [],
   activeDiscounts,
   viewAllHref = '/products',
   hideSubtitle = false,
@@ -163,16 +161,6 @@ export function ProductCarousel({
             style={{ WebkitOverflowScrolling: 'touch', scrollBehavior: 'smooth' }}
           >
             {products.map((product, index) => {
-              const applicableVoucher = vouchers.find(v =>
-                v.scope === 'all' ||
-                (v.scope === 'specific_products' && v.applicable_product_ids?.includes(product.id))
-              )
-              const voucherData = applicableVoucher ? {
-                discount_type: applicableVoucher.discount_type,
-                discount_value: applicableVoucher.discount_value,
-                valid_until: applicableVoucher.valid_until,
-              } : null
-
               const cardWidthClass = noBorders
                 ? 'snap-start flex-shrink-0 w-[calc(100vw/2.2)] sm:w-[calc(100vw/3)] md:w-[calc(100vw/3.8)] lg:w-[calc(100vw/4.8)] xl:w-[calc(100vw/5.2)]'
                 : 'snap-start flex-shrink-0 w-[calc(100vw/1.8)] sm:w-[calc(100vw/2.8)] md:w-[calc(100vw/3.8)] lg:w-[calc(100vw/4.8)] xl:w-[calc(100vw/5.2)] border-r border-[#e0e0e0]'
@@ -184,7 +172,6 @@ export function ProductCarousel({
                 >
                   <ProductCard
                     product={product}
-                    voucher={voucherData}
                     activeDiscount={activeDiscounts?.get(product.id) || null}
                     className="bestselling bg-white"
                     sizeHint={sizeHint}
@@ -272,16 +259,6 @@ export function ProductCarousel({
             style={{ WebkitOverflowScrolling: 'touch', scrollPaddingLeft: '1rem', scrollPaddingRight: '1rem' }}
           >
             {products.map((product, index) => {
-              const applicableVoucher = vouchers.find(v =>
-                v.scope === 'all' ||
-                (v.scope === 'specific_products' && v.applicable_product_ids?.includes(product.id))
-              )
-              const voucherData = applicableVoucher ? {
-                discount_type: applicableVoucher.discount_type,
-                discount_value: applicableVoucher.discount_value,
-                valid_until: applicableVoucher.valid_until,
-              } : null
-
               return (
                 <motion.div
                   key={product.id}
@@ -290,7 +267,7 @@ export function ProductCarousel({
                   transition={{ duration: 0.55, delay: 0.2 + index * 0.08, ease: [0.25, 0.1, 0.25, 1] }}
                   className="snap-center flex-shrink-0 w-[45vw] max-w-[180px] sm:w-[40vw] sm:max-w-[220px] md:w-[280px] lg:w-[320px] xl:w-[340px] first:ml-0 last:mr-0"
                 >
-                  <ProductCard product={product} voucher={voucherData} activeDiscount={activeDiscounts?.get(product.id) || null} className={getCardClasses()} />
+                  <ProductCard product={product} activeDiscount={activeDiscounts?.get(product.id) || null} className={getCardClasses()} />
                 </motion.div>
               )
             })}

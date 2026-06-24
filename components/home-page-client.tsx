@@ -48,7 +48,6 @@ export function HomePageClient() {
   const [collections, setCollections] = useState<Collection[]>([])
   const [newArrivals, setNewArrivals] = useState<Product[]>([])
   const [bestSelling, setBestSelling] = useState<Product[]>([])
-  const [vouchers, setVouchers] = useState<any[]>([])
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
   
   useEffect(() => {
@@ -69,7 +68,7 @@ export function HomePageClient() {
   const fetchData = async () => {
     try {
       // Fetch all data in parallel for better performance
-      const [productsResult, collectionsResult, newArrivalsResult, bestSellingResult, vouchersResult, discountsResult] = await Promise.all([
+      const [productsResult, collectionsResult, newArrivalsResult, bestSellingResult, discountsResult] = await Promise.all([
         supabase
           .from('products')
           .select('*')
@@ -118,12 +117,6 @@ export function HomePageClient() {
           .gt('stock_quantity', 0)
           .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${new Date().toISOString()}`),
         supabase
-          .from('promo_codes')
-          .select('discount_type, discount_value, scope, applicable_product_ids, valid_until')
-          .eq('is_active', true)
-          .lte('valid_from', new Date().toISOString())
-          .gte('valid_until', new Date().toISOString()),
-        supabase
           .from('discount_products')
           .select(`
             product_id,
@@ -146,7 +139,6 @@ export function HomePageClient() {
       setCollections((collectionsResult.data || []) as unknown as Collection[])
       setNewArrivals((newArrivalsResult.data || []) as unknown as Product[])
       setBestSelling((bestSellingResult.data || []) as unknown as Product[])
-      setVouchers(vouchersResult.data || [])
       
       // Build discount map by product_id -> lowest discounted price
       if (discountsResult.data && discountsResult.data.length > 0) {
@@ -179,7 +171,6 @@ export function HomePageClient() {
       collections={collections}
       newArrivals={newArrivals}
       bestSelling={bestSelling}
-      vouchers={vouchers}
       activeDiscounts={activeDiscounts}
       isLoading={isLoading}
     />

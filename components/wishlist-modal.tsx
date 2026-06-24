@@ -55,9 +55,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
   const [addedToCart, setAddedToCart] = useState<Set<string>>(new Set())
   const [cartItems, setCartItems] = useState<any[]>([])
-  const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
-  const [activeVoucher, setActiveVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number } | null>(null)
 
   const isVideo = (url: any): boolean => {
     if (!url || typeof url !== 'string') return false
@@ -140,18 +138,11 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
       const items = (data as any) || []
       setWishlistItems(items)
       
-      // Fetch active vouchers AND discounts for wishlist items in parallel
+      // Fetch active discounts for wishlist items
       if (items && items.length > 0) {
         const productIds = items.map((item: any) => item.product_id)
         const now = new Date().toISOString()
-        const [vouchersResult, discountsResult] = await Promise.all([
-          supabase
-            .from('promo_codes')
-            .select('discount_type, discount_value, scope, applicable_product_ids')
-            .eq('is_active', true)
-            .lte('valid_from', now)
-            .gte('valid_until', now),
-          supabase
+        const discountsResult = await supabase
             .from('discount_products')
             .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
             .eq('is_active', true)
@@ -159,7 +150,6 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
             .lte('discounts.start_date', now)
             .gte('discounts.end_date', now)
             .in('product_id', productIds)
-        ])
 
         if (discountsResult.data && discountsResult.data.length > 0) {
           const discMap = new Map<string, any>()
@@ -170,37 +160,6 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
             }
           })
           setActiveDiscounts(discMap)
-        }
-
-        const activeVouchers = vouchersResult.data
-        if (activeVouchers && activeVouchers.length > 0) {
-          const discountMap = new Map<string, number>()
-          items.forEach((item: any) => {
-            const applicableVoucher = activeVouchers.find((v: any) =>
-              v.scope === 'all' ||
-              (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
-            )
-            
-            if (applicableVoucher) {
-              // Use variant price if a variant is selected, else fall back to product price
-              let unitPrice = region?.code === 'ID' && item.product.price_idr 
-                ? item.product.price_idr 
-                : item.product.price_usd || 0
-              if (item.variant_sku && item.product.variants) {
-                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
-                if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
-              }
-              
-              const voucherDiscount = applicableVoucher.discount_type === 'percentage'
-                ? (unitPrice * applicableVoucher.discount_value / 100)
-                : applicableVoucher.discount_value
-              
-              discountMap.set(item.id, voucherDiscount)
-            }
-          })
-          
-          setVoucherDiscounts(discountMap)
-          setActiveVoucher(activeVouchers[0] ? { discount_type: activeVouchers[0].discount_type, discount_value: activeVouchers[0].discount_value } : null)
         }
       }
       
@@ -524,13 +483,12 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                               const discounted = campaignDiscount?.discounted_price ?? null
                               const displayPrice = discounted !== null && discounted < basePrice ? discounted : basePrice
                               const qty = quantities[item.id] || 1
-                              const voucherDiscount = voucherDiscounts.get(item.id) || 0
                               return (
                                 <>
-                                  {(discounted !== null && discounted < basePrice) || voucherDiscount > 0 ? (
-                                    <span className="text-xs text-gray-400 line-through">{formatPrice(displayPrice * qty, region)}</span>
+                                  {discounted !== null && discounted < basePrice ? (
+                                    <span className="text-xs text-gray-400 line-through">{formatPrice(basePrice * qty, region)}</span>
                                   ) : null}
-                                  <span className="text-sm font-bold text-gray-900">{formatPrice((displayPrice * qty) - voucherDiscount, region)}</span>
+                                  <span className="text-sm font-bold text-gray-900">{formatPrice(displayPrice * qty, region)}</span>
                                 </>
                               )
                             })() : '...'}
@@ -600,7 +558,6 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                 const displayPrice = campaignDiscount?.discounted_price ?? unitPrice
                 return sum + displayPrice * (quantities[item.id] || 1)
               }, 0)
-              const totalWishlistVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((s, d) => s + d, 0)
               if (!region) return null
               return (
                 <div className="border-t border-gray-200 px-6 sm:px-8 py-4">
@@ -609,19 +566,10 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                       <span className="text-sm font-medium text-gray-600">{t.cart.subtotal}</span>
                       <span className="text-sm font-medium text-gray-900">{formatPrice(wishlistSubtotal, region)}</span>
                     </div>
-                    {totalWishlistVoucherDiscount > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-orange-600 flex items-center gap-1">
-                          <Ticket className="h-3.5 w-3.5 flex-shrink-0" />
-                          Voucher{activeVoucher?.discount_type === 'percentage' ? ` (${activeVoucher.discount_value}%)` : ''}
-                        </span>
-                        <span className="text-sm font-medium text-orange-600">-{formatPrice(totalWishlistVoucherDiscount, region)}</span>
-                      </div>
-                    )}
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-3">
                     <span className="text-base font-semibold text-gray-900">{t.cart.total}</span>
-                    <span className="text-xl font-bold text-gray-900">{formatPrice(wishlistSubtotal - totalWishlistVoucherDiscount, region)}</span>
+                    <span className="text-xl font-bold text-gray-900">{formatPrice(wishlistSubtotal, region)}</span>
                   </div>
                 </div>
               )

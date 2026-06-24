@@ -92,16 +92,9 @@ export async function GET(request: Request) {
 
     if (inStockResult.error) throw inStockResult.error
 
-    // Fetch active vouchers and discounts in parallel
+    // Fetch active discounts
     const now = new Date().toISOString()
-    const [vouchersResult, discountsResult] = await Promise.all([
-      supabase
-        .from('promo_codes')
-        .select('discount_type, discount_value, scope, applicable_product_ids')
-        .eq('is_active', true)
-        .lte('valid_from', now)
-        .gte('valid_until', now),
-      supabase
+    const discountsResult = await supabase
         .from('discount_products')
         .select(`
           product_id,
@@ -112,27 +105,6 @@ export async function GET(request: Request) {
         .eq('discounts.is_active', true)
         .lte('discounts.start_date', now)
         .gte('discounts.end_date', now)
-    ])
-
-    // Build voucher map
-    const voucherMap = new Map()
-    if (vouchersResult.data) {
-      vouchersResult.data.forEach(voucher => {
-        if (voucher.scope === 'all') {
-          voucherMap.set('__all__', {
-            discount_type: voucher.discount_type,
-            discount_value: voucher.discount_value
-          })
-        } else if (voucher.scope === 'specific_products' && voucher.applicable_product_ids) {
-          voucher.applicable_product_ids.forEach((productId: string) => {
-            voucherMap.set(productId, {
-              discount_type: voucher.discount_type,
-              discount_value: voucher.discount_value
-            })
-          })
-        }
-      })
-    }
 
     // Build discount map
     const discountMap = new Map()
@@ -150,13 +122,11 @@ export async function GET(request: Request) {
     // Attach discounts to products
     const productsWithDiscounts = (inStockResult.data || []).map(product => ({
       ...product,
-      voucher: voucherMap.get(product.id) || voucherMap.get('__all__') || null,
       discount: discountMap.get(product.id) || null
     }))
 
     const soldOutWithDiscounts = (soldOutResult.data || []).map(product => ({
       ...product,
-      voucher: voucherMap.get(product.id) || voucherMap.get('__all__') || null,
       discount: discountMap.get(product.id) || null
     }))
 

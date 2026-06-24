@@ -19,7 +19,13 @@ export async function GET(
 
     const { data: discount, error } = await supabase
       .from('discounts')
-      .select('*, discount_products(*)')
+      .select(`
+        *,
+        discount_products(
+          *,
+          products(id, name, image_urls, price_usd)
+        )
+      `)
       .eq('id', id)
       .single()
 
@@ -50,7 +56,7 @@ export async function PATCH(
     const { id } = params
     const body = await request.json()
 
-    // Update discount
+    // Update discount header
     const { error } = await supabase
       .from('discounts')
       .update({
@@ -62,6 +68,37 @@ export async function PATCH(
       .eq('id', id)
 
     if (error) throw error
+
+    // Sync discount_products: delete all then re-insert
+    if (Array.isArray(body.products)) {
+      const { error: delError } = await supabase
+        .from('discount_products')
+        .delete()
+        .eq('discount_id', id)
+
+      if (delError) throw delError
+
+      if (body.products.length > 0) {
+        const rows = body.products.map((p: any) => ({
+          discount_id: id,
+          product_id: p.product_id,
+          variant_id: p.variant_id || null,
+          discount_type: p.discount_type || 'fixed',
+          discount_value: p.discount_value || 0,
+          discounted_price: p.discounted_price,
+          original_price: p.original_price ?? null,
+          promo_stock: p.promo_stock || null,
+          min_purchase: p.min_purchase || null,
+          is_active: p.is_active ?? true
+        }))
+
+        const { error: insError } = await supabase
+          .from('discount_products')
+          .insert(rows)
+
+        if (insError) throw insError
+      }
+    }
 
     return NextResponse.json({
       message: 'Discount updated successfully'

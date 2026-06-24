@@ -43,13 +43,9 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const [discountCode, setDiscountCode] = useState('')
-  const [discountApplied, setDiscountApplied] = useState(false)
-  const [discountAmount, setDiscountAmount] = useState(0)
+  const [publicVouchers, setPublicVouchers] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
-  const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
-  const [activeVoucher, setActiveVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number } | null>(null)
 
   const isVideo = (url: any): boolean => {
     if (!url || typeof url !== 'string') return false
@@ -65,6 +61,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     if (isOpen) {
       setLoading(true)
       fetchCart()
+      fetchPublicVouchers()
     }
   }, [isOpen])
 
@@ -116,18 +113,11 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
 
       setCartItems((data as any) || [])
       
-      // Fetch active vouchers AND discounts for cart items in parallel
+      // Fetch active discounts for cart items
       if (data && data.length > 0) {
         const productIds = data.map((item: any) => item.product_id)
         const now = new Date().toISOString()
-        const [vouchersResult, discountsResult] = await Promise.all([
-          supabase
-            .from('promo_codes')
-            .select('discount_type, discount_value, scope, applicable_product_ids')
-            .eq('is_active', true)
-            .lte('valid_from', now)
-            .gte('valid_until', now),
-          supabase
+        const discountsResult = await supabase
             .from('discount_products')
             .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
             .eq('is_active', true)
@@ -135,7 +125,6 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
             .lte('discounts.start_date', now)
             .gte('discounts.end_date', now)
             .in('product_id', productIds)
-        ])
 
         if (discountsResult.data && discountsResult.data.length > 0) {
           const discMap = new Map<string, any>()
@@ -146,38 +135,6 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
             }
           })
           setActiveDiscounts(discMap)
-        }
-
-        const activeVouchers = vouchersResult.data
-        if (activeVouchers && activeVouchers.length > 0) {
-          const discountMap = new Map<string, number>()
-          data.forEach((item: any) => {
-            const applicableVoucher = activeVouchers.find((v: any) =>
-              v.scope === 'all' ||
-              (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
-            )
-            
-            if (applicableVoucher) {
-              // Use variant price if a variant is selected, else fall back to product price
-              let unitPrice = region?.code === 'ID' && item.product.price_idr 
-                ? item.product.price_idr 
-                : item.product.price_usd || 0
-              if (item.variant_sku && item.product.variants) {
-                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
-                if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
-              }
-              const itemTotal = unitPrice * item.quantity
-              
-              const voucherDiscount = applicableVoucher.discount_type === 'percentage'
-                ? (itemTotal * applicableVoucher.discount_value / 100)
-                : applicableVoucher.discount_value
-              
-              discountMap.set(item.id, voucherDiscount)
-            }
-          })
-          
-          setVoucherDiscounts(discountMap)
-          setActiveVoucher(activeVouchers[0] ? { discount_type: activeVouchers[0].discount_type, discount_value: activeVouchers[0].discount_value } : null)
         }
       }
     } catch (error) {
@@ -247,17 +204,6 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
         )
       )
       
-      // Update voucher discounts optimistically
-      if (voucherDiscounts.has(itemId)) {
-        const oldQuantity = item.quantity
-        const quantityRatio = newQuantity / oldQuantity
-        setVoucherDiscounts(prev => {
-          const newMap = new Map(prev)
-          const oldDiscount = prev.get(itemId) || 0
-          newMap.set(itemId, oldDiscount * quantityRatio)
-          return newMap
-        })
-      }
       
       console.log('📢 [CART DRAWER] Dispatching cart-updated event with skipRefetch...')
       window.dispatchEvent(new CustomEvent('cart-updated', { detail: { skipRefetch: true } }))
@@ -286,13 +232,18 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     }
   }
 
-  const applyDiscount = () => {
-    if (discountCode.toLowerCase() === 'welcome10') {
-      setDiscountApplied(true)
-      setDiscountAmount(subtotal * 0.1)
-    } else {
-      toast.error('Invalid discount code')
-    }
+  const fetchPublicVouchers = async () => {
+    try {
+      const now = new Date().toISOString()
+      const { data, error } = await supabase
+        .from('promo_codes')
+        .select('id, code, name, discount_type, discount_value, min_purchase_amount, valid_until')
+        .eq('is_active', true)
+        .eq('visibility', 'public')
+        .or(`valid_from.is.null,valid_from.lte.${now}`)
+        .or(`valid_until.is.null,valid_until.gte.${now}`)
+      if (!error && data) setPublicVouchers(data)
+    } catch {}
   }
 
   // Get discounted price for a cart item
@@ -326,10 +277,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     return sum + itemTotal
   }, 0)
   
-  // Calculate total voucher discount
-  const totalVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((sum, discount) => sum + discount, 0)
-  
-  const total = subtotal - totalVoucherDiscount - discountAmount
+  const total = subtotal
 
   const validateBeforeCheckout = () => {
     for (const item of cartItems) {
@@ -561,16 +509,15 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                               }
                               const discounted = getItemDiscountedPrice(item)
                               const displayPrice = discounted !== null ? discounted : basePrice
-                              const voucherDiscount = voucherDiscounts.get(item.id) || 0
                               return (
                                 <>
-                                  {(discounted !== null && discounted < basePrice) || voucherDiscount > 0 ? (
+                                  {discounted !== null && discounted < basePrice ? (
                                     <span className="text-sm text-gray-400 line-through">
-                                      {formatPrice(displayPrice * item.quantity, region)}
+                                      {formatPrice(basePrice * item.quantity, region)}
                                     </span>
                                   ) : null}
                                   <p className="text-lg font-bold text-gray-900">
-                                    {formatPrice((displayPrice * item.quantity) - voucherDiscount, region)}
+                                    {formatPrice(displayPrice * item.quantity, region)}
                                   </p>
                                 </>
                               )
@@ -594,22 +541,34 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
             {/* Footer */}
             {cartItems.length > 0 && (
               <div className="border-t border-gray-200 px-6 sm:px-8 py-6">
+                {/* Available vouchers — apply at checkout */}
+                {publicVouchers.length > 0 && (
+                  <div className="space-y-2 mb-4">
+                    {publicVouchers.map((v) => {
+                      const discountLabel = v.discount_type === 'percentage'
+                        ? `${v.discount_value}% off`
+                        : `${v.discount_value} off`
+                      return (
+                        <div
+                          key={v.id}
+                          className="flex items-center justify-between p-3 rounded-lg border border-dashed border-luxury-gold bg-luxury-gold/5"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-luxury-gold font-mono tracking-wide">{v.code}</p>
+                            <p className="text-[11px] text-gray-500 mt-0.5">Apply at checkout</p>
+                          </div>
+                          <span className="ml-3 text-sm font-bold text-luxury-gold flex-shrink-0">{discountLabel}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-600">{t.cart.subtotal}</span>
                     <span className="text-sm font-medium text-gray-900">{region ? formatPrice(subtotal, region) : '...'}</span>
                   </div>
-                  {totalVoucherDiscount > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-orange-600 flex items-center gap-1">
-                        <Ticket className="h-3.5 w-3.5 flex-shrink-0" />
-                        Voucher{activeVoucher?.discount_type === 'percentage' ? ` (${activeVoucher.discount_value}%)` : ''}
-                      </span>
-                      <span className="text-sm font-medium text-orange-600">
-                        -{region ? formatPrice(totalVoucherDiscount, region) : '...'}
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <div className="mb-6 flex items-center justify-between border-t border-gray-100 pt-3">
                   <span className="text-lg font-semibold text-gray-900">{t.cart.total}</span>

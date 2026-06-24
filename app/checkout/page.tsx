@@ -12,7 +12,7 @@ import { LoadingSpinner } from '@/components/common'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown, Ticket } from 'lucide-react'
+import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown, Ticket, Timer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CheckoutModal } from '@/components/CheckoutModal'
@@ -71,6 +71,45 @@ type Address = {
   is_default: boolean
 }
 
+function VoucherExpiryInfo({ validUntil }: { validUntil: string }) {
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(null)
+
+  useEffect(() => {
+    const calculate = () => {
+      const endDate = new Date(new Date(validUntil).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
+      const nowJakarta = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
+      const diff = endDate.getTime() - nowJakarta.getTime()
+      if (diff > 0) {
+        return {
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((diff / 1000 / 60) % 60),
+        }
+      }
+      return null
+    }
+    const update = () => setTimeLeft(calculate())
+    update()
+    const timer = setInterval(update, 60000)
+    return () => clearInterval(timer)
+  }, [validUntil])
+
+  const countdownText = timeLeft
+    ? timeLeft.days > 0
+      ? `Ends in ${timeLeft.days}d ${timeLeft.hours}h`
+      : timeLeft.hours > 0
+        ? `Ends in ${timeLeft.hours}h ${timeLeft.minutes}m`
+        : `Ends in ${timeLeft.minutes}m`
+    : 'Expired'
+
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-luxury-gold mt-0.5" title={new Date(validUntil).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}>
+      <Timer className="h-3 w-3" />
+      {countdownText}
+    </span>
+  )
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { currency } = useCurrency()
@@ -78,6 +117,7 @@ export default function CheckoutPage() {
   const { t } = useLanguage()
   const { validateAddress, isValidating, validationResult } = useAddressValidation()
   const wasAlreadySignedIn = useRef(false)
+  const promoRestoredRef = useRef(false)
   const [userId, setUserId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -100,8 +140,7 @@ export default function CheckoutPage() {
   const [appliedPromo, setAppliedPromo] = useState<any>(null)
   const [discount, setDiscount] = useState(0)
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
-  const [vouchers, setVouchers] = useState<any[]>([])
-  const [voucherDiscounts, setVoucherDiscounts] = useState<Map<string, number>>(new Map())
+  const [publicVouchers, setPublicVouchers] = useState<any[]>([])
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
   const [isRecommendedExpanded, setIsRecommendedExpanded] = useState(true)
   const [pendingOrder, setPendingOrder] = useState<any>(null)
@@ -221,8 +260,37 @@ export default function CheckoutPage() {
       window.removeEventListener('cart-updated', handleCartUpdate)
       window.removeEventListener('pageshow', handlePageShow)
       subscription.unsubscribe()
+      // Clear promo so navigating away and returning doesn't auto-apply to a different cart
+      try { sessionStorage.removeItem('checkout_applied_promo') } catch {}
     }
   }, [])
+
+  // Clear promo when cart becomes empty
+  useEffect(() => {
+    if (cartItems.length === 0 && quickAddedItems.length === 0 && discount > 0) {
+      setAppliedPromo(null)
+      setDiscount(0)
+      setPromoCode('')
+      try { sessionStorage.removeItem('checkout_applied_promo') } catch {}
+    }
+  }, [cartItems.length, quickAddedItems.length])
+
+  // Restore promo from sessionStorage once after cart is loaded (covers cart drawer → checkout flow)
+  useEffect(() => {
+    if (cartItems.length === 0 || promoRestoredRef.current) return
+    promoRestoredRef.current = true
+
+    try {
+      const saved = sessionStorage.getItem('checkout_applied_promo')
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      const savedCode = parsed?.code || parsed?.promo_code?.code
+      if (!savedCode || parsed.discount_amount === undefined) return
+      setAppliedPromo(parsed)
+      setDiscount(parsed.discount_amount || 0)
+      setPromoCode(savedCode)
+    } catch {}
+  }, [cartItems])
 
   const initializeCheckout = async () => {
     try {
@@ -339,14 +407,7 @@ export default function CheckoutPage() {
         // Fetch active vouchers AND discounts for order again items in parallel
         const orderAgainProductIds = orderAgainCartItems.map((item: any) => item.product_id)
         const orderNow = new Date().toISOString()
-        const [orderVouchersResult, orderDiscountsResult] = await Promise.all([
-          supabase
-            .from('promo_codes')
-            .select('discount_type, discount_value, scope, applicable_product_ids')
-            .eq('is_active', true)
-            .lte('valid_from', orderNow)
-            .gte('valid_until', orderNow),
-          supabase
+        const orderDiscountsResult = await supabase
             .from('discount_products')
             .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
             .eq('is_active', true)
@@ -354,7 +415,6 @@ export default function CheckoutPage() {
             .lte('discounts.start_date', orderNow)
             .gte('discounts.end_date', orderNow)
             .in('product_id', orderAgainProductIds)
-        ])
 
         if (orderDiscountsResult.data && orderDiscountsResult.data.length > 0) {
           const discMap = new Map<string, any>()
@@ -365,41 +425,6 @@ export default function CheckoutPage() {
             }
           })
           setActiveDiscounts(discMap)
-        }
-
-        const activeVouchers = orderVouchersResult.data
-        if (activeVouchers && activeVouchers.length > 0) {
-          setVouchers(activeVouchers)
-          
-          // Calculate voucher discounts for each order again item
-          const discountMap = new Map<string, number>()
-          orderAgainCartItems.forEach((item: any) => {
-            const applicableVoucher = activeVouchers.find((v: any) =>
-              v.scope === 'all' ||
-              (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
-            )
-            
-            if (applicableVoucher) {
-              // Use variant price if a variant is selected, else fall back to product price
-              let unitPrice = region?.code === 'ID' && item.product.price_idr 
-                ? item.product.price_idr 
-                : item.product.price_usd || 0
-              if (item.variant_sku && item.product.variants) {
-                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
-                if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
-              }
-              const price = getEffectivePrice(unitPrice, null)
-              const itemTotal = price * item.quantity
-              
-              const voucherDiscount = applicableVoucher.discount_type === 'percentage'
-                ? (itemTotal * applicableVoucher.discount_value / 100)
-                : applicableVoucher.discount_value
-              
-              discountMap.set(item.id, voucherDiscount)
-            }
-          })
-          
-          setVoucherDiscounts(discountMap)
         }
       } else if (buyNowItemsStr && isBuyNowFlow) {
         // Handle Buy Now flow - fetch product details
@@ -455,16 +480,9 @@ export default function CheckoutPage() {
 
         setCartItems(buyNowCartItems)
         
-        // Fetch active vouchers AND discounts for buy now items in parallel
+        // Fetch campaign discounts for buy now items
         const buyNowNow = new Date().toISOString()
-        const [buyNowVouchersResult, buyNowDiscountsResult] = await Promise.all([
-          supabase
-            .from('promo_codes')
-            .select('discount_type, discount_value, scope, applicable_product_ids')
-            .eq('is_active', true)
-            .lte('valid_from', buyNowNow)
-            .gte('valid_until', buyNowNow),
-          supabase
+        const buyNowDiscountsResult = await supabase
             .from('discount_products')
             .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
             .eq('is_active', true)
@@ -472,7 +490,6 @@ export default function CheckoutPage() {
             .lte('discounts.start_date', buyNowNow)
             .gte('discounts.end_date', buyNowNow)
             .eq('product_id', productId)
-        ])
 
         if (buyNowDiscountsResult.data && buyNowDiscountsResult.data.length > 0) {
           const discMap = new Map<string, any>()
@@ -483,41 +500,6 @@ export default function CheckoutPage() {
             }
           })
           setActiveDiscounts(discMap)
-        }
-
-        const activeVouchers = buyNowVouchersResult.data
-        if (activeVouchers && activeVouchers.length > 0) {
-          setVouchers(activeVouchers)
-          
-          // Calculate voucher discounts for each buy now item
-          const discountMap = new Map<string, number>()
-          buyNowCartItems.forEach((item: any) => {
-            const applicableVoucher = activeVouchers.find((v: any) =>
-              v.scope === 'all' ||
-              (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
-            )
-            
-            if (applicableVoucher) {
-              // Use variant price if a variant is selected, else fall back to product price
-              let unitPrice = region?.code === 'ID' && item.product.price_idr 
-                ? item.product.price_idr 
-                : item.product.price_usd || 0
-              if (item.variant_sku && item.product.variants) {
-                const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
-                if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
-              }
-              const price = getEffectivePrice(unitPrice, null)
-              const itemTotal = price * item.quantity
-              
-              const voucherDiscount = applicableVoucher.discount_type === 'percentage'
-                ? (itemTotal * applicableVoucher.discount_value / 100)
-                : applicableVoucher.discount_value
-              
-              discountMap.set(item.id, voucherDiscount)
-            }
-          })
-          
-          setVoucherDiscounts(discountMap)
         }
       } else {
         // Regular cart flow - fetch cart items
@@ -566,17 +548,10 @@ export default function CheckoutPage() {
           console.log('✅ [CHECKOUT INIT] Setting cart items:', cart.length)
           setCartItems(cart as any)
           
-          // Fetch active vouchers and discounts for cart items in parallel
+          // Fetch campaign discounts for cart items
           const productIds = cart.map((item: any) => item.product_id)
           const now = new Date().toISOString()
-          const [vouchersResult, discountsResult] = await Promise.all([
-            supabase
-              .from('promo_codes')
-              .select('discount_type, discount_value, scope, applicable_product_ids')
-              .eq('is_active', true)
-              .lte('valid_from', now)
-              .gte('valid_until', now),
-            supabase
+          const discountsResult = await supabase
               .from('discount_products')
               .select(`
                 product_id,
@@ -594,9 +569,6 @@ export default function CheckoutPage() {
               .lte('discounts.start_date', now)
               .gte('discounts.end_date', now)
               .in('product_id', productIds)
-          ])
-
-          const activeVouchers = vouchersResult.data
 
           // Build activeDiscounts map: key = "productId-variantName" or "productId"
           if (discountsResult.data && discountsResult.data.length > 0) {
@@ -609,40 +581,6 @@ export default function CheckoutPage() {
               }
             })
             setActiveDiscounts(discountMap)
-          }
-          
-          if (activeVouchers && activeVouchers.length > 0) {
-            setVouchers(activeVouchers)
-            
-            // Calculate voucher discounts for each cart item
-            const discountMap = new Map<string, number>()
-            cart.forEach((item: any) => {
-              const applicableVoucher = activeVouchers.find((v: any) =>
-                v.scope === 'all' ||
-                (v.scope === 'specific_products' && v.applicable_product_ids?.includes(item.product_id))
-              )
-              
-              if (applicableVoucher) {
-                // Use variant price if a variant is selected, else fall back to product price
-                let unitPrice = region?.code === 'ID' && item.product.price_idr 
-                  ? item.product.price_idr 
-                  : item.product.price_usd || 0
-                if (item.variant_sku && item.product.variants) {
-                  const variant = item.product.variants.find((v: any) => v.sku === item.variant_sku)
-                  if (variant) unitPrice = region?.code === 'ID' ? (variant.price_idr || unitPrice) : (variant.price_usd || unitPrice)
-                }
-                const price = getEffectivePrice(unitPrice, null)
-                const itemTotal = price * item.quantity
-                
-                const voucherDiscount = applicableVoucher.discount_type === 'percentage'
-                  ? (itemTotal * applicableVoucher.discount_value / 100)
-                  : applicableVoucher.discount_value
-                
-                discountMap.set(item.id, voucherDiscount)
-              }
-            })
-            
-            setVoucherDiscounts(discountMap)
           }
         }
       }
@@ -671,6 +609,7 @@ export default function CheckoutPage() {
 
       // Fetch recommended products for quick add
       fetchRecommendedProducts()
+      fetchPublicVouchers()
 
       setIsLoading(false)
     } catch (error: any) {
@@ -694,6 +633,24 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error('Failed to fetch recommended products:', error)
+    }
+  }
+
+  const fetchPublicVouchers = async () => {
+    try {
+      const now = new Date().toISOString()
+      const { data, error } = await supabase
+        .from('promo_codes')
+        .select('id, name, code, discount_type, discount_value, min_purchase_amount, max_discount_amount, scope, valid_until')
+        .eq('is_active', true)
+        .eq('visibility', 'public')
+        .or(`valid_from.is.null,valid_from.lte.${now}`)
+        .or(`valid_until.is.null,valid_until.gte.${now}`)
+      if (!error && data) {
+        setPublicVouchers(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch public vouchers:', error)
     }
   }
 
@@ -831,8 +788,9 @@ export default function CheckoutPage() {
     */
   }
 
-  const applyPromoCode = async () => {
-    if (!promoCode.trim()) {
+  const applyPromoCode = async (codeOverride?: string) => {
+    const codeToApply = codeOverride?.trim() || promoCode.trim()
+    if (!codeToApply) {
       toast.error('Please enter a promo code')
       return
     }
@@ -840,11 +798,12 @@ export default function CheckoutPage() {
     setIsApplyingPromo(true)
     try {
       const allItems = [...cartItems, ...quickAddedItems]
+      // Must use same price chain as displayed subtotal to avoid mismatch
       const itemsSubtotal = allItems.reduce((total, item) => {
-        const basePrice = region?.code === 'ID' && (item.product as any).price_idr 
-          ? (item.product as any).price_idr 
-          : (item.product as any).price_usd || 0
-        const price = getEffectivePrice(basePrice, null)
+        const basePrice = getBasePrice(item.product, (item as any).variant_sku)
+        const salePrice = getEffectivePrice(basePrice, null)
+        const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
+        const price = discounted !== null ? discounted : salePrice
         return total + (price * item.quantity)
       }, 0)
 
@@ -855,7 +814,7 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: promoCode.trim().toUpperCase(),
+          code: codeToApply.toUpperCase(),
           region_id: region?.id,
           cart_total: itemsSubtotal,
           shipping_cost: shipping || 0,
@@ -866,11 +825,24 @@ export default function CheckoutPage() {
       const typedData = await response.json()
 
       if (typedData && typedData.is_valid) {
+        if (appliedPromo && appliedPromo.code !== codeToApply.toUpperCase()) {
+          toast(`Voucher replaced: ${codeToApply.toUpperCase()} is now active`, { icon: '🎫' })
+        } else {
+          toast.success(`Voucher applied: ${codeToApply.toUpperCase()}`)
+        }
         setAppliedPromo(typedData)
         setDiscount(typedData.discount_amount || 0)
-        toast.success('Promo code applied!')
+        setPromoCode(codeToApply.toUpperCase())
+        // Persist so promo survives page refresh
+        try {
+          const dataToStore = { ...typedData, code: codeToApply.toUpperCase() }
+          sessionStorage.setItem('checkout_applied_promo', JSON.stringify(dataToStore))
+        } catch {
+          // ignore storage errors
+        }
       } else {
-        toast.error(typedData?.error_message || 'Invalid promo code')
+        const errorMsg = typedData?.error_message || 'Invalid promo code'
+        toast.error(errorMsg)
       }
     } catch (error: any) {
       console.error('Failed to apply promo code:', error)
@@ -884,6 +856,7 @@ export default function CheckoutPage() {
     setAppliedPromo(null)
     setDiscount(0)
     setPromoCode('')
+    try { sessionStorage.removeItem('checkout_applied_promo') } catch {}
     toast.success('Promo code removed')
   }
 
@@ -972,16 +945,12 @@ export default function CheckoutPage() {
           const quantity = item.quantity || 1
           const itemTotal = price * quantity
           
-          // Add voucher discount
-          const itemVoucherDiscount = voucherDiscounts.get(item.id) || 0
-          voucherDiscountTotal += itemVoucherDiscount
-          
-          subtotal += itemTotal - itemVoucherDiscount
+          subtotal += itemTotal
           
           return {
             product_id: item.product_id,
             quantity: quantity,
-            price: price - (itemVoucherDiscount / quantity), // Net price per unit
+            price: price, // effective price per unit
             variant_name: itemWithVariant.variant_name,
             variant_sku: itemWithVariant.variant_sku,
             tax_enabled: (product as any).tax_enabled || false
@@ -1017,11 +986,11 @@ export default function CheckoutPage() {
             user_id: session.user.id,
             cart_snapshot: cartSnapshot,
             pricing_snapshot: {
-              subtotal: subtotal + voucherDiscountTotal, // Original subtotal before discount
-              discount: voucherDiscountTotal,
+              subtotal: subtotal,
+              discount: discount, // manually applied promo code
               shipping: manualShipping,
               tax: manualTax,
-              total: subtotal - voucherDiscountTotal + manualShipping + manualTax,
+              total: subtotal - discount + manualShipping + manualTax,
               currency_code: region?.currency_code || 'USD'
             }
           }),
@@ -1040,9 +1009,6 @@ export default function CheckoutPage() {
         console.log('🛍️ [ORDER] Using regular cart flow')
         console.log('📝 [ORDER] Creating checkout session from cart...')
         
-        // Calculate total voucher discount
-        const totalVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((sum, discount) => sum + discount, 0)
-
         // Build item discounts to pass to API (so cart_snapshot stores discounted prices)
         const itemDiscountsForSession = cartItems
           .map(item => {
@@ -1081,7 +1047,6 @@ export default function CheckoutPage() {
             user_id: session.user.id,
             currency_code: region?.currency_code,
             region_code: region?.code,
-            voucher_discount: totalVoucherDiscount,
             item_discounts: itemDiscountsForSession,
             tax,
             exchange_rate: exchangeRate,
@@ -1157,18 +1122,14 @@ export default function CheckoutPage() {
           // Use only variant name if available, otherwise product name
           const itemName = itemWithVariant.variant_name || item.product.name
           
-          // Apply campaign discount first, then sale price, then voucher
+          // Apply campaign discount first, then fall back to sale price
           const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, itemWithVariant.variant_name)
           const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
-          const voucherDiscount = voucherDiscounts.get(item.id) || 0
-          // Voucher discount is total for all units, so divide by quantity to get per-unit price
-          const totalItemPrice = effectivePrice * item.quantity
-          const netPricePerUnit = (totalItemPrice - voucherDiscount) / item.quantity
           
           return {
             id: item.product_id,
             name: itemName,
-            price: convertToIDR(netPricePerUnit),
+            price: convertToIDR(effectivePrice),
             quantity: item.quantity,
           }
         }),
@@ -1254,8 +1215,7 @@ export default function CheckoutPage() {
           
           const discounted = getDiscountedPrice(item.product, item.product_id, itemWithVariant.variant_name)
           const price = discounted !== null ? discounted : basePrice
-          const rawVoucherDiscount = voucherDiscounts.get(item.id) || 0
-          const netPrice = price - (rawVoucherDiscount / item.quantity)
+          const netPrice = price
           
           return {
             name: itemWithVariant.variant_name ? `${item.product.name} - ${itemWithVariant.variant_name}` : item.product.name,
@@ -1272,9 +1232,9 @@ export default function CheckoutPage() {
           price: Math.round(item.netPrice * 100) / 100,
         }))
 
-        // Ensure sum of rounded items matches desired item total (subtotal - voucher discount)
+        // Ensure sum of rounded items matches desired item total
         const roundedItemsTotal = roundedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-        const desiredItemsTotal = subtotal - totalVoucherDiscount
+        const desiredItemsTotal = subtotal
         const diff = Math.round((desiredItemsTotal - roundedItemsTotal) * 100) / 100
         if (diff !== 0 && roundedItems.length > 0) {
           roundedItems[0].price = Math.round((roundedItems[0].price + diff / roundedItems[0].quantity) * 100) / 100
@@ -1660,10 +1620,10 @@ export default function CheckoutPage() {
       })
 
       // Build pricing snapshot using the freshly fetched guest shipping cost
-      const guestTotal = subtotal - totalVoucherDiscount + guestShipping + tax - discount
+      const guestTotal = subtotal + guestShipping + tax - discount
       const pricing_snapshot = {
         subtotal,
-        discount: totalVoucherDiscount,
+        discount,
         shipping: guestShipping,
         tax,
         total: guestTotal,
@@ -1807,18 +1767,14 @@ export default function CheckoutPage() {
         ...[...cartItems, ...quickAddedItems].map(item => {
           const basePrice = getBasePrice(item.product, (item as any).variant_sku)
           const itemName = (item as any).variant_name || item.product.name
-          // Apply campaign discount first, then sale price, then voucher
+          // Apply campaign discount first, then fall back to sale price
           const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
           const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
-          const voucherDiscount = voucherDiscounts.get(item.id) || 0
-          // Voucher discount is total for all units, so divide by quantity to get per-unit price
-          const totalItemPrice = effectivePrice * item.quantity
-          const netPricePerUnit = (totalItemPrice - voucherDiscount) / item.quantity
           
           return {
             id: item.product_id,
             name: itemName,
-            price: convertToIDR(netPricePerUnit),
+            price: convertToIDR(effectivePrice),
             quantity: item.quantity,
           }
         }),
@@ -2358,12 +2314,6 @@ export default function CheckoutPage() {
     return total + (price * item.quantity)
   }, 0)
 
-  // Calculate total voucher discount (round to 2 decimals to match display and avoid float drift)
-  const rawVoucherDiscount = Array.from(voucherDiscounts.values()).reduce((sum, discount) => sum + discount, 0)
-  const totalVoucherDiscount = Math.round(rawVoucherDiscount * 100) / 100
-
-  // Calculate net amount after voucher discount for tax calculation
-  const netAmount = subtotal - totalVoucherDiscount
   const shipping = shippingCost ?? 0 // null = not yet calculated; use 0 for total until API is integrated
   
   // Calculate tax only for products with tax_enabled = true
@@ -2379,9 +2329,8 @@ export default function CheckoutPage() {
       const basePrice = getBasePrice(product, (item as any).variant_sku)
       const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
       const price = discounted !== null ? discounted : basePrice
-      const voucherDiscount = voucherDiscounts.get(item.product_id) || 0
-      const itemTaxableAmount = (price * item.quantity) - voucherDiscount
-      console.log(`  ✅ Taxable amount: ${itemTaxableAmount} (base: ${basePrice}, discounted: ${discounted}, voucher: ${voucherDiscount})`)
+      const itemTaxableAmount = price * item.quantity
+      console.log(`  ✅ Taxable amount: ${itemTaxableAmount} (base: ${basePrice}, discounted: ${discounted})`)
       return total + itemTaxableAmount
     }
     console.log(`  ❌ Tax disabled for this product`)
@@ -2390,7 +2339,7 @@ export default function CheckoutPage() {
   
   const tax = Math.round(taxableAmount * 0.1 * 100) / 100
   console.log(`💰 Total taxable amount: ${taxableAmount}, Tax (10%): ${tax}`)
-  const total = Math.round((netAmount + shipping + tax - discount) * 100) / 100
+  const total = Math.round((subtotal + shipping + tax - discount) * 100) / 100
   
   // For display: calculate by summing converted individual items to match what customer sees
   // This must exactly match what's displayed in the cart for each item
@@ -2407,11 +2356,10 @@ export default function CheckoutPage() {
     return total + priceLocal
   }, 0)
   
-  const displayVoucherDiscount = Math.round(convertToLocalCurrency(totalVoucherDiscount) * 100) / 100
   const displayShipping = Math.round(convertToLocalCurrency(shipping) * 100) / 100
   const displayTax = Math.round(convertToLocalCurrency(tax) * 100) / 100
   const displayDiscount = Math.round(convertToLocalCurrency(discount) * 100) / 100
-  const displayTotal = Math.round((displaySubtotal - displayVoucherDiscount + displayShipping + displayTax - displayDiscount) * 100) / 100
+  const displayTotal = Math.round((displaySubtotal + displayShipping + displayTax - displayDiscount) * 100) / 100
 
   if (isLoading) {
     return (
@@ -2551,14 +2499,14 @@ export default function CheckoutPage() {
                             {(item as any).variant_name || item.product.name}
                           </h3>
                           <p className="text-xs text-gray-500 mt-1">
-                            {(voucherDiscounts.get(item.id) || 0) > 0 || discount > 0 ? (
+                            {hasCampaignDiscount ? (
                               <>
                                 <span className="line-through text-gray-400">
                                   {formatPrice(basePrice, region?.currency_code || currency)}
                                 </span>
                                 {' '}
                                 <span className="text-green-600 font-medium">
-                                  {formatPrice(price - (voucherDiscounts.get(item.id) || 0) / item.quantity, region?.currency_code || currency)}
+                                  {formatPrice(price, region?.currency_code || currency)}
                                 </span>
                                 {' / '}{t.cart.item}
                               </>
@@ -2589,17 +2537,13 @@ export default function CheckoutPage() {
                             {t.trackOrder.qty}: {item.quantity}
                           </span>
                           <div className="flex flex-col items-end">
-                            {(hasCampaignDiscount || (voucherDiscounts.get(item.id) || 0) > 0 || discount > 0) && (
+                            {hasCampaignDiscount && (
                               <span className="text-xs text-gray-400 line-through">
                                 {formatPrice(basePrice * item.quantity, region?.currency_code || currency)}
                               </span>
                             )}
                             <p className="text-sm sm:text-base font-bold text-gray-900">
-                              {(() => {
-                                const itemTotal = price * item.quantity
-                                const voucherDiscount = voucherDiscounts.get(item.id) || 0
-                                return formatPrice(itemTotal - voucherDiscount, region?.currency_code || currency)
-                              })()}
+                              {formatPrice(price * item.quantity, region?.currency_code || currency)}
                             </p>
                           </div>
                         </div>
@@ -2937,14 +2881,66 @@ export default function CheckoutPage() {
             <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 lg:sticky lg:top-4">
               <h2 className="text-xl font-montserrat font-bold text-gray-900 mb-4">{t.checkout.orderSummary}</h2>
 
-              {/* Promo Code Section */}
-              <div className="mb-4 pb-4 border-b border-gray-200">
+              {/* Promo Code Section — only show when cart has items */}
+              {allItems.length > 0 && <div className="mb-4 pb-4 border-b border-gray-200">
                 <h3 className="text-sm font-montserrat font-semibold text-gray-900 mb-3">{t.checkout.promoCode}</h3>
+
+                {/* Public voucher tiles */}
+                {!appliedPromo && publicVouchers.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {publicVouchers.map((v) => {
+                      const discountLabel = v.discount_type === 'percentage'
+                        ? `${v.discount_value}% off`
+                        : formatCurrencyPrice(v.discount_value, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })
+                      const minLabel = v.min_purchase_amount
+                        ? `Min. ${formatCurrencyPrice(v.min_purchase_amount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}`
+                        : null
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => applyPromoCode(v.code)}
+                          disabled={isApplyingPromo}
+                          className="w-full flex items-center justify-between p-3 rounded-lg border border-dashed border-luxury-gold bg-luxury-gold/5 hover:bg-luxury-gold/10 transition-colors text-left group"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-luxury-gold font-mono tracking-wide">{v.code}</p>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              {minLabel && (
+                                <span className="text-[10px] text-gray-500">{minLabel}</span>
+                              )}
+                              {v.valid_until && (
+                                <VoucherExpiryInfo validUntil={v.valid_until} />
+                              )}
+                            </div>
+                          </div>
+                          <div className="ml-3 flex-shrink-0 flex flex-col items-end gap-2">
+                            <span className="text-sm font-bold text-luxury-gold">{discountLabel}</span>
+                            <span className="text-xs font-semibold text-luxury-gold border border-luxury-gold px-3 py-1 rounded-md group-hover:bg-luxury-gold group-hover:text-white transition-colors">
+                              Apply
+                            </span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
                 {appliedPromo ? (
                   <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-green-900">{appliedPromo.code}</p>
-                      <p className="text-xs text-green-700">-{formatCurrencyPrice(displayDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })} {t.checkout.discountApplied}</p>
+                      <p className="text-sm font-bold text-green-900">
+                        {appliedPromo.code || appliedPromo.promo_code?.code}
+                        {appliedPromo.promo_code && (
+                          <span className="font-normal text-green-700">
+                            {' '}— {appliedPromo.promo_code.discount_type === 'percentage'
+                              ? `${appliedPromo.promo_code.discount_value}% off`
+                              : `${formatCurrencyPrice(appliedPromo.promo_code.discount_value, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })} off`
+                            } applied
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-green-700">You save {formatCurrencyPrice(displayDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</p>
                     </div>
                     <button
                       onClick={removePromoCode}
@@ -2963,7 +2959,7 @@ export default function CheckoutPage() {
                       className="flex-1 text-sm"
                     />
                     <Button
-                      onClick={applyPromoCode}
+                      onClick={() => applyPromoCode()}
                       disabled={isApplyingPromo || !promoCode.trim()}
                       variant="outline"
                       size="sm"
@@ -2973,7 +2969,7 @@ export default function CheckoutPage() {
                     </Button>
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Price Breakdown */}
               <div className="space-y-2 mb-4">
@@ -2983,15 +2979,6 @@ export default function CheckoutPage() {
                     {formatCurrencyPrice(displaySubtotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}
                   </span>
                 </div>
-                {totalVoucherDiscount > 0 && (
-                  <div className="flex justify-between text-sm text-orange-600">
-                    <div className="flex items-center gap-1.5">
-                      <Ticket className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span>Voucher{vouchers.length > 0 && vouchers[0]?.discount_type === 'percentage' ? ` (${vouchers[0].discount_value}%)` : ''}</span>
-                    </div>
-                    <span className="font-medium">-{formatCurrencyPrice(displayVoucherDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</span>
-                  </div>
-                )}
                 {discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>{t.checkout.discount}</span>
@@ -3042,7 +3029,7 @@ export default function CheckoutPage() {
                 <>
                   <Button
                     onClick={handlePlaceOrder}
-                    disabled={isProcessing || !selectedAddressId}
+                    disabled={isProcessing || !selectedAddressId || allItems.length === 0}
                     className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-semibold py-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                     size="lg"
                   >

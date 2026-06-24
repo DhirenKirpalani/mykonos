@@ -24,13 +24,6 @@ export async function POST(request: Request) {
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
     const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
 
     const body = await request.json()
     const { code, region_id, cart_total, product_ids, shipping_cost } = body
@@ -43,13 +36,14 @@ export async function POST(request: Request) {
     }
 
     // Call validation function with scope-aware params
+    // p_user_id can be null for guest checkout
     const { data: validation, error } = await supabase.rpc('validate_promo_code', {
       p_code: code.toUpperCase(),
-      p_user_id: session.user.id,
+      p_user_id: session?.user?.id || null,
       p_region_id: region_id,
       p_cart_total: cart_total,
       p_shipping_cost: shipping_cost || 0,
-      p_product_ids: product_ids || null,
+      p_product_ids: null,
     } as any) as { data: any; error: any }
 
     if (error) {

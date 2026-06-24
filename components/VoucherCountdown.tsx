@@ -6,10 +6,11 @@ interface VoucherCountdownProps {
   validUntil: string
   className?: string
   onExpire?: () => void
+  variant?: 'full' | 'badge' | 'card'
 }
 
-export function VoucherCountdown({ validUntil, className = '', onExpire }: VoucherCountdownProps) {
-  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null)
+export function VoucherCountdown({ validUntil, className = '', onExpire, variant = 'full' }: VoucherCountdownProps) {
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -20,13 +21,11 @@ export function VoucherCountdown({ validUntil, className = '', onExpire }: Vouch
     if (!mounted) return
 
     const calculateTimeLeft = () => {
-      // Convert DB UTC time to Jakarta time for comparison
-      const endDate = new Date(new Date(validUntil).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
-      const nowJakarta = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
-      const difference = endDate.getTime() - nowJakarta.getTime()
+      const difference = new Date(validUntil).getTime() - Date.now()
 
       if (difference > 0) {
         return {
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
           hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
           minutes: Math.floor((difference / 1000 / 60) % 60),
           seconds: Math.floor((difference / 1000) % 60)
@@ -38,68 +37,66 @@ export function VoucherCountdown({ validUntil, className = '', onExpire }: Vouch
     const updateTime = () => {
       const newTimeLeft = calculateTimeLeft()
       setTimeLeft(newTimeLeft)
-      
-      // Call onExpire callback when countdown reaches zero
-      if (!newTimeLeft && onExpire) {
-        onExpire()
-      }
+      if (!newTimeLeft && onExpire) onExpire()
     }
 
     updateTime()
-
     const timer = setInterval(updateTime, 1000)
-
     return () => clearInterval(timer)
   }, [validUntil, mounted, onExpire])
 
   if (!mounted || !timeLeft) return null
 
-  const hours = timeLeft.hours
-  const minutes = timeLeft.minutes
-  const isCompact = className?.includes('text-orange')
-  
-  if (isCompact) {
-    // Compact format for product details badge
-    if (hours > 0) {
-      return (
-        <span className={className}>
-          Sisa {hours} jam
-        </span>
-      )
-    } else if (minutes === 30) {
-      return (
-        <span className={className}>
-          Sisa 30 menit
-        </span>
-      )
-    } else if (minutes < 30) {
-      return (
-        <span className={className}>
-          Kurang dari 30 menit
-        </span>
-      )
+  const { days, hours, minutes, seconds } = timeLeft
+
+  // Compact card badge: "Ends in 2d 3h" or "Ends in 3h 45m"
+  if (variant === 'card') {
+    let label = ''
+    if (days > 0) {
+      label = `${days}d ${hours}h`
+    } else if (hours > 0) {
+      label = `${hours}h ${minutes}m`
     } else {
-      return (
-        <span className={className}>
-          Sisa {minutes} menit
-        </span>
-      )
+      label = `${minutes}m`
     }
+    return (
+      <div className={`inline-flex items-center gap-1 ${className}`}>
+        <svg className="h-2.5 w-2.5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+        </svg>
+        <span className="text-[9px] md:text-[10px] font-semibold text-red-600">Ends in {label}</span>
+      </div>
+    )
   }
 
-  // Full countdown format for product details voucher section
+  // Badge mode: "Ends in Xh" inline span
+  if (variant === 'badge') {
+    if (days > 0) return <span className={className}>Ends in {days}d {hours}h</span>
+    if (hours > 0) return <span className={className}>Ends in {hours}h {minutes}m</span>
+    return <span className={className}>Ends in {minutes}m</span>
+  }
+
+  // Full countdown: HH:MM:SS boxes
   return (
     <div className={`flex items-center gap-0.5 ${className}`}>
+      {days > 0 && (
+        <>
+          <div className="bg-gray-900 text-white px-1.5 py-0.5 rounded text-xs font-bold min-w-[1.5rem] text-center">
+            {String(days).padStart(2, '0')}
+          </div>
+          <span className="text-gray-700 font-bold text-xs px-0.5">d</span>
+        </>
+      )}
       <div className="bg-gray-900 text-white px-1.5 py-0.5 rounded text-xs font-bold min-w-[1.5rem] text-center">
-        {String(timeLeft.hours).padStart(2, '0')}
+        {String(hours).padStart(2, '0')}
       </div>
       <span className="text-gray-700 font-bold text-xs px-0.5">:</span>
       <div className="bg-gray-900 text-white px-1.5 py-0.5 rounded text-xs font-bold min-w-[1.5rem] text-center">
-        {String(timeLeft.minutes).padStart(2, '0')}
+        {String(minutes).padStart(2, '0')}
       </div>
       <span className="text-gray-700 font-bold text-xs px-0.5">:</span>
       <div className="bg-gray-900 text-white px-1.5 py-0.5 rounded text-xs font-bold min-w-[1.5rem] text-center">
-        {String(timeLeft.seconds).padStart(2, '0')}
+        {String(seconds).padStart(2, '0')}
       </div>
     </div>
   )
