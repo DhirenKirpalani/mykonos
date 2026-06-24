@@ -123,6 +123,8 @@ export async function POST(request: Request) {
       scope: body.scope || 'all',
       applicable_product_ids: body.applicable_product_ids || null,
       applicable_category: body.applicable_category || null,
+      visibility: body.visibility || 'private',
+      applies_to: body.applies_to || 'products',
     }
 
     const { data: promoCode, error } = await supabase

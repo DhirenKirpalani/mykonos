@@ -27,7 +27,6 @@ interface HomeMobileProps {
   collections: Collection[]
   newArrivals: Product[]
   bestSelling: Product[]
-  vouchers: any[]
   activeDiscounts?: Map<string, any>
   isLoading?: boolean
 }
@@ -55,9 +54,8 @@ function CarouselSkeletonMobile({ bg, titleBg }: { bg: string; titleBg: string }
   )
 }
 
-function GenderCarouselSection({ genders, vouchers, activeDiscounts }: {
+function GenderCarouselSection({ genders, activeDiscounts }: {
   genders: { label: string; tabLabel: string; products: Product[]; href: string }[]
-  vouchers: any[]
   activeDiscounts?: Map<string, any>
 }) {
   const available = genders.filter(g => g.products.length > 0)
@@ -96,7 +94,6 @@ function GenderCarouselSection({ genders, vouchers, activeDiscounts }: {
           titleColor="text-[#1C2E4A]"
           variant="bestselling"
           viewAllHref={current.href}
-          vouchers={vouchers}
           activeDiscounts={activeDiscounts}
           hideHeader={true}
           noBorders={true}
@@ -106,8 +103,8 @@ function GenderCarouselSection({ genders, vouchers, activeDiscounts }: {
   )
 }
 
-function SizeCarouselSection({ products15ml, products50ml, products100ml, vouchers, activeDiscounts }: {
-  products15ml: Product[]; products50ml: Product[]; products100ml: Product[]; vouchers: any[]; activeDiscounts?: Map<string, any>
+function SizeCarouselSection({ products15ml, products50ml, products100ml, activeDiscounts }: {
+  products15ml: Product[]; products50ml: Product[]; products100ml: Product[]; activeDiscounts?: Map<string, any>
 }) {
   const sizes = [
     ...(products15ml.length > 0 ? [{ label: '15ML', products: products15ml, href: '/products?size=15ml' }] : []),
@@ -148,7 +145,6 @@ function SizeCarouselSection({ products15ml, products50ml, products100ml, vouche
           titleColor="text-[#1C2E4A]"
           variant="bestselling"
           viewAllHref={current.href}
-          vouchers={vouchers}
           activeDiscounts={activeDiscounts}
           hideHeader={true}
           sizeHint={active.replace(/[^0-9]/g, '')}
@@ -158,7 +154,7 @@ function SizeCarouselSection({ products15ml, products50ml, products100ml, vouche
   )
 }
 
-export function HomeMobile({ products, collections, newArrivals, bestSelling, vouchers, activeDiscounts, isLoading }: HomeMobileProps) {
+export function HomeMobile({ products, collections, newArrivals, bestSelling, activeDiscounts, isLoading }: HomeMobileProps) {
   const { t } = useLanguage()
 
   const maleProducts = products.filter(p => (p as any).gender?.toLowerCase() === 'male' || (p as any).gender?.toLowerCase() === 'men')
@@ -194,7 +190,6 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling, vo
           titleColor="text-[#1C2E4A]"
           variant="bestselling"
           viewAllHref="/products?filter=popular"
-          vouchers={vouchers}
           activeDiscounts={activeDiscounts}
         />
       ) : null}
@@ -208,7 +203,6 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling, vo
             { label: (t.home as any).forWomen || "Women's Collection", tabLabel: (t.home as any).forWomenTab || 'Women', products: femaleProducts, href: '/products?gender=female' },
             { label: (t.home as any).forUnisex || 'Unisex Collection', tabLabel: (t.home as any).forUnisexTab || 'Unisex', products: unisexProducts, href: '/products?gender=unisex' },
           ]}
-          vouchers={vouchers}
           activeDiscounts={activeDiscounts}
         />
       )}
@@ -220,7 +214,6 @@ export function HomeMobile({ products, collections, newArrivals, bestSelling, vo
           products15ml={products15ml}
           products50ml={products50ml}
           products100ml={products100ml}
-          vouchers={vouchers}
           activeDiscounts={activeDiscounts}
         />
       ) : null}

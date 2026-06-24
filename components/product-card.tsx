@@ -60,7 +60,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { BadgePercent, Ticket, ChevronLeft, ChevronRight } from 'lucide-react'
+import { BadgePercent, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Database } from '@/lib/supabase/database.types'
 import { VoucherCountdown } from '@/components/VoucherCountdown'
@@ -71,19 +71,15 @@ interface ProductCardProps {
   product: Product
   className?: string
   noBorder?: boolean
-  voucher?: {
-    discount_type: 'percentage' | 'fixed'
-    discount_value: number
-    valid_until: string
-  } | null
   activeDiscount?: {
     discounted_price: number
     variant_id?: string
+    discounts?: { end_date?: string }
   } | null
   sizeHint?: string
 }
 
-export function ProductCard({ product, className, noBorder = false, voucher, activeDiscount, sizeHint }: ProductCardProps) {
+export function ProductCard({ product, className, noBorder = false, activeDiscount, sizeHint }: ProductCardProps) {
   const { region } = useRegion()
   const { t, locale } = useLanguage()
   const [mounted, setMounted] = useState(false)
@@ -91,7 +87,6 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isHovering, setIsHovering] = useState(false)
   const touchStartXRef = useRef(0)
-  const [voucherExpired, setVoucherExpired] = useState(false)
   
   // Check if this is a bestselling card (minimal design)
   const isBestsellingCard = className?.includes('bestselling') || false
@@ -318,25 +313,6 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
             )}
           </div>
 
-          {/* Voucher Discount Banner - Bestselling */}
-          {voucher && !voucherExpired && (
-            <div className="bg-luxury-gold px-2 py-1.5 flex items-center justify-between gap-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="bg-white/20 rounded-sm px-1 py-0.5 flex items-center justify-center">
-                  <Ticket className="h-3 w-3 text-white" />
-                </div>
-                <span className="text-white text-[10px] md:text-xs font-bold">
-                  {voucher.discount_type === 'percentage' 
-                    ? `${voucher.discount_value}% Voucher`
-                    : `Rp${voucher.discount_value.toLocaleString('id-ID')} Voucher`
-                  }
-                </span>
-              </div>
-              {mounted && (
-                <VoucherCountdown validUntil={voucher.valid_until} onExpire={() => setVoucherExpired(true)} />
-              )}
-            </div>
-          )}
 
           {/* Product Name + Price */}
           <div className="px-4 py-3 md:px-5 md:py-4 text-center">
@@ -344,23 +320,16 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
               {product.name}
             </h3>
             {mounted && clientRegion && (() => {
-              let basePrice = hasPriceRange ? minVariantPrice : originalPrice
-              if (hasActiveDiscount) basePrice = displayPrice
-              const voucherDiscount = voucher
-                ? voucher.discount_type === 'percentage'
-                  ? basePrice * voucher.discount_value / 100
-                  : voucher.discount_value
-                : 0
-              const netPrice = basePrice - voucherDiscount
+              const basePrice = hasPriceRange ? minVariantPrice : (hasActiveDiscount ? displayPrice : originalPrice)
               if (!basePrice) return null
               
               return (
                 <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                  {(hasActiveDiscount || voucher) && (
-                    <span className="text-[10px] text-gray-400 line-through">{formatPrice(basePrice, clientRegion.currency_code)}</span>
+                  {hasActiveDiscount && (
+                    <span className="text-[10px] text-gray-400 line-through">{formatPrice(originalPrice, clientRegion.currency_code)}</span>
                   )}
                   <p className="text-[10px] md:text-xs font-montserrat font-semibold text-[#B8985F]">
-                    {hasPriceRange && !voucher ? 'From ' : ''}{formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code)}
+                    {hasPriceRange ? 'From ' : ''}{formatPrice(basePrice, clientRegion.currency_code)}
                   </p>
                 </div>
               )
@@ -517,26 +486,6 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
           })()}
         </div>
 
-        {/* Voucher Discount Banner - Mykonos Style */}
-        {voucher && !voucherExpired && (
-          <div className="bg-luxury-gold px-2 py-1.5 flex items-center justify-between gap-1.5">
-            <div className="flex items-center gap-1.5">
-              {/* Ticket icon */}
-              <div className="bg-white/20 rounded-sm px-1 py-0.5 flex items-center justify-center">
-                <Ticket className="h-3 w-3 text-white" />
-              </div>
-              <span className="text-white text-[10px] md:text-xs font-bold">
-                {voucher.discount_type === 'percentage' 
-                  ? `${voucher.discount_value}% Voucher`
-                  : `Rp${voucher.discount_value.toLocaleString('id-ID')} Voucher`
-                }
-              </span>
-            </div>
-            {mounted && (
-              <VoucherCountdown validUntil={voucher.valid_until} onExpire={() => setVoucherExpired(true)} />
-            )}
-          </div>
-        )}
 
         {/* Content — centered, matching bestselling style */}
         <div className="px-3 pt-3 pb-4 text-center md:px-4 md:pt-4">
@@ -547,14 +496,8 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
 
           {/* Price */}
           {mounted && clientRegion && (() => {
-            let basePrice = hasPriceRange ? minVariantPrice : originalPrice
-            if (hasActiveDiscount) basePrice = displayPrice
-            const voucherDiscount = voucher
-              ? voucher.discount_type === 'percentage'
-                ? basePrice * voucher.discount_value / 100
-                : voucher.discount_value
-              : 0
-            const netPrice = basePrice - voucherDiscount
+            const basePrice = hasPriceRange ? minVariantPrice : (hasActiveDiscount ? displayPrice : originalPrice)
+            const strikethrough = hasActiveDiscount ? (hasPriceRange ? minVariantPrice : originalPrice) : null
 
             let discountPct = 0
             if (hasVariants && minVariantCompareAtPrice > 0 && minVariantCompareAtPrice > minVariantPrice) {
@@ -566,18 +509,25 @@ export function ProductCard({ product, className, noBorder = false, voucher, act
 
             return (
               <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                {(hasActiveDiscount || voucher) && (
-                  <span className="text-[10px] text-gray-400 line-through">{formatPrice(basePrice, clientRegion.currency_code)}</span>
+                {strikethrough && (
+                  <span className="text-[10px] text-gray-400 line-through">{formatPrice(strikethrough, clientRegion.currency_code)}</span>
                 )}
                 <span className="text-xs md:text-sm font-montserrat font-semibold text-[#B8985F]">
-                  {hasPriceRange && !voucher ? 'From ' : ''}{formatPrice(voucher ? netPrice : basePrice, clientRegion.currency_code)}
+                  {hasPriceRange ? 'From ' : ''}{formatPrice(basePrice, clientRegion.currency_code)}
                 </span>
-                {discountPct > 0 && !voucher && (
+                {discountPct > 0 && (
                   <span className="text-[9px] text-gray-400">-{discountPct}%</span>
                 )}
               </div>
             )
           })()}
+
+          {/* Discount countdown */}
+          {mounted && hasActiveDiscount && activeDiscount?.discounts?.end_date && (
+            <div className="mt-1 flex justify-center">
+              <VoucherCountdown validUntil={activeDiscount.discounts.end_date} variant="card" />
+            </div>
+          )}
 
           {/* Rating + Sold */}
           {mounted && (product.rating > 0 || product.products_sold > 0) && (

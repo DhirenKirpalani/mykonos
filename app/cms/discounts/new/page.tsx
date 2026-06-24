@@ -80,54 +80,7 @@ export default function NewDiscountPage() {
     fetchProducts()
   }, [])
 
-  // Initialize all products with variants into discountProducts on load
-  useEffect(() => {
-    if (products.length > 0 && discountProducts.length === 0) {
-      const allProducts: DiscountProduct[] = []
-      
-      products.forEach(product => {
-        if (product.variants && product.variants.length > 0) {
-          // Add all variants
-          product.variants.forEach(variant => {
-            allProducts.push({
-              product_id: product.id,
-              product_name: product.name,
-              variant_id: variant.name,
-              variant_name: variant.name,
-              original_price: variant.price_idr,
-              discount_type: 'percentage',
-              discount_value: 0,
-              discounted_price: variant.price_idr,
-              promo_stock: variant.stock_quantity,
-              stock: variant.stock_quantity,
-              min_purchase: 1,
-              is_active: true,
-              image_url: product.image_urls?.[0] || product.image_url,
-            })
-          })
-        } else {
-          // Add product without variants
-          allProducts.push({
-            product_id: product.id,
-            product_name: product.name,
-            variant_id: undefined,
-            variant_name: undefined,
-            original_price: product.price_idr,
-            discount_type: 'percentage',
-            discount_value: 0,
-            discounted_price: product.price_idr,
-            promo_stock: product.stock_quantity,
-            stock: product.stock_quantity,
-            min_purchase: 1,
-            is_active: true,
-            image_url: product.image_urls?.[0] || product.image_url,
-          })
-        }
-      })
-      
-      setDiscountProducts(allProducts)
-    }
-  }, [products])
+  const [showProductSearch, setShowProductSearch] = useState(false)
 
   const fetchProducts = async () => {
     try {
@@ -172,10 +125,10 @@ export default function NewDiscountPage() {
           product_name: product.name,
           variant_id: variant.name,
           variant_name: variant.name,
-          original_price: variant.price_idr,
+          original_price: variant.price_usd,
           discount_type: 'percentage',
           discount_value: 0,
-          discounted_price: variant.price_idr,
+          discounted_price: variant.price_usd,
           promo_stock: variant.stock_quantity,
           stock: variant.stock_quantity,
           min_purchase: 1,
@@ -190,10 +143,10 @@ export default function NewDiscountPage() {
           product_name: product.name,
           variant_id: undefined,
           variant_name: undefined,
-          original_price: product.price_idr,
+          original_price: product.price_usd,
           discount_type: 'percentage',
           discount_value: 0,
-          discounted_price: product.price_idr,
+          discounted_price: product.price_usd,
           promo_stock: product.stock_quantity,
           stock: product.stock_quantity,
           min_purchase: 1,
@@ -294,9 +247,9 @@ export default function NewDiscountPage() {
         return
       }
 
-      // Convert local datetime to UTC for storage
-      const startDateUTC = new Date(formData.start_date).toISOString()
-      const endDateUTC = new Date(formData.end_date).toISOString()
+      // Treat datetime-local as Jakarta time (UTC+7) before storing
+      const startDateUTC = new Date(formData.start_date + ':00+07:00').toISOString()
+      const endDateUTC = new Date(formData.end_date + ':00+07:00').toISOString()
 
       console.log('📤 Submitting Discount Campaign:', {
         name: formData.name,
@@ -373,11 +326,11 @@ export default function NewDiscountPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Informasi Dasar</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Nama Promo Toko *
+                Discount Name *
               </label>
               <input
                 type="text"
@@ -386,7 +339,7 @@ export default function NewDiscountPage() {
                 onChange={handleChange}
                 required
                 maxLength={150}
-                placeholder="Nama Promo Toko tidak dapat dipertahankan ke Pembeli"
+                placeholder="Internal name (not shown to customers)"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
               />
               <p className="mt-1 text-xs text-gray-500">{formData.name.length}/150</p>
@@ -395,7 +348,7 @@ export default function NewDiscountPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Periode Promo Toko
+                  Start Date (Jakarta time)
                 </label>
                 <input
                   type="datetime-local"
@@ -408,7 +361,7 @@ export default function NewDiscountPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  &nbsp;
+                  End Date (Jakarta time)
                 </label>
                 <input
                   type="datetime-local"
@@ -426,51 +379,137 @@ export default function NewDiscountPage() {
         {/* Products in Discount */}
         <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Produk dalam Promo Toko</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Products in Discount</h2>
+            <Button type="button" size="sm" className="bg-luxury-gold hover:bg-luxury-gold/90" onClick={() => setShowProductSearch(v => !v)}>
+              + Add Products
+            </Button>
           </div>
 
+          {/* Product search/select panel */}
+          {showProductSearch && (
+            <div className="mb-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-luxury-gold"
+                />
+              </div>
+              {/* Select All */}
+              {(() => {
+                const available = filteredProducts.filter(p => !discountProducts.some(dp => dp.product_id === p.id))
+                const allSelected = available.length > 0 && available.every(p => tempSelectedProducts.has(p.id))
+                return available.length > 0 ? (
+                  <label className="flex items-center gap-2 px-3 py-2 mb-1 rounded-lg cursor-pointer border-b border-gray-200">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={() => {
+                        setTempSelectedProducts(prev => {
+                          const next = new Set(prev)
+                          if (allSelected) {
+                            available.forEach(p => next.delete(p.id))
+                          } else {
+                            available.forEach(p => next.add(p.id))
+                          }
+                          return next
+                        })
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-luxury-gold"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Select All ({available.length})</span>
+                  </label>
+                ) : null
+              })()}
+              <div className="max-h-48 overflow-y-auto space-y-1 mb-3">
+                {filteredProducts.filter(p => !discountProducts.some(dp => dp.product_id === p.id)).map(product => (
+                  <label key={product.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tempSelectedProducts.has(product.id)}
+                      onChange={() => {
+                        setTempSelectedProducts(prev => {
+                          const next = new Set(prev)
+                          next.has(product.id) ? next.delete(product.id) : next.add(product.id)
+                          return next
+                        })
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-luxury-gold"
+                    />
+                    {(product.image_urls?.[0] || product.image_url) && (
+                      <img src={product.image_urls?.[0] || product.image_url} alt={product.name} className="h-8 w-8 rounded object-cover" />
+                    )}
+                    <span className="text-sm text-gray-900">{product.name}</span>
+                    <span className="ml-auto text-xs text-gray-500">${product.price_usd?.toFixed(2)}</span>
+                  </label>
+                ))}
+                {filteredProducts.filter(p => !discountProducts.some(dp => dp.product_id === p.id)).length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-4">All products already added</p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => { setShowProductSearch(false); setTempSelectedProducts(new Set()); setSearchQuery('') }}>
+                  Close
+                </Button>
+                <Button type="button" size="sm" className="bg-luxury-gold hover:bg-luxury-gold/90" onClick={() => { addSelectedProducts(); setShowProductSearch(false); setSearchQuery('') }} disabled={tempSelectedProducts.size === 0}>
+                  Add {tempSelectedProducts.size > 0 ? `(${tempSelectedProducts.size})` : ''}
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="text-sm text-gray-600 mb-4">
-            {new Set(discountProducts.map(p => p.product_id)).size} total produk
+            {new Set(discountProducts.map(p => p.product_id)).size} products added
           </div>
 
           {/* Bulk Discount Options */}
           {discountProducts.length > 0 && selectedProducts.size > 0 && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900">Perubahan massal ({selectedProducts.size} produk dipilih)</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Bulk changes ({selectedProducts.size} selected)</h3>
                 <div className="flex gap-2">
                   <Button type="button" size="sm" onClick={applyBulkDiscount} className="bg-luxury-gold hover:bg-luxury-gold/90">
-                    Ubah Semua
+                    Apply to All
                   </Button>
                   <Button type="button" size="sm" variant="destructive" onClick={deleteSelected}>
-                    Hapus
+                    Delete
                   </Button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Harga Diskon (Rp)</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Discount Price (USD)</label>
                   <input
                     type="number"
                     value={bulkDiscount.value}
                     onChange={(e) => setBulkDiscount(prev => ({ ...prev, value: parseFloat(e.target.value) || 0, type: 'fixed' }))}
-                    placeholder="Masukkan harga diskon"
+                    placeholder="Enter discount price"
                     className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Stok Promosi</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Promo Stock</label>
                   <input
                     type="number"
                     value={bulkDiscount.promo_stock}
                     onChange={(e) => setBulkDiscount(prev => ({ ...prev, promo_stock: e.target.value }))}
-                    placeholder="Tidak ada"
+                    placeholder="None"
                     className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                     min="0"
                   />
                 </div>
               </div>
+            </div>
+          )}
+
+          {discountProducts.length === 0 && (
+            <div className="text-center py-12 text-gray-400 border border-dashed border-gray-200 rounded-lg">
+              <p className="text-sm">No products added yet.</p>
+              <p className="text-xs mt-1">Click <strong>+ Add Products</strong> to select which products to discount.</p>
             </div>
           )}
 
@@ -498,15 +537,15 @@ export default function NewDiscountPage() {
                     className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
                   />
                 </div>
-                <div className="col-span-1">Nama Produk</div>
-                <div className="col-span-1">Harga Awal</div>
-                <div className="col-span-2 text-center">Harga Diskon</div>
-                <div className="col-span-1 text-center">% Diskon</div>
-                <div className="col-span-1 text-center">Stok</div>
-                <div className="col-span-1 text-center">Stok Promosi</div>
-                <div className="col-span-1 text-center">Batas Pembelian</div>
-                <div className="col-span-1 text-center">Aktifkan / Nonaktifkan</div>
-                <div className="col-span-1 text-right">Aksi</div>
+                <div className="col-span-1">Product Name</div>
+                <div className="col-span-1">Original Price</div>
+                <div className="col-span-2 text-center">Discount Price</div>
+                <div className="col-span-1 text-center">% Off</div>
+                <div className="col-span-1 text-center">Stock</div>
+                <div className="col-span-1 text-center">Promo Stock</div>
+                <div className="col-span-1 text-center">Purchase Limit</div>
+                <div className="col-span-1 text-center">Active</div>
+                <div className="col-span-1 text-right">Action</div>
               </div>
 
               {(() => {
@@ -561,7 +600,7 @@ export default function NewDiscountPage() {
                             }}
                             className="text-red-500 hover:text-red-600 text-sm font-medium"
                           >
-                            Hapus
+                            Remove
                           </button>
                         </div>
                       </div>
@@ -592,23 +631,22 @@ export default function NewDiscountPage() {
                               {/* Variant Name */}
                               <div className="col-span-1">
                                 <span className="text-sm text-gray-900">{item.variant_name || '-'}</span>
-                                {item.stock === 0 && <span className="text-xs text-red-500">Habis</span>}
+                                {item.stock === 0 && <span className="text-xs text-red-500">Out of stock</span>}
                               </div>
                               {/* Original Price */}
                               <div className="col-span-1 text-sm text-gray-700">
-                                Rp{item.original_price.toLocaleString('id-ID')}
+                                ${item.original_price.toFixed(2)}
                               </div>
-                              {/* Discount Price (Rp input) */}
+                              {/* Discount Price (USD input) */}
                               <div className="col-span-2">
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs text-gray-500">Rp</span>
+                                  <span className="text-xs text-gray-500">$</span>
                                   <input
                                     key={`discount-${globalIndex}-${item.product_id}-${item.variant_id || 'no-variant'}`}
                                     type="text"
-                                    defaultValue={Math.round(item.discounted_price).toLocaleString('id-ID')}
+                                    defaultValue={item.discounted_price.toFixed(2)}
                                     onChange={(e) => {
-                                      const rawValue = e.target.value.replace(/\./g, '')
-                                      const val = parseFloat(rawValue) || 0
+                                      const val = parseFloat(e.target.value) || 0
                                       const currentOriginalPrice = item.original_price
                                       const newDiscountedPrice = Math.max(0, Math.min(val, currentOriginalPrice))
                                       
@@ -638,10 +676,8 @@ export default function NewDiscountPage() {
                                       })
                                     }}
                                     onBlur={(e) => {
-                                      // Format on blur
-                                      const rawValue = e.target.value.replace(/\./g, '')
-                                      const val = parseFloat(rawValue) || 0
-                                      e.target.value = Math.round(val).toLocaleString('id-ID')
+                                      const val = parseFloat(e.target.value) || 0
+                                      e.target.value = val.toFixed(2)
                                     }}
                                     className="w-28 rounded border border-blue-400 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   />
@@ -664,21 +700,21 @@ export default function NewDiscountPage() {
                                   onChange={(e) => updateDiscountProduct(globalIndex, 'promo_stock', e.target.value ? parseInt(e.target.value) : undefined)}
                                   className="w-full rounded border border-gray-300 px-1 py-1 text-xs"
                                 >
-                                  <option value="">Tidak ada</option>
+                                  <option value="">None</option>
                                   <option value="10">10</option>
                                   <option value="25">25</option>
                                   <option value="50">50</option>
                                   <option value="100">100</option>
                                 </select>
                               </div>
-                              {/* Batas Pembelian */}
+                              {/* Purchase Limit */}
                               <div className="col-span-1">
                                 <select
                                   value={item.min_purchase?.toString() || ''}
                                   onChange={(e) => updateDiscountProduct(globalIndex, 'min_purchase', e.target.value ? parseInt(e.target.value) : undefined)}
                                   className="w-full rounded border border-gray-300 px-1 py-1 text-xs"
                                 >
-                                  <option value="">Tidak ada</option>
+                                  <option value="">None</option>
                                   <option value="1">1</option>
                                   <option value="2">2</option>
                                   <option value="3">3</option>
@@ -709,11 +745,11 @@ export default function NewDiscountPage() {
           )}
         </div>
 
-        {/* Submit Buttons */}
-        <div className="flex items-center justify-end gap-4">
+        {/* Submit Buttons - sticky */}
+        <div className="sticky bottom-0 z-10 flex items-center justify-end gap-4 bg-gray-50 border-t border-gray-200 px-6 py-4 -mx-6">
           <Link href="/cms/discounts">
             <Button type="button" variant="outline">
-              Batal
+              Cancel
             </Button>
           </Link>
           <Button
@@ -721,7 +757,7 @@ export default function NewDiscountPage() {
             disabled={loading || discountProducts.length === 0}
             className="bg-luxury-gold hover:bg-luxury-gold/90"
           >
-            {loading ? 'Creating...' : 'Konfirmasi'}
+            {loading ? 'Creating...' : 'Create Discount'}
           </Button>
         </div>
       </form>

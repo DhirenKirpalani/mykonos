@@ -96,7 +96,10 @@ export function ProductVariantModal({
   }
 
   const basePrice = getRegionPrice()
-  const effectivePrice = basePrice
+  const noVariantCampaign = activeDiscounts?.get('no-variant')
+  const effectivePrice = (noVariantCampaign && noVariantCampaign.discounted_price < basePrice)
+    ? noVariantCampaign.discounted_price
+    : basePrice
 
   // Get variant price, applying discount if available
   const getVariantPrice = (variant: ProductVariant) => {
@@ -409,9 +412,9 @@ export function ProductVariantModal({
               {!hasVariants && (
               <div className="mb-4 md:mb-6">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  {voucher && (
+                  {(voucher || (noVariantCampaign && noVariantCampaign.discounted_price < basePrice)) && (
                     <span className="text-lg text-gray-400 line-through">
-                      {formatPrice(effectivePrice * quantity, currencyCode)}
+                      {formatPrice(basePrice * quantity, currencyCode)}
                     </span>
                   )}
                   <span className="text-2xl md:text-3xl font-bold text-luxury-navy">

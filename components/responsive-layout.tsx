@@ -23,12 +23,11 @@ interface ResponsiveLayoutProps {
   collections: Collection[]
   newArrivals: Product[]
   bestSelling: Product[]
-  vouchers: any[]
   activeDiscounts?: Map<string, any>
   isLoading?: boolean
 }
 
-export function ResponsiveLayout({ products, collections, newArrivals, bestSelling, vouchers, activeDiscounts, isLoading }: ResponsiveLayoutProps) {
+export function ResponsiveLayout({ products, collections, newArrivals, bestSelling, activeDiscounts, isLoading }: ResponsiveLayoutProps) {
   const [isMobile, setIsMobile] = useState(false)
   const [isClient, setIsClient] = useState(false)
 
@@ -60,5 +59,5 @@ export function ResponsiveLayout({ products, collections, newArrivals, bestSelli
     return <LoadingSpinner />
   }
 
-  return <LayoutComponent products={products} collections={collections} newArrivals={newArrivals} bestSelling={bestSelling} vouchers={vouchers} activeDiscounts={activeDiscounts} isLoading={isLoading} />
+  return <LayoutComponent products={products} collections={collections} newArrivals={newArrivals} bestSelling={bestSelling} activeDiscounts={activeDiscounts} isLoading={isLoading} />
 }

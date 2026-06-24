@@ -21,6 +21,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [topProducts, setTopProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
+  const [productDiscounts, setProductDiscounts] = useState<Map<string, any>>(new Map())
   const [activeVoucher, setActiveVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { t } = useLanguage()
@@ -31,8 +32,29 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       inputRef.current?.focus()
       fetchTopProducts()
       fetchVoucher()
+      fetchActiveDiscounts()
     }
   }, [isOpen])
+
+  const fetchActiveDiscounts = async () => {
+    try {
+      const now = new Date().toISOString()
+      const { data, error } = await supabase
+        .from('discount_products')
+        .select('product_id, variant_id, discounted_price, discounts!inner(id, start_date, end_date, is_active)')
+        .eq('is_active', true)
+        .eq('discounts.is_active', true)
+        .lte('discounts.start_date', now)
+        .gte('discounts.end_date', now)
+      if (!error && data) {
+        const map = new Map<string, any>()
+        data.forEach(d => {
+          if (!map.has(d.product_id)) map.set(d.product_id, d)
+        })
+        setProductDiscounts(map)
+      }
+    } catch {}
+  }
 
   const fetchVoucher = async () => {
     try {
@@ -173,7 +195,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
                   {displayProducts.map((product) => (
                     <div key={product.id} className="w-full">
-                      <ProductCard product={product} className="h-full" voucher={activeVoucher} />
+                      <ProductCard product={product} className="h-full" activeDiscount={productDiscounts.get(product.id) || null} />
                     </div>
                   ))}
                 </div>

@@ -149,7 +149,7 @@ export function ProductPriceDisplay({ product, quantity = 1, showRange = false, 
             </svg>
           </button>
         )}
-        {hasDiscount && !voucher && (
+        {salePrice && salePrice > unitPrice && !noVariantDiscount && !voucher && (
           <>
             <span className="text-lg text-gray-400 line-through">
               {formatPrice(salePrice * quantity, currencyCode)}

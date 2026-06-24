@@ -14,6 +14,12 @@ interface Product {
   fragrance_family?: string
 }
 
+// Interpret datetime-local value as Jakarta time and convert to UTC ISO
+function jakartaLocalToUtc(local: string | null): string | null {
+  if (!local) return null
+  return new Date(local + ':00+07:00').toISOString()
+}
+
 export default function NewPromoCodePage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
@@ -33,7 +39,9 @@ export default function NewPromoCodePage() {
     scope: 'all',
     valid_from: '',
     valid_until: '',
-    is_active: true
+    is_active: true,
+    visibility: 'private' as 'public' | 'private',
+    applies_to: 'products' as 'products' | 'shipping' | 'order',
   })
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -122,8 +130,9 @@ export default function NewPromoCodePage() {
           max_discount_cap: formData.max_discount_cap ? parseFloat(formData.max_discount_cap) : null,
           applicable_product_ids: formData.scope === 'specific_products' ? selectedProductIds : null,
           applicable_category: formData.scope === 'categories' ? selectedCategory : null,
-          valid_from: formData.valid_from ? new Date(formData.valid_from).toISOString() : null,
-          valid_until: formData.valid_until ? new Date(formData.valid_until).toISOString() : null,
+          applies_to: formData.applies_to,
+          valid_from: jakartaLocalToUtc(formData.valid_from),
+          valid_until: jakartaLocalToUtc(formData.valid_until),
         })
       })
 
@@ -226,6 +235,35 @@ export default function NewPromoCodePage() {
                 <p className="mt-1 text-sm text-gray-500">
                   {formData.discount_type === 'percentage' ? 'Percentage off (e.g. 10 = 10% off)' : 'Fixed IDR amount off'}
                 </p>
+              </div>
+            </div>
+
+            {/* Applies To — what the discount is calculated on */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Discount Applies To
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: 'products', label: 'Products Only', desc: 'Discount calculated on product subtotal. Shipping is paid in full.' },
+                  { value: 'shipping', label: 'Shipping Only', desc: 'Discount applies to shipping cost only.' },
+                  { value: 'order', label: 'Entire Order', desc: 'Discount on subtotal + shipping combined.' },
+                ].map(option => (
+                  <label key={option.value} className={`flex flex-col gap-1 p-3 rounded-lg border cursor-pointer transition-colors ${formData.applies_to === option.value ? 'border-luxury-gold bg-luxury-gold/5' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="applies_to"
+                        value={option.value}
+                        checked={formData.applies_to === option.value}
+                        onChange={(e) => setFormData(prev => ({ ...prev, applies_to: e.target.value as 'products' | 'shipping' | 'order' }))}
+                        className="h-4 w-4 border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                      />
+                      <span className="text-sm font-medium text-gray-900">{option.label}</span>
+                    </div>
+                    <span className="text-[10px] text-gray-500 leading-tight">{option.desc}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -463,6 +501,35 @@ export default function NewPromoCodePage() {
               </div>
             </div>
 
+          </div>
+        </div>
+
+        {/* Visibility */}
+        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Visibility</h2>
+          <p className="text-xs text-gray-500 mb-4">Controls how users can discover and apply this voucher</p>
+          <div className="space-y-2">
+            {([
+              { value: 'public', label: 'Public', desc: 'Shown as a clickable tile in checkout — customers can apply with one click' },
+              { value: 'private', label: 'Private', desc: 'Hidden — for influencers, affiliates & VIP. Customers must type the code manually.' },
+            ] as const).map(option => (
+              <label key={option.value} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                formData.visibility === option.value ? 'border-luxury-gold bg-luxury-gold/5' : 'border-gray-200 hover:border-gray-300'
+              }`}>
+                <input
+                  type="radio"
+                  name="visibility"
+                  value={option.value}
+                  checked={formData.visibility === option.value}
+                  onChange={(e) => setFormData(prev => ({ ...prev, visibility: e.target.value as 'public' | 'private' }))}
+                  className="mt-0.5 h-4 w-4 border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">{option.label}</div>
+                  <div className="text-xs text-gray-500">{option.desc}</div>
+                </div>
+              </label>
+            ))}
           </div>
         </div>
 
