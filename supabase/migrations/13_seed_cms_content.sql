@@ -11,28 +11,28 @@ INSERT INTO fragrance_families (name, description, display_order) VALUES
   ('Aromatic', 'Herbaceous and green with lavender, sage, and rosemary', 6);
 
 -- Update existing products with fragrance families and editorial priority
-UPDATE products SET 
-  fragrance_family = 'Oriental',
+UPDATE products SET
+  fragrance_family = 'Floral Woody',
   editorial_priority = 100
 WHERE slug = 'oud-noir';
 
-UPDATE products SET 
-  fragrance_family = 'Floral',
+UPDATE products SET
+  fragrance_family = 'Floral Vanilla',
   editorial_priority = 95
 WHERE slug = 'rose-lumiere';
 
-UPDATE products SET 
-  fragrance_family = 'Woody',
+UPDATE products SET
+  fragrance_family = 'Fruity Woody',
   editorial_priority = 90
 WHERE slug = 'vetiver-sauvage';
 
-UPDATE products SET 
-  fragrance_family = 'Oriental',
+UPDATE products SET
+  fragrance_family = 'Citrus Spicy',
   editorial_priority = 98
 WHERE slug = 'ambre-royal';
 
-UPDATE products SET 
-  fragrance_family = 'Fresh',
+UPDATE products SET
+  fragrance_family = 'Citrus Floral',
   editorial_priority = 85
 WHERE slug = 'neroli-garden';
 

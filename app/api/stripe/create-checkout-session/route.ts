@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe/config'
 import { createClient } from '@supabase/supabase-js'
+import { isZeroDecimalCurrency } from '@/lib/utils/payment'
 
 // Use server-side Supabase client with service role for admin operations
 const supabase = createClient(
@@ -56,16 +57,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Zero-decimal currencies (e.g. IDR) use whole units, not cents
+    const currencyLower = currency.toLowerCase()
+    const zeroDecimal = isZeroDecimalCurrency(currencyLower)
+    const toUnitAmount = (amount: number) => Math.round(zeroDecimal ? amount : amount * 100)
+
     // Create line items for Stripe
     const lineItems = items.map((item: any) => ({
       price_data: {
-        currency: currency.toLowerCase(),
+        currency: currencyLower,
         product_data: {
           name: item.name,
           description: item.variant_name ? `Variant: ${item.variant_name}` : undefined,
           images: item.image_url ? [item.image_url] : undefined,
         },
-        unit_amount: Math.round(item.price * 100), // Convert to cents
+        unit_amount: toUnitAmount(item.price),
       },
       quantity: item.quantity,
     }))
@@ -74,11 +80,11 @@ export async function POST(request: NextRequest) {
     if (shippingCost > 0) {
       lineItems.push({
         price_data: {
-          currency: currency.toLowerCase(),
+          currency: currencyLower,
           product_data: {
             name: 'Shipping',
           },
-          unit_amount: Math.round(shippingCost * 100),
+          unit_amount: toUnitAmount(shippingCost),
         },
         quantity: 1,
       })

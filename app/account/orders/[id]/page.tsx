@@ -326,12 +326,14 @@ export default function OrderDetailsPage() {
 
     setIsProcessingPayment(true)
     try {
-      // Check if this is a Stripe order (non-ID region)
+      // Continue payment using the gateway stored on the order
+      const paymentGateway = (order as any)?.payment_gateway
       const stripeSessionId = (order as any)?.stripe_session_id
       const snapToken = order.snap_token
       const expiryTime = order.expiry_time
       
       console.log('🔍 [PAYMENT] Payment Details:')
+      console.log('  - payment_gateway:', paymentGateway || 'MISSING')
       console.log('  - stripe_session_id:', stripeSessionId ? 'EXISTS' : 'MISSING')
       console.log('  - snap_token:', snapToken ? 'EXISTS' : 'MISSING')
       console.log('  - expiry_time:', expiryTime || 'MISSING')
