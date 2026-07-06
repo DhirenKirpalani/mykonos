@@ -1,11 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Power, ShieldAlert, Globe, Tag, Wrench, Save, AlertTriangle, ShoppingCart, X, Truck, UserPlus, Heart, Mail, Bell } from 'lucide-react'
+import { Power, ShieldAlert, Globe, Tag, Wrench, Save, AlertTriangle, ShoppingCart, X, Truck, UserPlus, Heart, Mail, Bell, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import { ReasonDialog } from '@/components/ui/reason-dialog'
 import { supabase } from '@/lib/supabase/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  DEFAULT_PAYMENT_GATEWAY_CONFIG,
+  type PaymentGateway,
+  type PaymentGatewayConfig,
+  type PaymentRegionKey,
+} from '@/lib/utils/payment'
 
 interface SystemSetting {
   setting_key: string
@@ -50,6 +56,8 @@ export default function SystemSettingsPage() {
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
   const [loadingAudit, setLoadingAudit] = useState(false)
+  const [gatewayConfig, setGatewayConfig] = useState<PaymentGatewayConfig>(DEFAULT_PAYMENT_GATEWAY_CONFIG)
+  const [savingGateways, setSavingGateways] = useState(false)
 
   useEffect(() => {
     fetchSettings()
@@ -77,6 +85,9 @@ export default function SystemSettingsPage() {
         const data = await response.json()
         setSettings(data)
         setMaintenanceMessage(data.maintenance_mode?.setting_value?.message || '')
+        if (data.payment_gateways?.setting_value) {
+          setGatewayConfig(data.payment_gateways.setting_value as PaymentGatewayConfig)
+        }
       } else {
         const error = await response.json()
         console.error('Failed to fetch settings:', error)
@@ -158,6 +169,84 @@ export default function SystemSettingsPage() {
         }, reason)
       }
     })
+  }
+
+  const ALL_GATEWAYS: { key: PaymentGateway; label: string; implemented: boolean }[] = [
+    { key: 'midtrans', label: 'Midtrans', implemented: true },
+    { key: 'stripe', label: 'Stripe', implemented: true },
+    { key: 'paypal', label: 'PayPal', implemented: false },
+  ]
+
+  const toggleGatewayEnabled = (regionKey: PaymentRegionKey, gateway: PaymentGateway) => {
+    setGatewayConfig(prev => {
+      const region = prev[regionKey]
+      const isEnabled = region.enabled.includes(gateway)
+      const newEnabled = isEnabled
+        ? region.enabled.filter(g => g !== gateway)
+        : [...region.enabled, gateway]
+
+      // If we disabled the current default, fall back to the first remaining enabled gateway
+      const newDefault = newEnabled.includes(region.default)
+        ? region.default
+        : newEnabled[0] || region.default
+
+      return {
+        ...prev,
+        [regionKey]: { enabled: newEnabled, default: newDefault }
+      }
+    })
+  }
+
+  const setGatewayDefault = (regionKey: PaymentRegionKey, gateway: PaymentGateway) => {
+    setGatewayConfig(prev => ({
+      ...prev,
+      [regionKey]: { ...prev[regionKey], default: gateway }
+    }))
+  }
+
+  const saveGatewayConfig = async () => {
+    // Basic validation: every region must have at least one enabled gateway
+    for (const key of Object.keys(gatewayConfig) as PaymentRegionKey[]) {
+      if (gatewayConfig[key].enabled.length === 0) {
+        toast.error(`Please enable at least one payment gateway for ${key === 'ID' ? 'Indonesia' : 'Global'}`)
+        return
+      }
+    }
+    setSavingGateways(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Session expired. Please log in again.')
+        return
+      }
+
+      const response = await fetch('/api/admin/system-settings', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          setting_key: 'payment_gateways',
+          setting_value: gatewayConfig,
+          reason: 'Updated payment gateway configuration'
+        })
+      })
+
+      if (response.ok) {
+        await fetchSettings()
+        toast.success('Payment gateway configuration saved')
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to save payment gateway configuration')
+      }
+    } catch (error: any) {
+      console.error('Error saving payment gateway config:', error)
+      toast.error(error.message || 'Failed to save payment gateway configuration')
+    } finally {
+      setSavingGateways(false)
+    }
   }
 
   const fetchAuditLog = async () => {
@@ -353,6 +442,87 @@ export default function SystemSettingsPage() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Payment Gateway Configuration */}
+      <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+        <div className="flex items-start gap-4 mb-6">
+          <div className="rounded-full bg-emerald-100 p-3">
+            <CreditCard className="h-6 w-6 text-emerald-600" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-gray-900">Payment Gateway Configuration</h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Choose which payment gateways are enabled for each region, and which one is used by default at checkout.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {(['ID', 'global'] as PaymentRegionKey[]).map((regionKey) => {
+            const regionConfig = gatewayConfig[regionKey]
+            return (
+              <div key={regionKey} className="rounded-lg border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">
+                  {regionKey === 'ID' ? '🇮🇩 Indonesia' : '🌍 Global (Rest of World)'}
+                </h3>
+                <div className="space-y-3">
+                  {ALL_GATEWAYS.map((gw) => {
+                    const isEnabled = regionConfig.enabled.includes(gw.key)
+                    const isDefault = regionConfig.default === gw.key
+                    return (
+                      <div
+                        key={gw.key}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
+                          isEnabled ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50'
+                        }`}
+                      >
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isEnabled}
+                            onChange={() => toggleGatewayEnabled(regionKey, gw.key)}
+                            className="h-4 w-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold"
+                          />
+                          <span className="text-sm font-medium text-gray-800">{gw.label}</span>
+                          {!gw.implemented && (
+                            <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700">
+                              Coming soon
+                            </span>
+                          )}
+                        </label>
+                        <label className={`flex items-center gap-1.5 text-xs ${isEnabled ? 'text-gray-600' : 'text-gray-300'}`}>
+                          <input
+                            type="radio"
+                            name={`default-${regionKey}`}
+                            checked={isDefault}
+                            disabled={!isEnabled}
+                            onChange={() => setGatewayDefault(regionKey, gw.key)}
+                            className="h-3.5 w-3.5 border-gray-300 text-luxury-gold focus:ring-luxury-gold disabled:opacity-40"
+                          />
+                          Default
+                        </label>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-blue-50 p-3 border border-blue-200">
+          <p className="text-sm text-blue-800">
+            <strong>Note:</strong> Orders will use the gateway marked as <strong>Default</strong> for the customer's region. PayPal integration is not yet built; enabling it will fall back to the region's other enabled gateway.
+          </p>
+          <button
+            onClick={saveGatewayConfig}
+            disabled={savingGateways}
+            className="ml-4 shrink-0 rounded-lg bg-luxury-navy px-4 py-2 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-50"
+          >
+            {savingGateways ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </div>
 

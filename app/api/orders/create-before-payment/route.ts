@@ -88,7 +88,7 @@ export async function POST(request: Request) {
           // Get order details
           const { data: existingOrder } = await supabase
             .from('orders')
-            .select('id, order_number, snap_token, snap_redirect_url, expiry_time, total_amount')
+            .select('id, order_number, snap_token, snap_redirect_url, expiry_time, total_amount, payment_gateway, stripe_session_id')
             .eq('id', existingOrderId)
             .single()
           
@@ -184,6 +184,8 @@ export async function POST(request: Request) {
               snap_redirect_url: typedOrder.snap_redirect_url,
               expiry_time: typedOrder.expiry_time,
               total_amount: typedOrder.total_amount,
+              payment_gateway: typedOrder.payment_gateway,
+              stripe_session_id: typedOrder.stripe_session_id,
               is_existing: true,
               message: 'You already have a pending order for these items'
             })

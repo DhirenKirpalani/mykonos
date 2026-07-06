@@ -38,6 +38,11 @@ import { useAddressValidation } from '@/hooks/useAddressValidation'
 import { formatPrice as formatCurrencyPrice } from '@/lib/utils/currency'
 import { formatPrice as formatRegionPrice } from '@/lib/utils/region'
 import { formatPrice } from '@/lib/utils'
+import {
+  fetchPaymentGatewayConfig,
+  resolveCheckoutGateway,
+  type PaymentGatewayConfig,
+} from '@/lib/utils/payment'
 
 type CartItem = {
   id: string
@@ -145,6 +150,7 @@ export default function CheckoutPage() {
   const [isRecommendedExpanded, setIsRecommendedExpanded] = useState(true)
   const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string>('')
+  const [paymentGatewayConfig, setPaymentGatewayConfig] = useState<PaymentGatewayConfig | null>(null)
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
@@ -162,6 +168,9 @@ export default function CheckoutPage() {
   useEffect(() => {
     // Clear reload flag if it exists
     sessionStorage.removeItem('checkout_reloading')
+    
+    // Load payment gateway config once
+    fetchPaymentGatewayConfig().then(setPaymentGatewayConfig)
     
     // Load Midtrans Snap script
     const snapScript = document.createElement('script')
@@ -1088,7 +1097,7 @@ export default function CheckoutPage() {
         throw new Error('Shipping address not found')
       }
 
-      // Check region for payment gateway routing
+      // Region used for currency/pricing only; gateway selection is controlled by CMS config
       const isIDRegion = region?.code === 'ID'
 
       // Convert to IDR (prices already in IDR for ID region)
@@ -1101,6 +1110,10 @@ export default function CheckoutPage() {
         // Otherwise convert USD to IDR
         return Math.round(amount * USD_TO_IDR)
       }
+
+      // Resolve the payment gateway based on CMS config and region
+      const activeGateway = resolveCheckoutGateway(region?.code, paymentGatewayConfig)
+      console.log('💳 [CHECKOUT] Resolved payment gateway:', activeGateway, 'for region:', region?.code)
 
       // Build items array including shipping and tax
       const itemsForMidtrans = [
@@ -1197,19 +1210,22 @@ export default function CheckoutPage() {
       // Immediately reset cart badge
       window.dispatchEvent(new Event('cart-updated'))
       
-      // For non-ID regions, redirect to Stripe checkout
-      if (!isIDRegion) {
-        console.log('💳 [STRIPE] Creating Stripe checkout session for non-ID region...')
+      // Route to the configured payment gateway
+      if (activeGateway === 'stripe') {
+        console.log('💳 [STRIPE] Creating Stripe checkout session...')
+        const stripeCurrency = isIDRegion ? 'idr' : 'usd'
         
         // Compute Stripe line items ensuring they sum exactly to checkout total
         const rawStripeItems = cartItems.map(item => {
           const itemWithVariant = item as any
-          let basePrice = (item.product as any).price_usd || 0
+          let basePrice = isIDRegion && (item.product as any).price_idr
+            ? (item.product as any).price_idr
+            : (item.product as any).price_usd || 0
           
           if (itemWithVariant.variant_sku && (item.product as any).variants) {
             const variant = (item.product as any).variants.find((v: any) => v.sku === itemWithVariant.variant_sku)
             if (variant) {
-              basePrice = variant.price_usd
+              basePrice = isIDRegion ? variant.price_idr : variant.price_usd
             }
           }
           
@@ -1252,7 +1268,7 @@ export default function CheckoutPage() {
             items: itemsForStripe,
             shippingCost: shipping,
             totalAmount: total,
-            currency: 'usd',
+            currency: stripeCurrency,
           }),
         })
         
@@ -1269,8 +1285,8 @@ export default function CheckoutPage() {
         return
       }
       
-      // For ID region, continue with Midtrans
-      console.log('💳 [MIDTRANS] Processing payment for ID region...')
+      // For Midtrans gateway
+      console.log('💳 [MIDTRANS] Processing payment via Midtrans...')
       
       // Check if this is a guest user
       const isGuest = session?.user?.is_anonymous
@@ -1283,6 +1299,7 @@ export default function CheckoutPage() {
         console.log('♻️ [ORDER] Reusing existing pending order')
         toast.info(t.checkout.continuingPendingOrder)
 
+        // For guest orders, always redirect to tracking page
         if (isGuest) {
           const customerEmail = orderData.customer_email || ''
           const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
@@ -1292,6 +1309,24 @@ export default function CheckoutPage() {
             window.location.href = redirectUrl
           }, 500)
           return
+        }
+
+        // For Stripe orders, reuse existing checkout session URL
+        if (orderData.payment_gateway === 'stripe' && orderData.stripe_session_id) {
+          console.log('💳 [STRIPE] Reusing existing Stripe checkout session:', orderData.stripe_session_id)
+          try {
+            const response = await fetch(`/api/stripe/checkout-session/${orderData.stripe_session_id}`)
+            const data = await response.json()
+            if (data.url) {
+              setIsProcessing(false)
+              window.location.href = data.url
+              return
+            }
+            console.error('❌ [STRIPE REUSE] No URL returned for existing session:', data)
+          } catch (error) {
+            console.error('❌ [STRIPE REUSE] Failed to retrieve existing session URL:', error)
+          }
+          // If reuse fails, fall through to create a new Stripe session below
         }
         
         // If reusing and has valid snap_token, use it directly
@@ -1686,40 +1721,92 @@ export default function CheckoutPage() {
       // Immediately reset cart badge
       window.dispatchEvent(new Event('cart-updated'))
 
+      // Resolve the payment gateway for this guest based on CMS config
+      const guestIsIDRegion = region?.code === 'ID'
+      const guestActiveGateway = resolveCheckoutGateway(region?.code, paymentGatewayConfig)
+      console.log('💳 [GUEST CHECKOUT] Resolved gateway:', guestActiveGateway, 'for region:', region?.code)
+
+      // Persist guest order info for tracking/continue payment
+      const orderInfo = JSON.stringify({
+        order_number: orderData.order_number,
+        customer_email: guestData.email
+      })
+      sessionStorage.setItem('guestOrderInfo', orderInfo)
+      localStorage.setItem('guestOrderInfo', orderInfo)
+      
+      const orderHistoryItem = {
+        order_number: orderData.order_number,
+        customer_email: guestData.email,
+        created_at: new Date().toISOString()
+      }
+      const existingHistory = localStorage.getItem('orderHistory')
+      let orderHistory = existingHistory ? JSON.parse(existingHistory) : []
+      const orderExists = orderHistory.some((o: any) => o.order_number === orderData.order_number)
+      if (!orderExists) {
+        orderHistory.unshift(orderHistoryItem)
+        orderHistory = orderHistory.slice(0, 10)
+        localStorage.setItem('orderHistory', JSON.stringify(orderHistory))
+        console.log('📚 [GUEST] Order added to session history')
+      }
+
+      // Stripe path for guests
+      if (guestActiveGateway === 'stripe') {
+        console.log('💳 [GUEST STRIPE] Creating Stripe checkout session...')
+        const stripeCurrency = guestIsIDRegion ? 'idr' : 'usd'
+
+        const rawStripeItems = [...cartItems, ...quickAddedItems].map(item => {
+          const itemWithVariant = item as any
+          let basePrice = guestIsIDRegion && (item.product as any).price_idr
+            ? (item.product as any).price_idr
+            : (item.product as any).price_usd || 0
+          if (itemWithVariant.variant_sku && (item.product as any).variants) {
+            const variant = (item.product as any).variants.find((v: any) => v.sku === itemWithVariant.variant_sku)
+            if (variant) {
+              basePrice = guestIsIDRegion ? variant.price_idr : variant.price_usd
+            }
+          }
+          const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, itemWithVariant.variant_name)
+          const price = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
+          return {
+            name: itemWithVariant.variant_name ? `${item.product.name} - ${itemWithVariant.variant_name}` : item.product.name,
+            price: Math.round(price * 100) / 100,
+            quantity: item.quantity,
+            variant_name: itemWithVariant.variant_name,
+            image_url: item.product.image_urls?.[0],
+          }
+        })
+
+        const stripeResponse = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: orderData.order_id,
+            customerEmail: guestData.email,
+            customerName: guestData.full_name,
+            items: rawStripeItems,
+            shippingCost: guestShipping,
+            totalAmount: guestTotal,
+            currency: stripeCurrency,
+          }),
+        })
+
+        const stripeData = await stripeResponse.json()
+        if (!stripeResponse.ok) {
+          console.error('❌ [GUEST STRIPE] Failed to create checkout session:', stripeData.error)
+          throw new Error(stripeData.error || 'Failed to create Stripe session')
+        }
+        console.log('✅ [GUEST STRIPE] Redirecting to Stripe checkout...')
+        setIsProcessing(false)
+        window.location.href = stripeData.url
+        return
+      }
+
       // If order already has snap_token and it's not expired, reuse it
       if (orderData.snap_token && orderData.expiry_time) {
         const expiryDate = new Date(orderData.expiry_time)
         if (expiryDate > new Date()) {
           console.log('✅ [GUEST] Reusing existing snap_token')
-          
-          // Store order info in sessionStorage and localStorage for track-order page
-          const orderInfo = JSON.stringify({
-            order_number: orderData.order_number,
-            customer_email: guestData.email
-          })
-          sessionStorage.setItem('guestOrderInfo', orderInfo)
-          localStorage.setItem('guestOrderInfo', orderInfo)
-          
-          // Add to order history array for session tracking
-          const orderHistoryItem = {
-            order_number: orderData.order_number,
-            customer_email: guestData.email,
-            created_at: new Date().toISOString()
-          }
-          
-          const existingHistory = localStorage.getItem('orderHistory')
-          let orderHistory = existingHistory ? JSON.parse(existingHistory) : []
-          
-          // Check if order already exists in history
-          const orderExists = orderHistory.some((o: any) => o.order_number === orderData.order_number)
-          if (!orderExists) {
-            orderHistory.unshift(orderHistoryItem) // Add to beginning
-            orderHistory = orderHistory.slice(0, 10) // Keep only last 10 orders
-            localStorage.setItem('orderHistory', JSON.stringify(orderHistory))
-            console.log('📚 [GUEST REUSE] Order added to session history')
-          }
 
-          // Open Midtrans modal with existing token
           if (typeof window !== 'undefined' && (window as any).snap) {
             ;(window as any).snap.pay(orderData.snap_token, {
               onSuccess: (result: any) => {
@@ -1751,13 +1838,12 @@ export default function CheckoutPage() {
         }
       }
 
-      // Generate new Midtrans token
-      console.log('� [GUEST] Generating new Midtrans token...')
+      // Generate new Midtrans token for guest
+      console.log('💳 [GUEST] Generating new Midtrans token...')
       
       const USD_TO_IDR = 15000
-      const isIDRegion = region?.code === 'ID'
       const convertToIDR = (amount: number) => {
-        if (isIDRegion) {
+        if (guestIsIDRegion) {
           return Math.round(amount)
         }
         return Math.round(amount * USD_TO_IDR)
@@ -1767,7 +1853,6 @@ export default function CheckoutPage() {
         ...[...cartItems, ...quickAddedItems].map(item => {
           const basePrice = getBasePrice(item.product, (item as any).variant_sku)
           const itemName = (item as any).variant_name || item.product.name
-          // Apply campaign discount first, then fall back to sale price
           const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
           const effectivePrice = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
           
@@ -1781,10 +1866,9 @@ export default function CheckoutPage() {
         {
           id: 'shipping',
           name: 'Shipping Fee',
-          price: convertToIDR(shipping),
+          price: convertToIDR(guestShipping),
           quantity: 1,
         },
-        // Add tax as a line item only if tax > 0
         ...(tax > 0 ? [{
           id: 'tax',
           name: 'Tax (10%)',
@@ -1793,18 +1877,12 @@ export default function CheckoutPage() {
         }] : [])
       ]
 
-      console.log('📤 [GUEST TOKEN DEBUG] Calling Midtrans API...', {
-        orderId: orderData.order_number,
-        amount: convertToIDR(total),
-        itemCount: itemsForMidtrans.length
-      })
-
       const midtransResponse = await fetch('/api/midtrans/create-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: orderData.order_number,
-          amount: convertToIDR(total),
+          amount: convertToIDR(guestTotal),
           customerDetails: {
             firstName: guestData.full_name.split(' ')[0],
             lastName: guestData.full_name.split(' ').slice(1).join(' ') || guestData.full_name,
@@ -1825,27 +1903,13 @@ export default function CheckoutPage() {
         }),
       })
 
-      console.log('📥 [GUEST TOKEN DEBUG] Midtrans response status:', midtransResponse.status)
-
       const midtransData = await midtransResponse.json()
-      
       if (!midtransResponse.ok) {
-        console.error('❌ [GUEST TOKEN DEBUG] Midtrans token creation failed!', {
-          status: midtransResponse.status,
-          error: midtransData
-        })
+        console.error('❌ [GUEST] Midtrans token creation failed:', midtransData)
         throw new Error(midtransData.error || 'Failed to create payment token')
       }
 
-      console.log('✅ [GUEST TOKEN DEBUG] Midtrans token created!', {
-        has_token: !!midtransData.token,
-        token_preview: midtransData.token?.substring(0, 20) + '...',
-        has_redirect_url: !!midtransData.redirect_url
-      })
-
-      // Save snap_token to order
-      console.log('💾 [GUEST TOKEN DEBUG] Saving token to order via update-snap-token API...')
-      const saveTokenResponse = await fetch('/api/orders/update-snap-token', {
+      await fetch('/api/orders/update-snap-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1855,51 +1919,6 @@ export default function CheckoutPage() {
         }),
       })
 
-      console.log('📥 [GUEST TOKEN DEBUG] Save token response status:', saveTokenResponse.status)
-
-      if (!saveTokenResponse.ok) {
-        const errorData = await saveTokenResponse.json().catch(() => ({ error: 'Unknown error' }))
-        console.error('❌ [GUEST TOKEN DEBUG] Failed to save token to order!', {
-          status: saveTokenResponse.status,
-          error: errorData,
-          order_id: orderData.order_id
-        })
-        // Continue anyway - user can still pay via track order page
-      } else {
-        console.log('✅ [GUEST TOKEN DEBUG] Token saved to order successfully!')
-      }
-
-      // Store order info in both sessionStorage (for immediate redirect) and localStorage (for persistence)
-      const orderInfo = JSON.stringify({
-        order_number: orderData.order_number,
-        customer_email: guestData.email
-      })
-      sessionStorage.setItem('guestOrderInfo', orderInfo)
-      localStorage.setItem('guestOrderInfo', orderInfo)
-      
-      // Add to order history array for session tracking
-      const orderHistoryItem = {
-        order_number: orderData.order_number,
-        customer_email: guestData.email,
-        created_at: new Date().toISOString()
-      }
-      
-      const existingHistory = localStorage.getItem('orderHistory')
-      let orderHistory = existingHistory ? JSON.parse(existingHistory) : []
-      
-      // Check if order already exists in history
-      const orderExists = orderHistory.some((o: any) => o.order_number === orderData.order_number)
-      if (!orderExists) {
-        orderHistory.unshift(orderHistoryItem) // Add to beginning
-        // Keep only last 10 orders
-        orderHistory = orderHistory.slice(0, 10)
-        localStorage.setItem('orderHistory', JSON.stringify(orderHistory))
-        console.log('📚 [GUEST] Order added to session history')
-      }
-      
-      console.log('💾 [GUEST] Order info saved to localStorage for persistent access')
-
-      // Open Midtrans Snap modal
       if (typeof window !== 'undefined' && (window as any).snap) {
         ;(window as any).snap.pay(midtransData.token, {
           onSuccess: (result: any) => {
