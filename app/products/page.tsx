@@ -413,7 +413,7 @@ function ProductsContent() {
                         )
                       })}
                     </div>
-                    <Pagination currentPage={currentPage} totalPages={totalPagesForPriceSorting} />
+                    <Pagination currentPage={currentPage} totalPages={totalPagesForPriceSorting} totalCount={allProductsCombined?.length} itemsPerPage={ITEMS_PER_PAGE} />
                   </>
                 ) : (
                   /* Default view: show in-stock products first, then sold-out section */
@@ -431,7 +431,7 @@ function ProductsContent() {
                         )
                       })}
                     </div>
-                    <Pagination currentPage={currentPage} totalPages={totalPages} />
+                    <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} itemsPerPage={ITEMS_PER_PAGE} />
 
                     {/* Sold Out Section */}
                     {soldOutProducts.length > 0 && (

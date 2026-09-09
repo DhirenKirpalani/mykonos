@@ -152,7 +152,7 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
     >
       {isVideo(url) ? (
         <div className="relative h-full w-full bg-gray-100">
-          <video src={url} className="h-full w-full object-cover" preload="metadata" muted playsInline />
+          <video src={url} className="h-full w-full object-contain" preload="metadata" muted playsInline />
           <div className="absolute inset-0 flex items-center justify-center bg-black/20">
             <svg className="h-5 w-5 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
               <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
@@ -160,7 +160,7 @@ export function ProductImageGallery({ images, productName, voucher, onVoucherExp
           </div>
         </div>
       ) : (
-        <Image src={url} alt={`${productName} thumbnail ${index + 1}`} fill className="object-cover" sizes="10vw" />
+        <Image src={url} alt={`${productName} thumbnail ${index + 1}`} fill className="object-contain" sizes="10vw" />
       )}
     </button>
   )

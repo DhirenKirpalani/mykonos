@@ -11,8 +11,9 @@ import NewsletterSubscription from '@/components/NewsletterSubscription'
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isCMSRoute = pathname.startsWith('/cms')
+  const isAuthRoute = pathname === '/login' || pathname === '/register'
 
-  if (isCMSRoute) {
+  if (isCMSRoute || isAuthRoute) {
     return <>{children}</>
   }
 

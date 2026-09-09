@@ -417,7 +417,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                             isVideo(displayUrl) ? (
                               <video
                                 src={displayUrl}
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                                 muted
                                 playsInline
                                 loop
@@ -428,7 +428,7 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
                                 alt={item.product.name}
                                 fill
                                 sizes="80px"
-                                className="object-cover"
+                                className="object-contain"
                               />
                             )
                           ) : (
