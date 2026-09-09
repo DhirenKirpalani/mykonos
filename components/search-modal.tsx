@@ -21,15 +21,21 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [topProducts, setTopProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const [productDiscounts, setProductDiscounts] = useState<Map<string, any>>(new Map())
   const [activeVoucher, setActiveVoucher] = useState<{ discount_type: 'percentage' | 'fixed', discount_value: number, valid_until: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { t } = useLanguage()
   const pathname = usePathname()
+  const PRODUCTS_PER_PAGE = 12
 
   useEffect(() => {
     if (isOpen) {
       inputRef.current?.focus()
+      setCurrentPage(1)
       fetchTopProducts()
       fetchVoucher()
       fetchActiveDiscounts()
@@ -80,9 +86,12 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
   useEffect(() => {
     if (searchQuery.length > 2) {
-      searchProducts()
+      setCurrentPage(1)
+      searchProducts(1)
     } else {
       setProducts([])
+      setTotalPages(1)
+      setTotalCount(0)
     }
   }, [searchQuery])
 
@@ -98,24 +107,54 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
   const fetchTopProducts = async () => {
     try {
-      const response = await fetch('/api/products?filter=popular&limit=6')
+      const response = await fetch(`/api/products?filter=popular&per_page=${PRODUCTS_PER_PAGE}`)
       const data = await response.json()
       setTopProducts(data.products || [])
+      setTotalPages(data.total_pages || 1)
+      setTotalCount(data.total || 0)
     } catch (error) {
       console.error('Failed to fetch top products:', error)
     }
   }
 
-  const searchProducts = async () => {
+  const searchProducts = async (page = 1) => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/products?search=${encodeURIComponent(searchQuery)}&limit=6`)
+      const response = await fetch(`/api/products?search=${encodeURIComponent(searchQuery)}&per_page=${PRODUCTS_PER_PAGE}&page=${page}`)
       const data = await response.json()
       setProducts(data.products || [])
+      setTotalPages(data.total_pages || 1)
+      setTotalCount(data.total || 0)
     } catch (error) {
       console.error('Search failed:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadMore = async () => {
+    const nextPage = currentPage + 1
+    setLoadingMore(true)
+    try {
+      const isSearch = searchQuery.length > 2
+      const url = isSearch
+        ? `/api/products?search=${encodeURIComponent(searchQuery)}&per_page=${PRODUCTS_PER_PAGE}&page=${nextPage}`
+        : `/api/products?filter=popular&per_page=${PRODUCTS_PER_PAGE}&page=${nextPage}`
+      const response = await fetch(url)
+      const data = await response.json()
+      const newProducts = data.products || []
+      if (isSearch) {
+        setProducts(prev => [...prev, ...newProducts])
+      } else {
+        setTopProducts(prev => [...prev, ...newProducts])
+      }
+      setCurrentPage(nextPage)
+      setTotalPages(data.total_pages || 1)
+      setTotalCount(data.total || 0)
+    } catch (error) {
+      console.error('Load more failed:', error)
+    } finally {
+      setLoadingMore(false)
     }
   }
 
@@ -162,19 +201,11 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     className="w-full bg-transparent border-0 border-b border-luxury-navy/20 py-3 pl-8 pr-4 text-lg lg:text-xl font-montserrat text-luxury-navy placeholder:text-luxury-navy/40 placeholder:font-montserrat focus:outline-none focus:border-luxury-gold tracking-wide transition-colors"
                   />
                 </div>
-                {searchQuery ? (
+                {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
                     className="flex h-10 w-10 items-center justify-center text-luxury-navy/60 transition-colors hover:text-luxury-navy flex-shrink-0"
                     aria-label="Clear search"
-                  >
-                    <X className="h-6 w-6" strokeWidth={1.5} />
-                  </button>
-                ) : (
-                  <button
-                    onClick={onClose}
-                    className="flex h-10 w-10 items-center justify-center text-luxury-navy/60 transition-colors hover:text-luxury-navy flex-shrink-0"
-                    aria-label="Close search"
                   >
                     <X className="h-6 w-6" strokeWidth={1.5} />
                   </button>
@@ -192,6 +223,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               {loading ? (
                 <div className="text-center py-16 text-luxury-navy/60">{t.searchModal.searching}</div>
               ) : displayProducts.length > 0 ? (
+                <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
                   {displayProducts.map((product) => (
                     <div key={product.id} className="w-full">
@@ -199,6 +231,21 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     </div>
                   ))}
                 </div>
+                {currentPage < totalPages && (
+                  <div className="flex flex-col items-center mt-8 gap-2">
+                    <button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      className="px-8 py-3 border border-luxury-navy/20 text-luxury-navy font-montserrat text-xs font-semibold uppercase tracking-widest hover:bg-luxury-navy hover:text-white transition-all disabled:opacity-50"
+                    >
+                      {loadingMore ? 'Loading...' : 'Load More'}
+                    </button>
+                    <p className="text-xs text-luxury-navy/40">
+                      Showing {displayProducts.length} of {totalCount} products
+                    </p>
+                  </div>
+                )}
+                </>
               ) : searchQuery.length > 2 ? (
                 <div className="text-center py-16 text-luxury-navy/60">{t.searchModal.noResults}</div>
               ) : null}

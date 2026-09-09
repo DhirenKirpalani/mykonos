@@ -104,7 +104,7 @@ export function ProductFilters() {
           </div>
         </div>
 
-        {(currentCategory || currentFilter !== 'all' || currentSort || currentGender) && (
+        {(currentCategory || (currentFilter && currentFilter !== 'all') || currentSort || currentGender) && (
           <Button variant="outline" onClick={clearFilters} className="w-full font-montserrat">
             {t.productsPage.clearFilters}
           </Button>

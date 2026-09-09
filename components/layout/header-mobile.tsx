@@ -3,32 +3,28 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User, Menu, X, Settings, Heart, Globe } from 'lucide-react'
+import { Search, ShoppingBag, User, Menu, X, Settings, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
 import { NotificationIcon } from '@/components/notification-icon'
 import { NotificationDialog, type Notification } from '@/components/notification-dialog'
-import { WishlistModal } from '@/components/wishlist-modal'
 import { CartModal } from '@/components/cart-modal'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { useCartCount } from '@/hooks/useCartCount'
-import { useWishlistCount } from '@/hooks/useWishlistCount'
 
 export function HeaderMobile() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
-  const [wishlistOpen, setWishlistOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t, locale } = useLanguage()
   const { role } = useUserRole()
   const { count: cartCount } = useCartCount()
-  const { count: wishlistCount } = useWishlistCount()
 
   useEffect(() => {
     setMounted(true)
@@ -448,19 +444,6 @@ export function HeaderMobile() {
 
             {/* Secondary */}
             <div className="space-y-1">
-              <button
-                onClick={() => { setWishlistOpen(true); setMobileMenuOpen(false) }}
-                className="flex w-full items-center gap-3 px-4 py-3.5 text-sm font-medium uppercase tracking-[0.12em] text-white/60 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
-              >
-                <Heart className="h-4 w-4 flex-shrink-0" />
-                {t.header.wishlist}
-                {wishlistCount > 0 && (
-                  <span className="ml-auto flex h-5 w-5 items-center justify-center bg-luxury-gold text-[9px] font-bold text-luxury-navy rounded-sm">
-                    {wishlistCount}
-                  </span>
-                )}
-              </button>
-
               {role !== 'customer' && (
                 <Link
                   href="/cms"
@@ -501,11 +484,6 @@ export function HeaderMobile() {
         notifications={notifications}
         onMarkAsRead={handleMarkAsRead}
         onMarkAllAsRead={handleMarkAllAsRead}
-      />
-      
-      <WishlistModal
-        isOpen={wishlistOpen}
-        onClose={() => setWishlistOpen(false)}
       />
       
       <CartModal

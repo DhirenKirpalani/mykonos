@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -43,6 +43,8 @@ import {
   resolveCheckoutGateway,
   type PaymentGatewayConfig,
 } from '@/lib/utils/payment'
+import { CartItemsList } from './components/CartItemsList'
+import { OrderSummary } from './components/OrderSummary'
 
 type CartItem = {
   id: string
@@ -75,6 +77,9 @@ type Address = {
   phone: string
   is_default: boolean
 }
+
+const isDev = process.env.NODE_ENV === 'development'
+const debugLog = isDev ? console.log.bind(console) : () => {}
 
 function VoucherExpiryInfo({ validUntil }: { validUntil: string }) {
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(null)
@@ -123,6 +128,7 @@ export default function CheckoutPage() {
   const { validateAddress, isValidating, validationResult } = useAddressValidation()
   const wasAlreadySignedIn = useRef(false)
   const promoRestoredRef = useRef(false)
+  const prefetchedExchangeRateRef = useRef<number | null>(null)
   const [userId, setUserId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -139,7 +145,6 @@ export default function CheckoutPage() {
   const [editAvailableCities, setEditAvailableCities] = useState<string[]>([])
   const [shippingCost, setShippingCost] = useState<number | null>(null)
   const [isLoadingShipping, setIsLoadingShipping] = useState(false)
-  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([])
   const [quickAddedItems, setQuickAddedItems] = useState<CartItem[]>([])
   const [promoCode, setPromoCode] = useState('')
   const [appliedPromo, setAppliedPromo] = useState<any>(null)
@@ -147,7 +152,6 @@ export default function CheckoutPage() {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
   const [publicVouchers, setPublicVouchers] = useState<any[]>([])
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
-  const [isRecommendedExpanded, setIsRecommendedExpanded] = useState(true)
   const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string>('')
   const [paymentGatewayConfig, setPaymentGatewayConfig] = useState<PaymentGatewayConfig | null>(null)
@@ -171,13 +175,6 @@ export default function CheckoutPage() {
     
     // Load payment gateway config once
     fetchPaymentGatewayConfig().then(setPaymentGatewayConfig)
-    
-    // Load Midtrans Snap script
-    const snapScript = document.createElement('script')
-    snapScript.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
-    snapScript.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '')
-    snapScript.async = true
-    document.head.appendChild(snapScript)
 
     // Check if this is a Buy Now flow
     const urlParams = new URLSearchParams(window.location.search)
@@ -199,7 +196,7 @@ export default function CheckoutPage() {
     const handlePageShow = (event: PageTransitionEvent) => {
       // If page is loaded from bfcache (browser back button), reinitialize
       if (event.persisted) {
-        console.log('🔄 [CHECKOUT] Page loaded from bfcache, reinitializing...')
+        debugLog('🔄 [CHECKOUT] Page loaded from bfcache, reinitializing...')
         setIsLoading(true)
         initializeCheckout()
       }
@@ -208,64 +205,39 @@ export default function CheckoutPage() {
 
     // Listen for cart updates only in cart flow (not buy now or order again flow)
     const handleCartUpdate = async () => {
-      console.log('🔔 [CHECKOUT] Received cart-updated event')
-      // Only refetch if we're in cart flow, not buy now or order again flow
       const urlParams = new URLSearchParams(window.location.search)
       const isBuyNowFlow = urlParams.get('buyNow') === 'true'
       const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
       
-      console.log('🔍 [CHECKOUT] Is buy now flow?', isBuyNowFlow)
-      console.log('🔍 [CHECKOUT] Is order again flow?', isOrderAgainFlow)
-      
       if (!isBuyNowFlow && !isOrderAgainFlow) {
-        console.log('🔄 [CHECKOUT] Refetching cart items...')
         // Small delay to ensure database has been updated
         await new Promise(resolve => setTimeout(resolve, 100))
-        // Refetch cart items when cart is updated
-        await initializeCheckout()
-        console.log('✅ [CHECKOUT] Cart items refetched')
-      } else {
-        console.log('⚠️ [CHECKOUT] Skipping refetch (buy now or order again flow)')
+        // Only refetch cart items and discounts, not addresses/recommended/vouchers
+        await refetchCartOnly()
       }
     }
     window.addEventListener('cart-updated', handleCartUpdate)
-    console.log('👂 [CHECKOUT] Event listener registered for cart-updated')
 
     // Listen for auth state changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 [CHECKOUT] Auth state changed:', event, session?.user?.id)
-      
       if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
-        // Skip if user was already signed in (Supabase fires SIGNED_IN on session
-        // refresh/desktop switch — not a real new login)
         if (wasAlreadySignedIn.current) return
 
-        // Check if page is about to reload (flag set by CheckoutModal)
         const isReloading = sessionStorage.getItem('checkout_reloading')
-        if (isReloading) {
-          console.log('⏭️ [CHECKOUT] Skipping re-initialization, page is reloading...')
-          return
-        }
+        if (isReloading) return
         
-        console.log('✅ [CHECKOUT] User signed in, waiting for cart merge...')
         // Wait a bit for cart merge to complete
         await new Promise(resolve => setTimeout(resolve, 500))
-        // Refetch cart items after login
         const urlParams = new URLSearchParams(window.location.search)
         const isBuyNowFlow = urlParams.get('buyNow') === 'true'
         const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
         if (!isBuyNowFlow && !isOrderAgainFlow) {
-          console.log('🔄 [CHECKOUT] Refetching cart after login...')
-          await initializeCheckout()
+          await refetchCartOnly()
         }
       }
     })
 
     return () => {
-      // Cleanup script on unmount
-      if (snapScript.parentNode) {
-        snapScript.parentNode.removeChild(snapScript)
-      }
       window.removeEventListener('cart-updated', handleCartUpdate)
       window.removeEventListener('pageshow', handlePageShow)
       subscription.unsubscribe()
@@ -273,6 +245,31 @@ export default function CheckoutPage() {
       try { sessionStorage.removeItem('checkout_applied_promo') } catch {}
     }
   }, [])
+
+  // Conditionally load Midtrans Snap script only when Midtrans is enabled
+  useEffect(() => {
+    if (!paymentGatewayConfig) return
+    const enabledGateways = [
+      ...(paymentGatewayConfig.ID?.enabled || []),
+      ...(paymentGatewayConfig.global?.enabled || []),
+    ]
+    if (!enabledGateways.includes('midtrans')) return
+
+    const existing = document.querySelector('script[src*="midtrans.com/snap/snap.js"]')
+    if (existing) return
+
+    const snapScript = document.createElement('script')
+    snapScript.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
+    snapScript.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '')
+    snapScript.async = true
+    document.head.appendChild(snapScript)
+
+    return () => {
+      if (snapScript.parentNode) {
+        snapScript.parentNode.removeChild(snapScript)
+      }
+    }
+  }, [paymentGatewayConfig])
 
   // Clear promo when cart becomes empty
   useEffect(() => {
@@ -301,12 +298,25 @@ export default function CheckoutPage() {
     } catch {}
   }, [cartItems])
 
+  // Prefetch exchange rates for non-USD regions to speed up order placement
+  useEffect(() => {
+    if (!region?.currency_code || region.currency_code === 'USD') return
+    if (prefetchedExchangeRateRef.current !== null) return
+    fetch('/api/exchange-rates')
+      .then(res => res.ok ? res.json() : null)
+      .then(rates => {
+        if (rates && rates[region.currency_code!]) {
+          prefetchedExchangeRateRef.current = 1 / rates[region.currency_code!]
+        }
+      })
+      .catch(() => {})
+  }, [region?.currency_code])
+
   const initializeCheckout = async () => {
     try {
       setIsLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       
-      // Set user email and ID for address formatting
       if (session?.user?.email) {
         setUserEmail(session.user.email)
       }
@@ -314,47 +324,34 @@ export default function CheckoutPage() {
         setUserId(session.user.id)
       }
       
-      console.log('🔍 [CHECKOUT INIT] Session info:', {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        isAnonymous: session?.user?.is_anonymous
-      })
-      
-      // Check if guest or logged-in user
       const guestUser = !session || session.user.is_anonymous === true
       setIsGuest(guestUser)
       if (!guestUser) wasAlreadySignedIn.current = true
 
-      // Check for Buy Now items in sessionStorage
       const buyNowItemsStr = sessionStorage.getItem('buyNowItems')
-      console.log('🔍 [CHECKOUT INIT] Buy now items in storage:', buyNowItemsStr ? 'YES' : 'NO')
-      
-      // Check for Order Again items in sessionStorage
       const orderAgainItemsStr = sessionStorage.getItem('orderAgainItems')
-      console.log('🔍 [CHECKOUT INIT] Order again items in storage:', orderAgainItemsStr ? 'YES' : 'NO')
       
-      // Check URL params to determine flow
       const urlParams = new URLSearchParams(window.location.search)
       const isBuyNowFlow = urlParams.get('buyNow') === 'true'
       const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
-      console.log('🔍 [CHECKOUT INIT] Is buy now flow from URL?', isBuyNowFlow)
-      console.log('🔍 [CHECKOUT INIT] Is order again flow from URL?', isOrderAgainFlow)
       
-      // Clear buyNowItems if not in buy now flow to prevent interference
       if (buyNowItemsStr && !isBuyNowFlow) {
-        console.log('⚠️ [CHECKOUT INIT] Clearing stale buyNowItems from sessionStorage')
         sessionStorage.removeItem('buyNowItems')
       }
-      
-      // Clear orderAgainItems if not in order again flow to prevent interference
       if (orderAgainItemsStr && !isOrderAgainFlow) {
-        console.log('⚠️ [CHECKOUT INIT] Clearing stale orderAgainItems from sessionStorage')
         sessionStorage.removeItem('orderAgainItems')
       }
-      
+
+      // Start address fetch in parallel (independent of cart flow)
+      const addressPromise = (session && !session.user.is_anonymous)
+        ? supabase
+            .from('shipping_addresses')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('is_default', { ascending: false })
+        : Promise.resolve({ data: null, error: null } as any)
+
       if (orderAgainItemsStr && isOrderAgainFlow) {
-        // Handle Order Again flow - fetch product details for multiple products
-        console.log('🔄 [CHECKOUT INIT] Using ORDER AGAIN flow')
         const orderAgainItems = JSON.parse(orderAgainItemsStr)
         
         if (!Array.isArray(orderAgainItems) || orderAgainItems.length === 0) {
@@ -364,31 +361,39 @@ export default function CheckoutPage() {
           return
         }
         
-        // Get unique product IDs from order items
         const productIds = Array.from(new Set(orderAgainItems.map((item: any) => item.product_id)))
-        
-        // Fetch all products
-        const { data: products, error: productsError } = await supabase
-          .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
-          .in('id', productIds)
+        const orderNow = new Date().toISOString()
 
-        if (productsError || !products || products.length === 0) {
+        // Fetch products and discounts in parallel with addresses
+        const [productsResult, orderDiscountsResult, addressResult] = await Promise.all([
+          supabase
+            .from('products')
+            .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
+            .in('id', productIds),
+          supabase
+            .from('discount_products')
+            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
+            .eq('is_active', true)
+            .eq('discounts.is_active', true)
+            .lte('discounts.start_date', orderNow)
+            .gte('discounts.end_date', orderNow)
+            .in('product_id', productIds),
+          addressPromise,
+        ])
+
+        if (productsResult.error || !productsResult.data || productsResult.data.length === 0) {
           toast.error('Products not found')
           sessionStorage.removeItem('orderAgainItems')
           router.push('/checkout')
           return
         }
 
-        // Create a map of products by ID for easy lookup
-        const productMap = new Map(products.map((p: any) => [p.id, p]))
+        const productMap = new Map(productsResult.data.map((p: any) => [p.id, p]))
 
-        // Create cart items structure for Order Again
         const orderAgainCartItems = orderAgainItems
           .map((item: any, index: number) => {
             const product = productMap.get(item.product_id)
             if (!product) return null
-
             return {
               id: `order-again-temp-${index}`,
               product_id: product.id,
@@ -408,23 +413,9 @@ export default function CheckoutPage() {
           })
           .filter((item: any) => item !== null) as CartItem[]
 
-        console.log('✅ [CHECKOUT INIT] Order again cart items created:', orderAgainCartItems.length)
-        console.log('📦 [CHECKOUT INIT] Order again items:', orderAgainCartItems)
         setCartItems(orderAgainCartItems)
-        setIsBuyNow(true) // Treat order again like buy now (don't refetch cart)
+        setIsBuyNow(true)
         
-        // Fetch active vouchers AND discounts for order again items in parallel
-        const orderAgainProductIds = orderAgainCartItems.map((item: any) => item.product_id)
-        const orderNow = new Date().toISOString()
-        const orderDiscountsResult = await supabase
-            .from('discount_products')
-            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
-            .eq('is_active', true)
-            .eq('discounts.is_active', true)
-            .lte('discounts.start_date', orderNow)
-            .gte('discounts.end_date', orderNow)
-            .in('product_id', orderAgainProductIds)
-
         if (orderDiscountsResult.data && orderDiscountsResult.data.length > 0) {
           const discMap = new Map<string, any>()
           orderDiscountsResult.data.forEach((d: any) => {
@@ -435,9 +426,19 @@ export default function CheckoutPage() {
           })
           setActiveDiscounts(discMap)
         }
+
+        // Process address result
+        if (addressResult.data) {
+          const addresses = (addressResult.data as Address[]) || []
+          setSavedAddresses(addresses)
+          const defaultAddress = addresses.find((a: Address) => a.is_default)
+          if (defaultAddress) {
+            setSelectedAddressId(defaultAddress.id)
+          } else if (addresses.length > 0) {
+            setSelectedAddressId(addresses[0].id)
+          }
+        }
       } else if (buyNowItemsStr && isBuyNowFlow) {
-        // Handle Buy Now flow - fetch product details
-        console.log('🛍️ [CHECKOUT INIT] Using BUY NOW flow')
         const buyNowItems = JSON.parse(buyNowItemsStr)
         
         if (!Array.isArray(buyNowItems) || buyNowItems.length === 0) {
@@ -447,26 +448,36 @@ export default function CheckoutPage() {
           return
         }
         
-        // Get unique product ID (all items should be from same product)
         const productId = buyNowItems[0].product_id
-        
-        const { data: product, error: productError } = await supabase
-          .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled')
-          .eq('id', productId)
-          .single()
+        const buyNowNow = new Date().toISOString()
 
-        if (productError || !product) {
+        // Fetch product, discounts, and addresses in parallel
+        const [productResult, buyNowDiscountsResult, addressResult] = await Promise.all([
+          supabase
+            .from('products')
+            .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled')
+            .eq('id', productId)
+            .single(),
+          supabase
+            .from('discount_products')
+            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
+            .eq('is_active', true)
+            .eq('discounts.is_active', true)
+            .lte('discounts.start_date', buyNowNow)
+            .gte('discounts.end_date', buyNowNow)
+            .eq('product_id', productId),
+          addressPromise,
+        ])
+
+        if (productResult.error || !productResult.data) {
           toast.error('Product not found')
           sessionStorage.removeItem('buyNowItems')
           router.push('/checkout')
           return
         }
 
-        // Type assertion for product data
-        const typedProduct = product as any
+        const typedProduct = productResult.data as any
 
-        // Create cart items structure for Buy Now (one item per variant)
         const buyNowCartItems = buyNowItems.map((item, index) => ({
           id: `buy-now-temp-${index}`,
           product_id: typedProduct.id,
@@ -489,17 +500,6 @@ export default function CheckoutPage() {
 
         setCartItems(buyNowCartItems)
         
-        // Fetch campaign discounts for buy now items
-        const buyNowNow = new Date().toISOString()
-        const buyNowDiscountsResult = await supabase
-            .from('discount_products')
-            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
-            .eq('is_active', true)
-            .eq('discounts.is_active', true)
-            .lte('discounts.start_date', buyNowNow)
-            .gte('discounts.end_date', buyNowNow)
-            .eq('product_id', productId)
-
         if (buyNowDiscountsResult.data && buyNowDiscountsResult.data.length > 0) {
           const discMap = new Map<string, any>()
           buyNowDiscountsResult.data.forEach((d: any) => {
@@ -510,115 +510,94 @@ export default function CheckoutPage() {
           })
           setActiveDiscounts(discMap)
         }
-      } else {
-        // Regular cart flow - fetch cart items
-        console.log('🛒 [CHECKOUT INIT] Using CART flow')
-        let cart: any[] = []
-        let cartError: any = null
 
-        if (session?.user) {
-          // Use user_id for both anonymous and authenticated users (matches cart drawer)
-          console.log('🔍 [CHECKOUT INIT] Querying cart with user_id:', session.user.id, '(anonymous:', session.user.is_anonymous, ')')
-          console.log('🔍 [CHECKOUT INIT] About to execute cart query...')
-          const { data, error } = await supabase
+        // Process address result
+        if (addressResult.data) {
+          const addresses = (addressResult.data as Address[]) || []
+          setSavedAddresses(addresses)
+          const defaultAddress = addresses.find((a: Address) => a.is_default)
+          if (defaultAddress) {
+            setSelectedAddressId(defaultAddress.id)
+          } else if (addresses.length > 0) {
+            setSelectedAddressId(addresses[0].id)
+          }
+        }
+      } else {
+        // Regular cart flow - fetch cart, discounts, and addresses in parallel
+        if (!session?.user) {
+          setCartItems([])
+        } else {
+          const { data: cart, error: cartError } = await supabase
             .from('cart_items')
             .select(`
               *,
               product:products(name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled)
             `)
             .eq('user_id', session.user.id)
-          console.log('🔍 [CHECKOUT INIT] Cart query completed, processing results...')
-          cart = data || []
-          cartError = error
-          console.log('🔍 [CHECKOUT INIT] Cart result:', { 
-            itemCount: cart.length, 
-            error: cartError,
-            rawData: data,
-            items: cart.map((item: any) => ({ 
-              id: item.id, 
-              product_id: item.product_id, 
-              quantity: item.quantity,
-              product_name: item.product?.name 
-            }))
-          })
-        } else {
-          console.log('⚠️ [CHECKOUT INIT] No session.user found')
-        }
 
-        if (cartError) {
-          console.error('❌ [CHECKOUT INIT] Cart query error:', cartError)
-          throw cartError
-        }
+          if (cartError) throw cartError
 
-        if (!cart || cart.length === 0) {
-          console.log('⚠️ [CHECKOUT INIT] Cart is empty, showing empty state')
-          setCartItems([])
-        } else {
-          console.log('✅ [CHECKOUT INIT] Setting cart items:', cart.length)
-          setCartItems(cart as any)
-          
-          // Fetch campaign discounts for cart items
-          const productIds = cart.map((item: any) => item.product_id)
-          const now = new Date().toISOString()
-          const discountsResult = await supabase
-              .from('discount_products')
-              .select(`
-                product_id,
-                variant_id,
-                discounted_price,
-                discounts!inner(
-                  id,
-                  start_date,
-                  end_date,
-                  is_active
-                )
-              `)
-              .eq('is_active', true)
-              .eq('discounts.is_active', true)
-              .lte('discounts.start_date', now)
-              .gte('discounts.end_date', now)
-              .in('product_id', productIds)
+          if (!cart || cart.length === 0) {
+            setCartItems([])
+          } else {
+            setCartItems(cart as any)
+            
+            // Fetch discounts and addresses in parallel (discounts depend on cart product IDs)
+            const productIds = cart.map((item: any) => item.product_id)
+            const now = new Date().toISOString()
 
-          // Build activeDiscounts map: key = "productId-variantName" or "productId"
-          if (discountsResult.data && discountsResult.data.length > 0) {
-            const discountMap = new Map<string, any>()
-            discountsResult.data.forEach((d: any) => {
-              const key = d.variant_id ? `${d.product_id}-${d.variant_id}` : d.product_id
-              // Keep lower price if multiple discounts for same key
-              if (!discountMap.has(key) || d.discounted_price < discountMap.get(key).discounted_price) {
-                discountMap.set(key, d)
+            const [discountsResult, addressResult] = await Promise.all([
+              supabase
+                .from('discount_products')
+                .select(`
+                  product_id,
+                  variant_id,
+                  discounted_price,
+                  discounts!inner(
+                    id,
+                    start_date,
+                    end_date,
+                    is_active
+                  )
+                `)
+                .eq('is_active', true)
+                .eq('discounts.is_active', true)
+                .lte('discounts.start_date', now)
+                .gte('discounts.end_date', now)
+                .in('product_id', productIds),
+              addressPromise,
+            ])
+
+            if (discountsResult.data && discountsResult.data.length > 0) {
+              const discountMap = new Map<string, any>()
+              discountsResult.data.forEach((d: any) => {
+                const key = d.variant_id ? `${d.product_id}-${d.variant_id}` : d.product_id
+                if (!discountMap.has(key) || d.discounted_price < discountMap.get(key).discounted_price) {
+                  discountMap.set(key, d)
+                }
+              })
+              setActiveDiscounts(discountMap)
+            }
+
+            // Process address result
+            if (addressResult.data) {
+              const addresses = (addressResult.data as Address[]) || []
+              setSavedAddresses(addresses)
+              const defaultAddress = addresses.find((a: Address) => a.is_default)
+              if (defaultAddress) {
+                setSelectedAddressId(defaultAddress.id)
+              } else if (addresses.length > 0) {
+                setSelectedAddressId(addresses[0].id)
               }
-            })
-            setActiveDiscounts(discountMap)
+            }
           }
         }
       }
 
-      // Fetch addresses only for logged-in users
-      if (session && !session.user.is_anonymous) {
-        const { data: addressData, error: addressError } = await supabase
-          .from('shipping_addresses')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('is_default', { ascending: false })
-
-        if (addressError) throw addressError
-
-        const addresses = (addressData as Address[]) || []
-        setSavedAddresses(addresses)
-        
-        // Select default address
-        const defaultAddress = addresses.find((a: Address) => a.is_default)
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress.id)
-        } else if (addresses.length > 0) {
-          setSelectedAddressId(addresses[0].id)
-        }
-      }
-
-      // Fetch recommended products for quick add
-      fetchRecommendedProducts()
-      fetchPublicVouchers()
+      // Defer public voucher fetch until after main UI is rendered
+      requestIdleCallback(() => {
+        fetchPublicVouchers()
+      })
 
       setIsLoading(false)
     } catch (error: any) {
@@ -628,20 +607,58 @@ export default function CheckoutPage() {
     }
   }
 
-  const fetchRecommendedProducts = async () => {
+  // Lightweight cart refetch — only fetches cart items and discounts, skips addresses/recommended/vouchers
+  const refetchCartOnly = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity')
-        .gt('stock_quantity', 0)
-        .limit(3)
-        .order('created_at', { ascending: false })
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
 
-      if (!error && data) {
-        setRecommendedProducts(data)
+      const { data: cart, error: cartError } = await supabase
+        .from('cart_items')
+        .select(`
+          *,
+          product:products(name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled)
+        `)
+        .eq('user_id', session.user.id)
+
+      if (cartError) throw cartError
+
+      if (!cart || cart.length === 0) {
+        setCartItems([])
+        return
       }
-    } catch (error) {
-      console.error('Failed to fetch recommended products:', error)
+
+      setCartItems(cart as any)
+
+      // Fetch discounts for cart items
+      const productIds = cart.map((item: any) => item.product_id)
+      const now = new Date().toISOString()
+      const { data: discountsData } = await supabase
+        .from('discount_products')
+        .select(`
+          product_id,
+          variant_id,
+          discounted_price,
+          discounts!inner(id, start_date, end_date, is_active)
+        `)
+        .eq('is_active', true)
+        .eq('discounts.is_active', true)
+        .lte('discounts.start_date', now)
+        .gte('discounts.end_date', now)
+        .in('product_id', productIds)
+
+      if (discountsData && discountsData.length > 0) {
+        const discountMap = new Map<string, any>()
+        discountsData.forEach((d: any) => {
+          const key = d.variant_id ? `${d.product_id}-${d.variant_id}` : d.product_id
+          if (!discountMap.has(key) || d.discounted_price < discountMap.get(key).discounted_price) {
+            discountMap.set(key, d)
+          }
+        })
+        setActiveDiscounts(discountMap)
+      }
+    } catch (error: any) {
+      console.error('Failed to refetch cart:', error)
     }
   }
 
@@ -660,60 +677,6 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error('Failed to fetch public vouchers:', error)
-    }
-  }
-
-  const handleQuickAdd = async (productId: string) => {
-    try {
-      // Fetch product details
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity')
-        .eq('id', productId)
-        .single()
-
-      if (productError || !product) {
-        toast.error('Product not found')
-        return
-      }
-
-      // Type assertion for product data
-      const typedProduct = product as {
-        id: string
-        name: string
-        slug: string
-        image_urls: string[]
-        price_usd: number
-        price_idr: number
-      }
-
-      // Check if already added to quick items
-      const existingIndex = quickAddedItems.findIndex(item => item.product_id === productId)
-      
-      if (existingIndex >= 0) {
-        // Increase quantity
-        const updatedItems = [...quickAddedItems]
-        updatedItems[existingIndex].quantity += 1
-        setQuickAddedItems(updatedItems)
-      } else {
-        // Add new item
-        const newItem: CartItem = {
-          id: `quick-${productId}`,
-          product_id: productId,
-          quantity: 1,
-          product: {
-            name: typedProduct.name,
-            slug: typedProduct.slug,
-            image_urls: typedProduct.image_urls,
-            price_usd: typedProduct.price_usd,
-            price_idr: typedProduct.price_idr,
-          }
-        }
-        setQuickAddedItems([...quickAddedItems, newItem])
-      }
-    } catch (error) {
-      console.error('Quick add error:', error)
-      toast.error('Failed to add product')
     }
   }
 
@@ -738,7 +701,7 @@ export default function CheckoutPage() {
     // Users should explicitly navigate to their order details page and click
     // "Continue Payment" there if they want to resume a pending order.
     
-    console.log('⚠️ [CHECKOUT] Pending order check disabled - always showing "Place Order"')
+    debugLog('⚠️ [CHECKOUT] Pending order check disabled - always showing "Place Order"')
     return
     
     /* Original code commented out:
@@ -769,7 +732,7 @@ export default function CheckoutPage() {
               const order = data[0] as any
               if (!order.expiry_time || new Date(order.expiry_time) > new Date()) {
                 setPendingOrder(order)
-                console.log('✅ [CHECKOUT] Found pending order:', order.order_number)
+                debugLog('✅ [CHECKOUT] Found pending order:', order.order_number)
               }
             }
           })
@@ -786,7 +749,7 @@ export default function CheckoutPage() {
               const order = data[0] as any
               if (!order.expiry_time || new Date(order.expiry_time) > new Date()) {
                 setPendingOrder(order)
-                console.log('✅ [CHECKOUT] Found pending order:', order.order_number)
+                debugLog('✅ [CHECKOUT] Found pending order:', order.order_number)
               }
             }
           })
@@ -870,7 +833,7 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
-    console.log('🚀 [ORDER] handlePlaceOrder called')
+    debugLog('🚀 [ORDER] handlePlaceOrder called')
     
     // Validate cart quantities before proceeding
     if (!validateCartQuantities()) {
@@ -879,7 +842,7 @@ export default function CheckoutPage() {
     
     // For guests, show modal to collect email and shipping info
     if (isGuest) {
-      console.log('👤 [ORDER] Guest user detected, showing checkout modal')
+      debugLog('👤 [ORDER] Guest user detected, showing checkout modal')
       setShowCheckoutModal(true)
       return
     }
@@ -891,14 +854,14 @@ export default function CheckoutPage() {
       return
     }
 
-    console.log('✅ [ORDER] Starting order placement for authenticated user')
-    console.log('📦 [ORDER] Cart items:', cartItems.length)
-    console.log('📍 [ORDER] Selected address ID:', selectedAddressId)
+    debugLog('✅ [ORDER] Starting order placement for authenticated user')
+    debugLog('📦 [ORDER] Cart items:', cartItems.length)
+    debugLog('📍 [ORDER] Selected address ID:', selectedAddressId)
     
     setIsProcessing(true)
     try {
       // Get current user session
-      console.log('🔐 [ORDER] Getting user session...')
+      debugLog('🔐 [ORDER] Getting user session...')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         console.error('❌ [ORDER] No session found')
@@ -906,13 +869,13 @@ export default function CheckoutPage() {
         setIsProcessing(false)
         return
       }
-      console.log('✅ [ORDER] Session found, user ID:', session.user.id)
+      debugLog('✅ [ORDER] Session found, user ID:', session.user.id)
 
       // Check if this is a Buy Now or Order Again flow with items still in sessionStorage
       const buyNowItemsStr = sessionStorage.getItem('buyNowItems')
       const orderAgainItemsStr = sessionStorage.getItem('orderAgainItems')
-      console.log('🛒 [ORDER] Buy Now items in storage:', buyNowItemsStr ? 'Yes' : 'No')
-      console.log('🔄 [ORDER] Order Again items in storage:', orderAgainItemsStr ? 'Yes' : 'No')
+      debugLog('🛒 [ORDER] Buy Now items in storage:', buyNowItemsStr ? 'Yes' : 'No')
+      debugLog('🔄 [ORDER] Order Again items in storage:', orderAgainItemsStr ? 'Yes' : 'No')
       
       let sessionData
       
@@ -922,7 +885,7 @@ export default function CheckoutPage() {
       const isOrderAgainFlow = orderAgainItemsStr && cartItems.length > 0 && cartItems[0].id?.startsWith('order-again-temp')
       
       if (isBuyNowFlow || isOrderAgainFlow) {
-        console.log(`🎯 [ORDER] Using ${isBuyNowFlow ? 'Buy Now' : 'Order Again'} flow with manual cart snapshot`)
+        debugLog(`🎯 [ORDER] Using ${isBuyNowFlow ? 'Buy Now' : 'Order Again'} flow with manual cart snapshot`)
         // For Buy Now/Order Again: Create checkout session with manual cart snapshot
         
         // Build cart snapshot from cart items in state
@@ -966,26 +929,26 @@ export default function CheckoutPage() {
           }
         })
         
-        console.log('📝 [ORDER] Creating manual checkout session...')
-        console.log('📦 [BUY NOW] Cart snapshot:', cartSnapshot)
+        debugLog('📝 [ORDER] Creating manual checkout session...')
+        debugLog('📦 [BUY NOW] Cart snapshot:', cartSnapshot)
         
         // Calculate tax only for taxable items in manual checkout
         const manualTaxableAmount = cartSnapshot.reduce((total: number, item: any) => {
-          console.log(`🔍 [BUY NOW] Tax check for product ${item.product_id}:`, {
+          debugLog(`🔍 [BUY NOW] Tax check for product ${item.product_id}:`, {
             tax_enabled: item.tax_enabled,
             price: item.price,
             quantity: item.quantity
           })
           if (item.tax_enabled) {
             const itemAmount = item.price * item.quantity
-            console.log(`  ✅ [BUY NOW] Adding to taxable amount: ${itemAmount}`)
+            debugLog(`  ✅ [BUY NOW] Adding to taxable amount: ${itemAmount}`)
             return total + itemAmount
           }
-          console.log(`  ❌ [BUY NOW] Tax disabled, skipping`)
+          debugLog(`  ❌ [BUY NOW] Tax disabled, skipping`)
           return total
         }, 0)
         const manualTax = manualTaxableAmount * 0.1
-        console.log(`💰 [BUY NOW] Taxable amount: ${manualTaxableAmount}, Tax (10%): ${manualTax}`)
+        debugLog(`💰 [BUY NOW] Taxable amount: ${manualTaxableAmount}, Tax (10%): ${manualTax}`)
         const manualShipping = shippingCost ?? 0
 
         const sessionResponse = await fetch('/api/checkout/session/manual', {
@@ -1006,17 +969,17 @@ export default function CheckoutPage() {
         })
         
         sessionData = await sessionResponse.json()
-        console.log('📋 [ORDER] Manual session response:', sessionData)
+        debugLog('📋 [ORDER] Manual session response:', sessionData)
         if (!sessionResponse.ok) {
           console.error('❌ [ORDER] Failed to create manual checkout session:', sessionData.error)
           throw new Error(sessionData.error || 'Failed to create checkout session')
         }
-        console.log('✅ [ORDER] Manual checkout session created:', sessionData.session_id)
+        debugLog('✅ [ORDER] Manual checkout session created:', sessionData.session_id)
       } else {
         // Regular cart flow: Create checkout session from cart
         // This includes Buy Now items that have been transferred to cart after login
-        console.log('🛍️ [ORDER] Using regular cart flow')
-        console.log('📝 [ORDER] Creating checkout session from cart...')
+        debugLog('🛍️ [ORDER] Using regular cart flow')
+        debugLog('📝 [ORDER] Creating checkout session from cart...')
         
         // Build item discounts to pass to API (so cart_snapshot stores discounted prices)
         const itemDiscountsForSession = cartItems
@@ -1030,22 +993,23 @@ export default function CheckoutPage() {
           })
           .filter(Boolean)
         
-        // Calculate exchange rate for non-USD currencies
+        // Use prefetched exchange rate, or fetch if not available
         let exchangeRate = null
         if (region?.currency_code && region.currency_code !== 'USD') {
-          // Fetch current exchange rate
-          try {
-            const ratesResponse = await fetch('/api/exchange-rates')
-            if (ratesResponse.ok) {
-              const rates = await ratesResponse.json()
-              if (rates[region.currency_code]) {
-                // Store the rate from USD to local currency (e.g., 1 USD = 36 THB)
-                // But we want to store the reverse (1 THB = X USD) for historical accuracy
-                exchangeRate = 1 / rates[region.currency_code]
+          if (prefetchedExchangeRateRef.current !== null) {
+            exchangeRate = prefetchedExchangeRateRef.current
+          } else {
+            try {
+              const ratesResponse = await fetch('/api/exchange-rates')
+              if (ratesResponse.ok) {
+                const rates = await ratesResponse.json()
+                if (rates[region.currency_code]) {
+                  exchangeRate = 1 / rates[region.currency_code]
+                }
               }
+            } catch (error) {
+              console.error('Failed to fetch exchange rates:', error)
             }
-          } catch (error) {
-            console.error('Failed to fetch exchange rates:', error)
           }
         }
 
@@ -1064,16 +1028,16 @@ export default function CheckoutPage() {
         })
 
         sessionData = await sessionResponse.json()
-        console.log('📋 [ORDER] Session response:', sessionData)
+        debugLog('📋 [ORDER] Session response:', sessionData)
         if (!sessionResponse.ok) {
           console.error('❌ [ORDER] Failed to create checkout session:', sessionData.error)
           throw new Error(sessionData.error || 'Failed to create checkout session')
         }
-        console.log('✅ [ORDER] Checkout session created:', sessionData.session_id)
+        debugLog('✅ [ORDER] Checkout session created:', sessionData.session_id)
       }
 
       // Update with shipping address
-      console.log('📦 [ORDER] Updating session with shipping address...')
+      debugLog('📦 [ORDER] Updating session with shipping address...')
       const updateResponse = await fetch('/api/checkout/session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -1090,7 +1054,7 @@ export default function CheckoutPage() {
         console.error('❌ [ORDER] Failed to update shipping info:', updateData.error)
         throw new Error(updateData.error || 'Failed to update shipping info')
       }
-      console.log('✅ [ORDER] Session updated with shipping address')
+      debugLog('✅ [ORDER] Session updated with shipping address')
 
       const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
       if (!selectedAddress) {
@@ -1113,7 +1077,7 @@ export default function CheckoutPage() {
 
       // Resolve the payment gateway based on CMS config and region
       const activeGateway = resolveCheckoutGateway(region?.code, paymentGatewayConfig)
-      console.log('💳 [CHECKOUT] Resolved payment gateway:', activeGateway, 'for region:', region?.code)
+      debugLog('💳 [CHECKOUT] Resolved payment gateway:', activeGateway, 'for region:', region?.code)
 
       // Build items array including shipping and tax
       const itemsForMidtrans = [
@@ -1163,7 +1127,7 @@ export default function CheckoutPage() {
       ]
 
       // ⭐ CRITICAL: Save shipping address to checkout session BEFORE creating order
-      console.log('📍 [CHECKOUT] Saving shipping address to checkout session...')
+      debugLog('📍 [CHECKOUT] Saving shipping address to checkout session...')
       try {
         await fetch('/api/checkout/session', {
           method: 'PATCH',
@@ -1182,14 +1146,14 @@ export default function CheckoutPage() {
             }
           })
         })
-        console.log('✅ [CHECKOUT] Shipping address saved to checkout session')
+        debugLog('✅ [CHECKOUT] Shipping address saved to checkout session')
       } catch (error) {
         console.error('❌ [CHECKOUT] Failed to save shipping address:', error)
         throw new Error('Failed to save shipping address')
       }
 
       // ⭐ STEP 1: Create order FIRST (before token generation)
-      console.log('📝 [ORDER] Creating order before payment...')
+      debugLog('📝 [ORDER] Creating order before payment...')
       const initialOrderResponse = await fetch('/api/orders/create-before-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1206,13 +1170,13 @@ export default function CheckoutPage() {
         console.error('❌ [ORDER] Failed to create order:', orderData.error)
         throw new Error(orderData.error || 'Failed to create order')
       }
-      console.log('✅ [ORDER] Order created:', orderData.order_number)
+      debugLog('✅ [ORDER] Order created:', orderData.order_number)
       // Immediately reset cart badge
       window.dispatchEvent(new Event('cart-updated'))
       
       // Route to the configured payment gateway
       if (activeGateway === 'stripe') {
-        console.log('💳 [STRIPE] Creating Stripe checkout session...')
+        debugLog('💳 [STRIPE] Creating Stripe checkout session...')
         const stripeCurrency = isIDRegion ? 'idr' : 'usd'
         
         // Compute Stripe line items ensuring they sum exactly to checkout total
@@ -1279,31 +1243,31 @@ export default function CheckoutPage() {
           throw new Error(stripeData.error || 'Failed to create Stripe session')
         }
         
-        console.log('✅ [STRIPE] Redirecting to Stripe checkout...')
+        debugLog('✅ [STRIPE] Redirecting to Stripe checkout...')
         setIsProcessing(false)
         window.location.href = stripeData.url
         return
       }
       
       // For Midtrans gateway
-      console.log('💳 [MIDTRANS] Processing payment via Midtrans...')
+      debugLog('💳 [MIDTRANS] Processing payment via Midtrans...')
       
       // Check if this is a guest user
       const isGuest = session?.user?.is_anonymous
-      console.log('🔵 [DEBUG] Is guest user?', isGuest)
-      console.log('🔵 [DEBUG] Session:', session)
+      debugLog('🔵 [DEBUG] Is guest user?', isGuest)
+      debugLog('🔵 [DEBUG] Session:', session)
 
       // Check for existing pending order FIRST (applies to both guests and logged-in users)
       // This prevents duplicate inventory reservations
       if (orderData.is_existing) {
-        console.log('♻️ [ORDER] Reusing existing pending order')
+        debugLog('♻️ [ORDER] Reusing existing pending order')
         toast.info(t.checkout.continuingPendingOrder)
 
         // For guest orders, always redirect to tracking page
         if (isGuest) {
           const customerEmail = orderData.customer_email || ''
           const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
-          console.log('🔵 [GUEST REUSE] Redirecting guest to existing order tracking:', redirectUrl)
+          debugLog('🔵 [GUEST REUSE] Redirecting guest to existing order tracking:', redirectUrl)
           setIsProcessing(false)
           setTimeout(() => {
             window.location.href = redirectUrl
@@ -1313,7 +1277,7 @@ export default function CheckoutPage() {
 
         // For Stripe orders, reuse existing checkout session URL
         if (orderData.payment_gateway === 'stripe' && orderData.stripe_session_id) {
-          console.log('💳 [STRIPE] Reusing existing Stripe checkout session:', orderData.stripe_session_id)
+          debugLog('💳 [STRIPE] Reusing existing Stripe checkout session:', orderData.stripe_session_id)
           try {
             const response = await fetch(`/api/stripe/checkout-session/${orderData.stripe_session_id}`)
             const data = await response.json()
@@ -1333,37 +1297,37 @@ export default function CheckoutPage() {
         if (orderData.snap_token && orderData.expiry_time) {
           const expiryDate = new Date(orderData.expiry_time)
           if (expiryDate > new Date()) {
-            console.log('✅ [ORDER] Reusing existing snap_token')
+            debugLog('✅ [ORDER] Reusing existing snap_token')
             
             // Logged-in users: open payment modal with existing token
             const redirectUrl = '/account/orders/' + orderData.order_id
-            console.log('🔵 [USER REUSE] Redirect URL for logged-in user:', redirectUrl)
+            debugLog('🔵 [USER REUSE] Redirect URL for logged-in user:', redirectUrl)
             
             if (typeof window !== 'undefined' && (window as any).snap) {
               ;(window as any).snap.pay(orderData.snap_token, {
                 onSuccess: (result: any) => {
-                  console.log('✅ [PAYMENT] Payment successful!', result)
+                  debugLog('✅ [PAYMENT] Payment successful!', result)
                   toast.success('Payment successful! Processing your order...')
-                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
                   router.push(redirectUrl)
                   setIsProcessing(false)
                 },
                 onPending: (result: any) => {
-                  console.log('⏳ [PAYMENT] Payment pending', result)
+                  debugLog('⏳ [PAYMENT] Payment pending', result)
                   toast.info('Payment pending. You can continue payment later.')
-                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
                   router.push(redirectUrl)
                   setIsProcessing(false)
                 },
                 onError: (result: any) => {
                   console.error('❌ [PAYMENT] Payment error', result)
                   toast.error('Payment failed. You can retry later.')
-                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
                   router.push(redirectUrl)
                   setIsProcessing(false)
                 },
                 onClose: () => {
-                  console.log('🚪 [PAYMENT] Payment modal closed by user')
+                  debugLog('🚪 [PAYMENT] Payment modal closed by user')
                   toast.info(t.checkout.continuePaymentLater)
                   router.push(redirectUrl)
                   setIsProcessing(false)
@@ -1372,7 +1336,7 @@ export default function CheckoutPage() {
               return // Exit early, no need to generate new token
             }
           } else {
-            console.log('⏰ [ORDER] Existing snap_token expired, generating new one')
+            debugLog('⏰ [ORDER] Existing snap_token expired, generating new one')
           }
         }
       }
@@ -1381,7 +1345,7 @@ export default function CheckoutPage() {
       if (isGuest) {
         const customerEmail = orderData.customer_email || ''
         const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
-        console.log('🔵 [GUEST] Redirecting guest immediately to:', redirectUrl)
+        debugLog('🔵 [GUEST] Redirecting guest immediately to:', redirectUrl)
         toast.success('Order created! Redirecting to tracking page...')
         setIsProcessing(false)
         setTimeout(() => {
@@ -1391,12 +1355,12 @@ export default function CheckoutPage() {
       }
 
       // ⭐ STEP 2: Generate Midtrans token using order_number
-      console.log('💳 [ORDER] Creating Midtrans payment token...')
-      console.log('💰 [ORDER] Total amount (IDR):', convertToIDR(total))
-      console.log('📋 [ORDER] Selected Address:', selectedAddress)
-      console.log('📋 [ORDER] Full Name:', selectedAddress.full_name)
-      console.log('📋 [ORDER] Phone:', selectedAddress.phone)
-      console.log('📋 [ORDER] Email:', session.user.email)
+      debugLog('💳 [ORDER] Creating Midtrans payment token...')
+      debugLog('💰 [ORDER] Total amount (IDR):', convertToIDR(total))
+      debugLog('📋 [ORDER] Selected Address:', selectedAddress)
+      debugLog('📋 [ORDER] Full Name:', selectedAddress.full_name)
+      debugLog('📋 [ORDER] Phone:', selectedAddress.phone)
+      debugLog('📋 [ORDER] Email:', session.user.email)
       
       // Safely extract customer details with fallbacks
       const addressData = selectedAddress as any // Cast to any for fallback checks
@@ -1405,11 +1369,11 @@ export default function CheckoutPage() {
       const lastName = fullName.split(' ').slice(1).join(' ') || ''
       const phone = selectedAddress.phone || addressData.phone_number || session.user.user_metadata?.phone || '0000000000'
       
-      console.log('📋 [ORDER] Extracted - First Name:', firstName)
-      console.log('📋 [ORDER] Extracted - Last Name:', lastName)
-      console.log('📋 [ORDER] Extracted - Phone:', phone)
-      console.log('📦 [ORDER] Items for Midtrans:', itemsForMidtrans)
-      console.log('📦 [ORDER] Items count:', itemsForMidtrans?.length || 0)
+      debugLog('📋 [ORDER] Extracted - First Name:', firstName)
+      debugLog('📋 [ORDER] Extracted - Last Name:', lastName)
+      debugLog('📋 [ORDER] Extracted - Phone:', phone)
+      debugLog('📦 [ORDER] Items for Midtrans:', itemsForMidtrans)
+      debugLog('📦 [ORDER] Items count:', itemsForMidtrans?.length || 0)
       
       // Ensure items is always an array
       const safeItems = Array.isArray(itemsForMidtrans) && itemsForMidtrans.length > 0 
@@ -1421,7 +1385,7 @@ export default function CheckoutPage() {
             quantity: 1
           }]
       
-      console.log('📦 [ORDER] Safe Items:', safeItems)
+      debugLog('📦 [ORDER] Safe Items:', safeItems)
       
       const midtransResponse = await fetch('/api/midtrans/create-token', {
         method: 'POST',
@@ -1453,14 +1417,14 @@ export default function CheckoutPage() {
       })
 
       const midtransData = await midtransResponse.json()
-      console.log('🎫 [ORDER] Midtrans response:', midtransData)
+      debugLog('🎫 [ORDER] Midtrans response:', midtransData)
 
       if (!midtransResponse.ok) {
         console.error('❌ [ORDER] Failed to create payment token:', midtransData.error)
         throw new Error(midtransData.error || 'Failed to create payment token')
       }
-      console.log('✅ [ORDER] Payment token created successfully')
-      console.log('📊 [TOKEN DEBUG] Midtrans token details:', {
+      debugLog('✅ [ORDER] Payment token created successfully')
+      debugLog('📊 [TOKEN DEBUG] Midtrans token details:', {
         token_preview: midtransData.token?.substring(0, 20) + '...',
         token_length: midtransData.token?.length,
         has_redirect_url: !!midtransData.redirect_url,
@@ -1468,8 +1432,8 @@ export default function CheckoutPage() {
       })
 
       // ⭐ STEP 3: Save snap_token back to order
-      console.log('💾 [TOKEN DEBUG] Saving snap_token to order...')
-      console.log('📤 [TOKEN DEBUG] Update request payload:', {
+      debugLog('💾 [TOKEN DEBUG] Saving snap_token to order...')
+      debugLog('📤 [TOKEN DEBUG] Update request payload:', {
         order_id: orderData.order_id,
         token_length: midtransData.token?.length,
         has_redirect_url: !!midtransData.redirect_url
@@ -1485,7 +1449,7 @@ export default function CheckoutPage() {
         }),
       })
 
-      console.log('📥 [TOKEN DEBUG] Update response status:', updateTokenResponse.status)
+      debugLog('📥 [TOKEN DEBUG] Update response status:', updateTokenResponse.status)
 
       if (!updateTokenResponse.ok) {
         const errorData = await updateTokenResponse.json().catch(() => ({ error: 'Unknown error' }))
@@ -1498,43 +1462,43 @@ export default function CheckoutPage() {
         console.error('⚠️ [ORDER] Failed to save snap_token, but continuing...')
       } else {
         const successData = await updateTokenResponse.json().catch(() => ({}))
-        console.log('✅ [TOKEN DEBUG] snap_token saved successfully!', successData)
-        console.log('✅ [ORDER] snap_token saved to order')
+        debugLog('✅ [TOKEN DEBUG] snap_token saved successfully!', successData)
+        debugLog('✅ [ORDER] snap_token saved to order')
       }
 
       // Guest users should have already been redirected earlier
       // This code only runs for logged-in users
       
       // Logged-in users: open payment modal here
-      console.log('🪟 [ORDER] Opening Midtrans payment modal for logged-in user...')
+      debugLog('🪟 [ORDER] Opening Midtrans payment modal for logged-in user...')
       const redirectUrl = '/account/orders/' + orderData.order_id
-      console.log('🔵 [USER] Redirect URL for logged-in user:', redirectUrl)
+      debugLog('🔵 [USER] Redirect URL for logged-in user:', redirectUrl)
       
       if (typeof window !== 'undefined' && (window as any).snap) {
         ;(window as any).snap.pay(midtransData.token, {
           onSuccess: (result: any) => {
-            console.log('✅ [PAYMENT] Payment successful!', result)
+            debugLog('✅ [PAYMENT] Payment successful!', result)
             toast.success('Payment successful! Processing your order...')
-            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
             router.push(redirectUrl)
             setIsProcessing(false)
           },
           onPending: (result: any) => {
-            console.log('⏳ [PAYMENT] Payment pending', result)
+            debugLog('⏳ [PAYMENT] Payment pending', result)
             toast.info('Payment pending. You can continue payment later.')
-            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
             router.push(redirectUrl)
             setIsProcessing(false)
           },
           onError: (result: any) => {
             console.error('❌ [PAYMENT] Payment error', result)
             toast.error('Payment failed. You can retry later.')
-            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
             router.push(redirectUrl)
             setIsProcessing(false)
           },
           onClose: () => {
-            console.log('🚪 [PAYMENT] Payment modal closed by user')
+            debugLog('🚪 [PAYMENT] Payment modal closed by user')
             toast.info(t.checkout.continuePaymentLater)
             router.push(redirectUrl)
             setIsProcessing(false)
@@ -1589,7 +1553,7 @@ export default function CheckoutPage() {
   }
 
   const handleGuestCheckout = async (guestData: any) => {
-    console.log('🚀 [GUEST] handleGuestCheckout called')
+    debugLog('🚀 [GUEST] handleGuestCheckout called')
     
     // Validate cart quantities before proceeding
     if (!validateCartQuantities()) {
@@ -1605,11 +1569,11 @@ export default function CheckoutPage() {
         throw new Error('No session found. Please refresh the page.')
       }
 
-      console.log('🔵 [GUEST] Session:', session)
-      console.log('🔵 [GUEST] Is anonymous?', session.user.is_anonymous)
+      debugLog('🔵 [GUEST] Session:', session)
+      debugLog('🔵 [GUEST] Is anonymous?', session.user.is_anonymous)
 
       // Fetch DHL shipping cost for guest address
-      console.log('🚀 [GUEST] Fetching shipping cost for guest address...')
+      debugLog('🚀 [GUEST] Fetching shipping cost for guest address...')
       const guestShippingCost = await fetchShippingCost(guestData)
       const guestShipping = guestShippingCost ?? 0
 
@@ -1694,10 +1658,10 @@ export default function CheckoutPage() {
         throw new Error(sessionData.error || 'Failed to create checkout session')
       }
 
-      console.log('✅ [GUEST] Checkout session created:', sessionData.session_id)
+      debugLog('✅ [GUEST] Checkout session created:', sessionData.session_id)
 
       // ⭐ STEP 1: Create order FIRST (before token generation) - ORDER-FIRST ARCHITECTURE
-      console.log('📝 [GUEST] Creating order before payment...')
+      debugLog('📝 [GUEST] Creating order before payment...')
       const initialOrderResponse = await fetch('/api/orders/create-before-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1716,15 +1680,15 @@ export default function CheckoutPage() {
         throw new Error(orderData.error || 'Failed to create order')
       }
 
-      console.log('✅ [GUEST] Order created:', orderData.order_number)
-      console.log('🔵 [GUEST] Order data:', orderData)
+      debugLog('✅ [GUEST] Order created:', orderData.order_number)
+      debugLog('🔵 [GUEST] Order data:', orderData)
       // Immediately reset cart badge
       window.dispatchEvent(new Event('cart-updated'))
 
       // Resolve the payment gateway for this guest based on CMS config
       const guestIsIDRegion = region?.code === 'ID'
       const guestActiveGateway = resolveCheckoutGateway(region?.code, paymentGatewayConfig)
-      console.log('💳 [GUEST CHECKOUT] Resolved gateway:', guestActiveGateway, 'for region:', region?.code)
+      debugLog('💳 [GUEST CHECKOUT] Resolved gateway:', guestActiveGateway, 'for region:', region?.code)
 
       // Persist guest order info for tracking/continue payment
       const orderInfo = JSON.stringify({
@@ -1746,12 +1710,12 @@ export default function CheckoutPage() {
         orderHistory.unshift(orderHistoryItem)
         orderHistory = orderHistory.slice(0, 10)
         localStorage.setItem('orderHistory', JSON.stringify(orderHistory))
-        console.log('📚 [GUEST] Order added to session history')
+        debugLog('📚 [GUEST] Order added to session history')
       }
 
       // Stripe path for guests
       if (guestActiveGateway === 'stripe') {
-        console.log('💳 [GUEST STRIPE] Creating Stripe checkout session...')
+        debugLog('💳 [GUEST STRIPE] Creating Stripe checkout session...')
         const stripeCurrency = guestIsIDRegion ? 'idr' : 'usd'
 
         const rawStripeItems = [...cartItems, ...quickAddedItems].map(item => {
@@ -1795,7 +1759,7 @@ export default function CheckoutPage() {
           console.error('❌ [GUEST STRIPE] Failed to create checkout session:', stripeData.error)
           throw new Error(stripeData.error || 'Failed to create Stripe session')
         }
-        console.log('✅ [GUEST STRIPE] Redirecting to Stripe checkout...')
+        debugLog('✅ [GUEST STRIPE] Redirecting to Stripe checkout...')
         setIsProcessing(false)
         window.location.href = stripeData.url
         return
@@ -1805,17 +1769,17 @@ export default function CheckoutPage() {
       if (orderData.snap_token && orderData.expiry_time) {
         const expiryDate = new Date(orderData.expiry_time)
         if (expiryDate > new Date()) {
-          console.log('✅ [GUEST] Reusing existing snap_token')
+          debugLog('✅ [GUEST] Reusing existing snap_token')
 
           if (typeof window !== 'undefined' && (window as any).snap) {
             ;(window as any).snap.pay(orderData.snap_token, {
               onSuccess: (result: any) => {
-                console.log('✅ [PAYMENT] Payment successful!', result)
+                debugLog('✅ [PAYMENT] Payment successful!', result)
                 toast.success('Payment successful! Processing your order...')
                 window.location.href = '/track-order'
               },
               onPending: (result: any) => {
-                console.log('⏳ [PAYMENT] Payment pending', result)
+                debugLog('⏳ [PAYMENT] Payment pending', result)
                 toast.info('Payment pending. You can continue payment later.')
                 window.location.href = '/track-order'
                 setIsProcessing(false)
@@ -1827,7 +1791,7 @@ export default function CheckoutPage() {
                 setIsProcessing(false)
               },
               onClose: () => {
-                console.log('🚪 [PAYMENT] Payment modal closed by user')
+                debugLog('🚪 [PAYMENT] Payment modal closed by user')
                 toast.info('You can continue payment anytime from the order tracking page')
                 window.location.href = '/track-order'
                 setIsProcessing(false)
@@ -1839,7 +1803,7 @@ export default function CheckoutPage() {
       }
 
       // Generate new Midtrans token for guest
-      console.log('💳 [GUEST] Generating new Midtrans token...')
+      debugLog('💳 [GUEST] Generating new Midtrans token...')
       
       const USD_TO_IDR = 15000
       const convertToIDR = (amount: number) => {
@@ -1922,12 +1886,12 @@ export default function CheckoutPage() {
       if (typeof window !== 'undefined' && (window as any).snap) {
         ;(window as any).snap.pay(midtransData.token, {
           onSuccess: (result: any) => {
-            console.log('✅ [PAYMENT] Payment successful!', result)
+            debugLog('✅ [PAYMENT] Payment successful!', result)
             toast.success('Payment successful! Processing your order...')
             window.location.href = '/track-order'
           },
           onPending: (result: any) => {
-            console.log('⏳ [PAYMENT] Payment pending', result)
+            debugLog('⏳ [PAYMENT] Payment pending', result)
             toast.info('Payment pending. You can continue payment later.')
             window.location.href = '/track-order'
             setIsProcessing(false)
@@ -1939,7 +1903,7 @@ export default function CheckoutPage() {
             setIsProcessing(false)
           },
           onClose: () => {
-            console.log('🚪 [PAYMENT] Payment modal closed by user')
+            debugLog('🚪 [PAYMENT] Payment modal closed by user')
             toast.info('You can continue payment anytime from the order tracking page')
             window.location.href = '/track-order'
             setIsProcessing(false)
@@ -2180,11 +2144,13 @@ export default function CheckoutPage() {
     }
   }
 
-  // Fetch shipping cost when address is selected (wait for region to load)
+  // Fetch shipping cost when address is selected (debounced to avoid rapid API calls)
   useEffect(() => {
-    if (selectedAddressId && savedAddresses.length > 0 && region) {
+    if (!selectedAddressId || savedAddresses.length === 0 || !region) return
+    const timer = setTimeout(() => {
       fetchShippingCost()
-    }
+    }, 400)
+    return () => clearTimeout(timer)
   }, [selectedAddressId, region])
 
   const fetchShippingCost = async (address?: any): Promise<number | null> => {
@@ -2192,12 +2158,12 @@ export default function CheckoutPage() {
     try {
       const targetAddress = address || savedAddresses.find(a => a.id === selectedAddressId)
       if (!targetAddress) {
-        console.log('⚠️ [SHIPPING] No address available for rate calculation')
+        debugLog('⚠️ [SHIPPING] No address available for rate calculation')
         setShippingCost(null)
         return null
       }
 
-      console.log('🚀 [SHIPPING] Fetching DHL rates for address:', targetAddress.city, targetAddress.postal_code)
+      debugLog('🚀 [SHIPPING] Fetching DHL rates for address:', targetAddress.city, targetAddress.postal_code)
 
       const res = await fetch('/api/shipping/dhl/rates', {
         method: 'POST',
@@ -2230,7 +2196,7 @@ export default function CheckoutPage() {
 
       // Pick the cheapest rate
       const cheapest = data.rates.reduce((min: any, r: any) => r.totalPrice < min.totalPrice ? r : min, data.rates[0])
-      console.log('✅ [SHIPPING] Cheapest DHL rate:', cheapest.serviceType, cheapest.totalPrice, cheapest.currency)
+      debugLog('✅ [SHIPPING] Cheapest DHL rate:', cheapest.serviceType, cheapest.totalPrice, cheapest.currency)
 
       // Convert DHL rate to match checkout base currency
       // DHL returns IDR for Indonesia domestic; checkout base is IDR if region=ID, else USD
@@ -2243,12 +2209,12 @@ export default function CheckoutPage() {
 
       if (dhlCurrency === 'IDR' && !isIDRegion) {
         convertedShipping = dhlPrice / USD_TO_IDR
-        console.log('💱 [SHIPPING] Converted', dhlPrice, 'IDR →', convertedShipping.toFixed(2), 'USD')
+        debugLog('💱 [SHIPPING] Converted', dhlPrice, 'IDR →', convertedShipping.toFixed(2), 'USD')
       } else if (dhlCurrency === 'USD' && isIDRegion) {
         convertedShipping = dhlPrice * USD_TO_IDR
-        console.log('💱 [SHIPPING] Converted', dhlPrice, 'USD →', convertedShipping.toFixed(0), 'IDR')
+        debugLog('💱 [SHIPPING] Converted', dhlPrice, 'USD →', convertedShipping.toFixed(0), 'IDR')
       } else {
-        console.log('💱 [SHIPPING] No conversion needed:', dhlPrice, dhlCurrency)
+        debugLog('💱 [SHIPPING] No conversion needed:', dhlPrice, dhlCurrency)
       }
 
       const roundedShipping = Math.round(convertedShipping * 100) / 100
@@ -2309,81 +2275,109 @@ export default function CheckoutPage() {
   }
 
   // Combine cart items and quick-added items for total calculation
-  const allItems = [...cartItems, ...quickAddedItems]
+  const allItems = useMemo(() => [...cartItems, ...quickAddedItems], [cartItems, quickAddedItems])
   
   // Helper to convert USD to local currency (matches formatPrice logic)
-  const convertToLocalCurrency = (usdAmount: number): number => {
+  const convertToLocalCurrency = useCallback((usdAmount: number): number => {
     const currencyCode = region?.currency_code || currency
     if (currencyCode === 'USD') return usdAmount
     if (currencyCode === 'IDR') return usdAmount // IDR prices are pre-converted
-    
-    // Parse the formatted price to extract the numeric value with conversion applied
-    // This ensures we use the same conversion logic as formatPrice
     const formatted = formatPrice(usdAmount, currencyCode)
     const numericValue = parseFloat(formatted.replace(/[^0-9.-]+/g, ''))
     return isNaN(numericValue) ? usdAmount : numericValue
-  }
+  }, [region?.currency_code, currency])
   
-  const subtotal = allItems.reduce((total, item) => {
+  const subtotal = useMemo(() => allItems.reduce((total, item) => {
     const basePrice = getBasePrice(item.product, (item as any).variant_sku)
     const salePrice = getEffectivePrice(basePrice, null)
-    // Apply campaign discount if available (takes priority over sale price)
     const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
     const price = discounted !== null ? discounted : salePrice
     return total + (price * item.quantity)
-  }, 0)
+  }, 0), [allItems, region, activeDiscounts])
 
-  const shipping = shippingCost ?? 0 // null = not yet calculated; use 0 for total until API is integrated
+  const shipping = shippingCost ?? 0
   
-  // Calculate tax only for products with tax_enabled = true
-  const taxableAmount = cartItems.reduce((total, item) => {
-    const product = item.product as any
-    console.log(`🔍 Tax calculation for ${product.name}:`, {
-      tax_enabled: product.tax_enabled,
-      product_id: item.product_id,
-      variant_sku: (item as any).variant_sku
-    })
-    if (product.tax_enabled) {
-      // Use getBasePrice to handle variant prices correctly
-      const basePrice = getBasePrice(product, (item as any).variant_sku)
-      const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
-      const price = discounted !== null ? discounted : basePrice
-      const itemTaxableAmount = price * item.quantity
-      console.log(`  ✅ Taxable amount: ${itemTaxableAmount} (base: ${basePrice}, discounted: ${discounted})`)
-      return total + itemTaxableAmount
-    }
-    console.log(`  ❌ Tax disabled for this product`)
-    return total
-  }, 0)
+  const tax = useMemo(() => {
+    const taxableAmount = cartItems.reduce((total, item) => {
+      const product = item.product as any
+      if (product.tax_enabled) {
+        const basePrice = getBasePrice(product, (item as any).variant_sku)
+        const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
+        const price = discounted !== null ? discounted : basePrice
+        return total + (price * item.quantity)
+      }
+      return total
+    }, 0)
+    return Math.round(taxableAmount * 0.1 * 100) / 100
+  }, [cartItems, region, activeDiscounts])
+
+  const total = useMemo(() => 
+    Math.round((subtotal + shipping + tax - discount) * 100) / 100,
+  [subtotal, shipping, tax, discount])
   
-  const tax = Math.round(taxableAmount * 0.1 * 100) / 100
-  console.log(`💰 Total taxable amount: ${taxableAmount}, Tax (10%): ${tax}`)
-  const total = Math.round((subtotal + shipping + tax - discount) * 100) / 100
-  
-  // For display: calculate by summing converted individual items to match what customer sees
-  // This must exactly match what's displayed in the cart for each item
-  console.log('💵 [DISPLAY SUBTOTAL] Calculating with allItems:', allItems.length, 'items')
-  const displaySubtotal = allItems.reduce((total, item) => {
+  const displaySubtotal = useMemo(() => allItems.reduce((total, item) => {
     const basePrice = getBasePrice(item.product, (item as any).variant_sku)
     const salePrice = getEffectivePrice(basePrice, null)
     const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
     const priceUSD = discounted !== null ? discounted : salePrice
-    
-    // Subtotal = original price before voucher
     const itemTotalUSD = priceUSD * item.quantity
     const priceLocal = convertToLocalCurrency(itemTotalUSD)
     return total + priceLocal
-  }, 0)
+  }, 0), [allItems, region, activeDiscounts, convertToLocalCurrency])
   
-  const displayShipping = Math.round(convertToLocalCurrency(shipping) * 100) / 100
-  const displayTax = Math.round(convertToLocalCurrency(tax) * 100) / 100
-  const displayDiscount = Math.round(convertToLocalCurrency(discount) * 100) / 100
-  const displayTotal = Math.round((displaySubtotal + displayShipping + displayTax - displayDiscount) * 100) / 100
+  const displayShipping = useMemo(() => Math.round(convertToLocalCurrency(shipping) * 100) / 100, [shipping, convertToLocalCurrency])
+  const displayTax = useMemo(() => Math.round(convertToLocalCurrency(tax) * 100) / 100, [tax, convertToLocalCurrency])
+  const displayDiscount = useMemo(() => Math.round(convertToLocalCurrency(discount) * 100) / 100, [discount, convertToLocalCurrency])
+  const displayTotal = useMemo(() => Math.round((displaySubtotal + displayShipping + displayTax - displayDiscount) * 100) / 100,
+  [displaySubtotal, displayShipping, displayTax, displayDiscount])
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="min-h-screen bg-white font-montserrat">
+        {/* Hero Header Skeleton */}
+        <div className="border-b border-border/40 bg-luxury-gray-light py-10 md:py-12">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="h-10 w-48 bg-gray-200 rounded-lg animate-pulse mb-2" />
+            <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+          <div className="grid lg:grid-cols-3 gap-4 lg:gap-8">
+            {/* Left column skeleton */}
+            <div className="lg:col-span-2 space-y-4">
+              {[1, 2].map(i => (
+                <div key={i} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 animate-pulse">
+                  <div className="flex gap-4">
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-3/4 bg-gray-200 rounded" />
+                      <div className="h-3 w-1/3 bg-gray-200 rounded" />
+                      <div className="h-4 w-1/4 bg-gray-200 rounded mt-4" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Address skeleton */}
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse mt-6">
+                <div className="h-6 w-40 bg-gray-200 rounded mb-4" />
+                <div className="h-20 w-full bg-gray-100 rounded-lg" />
+              </div>
+            </div>
+            {/* Right column skeleton */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse sticky top-4">
+                <div className="h-6 w-32 bg-gray-200 rounded mb-4" />
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between"><div className="h-4 w-16 bg-gray-200 rounded" /><div className="h-4 w-20 bg-gray-200 rounded" /></div>
+                  <div className="flex justify-between"><div className="h-4 w-16 bg-gray-200 rounded" /><div className="h-4 w-20 bg-gray-200 rounded" /></div>
+                </div>
+                <div className="h-px bg-gray-200 my-4" />
+                <div className="flex justify-between"><div className="h-6 w-16 bg-gray-200 rounded" /><div className="h-6 w-28 bg-gray-200 rounded" /></div>
+                <div className="h-12 w-full bg-gray-200 rounded-lg mt-6" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -2420,6 +2414,65 @@ export default function CheckoutPage() {
         </div>
       </div>
 
+      {/* Checkout Progress Indicator */}
+      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {/* Step 1: Address */}
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+              selectedAddressId || isGuest
+                ? 'bg-luxury-navy text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}>
+              {selectedAddressId || isGuest ? (
+                <CheckCircle2 className="h-5 w-5" />
+              ) : '1'}
+            </div>
+            <span className={`text-sm font-medium hidden sm:inline ${
+              selectedAddressId || isGuest ? 'text-gray-900' : 'text-gray-500'
+            }`}>
+              {t.checkout.stepAddress}
+            </span>
+          </div>
+          {/* Connector */}
+          <div className={`h-px w-8 sm:w-16 ${selectedAddressId || isGuest ? 'bg-luxury-navy' : 'bg-gray-200'}`} />
+          {/* Step 2: Review */}
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+              allItems.length > 0
+                ? 'bg-luxury-navy text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}>
+              {allItems.length > 0 ? (
+                <CheckCircle2 className="h-5 w-5" />
+              ) : '2'}
+            </div>
+            <span className={`text-sm font-medium hidden sm:inline ${
+              allItems.length > 0 ? 'text-gray-900' : 'text-gray-500'
+            }`}>
+              {t.checkout.stepReview}
+            </span>
+          </div>
+          {/* Connector */}
+          <div className={`h-px w-8 sm:w-16 ${isProcessing ? 'bg-luxury-navy' : 'bg-gray-200'}`} />
+          {/* Step 3: Payment */}
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+              isProcessing
+                ? 'bg-luxury-navy text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}>
+              3
+            </div>
+            <span className={`text-sm font-medium hidden sm:inline ${
+              isProcessing ? 'text-gray-900' : 'text-gray-500'
+            }`}>
+              {t.checkout.stepPayment}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
 
         <div className="grid lg:grid-cols-3 gap-4 lg:gap-8">
@@ -2452,126 +2505,14 @@ export default function CheckoutPage() {
             })()}
 
             {/* Cart Items */}
-            {allItems.map((item) => {
-              const basePrice = getBasePrice(item.product, (item as any).variant_sku)
-              const salePrice = getEffectivePrice(basePrice, null)
-              const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
-              const price = campaignDiscounted !== null ? campaignDiscounted : salePrice
-              const hasCampaignDiscount = campaignDiscounted !== null && campaignDiscounted < basePrice
-              
-              return (
-                <div key={item.id} className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
-                  <div className="flex gap-3 sm:gap-4">
-                    {/* Product Image */}
-                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                      {(() => {
-                        // Parse image field that may be a JSON string, array, or plain string
-                        const parseImg = (raw: any): string | null => {
-                          if (!raw) return null
-                          if (Array.isArray(raw)) return raw.filter(Boolean)[0] || null
-                          if (typeof raw === 'string') {
-                            try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean)[0] || null : raw } catch { return raw }
-                          }
-                          return null
-                        }
-
-                        // Prefer variant-specific image
-                        let displayImage: string | null = null
-                        if ((item as any).variant_name && item.product.variants) {
-                          const variants = Array.isArray(item.product.variants)
-                            ? item.product.variants
-                            : (() => { try { return JSON.parse(item.product.variants) } catch { return [] } })()
-                          const variant = variants.find((v: any) => v.name === (item as any).variant_name)
-                          if (variant?.image_url) displayImage = parseImg(variant.image_url)
-                        }
-
-                        // Fallback to product images
-                        if (!displayImage) {
-                          const raw = item.product.image_urls
-                          const urls: string[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw as any) } catch { return [] } })()
-                          displayImage = urls.find(u => u && !u.includes('placehold.co')) || null
-                        }
-
-                        return displayImage ? (
-                          <img
-                            src={displayImage}
-                            alt={(item as any).variant_name || item.product.name}
-                            className="w-full h-full object-contain p-2"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                            No image
-                          </div>
-                        )
-                      })()}
-                    </div>
-
-                    {/* Product Details & Controls */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      {/* Product Name and Remove Button */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-medium text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
-                            {(item as any).variant_name || item.product.name}
-                          </h3>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {hasCampaignDiscount ? (
-                              <>
-                                <span className="line-through text-gray-400">
-                                  {formatPrice(basePrice, region?.currency_code || currency)}
-                                </span>
-                                {' '}
-                                <span className="text-green-600 font-medium">
-                                  {formatPrice(price, region?.currency_code || currency)}
-                                </span>
-                                {' / '}{t.cart.item}
-                              </>
-                            ) : (
-                              <>
-                                {formatPrice(price, region?.currency_code || currency)} / {t.cart.item}
-                              </>
-                            )}
-                          </p>
-                        </div>
-                        {item.id.startsWith('quick-') && (
-                          <button
-                            onClick={() => removeQuickItem(item.product_id)}
-                            className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
-                            aria-label="Remove item"
-                          >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Quantity and Total */}
-                      <div className="flex flex-col gap-1 mt-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm sm:text-base text-gray-600">
-                            {t.trackOrder.qty}: {item.quantity}
-                          </span>
-                          <div className="flex flex-col items-end">
-                            {hasCampaignDiscount && (
-                              <span className="text-xs text-gray-400 line-through">
-                                {formatPrice(basePrice * item.quantity, region?.currency_code || currency)}
-                              </span>
-                            )}
-                            <p className="text-sm sm:text-base font-bold text-gray-900">
-                              {formatPrice(price * item.quantity, region?.currency_code || currency)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+            <CartItemsList
+              items={allItems}
+              regionCode={region?.code}
+              currency={currency}
+              activeDiscounts={activeDiscounts}
+              removeQuickItem={removeQuickItem}
+              t={t}
+            />
 
 
             {/* Shipping Address Section - For logged in users */}
@@ -2896,225 +2837,34 @@ export default function CheckoutPage() {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 lg:sticky lg:top-4">
-              <h2 className="text-xl font-montserrat font-bold text-gray-900 mb-4">{t.checkout.orderSummary}</h2>
-
-              {/* Promo Code Section — only show when cart has items */}
-              {allItems.length > 0 && <div className="mb-4 pb-4 border-b border-gray-200">
-                <h3 className="text-sm font-montserrat font-semibold text-gray-900 mb-3">{t.checkout.promoCode}</h3>
-
-                {/* Public voucher tiles */}
-                {!appliedPromo && publicVouchers.length > 0 && (
-                  <div className="space-y-2 mb-3">
-                    {publicVouchers.map((v) => {
-                      const discountLabel = v.discount_type === 'percentage'
-                        ? `${v.discount_value}% off`
-                        : formatCurrencyPrice(v.discount_value, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })
-                      const minLabel = v.min_purchase_amount
-                        ? `Min. ${formatCurrencyPrice(v.min_purchase_amount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}`
-                        : null
-                      return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => applyPromoCode(v.code)}
-                          disabled={isApplyingPromo}
-                          className="w-full flex items-center justify-between p-3 rounded-lg border border-dashed border-luxury-gold bg-luxury-gold/5 hover:bg-luxury-gold/10 transition-colors text-left group"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-luxury-gold font-mono tracking-wide">{v.code}</p>
-                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                              {minLabel && (
-                                <span className="text-[10px] text-gray-500">{minLabel}</span>
-                              )}
-                              {v.valid_until && (
-                                <VoucherExpiryInfo validUntil={v.valid_until} />
-                              )}
-                            </div>
-                          </div>
-                          <div className="ml-3 flex-shrink-0 flex flex-col items-end gap-2">
-                            <span className="text-sm font-bold text-luxury-gold">{discountLabel}</span>
-                            <span className="text-xs font-semibold text-luxury-gold border border-luxury-gold px-3 py-1 rounded-md group-hover:bg-luxury-gold group-hover:text-white transition-colors">
-                              Apply
-                            </span>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {appliedPromo ? (
-                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-green-900">
-                        {appliedPromo.code || appliedPromo.promo_code?.code}
-                        {appliedPromo.promo_code && (
-                          <span className="font-normal text-green-700">
-                            {' '}— {appliedPromo.promo_code.discount_type === 'percentage'
-                              ? `${appliedPromo.promo_code.discount_value}% off`
-                              : `${formatCurrencyPrice(appliedPromo.promo_code.discount_value, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })} off`
-                            } applied
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-green-700">You save {formatCurrencyPrice(displayDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</p>
-                    </div>
-                    <button
-                      onClick={removePromoCode}
-                      className="text-green-700 hover:text-green-900 text-sm font-medium"
-                    >
-                      {t.checkout.remove}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      type="text"
-                      placeholder={t.checkout.enterCode}
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      className="flex-1 text-sm"
-                    />
-                    <Button
-                      onClick={() => applyPromoCode()}
-                      disabled={isApplyingPromo || !promoCode.trim()}
-                      variant="outline"
-                      size="sm"
-                      className="px-4"
-                    >
-                      {isApplyingPromo ? t.checkout.applying : t.checkout.apply}
-                    </Button>
-                  </div>
-                )}
-              </div>}
-
-              {/* Price Breakdown */}
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{t.checkout.subtotal}</span>
-                  <span className="font-medium text-gray-900">
-                    {formatCurrencyPrice(displaySubtotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}
-                  </span>
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>{t.checkout.discount}</span>
-                    <span className="font-medium">-{formatCurrencyPrice(displayDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span className="flex items-center gap-2">
-                    {t.checkout.shipping}
-                    {isLoadingShipping && (
-                      <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        Calculating...
-                      </span>
-                    )}
-                  </span>
-                  <span className={`font-medium ${shippingCost === null || shippingCost === 0 ? 'text-gray-500' : 'text-gray-900'}`}>
-                    {shippingCost === null ? (
-                      <span className="text-xs italic">{t.checkout.shippingCalculated}</span>
-                    ) : shippingCost === 0 ? (
-                      <span className="text-green-600">{t.checkout.free}</span>
-                    ) : (
-                      formatCurrencyPrice(displayShipping, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })
-                    )}
-                  </span>
-                </div>
-                {tax > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>{t.checkout.tax}</span>
-                    <span className="font-medium text-gray-900">{formatCurrencyPrice(displayTax, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Total */}
-              <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                <span className="text-base font-bold text-gray-900">{t.checkout.total}</span>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-luxury-navy">{formatCurrencyPrice(displayTotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
-                  </p>
-                </div>
-              </div>
-              {/* Checkout Button - For both logged-in and guest users */}
-              <div className="mt-6">
-              {!isGuest ? (
-                <>
-                  <Button
-                    onClick={handlePlaceOrder}
-                    disabled={isProcessing || !selectedAddressId || allItems.length === 0}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-semibold py-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="animate-spin">⏳</span>
-                        {t.checkout.processing}
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        {!pendingOrder && <Lock className="h-5 w-5" />}
-                        {pendingOrder ? 'Continue Payment' : t.checkout.placeOrder} · {formatCurrencyPrice(displayTotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}
-                      </span>
-                    )}
-                  </Button>
-
-                  {/* Payment Methods */}
-                  <div className="mt-4">
-                    <PaymentMethods size="small" showTitle />
-                  </div>
-
-                  {!selectedAddressId && savedAddresses.length === 0 && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-700 text-center font-medium">
-                        {t.checkout.pleaseAddAddress}
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Button
-                    onClick={() => setShowCheckoutModal(true)}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-semibold py-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                    size="lg"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <Lock className="h-5 w-5" />
-                      {t.checkout.continueToCheckout}
-                    </span>
-                  </Button>
-
-                  {/* Payment Methods */}
-                  <div className="mt-4">
-                    <PaymentMethods size="small" showTitle />
-                  </div>
-                </>
-              )}
-
-              {/* Trust Badges */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <Lock className="h-3 w-3" />
-                    <span>{t.checkout.secureCheckout}</span>
-                  </div>
-                  <div className="w-px h-4 bg-gray-300"></div>
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span>{t.checkout.safePayment}</span>
-                  </div>
-                </div>
-              </div>
-              </div>
-            </div>
-          </div>
+          <OrderSummary
+            allItems={allItems}
+            publicVouchers={publicVouchers}
+            appliedPromo={appliedPromo}
+            promoCode={promoCode}
+            setPromoCode={setPromoCode}
+            isApplyingPromo={isApplyingPromo}
+            discount={discount}
+            displaySubtotal={displaySubtotal}
+            displayShipping={displayShipping}
+            displayTax={displayTax}
+            displayDiscount={displayDiscount}
+            displayTotal={displayTotal}
+            shippingCost={shippingCost}
+            isLoadingShipping={isLoadingShipping}
+            tax={tax}
+            regionCurrency={region?.currency_code || currency}
+            isGuest={isGuest}
+            isProcessing={isProcessing}
+            selectedAddressId={selectedAddressId || ''}
+            savedAddresses={savedAddresses}
+            pendingOrder={pendingOrder}
+            onApplyPromo={applyPromoCode}
+            onRemovePromo={removePromoCode}
+            onPlaceOrder={handlePlaceOrder}
+            onShowCheckoutModal={() => setShowCheckoutModal(true)}
+            t={t}
+          />
         </div>
       </div>
 

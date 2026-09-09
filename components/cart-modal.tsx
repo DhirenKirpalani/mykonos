@@ -405,7 +405,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                             isVideo(displayUrl) ? (
                               <video
                                 src={displayUrl}
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                                 muted
                                 playsInline
                                 loop
@@ -416,7 +416,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                                 alt={item.product.name}
                                 fill
                                 sizes="80px"
-                                className="object-cover"
+                                className="object-contain"
                               />
                             )
                           ) : (

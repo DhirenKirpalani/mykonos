@@ -52,7 +52,21 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   const [variantModalMode, setVariantModalMode] = useState<'add-to-cart' | 'buy-now' | 'wishlist'>('add-to-cart')
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [pendingVariantName, setPendingVariantName] = useState<string | null>(null)
-  
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  // Check auth status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setIsLoggedIn(!!session && !session.user.is_anonymous)
+    }
+    checkAuth()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkAuth()
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
   // Check if product is out of stock
   const isOutOfStock = (() => {
     if (productData?.variants && Array.isArray(productData.variants) && productData.variants.length > 0) {
@@ -449,34 +463,40 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           <ShoppingBag className="mr-2 h-5 w-5" />
           {isAddingToCart ? t('common.loading') : t('product.addToCart')}
         </Button>
-        <Button 
-          variant="outline" 
-          size="lg" 
-          className="w-full font-montserrat font-semibold uppercase tracking-wider py-3 text-base"
-          onClick={() => handleAddToWishlist()}
-          disabled={isAddingToWishlist || isOutOfStock}
-          style={isOutOfStock ? { pointerEvents: 'none' } : {}}
-        >
-          <Heart className="mr-2 h-5 w-5" />
-          {isAddingToWishlist ? t('common.loading') : t('product.addToWishlist')}
-        </Button>
+        {isLoggedIn && (
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="w-full font-montserrat font-semibold uppercase tracking-wider py-3 text-base"
+            onClick={() => handleAddToWishlist()}
+            disabled={isAddingToWishlist || isOutOfStock}
+            style={isOutOfStock ? { pointerEvents: 'none' } : {}}
+          >
+            <Heart className="mr-2 h-5 w-5" />
+            {isAddingToWishlist ? t('common.loading') : t('product.addToWishlist')}
+          </Button>
+        )}
       </div>
 
     {/* Sticky Bottom Action Bar - Mobile Only */}
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
       <div className="flex items-center gap-2 p-2 sm:p-3">
-        {/* Wishlist Icon */}
-        <button 
-          onClick={() => handleAddToWishlist()}
-          disabled={isAddingToWishlist || isOutOfStock}
-          style={isOutOfStock ? { pointerEvents: 'none' } : {}}
-          className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
-        >
-          <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
-        </button>
-        
-        {/* Divider */}
-        <div className="h-10 sm:h-12 w-px bg-gray-300" />
+        {/* Wishlist Icon - only for logged-in users */}
+        {isLoggedIn && (
+          <>
+            <button 
+              onClick={() => handleAddToWishlist()}
+              disabled={isAddingToWishlist || isOutOfStock}
+              style={isOutOfStock ? { pointerEvents: 'none' } : {}}
+              className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+            >
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+            </button>
+            
+            {/* Divider */}
+            <div className="h-10 sm:h-12 w-px bg-gray-300" />
+          </>
+        )}
         
         {/* Cart Icon */}
         <button 

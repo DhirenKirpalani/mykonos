@@ -92,7 +92,7 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
   const isBestsellingCard = className?.includes('bestselling') || false
 
   // Combine variant images with product images (same logic as product detail page)
-  const allProductImages = (() => {
+  const allProductImages = useMemo(() => {
     const hasVariants = (product as any).variants && Array.isArray((product as any).variants) && (product as any).variants.length > 0
     const variantImages = hasVariants 
       ? (product as any).variants
@@ -102,7 +102,7 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
     return variantImages.length > 0 
       ? [...variantImages, ...(product.image_urls || [])]
       : (product.image_urls || [])
-  })()
+  }, [product])
 
   useEffect(() => {
     setMounted(true)
@@ -295,6 +295,7 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
           <div className="relative w-full bg-white" style={{ paddingBottom: '105%' }}>
             {displayThumbnailUrl ? (
               <Image
+                key={displayThumbnailUrl}
                 src={displayThumbnailUrl}
                 alt={product.name}
                 fill
@@ -403,6 +404,7 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
                   <button
                     onClick={(e) => {
                       e.preventDefault()
+                      e.stopPropagation()
                       setCurrentImageIndex(prev => prev - 1)
                     }}
                     className="group/arrow absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-[#B8985F] rounded-full p-1.5 shadow-md transition-all duration-200 active:scale-95"
@@ -416,6 +418,7 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
                   <button
                     onClick={(e) => {
                       e.preventDefault()
+                      e.stopPropagation()
                       setCurrentImageIndex(prev => prev + 1)
                     }}
                     className="group/arrow absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-[#B8985F] rounded-full p-1.5 shadow-md transition-all duration-200 active:scale-95"
@@ -438,6 +441,7 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
             return displayUrl ? (
               isVideo(displayUrl) ? (
                 <video
+                  key={displayUrl}
                   src={displayUrl}
                   className="absolute inset-0 h-full w-full object-contain p-4 transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                   muted
@@ -445,6 +449,7 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
                 />
             ) : (
                 <Image
+                  key={displayUrl}
                   src={displayUrl}
                   alt={`${product.name} - ${product.category} fragrance`}
                   fill
