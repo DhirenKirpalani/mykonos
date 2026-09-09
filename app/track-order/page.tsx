@@ -72,6 +72,7 @@ type Order = {
   snap_token?: string
   stripe_session_id?: string
   stripe_payment_intent_id?: string
+  paypal_order_id?: string
   expiry_time?: string
   payment_method_type?: string
   payment_gateway?: string
@@ -206,7 +207,7 @@ export default function TrackOrderPage() {
           // Fetch summary only — full detail loaded on-demand when user clicks
           const { data, error } = await supabase
             .from('orders')
-            .select('id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, shipping_address')
+            .select('id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, paypal_order_id, expiry_time, payment_metadata, shipping_address')
             .eq('customer_email', authenticatedEmail)
             .order('created_at', { ascending: false })
             .limit(5)
@@ -247,7 +248,7 @@ export default function TrackOrderPage() {
             // Fetch summary only — full detail loaded on-demand when user clicks
             const { data, error } = await supabase
               .from('orders')
-              .select('id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, shipping_address')
+              .select('id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, paypal_order_id, expiry_time, payment_metadata, shipping_address')
               .eq('customer_email', mostRecentEmail)
               .order('created_at', { ascending: false })
               .limit(5)
@@ -369,7 +370,7 @@ export default function TrackOrderPage() {
         debugLog('🔍 [POLLING] Checking order status...')
         const { data, error } = await supabase
           .from('orders')
-          .select('payment_status, status, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, tracking_url, carrier_code')
+          .select('payment_status, status, snap_token, stripe_session_id, stripe_payment_intent_id, paypal_order_id, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, tracking_url, carrier_code')
           .eq('order_number', order.order_number)
           .eq('customer_email', order.customer_email)
           .single()
@@ -463,6 +464,7 @@ export default function TrackOrderPage() {
       payment_status: currentOrder?.payment_status,
       snap_token: currentOrder?.snap_token ? 'exists' : 'missing',
       stripe_session_id: (currentOrder as any)?.stripe_session_id ? 'exists' : 'missing',
+      paypal_order_id: (currentOrder as any)?.paypal_order_id ? 'exists' : 'missing',
       expiry_time: currentOrder?.expiry_time,
       has_payment_metadata: !!currentOrder?.payment_metadata
     })
@@ -475,6 +477,13 @@ export default function TrackOrderPage() {
 
     // Check if this is a Stripe order (non-ID region)
     const stripeSessionId = (currentOrder as any)?.stripe_session_id
+    const paypalOrderId = (currentOrder as any)?.paypal_order_id
+    if (paypalOrderId || (currentOrder as any)?.payment_gateway === 'paypal') {
+      debugLog('💳 [PAYPAL] Detected PayPal order, redirecting to checkout...')
+      toast.info('Redirecting to PayPal checkout...')
+      window.location.href = '/checkout'
+      return
+    }
     if (stripeSessionId) {
       debugLog('💳 [STRIPE] Detected Stripe order, redirecting to Stripe checkout...')
       

@@ -45,6 +45,7 @@ import {
 } from '@/lib/utils/payment'
 import { CartItemsList } from './components/CartItemsList'
 import { OrderSummary } from './components/OrderSummary'
+import { PayPalCheckout } from '@/components/PayPalCheckout'
 
 type CartItem = {
   id: string
@@ -155,6 +156,7 @@ export default function CheckoutPage() {
   const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string>('')
   const [paymentGatewayConfig, setPaymentGatewayConfig] = useState<PaymentGatewayConfig | null>(null)
+  const [paypalOrderData, setPaypalOrderData] = useState<{ orderId: string; amount: number; currency: string; items: any[]; shippingCost: number } | null>(null)
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
@@ -1248,6 +1250,37 @@ export default function CheckoutPage() {
         window.location.href = stripeData.url
         return
       }
+
+      // For PayPal gateway - show inline PayPal buttons
+      if (activeGateway === 'paypal') {
+        debugLog('💳 [PAYPAL] Preparing PayPal checkout...')
+        const paypalCurrency = 'usd'
+        const paypalItems = cartItems.map(item => {
+          const itemWithVariant = item as any
+          let basePrice = (item.product as any).price_usd || 0
+          if (itemWithVariant.variant_sku && (item.product as any).variants) {
+            const variant = (item.product as any).variants.find((v: any) => v.sku === itemWithVariant.variant_sku)
+            if (variant) basePrice = variant.price_usd
+          }
+          const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, itemWithVariant.variant_name)
+          const price = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
+          return {
+            name: itemWithVariant.variant_name ? `${item.product.name} - ${itemWithVariant.variant_name}` : item.product.name,
+            price: Math.round(price * 100) / 100,
+            quantity: item.quantity,
+          }
+        })
+        const paypalTotal = total
+        setPaypalOrderData({
+          orderId: orderData.order_id,
+          amount: paypalTotal,
+          currency: paypalCurrency,
+          items: paypalItems,
+          shippingCost: shipping,
+        })
+        setIsProcessing(false)
+        return
+      }
       
       // For Midtrans gateway
       debugLog('💳 [MIDTRANS] Processing payment via Midtrans...')
@@ -1762,6 +1795,35 @@ export default function CheckoutPage() {
         debugLog('✅ [GUEST STRIPE] Redirecting to Stripe checkout...')
         setIsProcessing(false)
         window.location.href = stripeData.url
+        return
+      }
+
+      // PayPal path for guests
+      if (guestActiveGateway === 'paypal') {
+        debugLog('💳 [GUEST PAYPAL] Preparing PayPal checkout...')
+        const paypalItems = [...cartItems, ...quickAddedItems].map(item => {
+          const itemWithVariant = item as any
+          let basePrice = (item.product as any).price_usd || 0
+          if (itemWithVariant.variant_sku && (item.product as any).variants) {
+            const variant = (item.product as any).variants.find((v: any) => v.sku === itemWithVariant.variant_sku)
+            if (variant) basePrice = variant.price_usd
+          }
+          const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, itemWithVariant.variant_name)
+          const price = campaignDiscounted !== null ? campaignDiscounted : getEffectivePrice(basePrice, null)
+          return {
+            name: itemWithVariant.variant_name ? `${item.product.name} - ${itemWithVariant.variant_name}` : item.product.name,
+            price: Math.round(price * 100) / 100,
+            quantity: item.quantity,
+          }
+        })
+        setPaypalOrderData({
+          orderId: orderData.order_id,
+          amount: guestTotal,
+          currency: 'usd',
+          items: paypalItems,
+          shippingCost: guestShipping,
+        })
+        setIsProcessing(false)
         return
       }
 
@@ -2865,6 +2927,95 @@ export default function CheckoutPage() {
             onShowCheckoutModal={() => setShowCheckoutModal(true)}
             t={t}
           />
+
+          {/* PayPal Inline Checkout */}
+          {paypalOrderData && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <svg viewBox="0 0 154 40" className="h-7 w-auto" fill="none">
+                      <path fill="#253B80" d="M23.5 8.2c-1.6-1.8-4.5-2.6-8.2-2.6H5.3c-.8 0-1.4.6-1.5 1.3L1.2 28.1c-.1.5.3 1 .8 1h5.7l1.4-9c0-.6.6-1.1 1.5-1.1h2.8c5.5 0 9.8-2.2 11-8.7v-.3c0-.1 0-.2-.1-.3-.2-1.2-.7-2.2-1.4-3z"/>
+                      <path fill="#179BD7" d="M51.2 17.3c-.6 3.9-3.6 3.9-6.5 3.9h-1.7l1.2-7.4c.1-.5.5-.8 1-.8h.8c2 0 3.8 0 4.8 1.1.6.6.7 1.6.5 2.8z"/>
+                    </svg>
+                  </div>
+                  <button
+                    onClick={() => setPaypalOrderData(null)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                    aria-label="Close"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Order Summary */}
+                <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Order Summary</p>
+                  <div className="space-y-2">
+                    {paypalOrderData.items.map((item: any, idx: number) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <span className="text-gray-600 truncate pr-2">
+                          {item.name} <span className="text-gray-400">× {item.quantity}</span>
+                        </span>
+                        <span className="text-gray-900 font-medium whitespace-nowrap">
+                          {formatPrice(item.price * item.quantity, 'USD')}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                      <span className="text-gray-600">Shipping</span>
+                      <span className="text-gray-900 font-medium">
+                        {paypalOrderData.shippingCost > 0 ? formatPrice(paypalOrderData.shippingCost, 'USD') : 'Free'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div className="px-6 py-4 flex justify-between items-center border-b border-gray-100">
+                  <span className="text-base font-bold text-gray-900">Total</span>
+                  <span className="text-xl font-bold text-luxury-navy">
+                    {formatPrice(paypalOrderData.amount, 'USD')}
+                  </span>
+                </div>
+
+                {/* PayPal Buttons */}
+                <div className="px-6 py-5">
+                  <p className="text-xs text-gray-500 text-center mb-3">
+                    Click below to pay securely with PayPal
+                  </p>
+                  <PayPalCheckout
+                    orderId={paypalOrderData.orderId}
+                    amount={paypalOrderData.amount}
+                    currency={paypalOrderData.currency}
+                    items={paypalOrderData.items}
+                    shippingCost={paypalOrderData.shippingCost}
+                    onSuccess={(data) => {
+                      setPaypalOrderData(null)
+                      if (data.status === 'paid') {
+                        toast.success('Payment successful! Processing your order...')
+                        router.push('/account/orders/' + paypalOrderData.orderId)
+                      } else if (data.status === 'pending') {
+                        toast.info('Payment pending. You can complete it later.')
+                        router.push('/track-order?order=' + paypalOrderData.orderId)
+                      }
+                    }}
+                    onError={(error) => {
+                      console.error('PayPal payment error:', error)
+                      toast.error('PayPal payment failed. Please try again.')
+                      setPaypalOrderData(null)
+                    }}
+                  />
+                  <p className="text-[11px] text-gray-400 text-center mt-3">
+                    Your payment is secured by PayPal encryption
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

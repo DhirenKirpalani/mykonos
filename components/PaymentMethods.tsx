@@ -38,13 +38,12 @@ export function PaymentMethods({ className = '', showTitle = false, size = 'medi
     { name: 'Akulaku', src: '/assets/payment-methods/akulaku_paylater.svg', scale: 1 },
   ]
   
-  // Payment methods for International (Stripe)
-  // Stripe accepts all major credit/debit cards
+  // Payment methods for International (PayPal)
+  // PayPal accepts Visa, Mastercard, Amex, Discover, and PayPal balance
   const internationalPaymentMethods = [
+    { name: 'PayPal', src: '/assets/payment-methods/PayPal_Logo2014.svg', scale: 1.1 },
     { name: 'Visa', src: '/assets/payment-methods/visa.png', scale: 1 },
     { name: 'Mastercard', src: '/assets/payment-methods/mastercard.png', scale: 1 },
-    // Note: Stripe also supports Amex, Discover, Diners, JCB, UnionPay, etc.
-    // Showing just the most common ones for cleaner display
   ]
   
   // Use appropriate payment methods based on region

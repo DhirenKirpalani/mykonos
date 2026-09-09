@@ -174,7 +174,7 @@ export default function SystemSettingsPage() {
   const ALL_GATEWAYS: { key: PaymentGateway; label: string; implemented: boolean }[] = [
     { key: 'midtrans', label: 'Midtrans', implemented: true },
     { key: 'stripe', label: 'Stripe', implemented: true },
-    { key: 'paypal', label: 'PayPal', implemented: false },
+    { key: 'paypal', label: 'PayPal', implemented: true },
   ]
 
   const toggleGatewayEnabled = (regionKey: PaymentRegionKey, gateway: PaymentGateway) => {
@@ -514,7 +514,7 @@ export default function SystemSettingsPage() {
 
         <div className="mt-4 flex items-center justify-between rounded-lg bg-blue-50 p-3 border border-blue-200">
           <p className="text-sm text-blue-800">
-            <strong>Note:</strong> Orders will use the gateway marked as <strong>Default</strong> for the customer's region. PayPal integration is not yet built; enabling it will fall back to the region's other enabled gateway.
+            <strong>Note:</strong> Orders will use the gateway marked as <strong>Default</strong> for the customer's region. PayPal is now fully integrated for international (non-IDR) payments.
           </p>
           <button
             onClick={saveGatewayConfig}

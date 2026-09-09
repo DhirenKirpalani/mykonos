@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Search, ShoppingBag, User, Settings } from 'lucide-react'
+import { Search, ShoppingBag, User, Settings, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
@@ -11,21 +11,25 @@ import { NotificationIcon } from '@/components/notification-icon'
 import { NotificationDialog, type Notification } from '@/components/notification-dialog'
 import { SearchModal } from '@/components/search-modal'
 import { CartModal } from '@/components/cart-modal'
+import { WishlistModal } from '@/components/wishlist-modal'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { useCartCount } from '@/hooks/useCartCount'
+import { useWishlistCount } from '@/hooks/useWishlistCount'
 import { useUserProfile } from '@/hooks/useUserProfile'
 
 export function HeaderDesktop() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [wishlistOpen, setWishlistOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { t } = useLanguage()
   const { role } = useUserRole()
   const { count: cartCount } = useCartCount()
+  const { count: wishlistCount, isAuthenticated: wishlistAuthed } = useWishlistCount()
   const { profile, getInitials } = useUserProfile()
   const userInitials = getInitials()
 
@@ -369,6 +373,36 @@ export function HeaderDesktop() {
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               isActive={notificationsOpen}
             />
+            {wishlistAuthed && (
+            <button
+              onClick={() => setWishlistOpen(true)}
+              className={cn(
+                "relative flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
+                wishlistOpen
+                  ? "bg-white/10 text-luxury-gold"
+                  : "text-white hover:bg-white/10"
+              )}
+              aria-label={`Wishlist${wishlistCount > 0 ? ` (${wishlistCount} items)` : ''}`}
+            >
+              <Heart className="h-5 w-5" aria-hidden="true" />
+              {wishlistCount > 0 && (
+                <span
+                  className="
+                    absolute right-0 top-0
+                    flex h-4 w-4 items-center justify-center
+                    rounded-full
+                    bg-luxury-gold
+                    text-[9px]
+                    font-bold
+                    text-luxury-navy
+                    ring-2 ring-luxury-navy
+                  "
+                >
+                  {wishlistCount > 9 ? '9+' : wishlistCount}
+                </span>
+              )}
+            </button>
+            )}
             <button
               onClick={() => setCartOpen(true)}
               className={cn(
@@ -443,6 +477,7 @@ export function HeaderDesktop() {
 
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       <CartModal isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+      <WishlistModal isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
       <NotificationDialog
         isOpen={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}

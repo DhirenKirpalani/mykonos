@@ -88,7 +88,7 @@ export async function POST(request: Request) {
           // Get order details
           const { data: existingOrder } = await supabase
             .from('orders')
-            .select('id, order_number, snap_token, snap_redirect_url, expiry_time, total_amount, payment_gateway, stripe_session_id')
+            .select('id, order_number, snap_token, snap_redirect_url, expiry_time, total_amount, payment_gateway, stripe_session_id, paypal_order_id')
             .eq('id', existingOrderId)
             .single()
           
@@ -186,6 +186,7 @@ export async function POST(request: Request) {
               total_amount: typedOrder.total_amount,
               payment_gateway: typedOrder.payment_gateway,
               stripe_session_id: typedOrder.stripe_session_id,
+              paypal_order_id: typedOrder.paypal_order_id,
               is_existing: true,
               message: 'You already have a pending order for these items'
             })
@@ -337,10 +338,10 @@ export async function POST(request: Request) {
       console.warn('⚠️ [API] Cannot send email - missing customer_email or order_number')
     }
 
-    // NOTE: Cart is NOT cleared here for Stripe payments
-    // For Stripe: Cart will be cleared after successful payment via webhook
+    // NOTE: Cart is NOT cleared here for Stripe/PayPal payments
+    // For Stripe/PayPal: Cart will be cleared after successful payment via webhook/capture
     // For Midtrans: Cart is cleared here because payment happens immediately
-    // Check if this is a Stripe order by looking at the checkout session
+    // Check if this is a Stripe/PayPal order by looking at the checkout session
     const { data: sessionData } = await supabase
       .from('checkout_sessions')
       .select('pricing_snapshot')
@@ -348,10 +349,10 @@ export async function POST(request: Request) {
       .single()
     
     const pricingSnapshot = sessionData?.pricing_snapshot as any
-    const isStripeOrder = pricingSnapshot?.currency_code && pricingSnapshot.currency_code !== 'IDR'
+    const isNonMidtransOrder = pricingSnapshot?.currency_code && pricingSnapshot.currency_code !== 'IDR'
     
-    // Only clear cart for Midtrans (IDR) orders, not for Stripe orders
-    if (user_id && !isStripeOrder) {
+    // Only clear cart for Midtrans (IDR) orders, not for Stripe/PayPal orders
+    if (user_id && !isNonMidtransOrder) {
       console.log('🗑️ [API] Clearing cart items for Midtrans order, user:', user_id)
       const { error: clearCartError } = await supabase
         .from('cart_items')
@@ -364,8 +365,8 @@ export async function POST(request: Request) {
       } else {
         console.log('✅ [API] Cart cleared successfully')
       }
-    } else if (isStripeOrder) {
-      console.log('💳 [API] Stripe order detected - cart will be cleared after payment confirmation')
+    } else if (isNonMidtransOrder) {
+      console.log('💳 [API] Stripe/PayPal order detected - cart will be cleared after payment confirmation')
     }
 
     console.log('✅ [API] Order created before payment successfully')
