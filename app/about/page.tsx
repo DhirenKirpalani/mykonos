@@ -21,12 +21,14 @@ const GoldDivider = () => (
 export default function AboutPage() {
   const { t, locale } = useLanguage()
   const [cms, setCms] = useState<any>(null)
+  const [cmsLoaded, setCmsLoaded] = useState(false)
 
   useEffect(() => {
     fetch('/api/page-content/about')
       .then((r) => r.json())
       .then((d) => { if (d.success) setCms(d.content) })
       .catch(() => {})
+      .finally(() => setCmsLoaded(true))
   }, [])
 
   const c = cms?.[locale] || cms?.en || null
@@ -55,7 +57,17 @@ export default function AboutPage() {
       <div className="container mx-auto px-4 py-14 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-3xl">
 
-          {sections.length > 0 ? (
+          {!cmsLoaded ? (
+            <div className="animate-pulse">
+              <div className="h-3 w-8 bg-gray-200 rounded mb-3" />
+              <div className="h-10 w-72 bg-gray-200 rounded mb-6" />
+              <div className="h-0.5 w-12 bg-gray-200 rounded mb-8" />
+              <div className="space-y-4">
+                <div className="h-4 w-full bg-gray-200 rounded" />
+                <div className="h-4 w-full bg-gray-200 rounded" />
+              </div>
+            </div>
+          ) : sections.length > 0 ? (
             sections.map((section: any, idx: number) => (
               <div key={idx}>
                 <section>
