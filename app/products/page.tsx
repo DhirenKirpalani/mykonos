@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/product-card'
 import { ProductFilters } from '@/components/product-filters'
@@ -26,15 +26,35 @@ function ProductsContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSoldOutLoading, setIsSoldOutLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [mounted, setMounted] = useState(false)
   const [productDiscounts, setProductDiscounts] = useState<Map<string, any>>(new Map())
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Debounce search input to reduce API calls
   useEffect(() => {
-    async function fetchActiveDiscounts() {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    }
+  }, [searchQuery])
+
+  // Fetch discounts only for products currently displayed on the page
+  useEffect(() => {
+    const allProductIds = [
+      ...products.map(p => p.id),
+      ...soldOutProducts.map(p => p.id)
+    ]
+    if (allProductIds.length === 0) return
+
+    const fetchDiscounts = async () => {
       try {
         const now = new Date().toISOString()
         const { data: discounts, error } = await supabase
@@ -54,10 +74,10 @@ function ProductsContent() {
           .eq('discounts.is_active', true)
           .lte('discounts.start_date', now)
           .gte('discounts.end_date', now)
+          .in('product_id', allProductIds)
 
         if (!error && discounts) {
           const discountMap = new Map()
-          // Group discounts by product_id and get the minimum discounted price
           const productGroups = new Map()
           
           discounts.forEach(discount => {
@@ -67,7 +87,6 @@ function ProductsContent() {
             productGroups.get(discount.product_id).push(discount)
           })
           
-          // For each product, store the discount with minimum price
           productGroups.forEach((productDiscounts, productId) => {
             const minDiscount = productDiscounts.reduce((min: any, current: any) => 
               current.discounted_price < min.discounted_price ? current : min
@@ -76,17 +95,14 @@ function ProductsContent() {
           })
           
           setProductDiscounts(discountMap)
-          console.log('📊 Loaded discounts for', discountMap.size, 'products')
         }
       } catch (error) {
         console.error('Error fetching discounts:', error)
       }
     }
 
-    if (mounted) {
-      fetchActiveDiscounts()
-    }
-  }, [mounted])
+    fetchDiscounts()
+  }, [products, soldOutProducts])
 
   const category = searchParams.get('category') || undefined
   const collection = searchParams.get('collection') || undefined
@@ -122,13 +138,20 @@ function ProductsContent() {
       }
 
       const now = new Date().toISOString()
+      const isPriceSorting = sort?.startsWith('price-')
 
       let query = supabase.from('products').select('*', { count: 'exact' })
         .eq('is_visible', true)
         .eq('is_archived', false)
         .eq('status', 'active')
-        .gt('stock_quantity', 0)
         .or(`scheduled_publish_date.is.null,scheduled_publish_date.lte.${now}`)
+
+      // When price sorting, include both in-stock and sold-out in one query
+      if (isPriceSorting) {
+        query = query.gte('stock_quantity', 0)
+      } else {
+        query = query.gt('stock_quantity', 0)
+      }
 
       // Apply filter (like homepage)
       if (filter === 'popular') {
@@ -166,17 +189,23 @@ function ProductsContent() {
         query = query.ilike('gender', gender)
       }
 
-      if (searchQuery.trim()) {
-        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+      if (debouncedSearchQuery.trim()) {
+        query = query.or(`name.ilike.%${debouncedSearchQuery}%,description.ilike.%${debouncedSearchQuery}%`)
       }
 
-      // Apply sorting (skip sorting for price - we'll sort after combining with sold-out products)
-      if (!sort?.startsWith('price-')) {
-        // Default sort by creation date (newest first)
+      // Apply sorting at DB level
+      if (sort === 'price-asc') {
+        const priceCol = region?.code === 'ID' ? 'price_idr' : 'price_usd'
+        query = query.order(priceCol, { ascending: true })
+      } else if (sort === 'price-desc') {
+        const priceCol = region?.code === 'ID' ? 'price_idr' : 'price_usd'
+        query = query.order(priceCol, { ascending: false })
+      } else {
         query = query.order('created_at', { ascending: false })
-        // Apply pagination for non-price sorting
-        query = query.range(from, to)
       }
+
+      // Always apply pagination
+      query = query.range(from, to)
 
       const { data, error, count } = await query as { data: Product[] | null; error: any; count: number | null }
 
@@ -192,9 +221,16 @@ function ProductsContent() {
     }
 
     fetchProducts()
-  }, [category, collection, isNew, filter, gender, sort, currentPage, searchQuery])
+  }, [category, collection, isNew, filter, gender, sort, currentPage, debouncedSearchQuery, region])
 
   useEffect(() => {
+    // Skip sold-out fetch when price sorting (products query already includes them)
+    if (sort?.startsWith('price-')) {
+      setSoldOutProducts([])
+      setIsSoldOutLoading(false)
+      return
+    }
+
     async function fetchSoldOutProducts() {
       setIsSoldOutLoading(true)
 
@@ -223,14 +259,12 @@ function ProductsContent() {
         query = query.ilike('gender', gender)
       }
 
-      if (searchQuery.trim()) {
-        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+      if (debouncedSearchQuery.trim()) {
+        query = query.or(`name.ilike.%${debouncedSearchQuery}%,description.ilike.%${debouncedSearchQuery}%`)
       }
 
-      // Apply same sorting as main products (skip for price sorting)
-      if (!sort?.startsWith('price-')) {
-        query = query.order('created_at', { ascending: false })
-      }
+      query = query.order('created_at', { ascending: false })
+        .limit(12)
 
       const { data, error } = await query as { data: Product[] | null; error: any }
 
@@ -244,55 +278,7 @@ function ProductsContent() {
     }
 
     fetchSoldOutProducts()
-  }, [category, collection, gender, searchQuery, sort])
-
-  // Combine and sort all products when price sorting is active
-  const allProductsCombined = sort?.startsWith('price-') 
-    ? (() => {
-        const isIDR = region?.code === 'ID'
-        
-        // Pre-calculate prices once per product for efficiency
-        const productsWithPrices = products.map(product => {
-          const productWithVariants = product as any
-          const hasVariants = productWithVariants.variants && productWithVariants.variants.length > 0
-          let displayPrice = 0
-          
-          if (hasVariants) {
-            const variantPrices = productWithVariants.variants
-              .map((v: any) => Number(isIDR ? v.price_idr : v.price_usd) || 0)
-              .filter((p: number) => p > 0)
-            
-            if (variantPrices.length > 0) {
-              const minPrice = Math.min(...variantPrices)
-              const maxPrice = Math.max(...variantPrices)
-              // If variants have different prices, use minimum (hasPriceRange logic)
-              displayPrice = (minPrice > 0 && maxPrice > minPrice) ? minPrice : Number(isIDR ? product.price_idr : product.price_usd) || 0
-            } else {
-              displayPrice = Number(isIDR ? product.price_idr : product.price_usd) || 0
-            }
-          } else {
-            displayPrice = Number(isIDR ? product.price_idr : product.price_usd) || 0
-          }
-          
-          return { product, displayPrice }
-        })
-        
-        // Sort by pre-calculated prices
-        return productsWithPrices
-          .sort((a, b) => sort === 'price-asc' ? a.displayPrice - b.displayPrice : b.displayPrice - a.displayPrice)
-          .map(item => item.product)
-      })()
-    : null
-
-  // Apply pagination to sorted products
-  const allProductsSorted = allProductsCombined 
-    ? allProductsCombined.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-    : null
-
-  // Calculate total pages for price sorting
-  const totalPagesForPriceSorting = allProductsCombined 
-    ? Math.ceil(allProductsCombined.length / ITEMS_PER_PAGE)
-    : 0
+  }, [category, collection, gender, debouncedSearchQuery, sort])
 
   // Prevent hydration mismatch - render loading state until mounted
   if (!mounted) {
@@ -397,75 +383,52 @@ function ProductsContent() {
               </div>
             ) : products.length > 0 || soldOutProducts.length > 0 ? (
               <>
-                {allProductsSorted ? (
-                  /* When price sorting is active, show all products combined and sorted */
-                  <>
-                    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-                      {allProductsSorted.map((product: Product) => {
-                        const discount = productDiscounts.get(product.id)
-                        return (
-                          <ProductCard 
-                            key={product.id} 
-                            product={product}
-                            activeDiscount={discount || null}
-                            noBorder
-                          />
-                        )
-                      })}
-                    </div>
-                    <Pagination currentPage={currentPage} totalPages={totalPagesForPriceSorting} totalCount={allProductsCombined?.length} itemsPerPage={ITEMS_PER_PAGE} />
-                  </>
-                ) : (
-                  /* Default view: show in-stock products first, then sold-out section */
-                  <>
-                    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-                      {products.map((product: Product) => {
-                        const discount = productDiscounts.get(product.id)
-                        return (
-                          <ProductCard 
-                            key={product.id} 
-                            product={product}
-                            activeDiscount={discount || null}
-                            noBorder
-                          />
-                        )
-                      })}
-                    </div>
-                    <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} itemsPerPage={ITEMS_PER_PAGE} />
+                <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+                  {products.map((product: Product) => {
+                    const discount = productDiscounts.get(product.id)
+                    return (
+                      <ProductCard 
+                        key={product.id} 
+                        product={product}
+                        activeDiscount={discount || null}
+                        noBorder
+                      />
+                    )
+                  })}
+                </div>
+                <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} itemsPerPage={ITEMS_PER_PAGE} />
 
-                    {/* Sold Out Section */}
-                    {soldOutProducts.length > 0 && (
-                      <div className="mt-12 md:mt-16">
-                        <div className="mb-6 border-t border-gray-200 pt-8">
-                          <h2 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl">
-                            {t.productsPage.soldOut}
-                          </h2>
-                          <p className="mt-2 text-sm font-montserrat text-gray-500 font-semibold">
-                            {t.productsPage.soldOutDescription}
-                          </p>
-                        </div>
-                        {isSoldOutLoading ? (
-                          <div className="flex min-h-[200px] items-center justify-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-luxury-navy"></div>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-                            {soldOutProducts.map((product: Product) => {
-                              const discount = productDiscounts.get(product.id)
-                              return (
-                                <ProductCard 
-                                  key={product.id} 
-                                  product={product}
-                                  activeDiscount={discount || null}
-                                  noBorder
-                                />
-                              )
-                            })}
-                          </div>
-                        )}
+                {/* Sold Out Section - hidden when price sorting (already included in main grid) */}
+                {!sort?.startsWith('price-') && soldOutProducts.length > 0 && (
+                  <div className="mt-12 md:mt-16">
+                    <div className="mb-6 border-t border-gray-200 pt-8">
+                      <h2 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl">
+                        {t.productsPage.soldOut}
+                      </h2>
+                      <p className="mt-2 text-sm font-montserrat text-gray-500 font-semibold">
+                        {t.productsPage.soldOutDescription}
+                      </p>
+                    </div>
+                    {isSoldOutLoading ? (
+                      <div className="flex min-h-[200px] items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-luxury-navy"></div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+                        {soldOutProducts.map((product: Product) => {
+                          const discount = productDiscounts.get(product.id)
+                          return (
+                            <ProductCard 
+                              key={product.id} 
+                              product={product}
+                              activeDiscount={discount || null}
+                              noBorder
+                            />
+                          )
+                        })}
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </>
             ) : (

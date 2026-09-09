@@ -275,6 +275,7 @@ export default function RegisterPage() {
           {/* Decorative rings */}
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full border border-luxury-gold/10" />
           <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full border border-luxury-gold/10" />
+          <p className="text-white/40 font-montserrat text-[10px] tracking-[0.4em] uppercase mb-4 relative z-10">Join</p>
           <Link href="/" className="relative z-10">
             <span
               className="font-montserrat text-4xl font-semibold tracking-normal hover:opacity-90 transition-opacity"
@@ -284,6 +285,7 @@ export default function RegisterPage() {
             </span>
           </Link>
           <div className="w-10 h-px bg-luxury-gold mt-3 relative z-10" />
+          <p className="text-white/50 font-sans text-sm italic mt-4 relative z-10 text-center">Begin your journey with luxury fragrance</p>
         </div>
 
         <div className="w-full max-w-[460px] px-6 py-8 sm:px-8 lg:py-12">
@@ -307,7 +309,7 @@ export default function RegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-xs font-montserrat font-semibold uppercase tracking-widest text-gray-500 mb-2">
-                  {t.auth.firstName} *
+                  {t.auth.firstName}
                 </label>
                 <div className="border-b border-gray-200 focus-within:border-luxury-gold transition-colors duration-200">
                   <input
@@ -323,7 +325,7 @@ export default function RegisterPage() {
               </div>
               <div>
                 <label htmlFor="lastName" className="block text-xs font-montserrat font-semibold uppercase tracking-widest text-gray-500 mb-2">
-                  {t.auth.lastName} *
+                  {t.auth.lastName}
                 </label>
                 <div className="border-b border-gray-200 focus-within:border-luxury-gold transition-colors duration-200">
                   <input
@@ -342,7 +344,7 @@ export default function RegisterPage() {
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-xs font-montserrat font-semibold uppercase tracking-widest text-gray-500 mb-2">
-                {t.auth.emailAddress} *
+                {t.auth.emailAddress}
               </label>
               <div className="border-b border-gray-200 focus-within:border-luxury-gold transition-colors duration-200">
                 <input
@@ -377,7 +379,7 @@ export default function RegisterPage() {
             {/* Password */}
             <div>
               <label htmlFor="password" className="block text-xs font-montserrat font-semibold uppercase tracking-widest text-gray-500 mb-2">
-                {t.auth.password} *
+                {t.auth.password}
               </label>
               <div className="border-b border-gray-200 focus-within:border-luxury-gold transition-colors duration-200 flex items-center">
                 <input
@@ -406,7 +408,7 @@ export default function RegisterPage() {
             {/* Confirm Password */}
             <div>
               <label htmlFor="confirmPassword" className="block text-xs font-montserrat font-semibold uppercase tracking-widest text-gray-500 mb-2">
-                {t.auth.confirmPassword} *
+                {t.auth.confirmPassword}
               </label>
               <div className="border-b border-gray-200 focus-within:border-luxury-gold transition-colors duration-200 flex items-center">
                 <input

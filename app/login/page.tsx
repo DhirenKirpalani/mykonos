@@ -179,6 +179,7 @@ export default function LoginPage() {
           {/* Decorative rings */}
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full border border-luxury-gold/10" />
           <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full border border-luxury-gold/10" />
+          <p className="text-white/40 font-montserrat text-[10px] tracking-[0.4em] uppercase mb-4 relative z-10">Welcome to</p>
           <Link href="/" className="relative z-10">
             <span
               className="font-montserrat text-4xl font-semibold tracking-normal hover:opacity-90 transition-opacity"
@@ -188,6 +189,7 @@ export default function LoginPage() {
             </span>
           </Link>
           <div className="w-10 h-px bg-luxury-gold mt-3 relative z-10" />
+          <p className="text-white/50 font-sans text-sm italic mt-4 relative z-10 text-center">Discover the art of luxury fragrance</p>
         </div>
 
         <div className="w-full max-w-[420px] px-6 py-10 sm:px-8 lg:py-12">

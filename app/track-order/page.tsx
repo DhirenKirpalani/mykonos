@@ -16,6 +16,9 @@ import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 import { OrderDetailsModal } from '@/components/OrderDetailsModal'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
+const isDev = process.env.NODE_ENV === 'development'
+const debugLog = isDev ? console.log.bind(console) : () => {}
+
 type OrderItem = {
   id: string
   product_id: string
@@ -188,14 +191,14 @@ export default function TrackOrderPage() {
         // If user is logged in (not anonymous)
         if (session && !session.user.is_anonymous) {
           const authenticatedEmail = session.user.email
-          console.log('🔐 [SECURITY] User authenticated with email:', authenticatedEmail)
+          debugLog('🔐 [SECURITY] User authenticated with email:', authenticatedEmail)
           
           // Clear localStorage if it contains orders from a different email
           const orderHistory = localStorage.getItem('orderHistory')
           if (orderHistory) {
             const orders = JSON.parse(orderHistory)
             if (orders.length > 0 && orders[0].customer_email !== authenticatedEmail) {
-              console.log('🧹 [SECURITY] Clearing guest order history - email mismatch')
+              debugLog('🧹 [SECURITY] Clearing guest order history - email mismatch')
               localStorage.removeItem('orderHistory')
             }
           }
@@ -212,7 +215,7 @@ export default function TrackOrderPage() {
             console.error('Error fetching orders:', error)
           } else if (data) {
             setSessionOrders(data as Order[])
-            console.log('✅ [ORDER HISTORY] Loaded', data.length, 'orders for authenticated user')
+            debugLog('✅ [ORDER HISTORY] Loaded', data.length, 'orders for authenticated user')
           }
         } else {
           // Guest user - load from localStorage
@@ -231,7 +234,7 @@ export default function TrackOrderPage() {
               
               // If we filtered out orders, update localStorage
               if (filteredOrders.length !== orders.length) {
-                console.log('🧹 [SECURITY] Removing orders from different emails. Before:', orders.length, 'After:', filteredOrders.length)
+                debugLog('🧹 [SECURITY] Removing orders from different emails. Before:', orders.length, 'After:', filteredOrders.length)
                 localStorage.setItem('orderHistory', JSON.stringify(filteredOrders))
               }
             }
@@ -239,7 +242,7 @@ export default function TrackOrderPage() {
           
           // If we have an email, fetch ALL orders for that email from database
           if (mostRecentEmail) {
-            console.log('📚 [ORDER HISTORY] Fetching guest orders for:', mostRecentEmail)
+            debugLog('📚 [ORDER HISTORY] Fetching guest orders for:', mostRecentEmail)
             
             // Fetch summary only — full detail loaded on-demand when user clicks
             const { data, error } = await supabase
@@ -253,10 +256,10 @@ export default function TrackOrderPage() {
               console.error('Error fetching orders:', error)
             } else if (data) {
               setSessionOrders(data as Order[])
-              console.log('✅ [ORDER HISTORY] Loaded', data.length, 'guest orders from database')
+              debugLog('✅ [ORDER HISTORY] Loaded', data.length, 'guest orders from database')
             }
           } else {
-            console.log('⚠️ [ORDER HISTORY] No email found in localStorage')
+            debugLog('⚠️ [ORDER HISTORY] No email found in localStorage')
           }
         }
         
@@ -289,7 +292,7 @@ export default function TrackOrderPage() {
         const { order_number, customer_email } = JSON.parse(guestOrderInfo)
         
         if (order_number && customer_email) {
-          console.log('🔄 [AUTO-LOAD] Found saved order info, auto-loading...', {
+          debugLog('🔄 [AUTO-LOAD] Found saved order info, auto-loading...', {
             order_number,
             from: fromSession ? 'sessionStorage' : 'localStorage'
           })
@@ -315,10 +318,10 @@ export default function TrackOrderPage() {
                 // Don't show error toast for auto-load, just clear localStorage
                 if (!fromSession) {
                   localStorage.removeItem('guestOrderInfo')
-                  console.log('🗑️ [AUTO-LOAD] Cleared invalid order from localStorage')
+                  debugLog('🗑️ [AUTO-LOAD] Cleared invalid order from localStorage')
                 }
               } else {
-                console.log('✅ [AUTO-LOAD] Order loaded successfully')
+                debugLog('✅ [AUTO-LOAD] Order loaded successfully')
                 setOrder(json.order as Order)
                 // Clear sessionStorage after successful load (but keep localStorage)
                 if (fromSession) {
@@ -359,11 +362,11 @@ export default function TrackOrderPage() {
       return
     }
 
-    console.log('🔄 [POLLING] Starting real-time status polling for order:', order.order_number, 'Payment:', order.payment_status, 'Order:', order.status)
+    debugLog('🔄 [POLLING] Starting real-time status polling for order:', order.order_number, 'Payment:', order.payment_status, 'Order:', order.status)
 
     const pollInterval = setInterval(async () => {
       try {
-        console.log('🔍 [POLLING] Checking order status...')
+        debugLog('🔍 [POLLING] Checking order status...')
         const { data, error } = await supabase
           .from('orders')
           .select('payment_status, status, snap_token, stripe_session_id, stripe_payment_intent_id, expiry_time, payment_metadata, packed_at, shipped_at, tracking_number, tracking_url, carrier_code')
@@ -372,7 +375,7 @@ export default function TrackOrderPage() {
           .single()
 
         if (!error && data) {
-          console.log('📊 [POLLING] Fetched data:', {
+          debugLog('📊 [POLLING] Fetched data:', {
             payment_status: data.payment_status,
             status: data.status,
             has_metadata: !!data.payment_metadata
@@ -380,7 +383,7 @@ export default function TrackOrderPage() {
 
           // Check if payment status OR order status has changed
           if (data.payment_status !== order.payment_status || data.status !== order.status) {
-            console.log('🔔 [POLLING] Status changed:', {
+            debugLog('🔔 [POLLING] Status changed:', {
               old_payment: order.payment_status,
               new_payment: data.payment_status,
               old_status: order.status,
@@ -400,7 +403,7 @@ export default function TrackOrderPage() {
               toast.error(t('trackOrder.paymentFailed'))
             }
           } else {
-            console.log('✓ [POLLING] No status change detected')
+            debugLog('✓ [POLLING] No status change detected')
           }
         } else if (error) {
           console.error('❌ [POLLING] Error fetching order:', error)
@@ -412,7 +415,7 @@ export default function TrackOrderPage() {
 
     // Cleanup interval on unmount or when order changes
     return () => {
-      console.log('🛑 [POLLING] Stopping payment status polling')
+      debugLog('🛑 [POLLING] Stopping payment status polling')
       clearInterval(pollInterval)
     }
   }, [order?.order_number, order?.customer_email, order?.payment_status])
@@ -453,8 +456,8 @@ export default function TrackOrderPage() {
   const handleContinuePayment = async (orderToUse?: Order) => {
     const currentOrder = orderToUse || order
     
-    console.log('🔵 [PAYMENT DEBUG] handleContinuePayment called')
-    console.log('📦 [PAYMENT DEBUG] Order data:', {
+    debugLog('🔵 [PAYMENT DEBUG] handleContinuePayment called')
+    debugLog('📦 [PAYMENT DEBUG] Order data:', {
       order_id: currentOrder?.id,
       order_number: currentOrder?.order_number,
       payment_status: currentOrder?.payment_status,
@@ -473,7 +476,7 @@ export default function TrackOrderPage() {
     // Check if this is a Stripe order (non-ID region)
     const stripeSessionId = (currentOrder as any)?.stripe_session_id
     if (stripeSessionId) {
-      console.log('💳 [STRIPE] Detected Stripe order, redirecting to Stripe checkout...')
+      debugLog('💳 [STRIPE] Detected Stripe order, redirecting to Stripe checkout...')
       
       // Redirect to Stripe checkout
       try {
@@ -507,7 +510,7 @@ export default function TrackOrderPage() {
       return
     }
 
-    console.log('✅ [PAYMENT DEBUG] snap_token exists:', currentOrder.snap_token.substring(0, 20) + '...')
+    debugLog('✅ [PAYMENT DEBUG] snap_token exists:', currentOrder.snap_token.substring(0, 20) + '...')
 
     // Check if token is expired
     if (currentOrder.expiry_time && new Date(currentOrder.expiry_time) < new Date()) {
@@ -525,15 +528,15 @@ export default function TrackOrderPage() {
       return
     }
 
-    console.log('✅ [PAYMENT DEBUG] Token is valid and not expired')
+    debugLog('✅ [PAYMENT DEBUG] Token is valid and not expired')
     setIsProcessingPayment(true)
 
     try {
-      console.log('🔵 [PAYMENT DEBUG] Starting payment flow...')
+      debugLog('🔵 [PAYMENT DEBUG] Starting payment flow...')
       
       // Load Midtrans Snap script if not already loaded
       if (typeof window !== 'undefined' && !(window as any).snap) {
-        console.log('📥 [PAYMENT DEBUG] Loading Midtrans Snap script...')
+        debugLog('📥 [PAYMENT DEBUG] Loading Midtrans Snap script...')
         const script = document.createElement('script')
         script.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
         script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '')
@@ -541,7 +544,7 @@ export default function TrackOrderPage() {
         
         await new Promise((resolve, reject) => {
           script.onload = () => {
-            console.log('✅ [PAYMENT DEBUG] Midtrans Snap script loaded successfully')
+            debugLog('✅ [PAYMENT DEBUG] Midtrans Snap script loaded successfully')
             resolve(true)
           }
           script.onerror = () => {
@@ -550,17 +553,17 @@ export default function TrackOrderPage() {
           }
         })
       } else {
-        console.log('✅ [PAYMENT DEBUG] Midtrans Snap already loaded')
+        debugLog('✅ [PAYMENT DEBUG] Midtrans Snap already loaded')
       }
 
       // Open Snap modal
       if (typeof window !== 'undefined' && (window as any).snap) {
-        console.log('🚀 [PAYMENT DEBUG] Opening payment modal with token:', currentOrder.snap_token.substring(0, 20) + '...')
+        debugLog('🚀 [PAYMENT DEBUG] Opening payment modal with token:', currentOrder.snap_token.substring(0, 20) + '...')
         const snapPay = (window as any).snap.pay as Function
         snapPay(currentOrder.snap_token, {
           onSuccess: (result: any) => {
-            console.log('✅ [PAYMENT DEBUG] Payment successful!', result)
-            console.log('📊 [PAYMENT DEBUG] Success details:', {
+            debugLog('✅ [PAYMENT DEBUG] Payment successful!', result)
+            debugLog('📊 [PAYMENT DEBUG] Success details:', {
               order_id: result.order_id,
               transaction_id: result.transaction_id,
               payment_type: result.payment_type,
@@ -576,8 +579,8 @@ export default function TrackOrderPage() {
             }, 100)
           },
           onPending: (result: any) => {
-            console.log('⏳ [PAYMENT DEBUG] Payment pending', result)
-            console.log('📊 [PAYMENT DEBUG] Pending details:', {
+            debugLog('⏳ [PAYMENT DEBUG] Payment pending', result)
+            debugLog('📊 [PAYMENT DEBUG] Pending details:', {
               order_id: result.order_id,
               transaction_status: result.transaction_status
             })
@@ -600,7 +603,7 @@ export default function TrackOrderPage() {
             toast.error(t('trackOrder.paymentFailed'))
           },
           onClose: () => {
-            console.log('🔴 [PAYMENT DEBUG] Payment modal closed by user')
+            debugLog('🔴 [PAYMENT DEBUG] Payment modal closed by user')
             toast.info(t('trackOrder.paymentCancelled'))
             setIsProcessingPayment(false)
           }
@@ -618,7 +621,7 @@ export default function TrackOrderPage() {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log('🔍 [ORDER DEBUG] Searching for order...', {
+    debugLog('🔍 [ORDER DEBUG] Searching for order...', {
       email: email?.toLowerCase().trim(),
       orderNumber: orderNumber?.toUpperCase().trim()
     })
@@ -652,7 +655,7 @@ export default function TrackOrderPage() {
         return
       }
 
-      console.log('✅ [ORDER DEBUG] Order found!', {
+      debugLog('✅ [ORDER DEBUG] Order found!', {
         order_id: data.id,
         order_number: data.order_number,
         payment_status: data.payment_status,
@@ -664,7 +667,7 @@ export default function TrackOrderPage() {
         total_amount: data.total_amount
       })
 
-      console.log('📅 [TIMESTAMP DEBUG] Order timestamps:', {
+      debugLog('📅 [TIMESTAMP DEBUG] Order timestamps:', {
         created_at: data.created_at,
         packed_at: data.packed_at,
         shipped_at: data.shipped_at,
@@ -697,7 +700,7 @@ export default function TrackOrderPage() {
           customer_email: email.toLowerCase().trim()
         })
         localStorage.setItem('guestOrderInfo', orderInfo)
-        console.log('💾 [ORDER DEBUG] Order info saved to localStorage for guest user')
+        debugLog('💾 [ORDER DEBUG] Order info saved to localStorage for guest user')
         setShowCreateAccount(true)
       }
     } catch (error) {
@@ -1020,7 +1023,7 @@ export default function TrackOrderPage() {
 
               {/* Order Status Timeline */}
               {(() => {
-                console.log('🎯 [TIMELINE RENDER] Rendering OrderStatusTimeline with props:', {
+                debugLog('🎯 [TIMELINE RENDER] Rendering OrderStatusTimeline with props:', {
                   currentStatus: order.status,
                   paymentStatus: order.payment_status,
                   createdAt: order.created_at,
