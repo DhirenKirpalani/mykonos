@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase/client'
 export function useWishlistCount() {
   const [count, setCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   const fetchWishlistCount = async () => {
     try {
@@ -12,6 +13,7 @@ export function useWishlistCount() {
       
       if (!session) {
         setCount(0)
+        setIsAuthenticated(false)
         setIsLoading(false)
         return
       }
@@ -19,9 +21,12 @@ export function useWishlistCount() {
       // Skip anonymous users - wishlist only for registered users
       if (session.user.is_anonymous) {
         setCount(0)
+        setIsAuthenticated(false)
         setIsLoading(false)
         return
       }
+
+      setIsAuthenticated(true)
       // Fetch wishlist count from database - sum quantities like cart
       const { data, error } = await supabase
         .from('wishlist_items')
@@ -36,6 +41,7 @@ export function useWishlistCount() {
       setCount(totalItems)
     } catch (error) {
       setCount(0)
+      setIsAuthenticated(false)
     } finally {
       setIsLoading(false)
     }
@@ -61,5 +67,5 @@ export function useWishlistCount() {
     }
   }, [])
 
-  return { count, isLoading, refresh: fetchWishlistCount }
+  return { count, isLoading, isAuthenticated, refresh: fetchWishlistCount }
 }

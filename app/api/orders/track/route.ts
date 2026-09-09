@@ -40,6 +40,7 @@ export async function GET(request: Request) {
         snap_token,
         stripe_session_id,
         stripe_payment_intent_id,
+        paypal_order_id,
         expiry_time,
         payment_method_type,
         payment_gateway,

@@ -124,16 +124,16 @@ export const CartItemsList = memo(function CartItemsList({
                       {hasCampaignDiscount ? (
                         <>
                           <span className="line-through text-gray-400">
-                            {formatPrice(basePrice, regionCode || currency)}
+                            {formatPrice(basePrice, currency)}
                           </span>
                           {' '}
                           <span className="text-green-600 font-medium">
-                            {formatPrice(price, regionCode || currency)}
+                            {formatPrice(price, currency)}
                           </span>
                           {' / '}{t.cart.item}
                         </>
                       ) : (
-                        <>{formatPrice(price, regionCode || currency)} / {t.cart.item}</>
+                        <>{formatPrice(price, currency)} / {t.cart.item}</>
                       )}
                     </p>
                   </div>
@@ -158,11 +158,11 @@ export const CartItemsList = memo(function CartItemsList({
                     <div className="flex flex-col items-end">
                       {hasCampaignDiscount && (
                         <span className="text-xs text-gray-400 line-through">
-                          {formatPrice(basePrice * item.quantity, regionCode || currency)}
+                          {formatPrice(basePrice * item.quantity, currency)}
                         </span>
                       )}
                       <p className="text-sm sm:text-base font-bold text-gray-900">
-                        {formatPrice(price * item.quantity, regionCode || currency)}
+                        {formatPrice(price * item.quantity, currency)}
                       </p>
                     </div>
                   </div>

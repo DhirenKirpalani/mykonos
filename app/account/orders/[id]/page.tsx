@@ -53,6 +53,7 @@ type Order = Database['public']['Tables']['orders']['Row'] & {
   snap_token?: string | null
   stripe_session_id?: string | null
   stripe_payment_intent_id?: string | null
+  paypal_order_id?: string | null
   expiry_time?: string | null
   payment_metadata?: any
   payment_method_type?: string | null
@@ -329,12 +330,14 @@ export default function OrderDetailsPage() {
       // Continue payment using the gateway stored on the order
       const paymentGateway = (order as any)?.payment_gateway
       const stripeSessionId = (order as any)?.stripe_session_id
+      const paypalOrderId = (order as any)?.paypal_order_id
       const snapToken = order.snap_token
       const expiryTime = order.expiry_time
       
       console.log('🔍 [PAYMENT] Payment Details:')
       console.log('  - payment_gateway:', paymentGateway || 'MISSING')
       console.log('  - stripe_session_id:', stripeSessionId ? 'EXISTS' : 'MISSING')
+      console.log('  - paypal_order_id:', paypalOrderId ? 'EXISTS' : 'MISSING')
       console.log('  - snap_token:', snapToken ? 'EXISTS' : 'MISSING')
       console.log('  - expiry_time:', expiryTime || 'MISSING')
       
@@ -375,6 +378,14 @@ export default function OrderDetailsPage() {
           toast.error('Unable to continue payment. Please contact support.')
           setIsProcessingPayment(false)
         }
+        return
+      }
+
+      // For PayPal orders - redirect to checkout to re-initiate
+      if (paypalOrderId || paymentGateway === 'paypal') {
+        console.log('💳 [PAYPAL] Detected PayPal order, redirecting to checkout...')
+        toast.info('Redirecting to PayPal checkout...')
+        router.push('/checkout')
         return
       }
 
@@ -428,15 +439,16 @@ export default function OrderDetailsPage() {
           setIsProcessingPayment(false)
         }
       } else {
-        // No snap_token and no stripe_session_id - this shouldn't happen
+        // No snap_token, stripe_session_id, or paypal_order_id - this shouldn't happen
         console.error('❌ [PAYMENT] No payment token found!')
-        console.error('❌ [PAYMENT] This order has neither snap_token nor stripe_session_id')
+        console.error('❌ [PAYMENT] This order has neither snap_token, stripe_session_id, nor paypal_order_id')
         console.error('❌ [PAYMENT] Order data:', {
           id: order.id,
           order_number: order.order_number,
           payment_status: order.payment_status,
           snap_token: order.snap_token,
-          stripe_session_id: (order as any)?.stripe_session_id
+          stripe_session_id: (order as any)?.stripe_session_id,
+          paypal_order_id: (order as any)?.paypal_order_id
         })
         toast.error('Payment configuration error. Please contact support.')
         setIsProcessingPayment(false)

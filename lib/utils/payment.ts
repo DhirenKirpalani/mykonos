@@ -22,14 +22,13 @@ export type PaymentGatewayConfig = Record<PaymentRegionKey, PaymentGatewayRegion
  */
 export const DEFAULT_PAYMENT_GATEWAY_CONFIG: PaymentGatewayConfig = {
   ID: { enabled: ['midtrans', 'stripe'], default: 'midtrans' },
-  global: { enabled: ['stripe'], default: 'stripe' },
+  global: { enabled: ['paypal', 'stripe'], default: 'paypal' },
 }
 
 /**
  * Gateways that are fully implemented and safe to route orders to.
- * PayPal is intentionally excluded until its integration is complete.
  */
-const IMPLEMENTED_GATEWAYS: PaymentGateway[] = ['midtrans', 'stripe']
+const IMPLEMENTED_GATEWAYS: PaymentGateway[] = ['midtrans', 'stripe', 'paypal']
 
 /**
  * Maps a region code (e.g. 'ID', 'US', 'SG') to the payment region key.
@@ -88,9 +87,8 @@ export async function fetchPaymentGatewayConfig(): Promise<PaymentGatewayConfig>
  * @deprecated Prefer fetching the config via fetchPaymentGatewayConfig() and
  * calling resolveDefaultGateway() so the CMS-configured gateway is respected.
  */
-export function getPaymentGateway(regionCode: string | undefined): 'midtrans' | 'stripe' {
-  const gateway = resolveDefaultGateway(regionCode)
-  return gateway === 'paypal' ? 'stripe' : gateway
+export function getPaymentGateway(regionCode: string | undefined): PaymentGateway {
+  return resolveDefaultGateway(regionCode)
 }
 
 /**
@@ -99,7 +97,7 @@ export function getPaymentGateway(regionCode: string | undefined): 'midtrans' | 
  * - Midtrans only supports IDR, so it's only usable for the 'ID' region.
  *   If configured as default for 'global', falls back to Stripe.
  * - Stripe supports both USD and IDR, so it can be used for either region.
- * - PayPal falls back to an implemented gateway until it's built.
+ * - PayPal supports USD and major currencies, falls back to Stripe for IDR.
  */
 export function resolveCheckoutGateway(
   regionCode: string | undefined,
@@ -111,6 +109,11 @@ export function resolveCheckoutGateway(
   if (gateway === 'midtrans' && !isID) {
     console.warn("Payment gateway config requests Midtrans for a non-Indonesia region, but Midtrans only supports IDR. Falling back to Stripe.")
     gateway = 'stripe'
+  }
+
+  if (gateway === 'paypal' && isID) {
+    // PayPal doesn't support IDR well, fall back to Midtrans for Indonesia
+    gateway = 'midtrans'
   }
 
   return gateway
@@ -134,7 +137,7 @@ export function isZeroDecimalCurrency(currency: string): boolean {
  */
 export function convertToPaymentCurrency(
   amount: number,
-  gateway: 'midtrans' | 'stripe',
+  gateway: 'midtrans' | 'stripe' | 'paypal',
   currency: 'USD' | 'IDR'
 ): number {
   if (gateway === 'midtrans') {
@@ -144,7 +147,7 @@ export function convertToPaymentCurrency(
     }
     return Math.round(amount)
   } else {
-    // Stripe uses the original currency
+    // Stripe and PayPal use the original currency
     if (currency === 'IDR') {
       return amount / 15000 // IDR to USD conversion
     }
