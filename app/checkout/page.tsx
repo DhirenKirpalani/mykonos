@@ -43,6 +43,8 @@ import {
   resolveCheckoutGateway,
   type PaymentGatewayConfig,
 } from '@/lib/utils/payment'
+import { CartItemsList } from './components/CartItemsList'
+import { OrderSummary } from './components/OrderSummary'
 
 type CartItem = {
   id: string
@@ -143,7 +145,6 @@ export default function CheckoutPage() {
   const [editAvailableCities, setEditAvailableCities] = useState<string[]>([])
   const [shippingCost, setShippingCost] = useState<number | null>(null)
   const [isLoadingShipping, setIsLoadingShipping] = useState(false)
-  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([])
   const [quickAddedItems, setQuickAddedItems] = useState<CartItem[]>([])
   const [promoCode, setPromoCode] = useState('')
   const [appliedPromo, setAppliedPromo] = useState<any>(null)
@@ -151,7 +152,6 @@ export default function CheckoutPage() {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
   const [publicVouchers, setPublicVouchers] = useState<any[]>([])
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
-  const [isRecommendedExpanded, setIsRecommendedExpanded] = useState(true)
   const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string>('')
   const [paymentGatewayConfig, setPaymentGatewayConfig] = useState<PaymentGatewayConfig | null>(null)
@@ -594,9 +594,10 @@ export default function CheckoutPage() {
         }
       }
 
-      // Fire-and-forget: recommended products and vouchers (non-blocking)
-      fetchRecommendedProducts()
-      fetchPublicVouchers()
+      // Defer public voucher fetch until after main UI is rendered
+      requestIdleCallback(() => {
+        fetchPublicVouchers()
+      })
 
       setIsLoading(false)
     } catch (error: any) {
@@ -661,23 +662,6 @@ export default function CheckoutPage() {
     }
   }
 
-  const fetchRecommendedProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity')
-        .gt('stock_quantity', 0)
-        .limit(3)
-        .order('created_at', { ascending: false })
-
-      if (!error && data) {
-        setRecommendedProducts(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch recommended products:', error)
-    }
-  }
-
   const fetchPublicVouchers = async () => {
     try {
       const now = new Date().toISOString()
@@ -693,60 +677,6 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error('Failed to fetch public vouchers:', error)
-    }
-  }
-
-  const handleQuickAdd = async (productId: string) => {
-    try {
-      // Fetch product details
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity')
-        .eq('id', productId)
-        .single()
-
-      if (productError || !product) {
-        toast.error('Product not found')
-        return
-      }
-
-      // Type assertion for product data
-      const typedProduct = product as {
-        id: string
-        name: string
-        slug: string
-        image_urls: string[]
-        price_usd: number
-        price_idr: number
-      }
-
-      // Check if already added to quick items
-      const existingIndex = quickAddedItems.findIndex(item => item.product_id === productId)
-      
-      if (existingIndex >= 0) {
-        // Increase quantity
-        const updatedItems = [...quickAddedItems]
-        updatedItems[existingIndex].quantity += 1
-        setQuickAddedItems(updatedItems)
-      } else {
-        // Add new item
-        const newItem: CartItem = {
-          id: `quick-${productId}`,
-          product_id: productId,
-          quantity: 1,
-          product: {
-            name: typedProduct.name,
-            slug: typedProduct.slug,
-            image_urls: typedProduct.image_urls,
-            price_usd: typedProduct.price_usd,
-            price_idr: typedProduct.price_idr,
-          }
-        }
-        setQuickAddedItems([...quickAddedItems, newItem])
-      }
-    } catch (error) {
-      console.error('Quick add error:', error)
-      toast.error('Failed to add product')
     }
   }
 
@@ -2575,126 +2505,14 @@ export default function CheckoutPage() {
             })()}
 
             {/* Cart Items */}
-            {allItems.map((item) => {
-              const basePrice = getBasePrice(item.product, (item as any).variant_sku)
-              const salePrice = getEffectivePrice(basePrice, null)
-              const campaignDiscounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
-              const price = campaignDiscounted !== null ? campaignDiscounted : salePrice
-              const hasCampaignDiscount = campaignDiscounted !== null && campaignDiscounted < basePrice
-              
-              return (
-                <div key={item.id} className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
-                  <div className="flex gap-3 sm:gap-4">
-                    {/* Product Image */}
-                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                      {(() => {
-                        // Parse image field that may be a JSON string, array, or plain string
-                        const parseImg = (raw: any): string | null => {
-                          if (!raw) return null
-                          if (Array.isArray(raw)) return raw.filter(Boolean)[0] || null
-                          if (typeof raw === 'string') {
-                            try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean)[0] || null : raw } catch { return raw }
-                          }
-                          return null
-                        }
-
-                        // Prefer variant-specific image
-                        let displayImage: string | null = null
-                        if ((item as any).variant_name && item.product.variants) {
-                          const variants = Array.isArray(item.product.variants)
-                            ? item.product.variants
-                            : (() => { try { return JSON.parse(item.product.variants) } catch { return [] } })()
-                          const variant = variants.find((v: any) => v.name === (item as any).variant_name)
-                          if (variant?.image_url) displayImage = parseImg(variant.image_url)
-                        }
-
-                        // Fallback to product images
-                        if (!displayImage) {
-                          const raw = item.product.image_urls
-                          const urls: string[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw as any) } catch { return [] } })()
-                          displayImage = urls.find(u => u && !u.includes('placehold.co')) || null
-                        }
-
-                        return displayImage ? (
-                          <img
-                            src={displayImage}
-                            alt={(item as any).variant_name || item.product.name}
-                            className="w-full h-full object-contain p-2"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                            No image
-                          </div>
-                        )
-                      })()}
-                    </div>
-
-                    {/* Product Details & Controls */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      {/* Product Name and Remove Button */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-medium text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
-                            {(item as any).variant_name || item.product.name}
-                          </h3>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {hasCampaignDiscount ? (
-                              <>
-                                <span className="line-through text-gray-400">
-                                  {formatPrice(basePrice, region?.currency_code || currency)}
-                                </span>
-                                {' '}
-                                <span className="text-green-600 font-medium">
-                                  {formatPrice(price, region?.currency_code || currency)}
-                                </span>
-                                {' / '}{t.cart.item}
-                              </>
-                            ) : (
-                              <>
-                                {formatPrice(price, region?.currency_code || currency)} / {t.cart.item}
-                              </>
-                            )}
-                          </p>
-                        </div>
-                        {item.id.startsWith('quick-') && (
-                          <button
-                            onClick={() => removeQuickItem(item.product_id)}
-                            className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
-                            aria-label="Remove item"
-                          >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Quantity and Total */}
-                      <div className="flex flex-col gap-1 mt-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm sm:text-base text-gray-600">
-                            {t.trackOrder.qty}: {item.quantity}
-                          </span>
-                          <div className="flex flex-col items-end">
-                            {hasCampaignDiscount && (
-                              <span className="text-xs text-gray-400 line-through">
-                                {formatPrice(basePrice * item.quantity, region?.currency_code || currency)}
-                              </span>
-                            )}
-                            <p className="text-sm sm:text-base font-bold text-gray-900">
-                              {formatPrice(price * item.quantity, region?.currency_code || currency)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+            <CartItemsList
+              items={allItems}
+              regionCode={region?.code}
+              currency={currency}
+              activeDiscounts={activeDiscounts}
+              removeQuickItem={removeQuickItem}
+              t={t}
+            />
 
 
             {/* Shipping Address Section - For logged in users */}
@@ -3019,230 +2837,34 @@ export default function CheckoutPage() {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 lg:sticky lg:top-4">
-              <h2 className="text-xl font-montserrat font-bold text-gray-900 mb-4">{t.checkout.orderSummary}</h2>
-
-              {/* Promo Code Section — only show when cart has items */}
-              {allItems.length > 0 && <div className="mb-4 pb-4 border-b border-gray-200">
-                <h3 className="text-sm font-montserrat font-semibold text-gray-900 mb-3">{t.checkout.promoCode}</h3>
-
-                {/* Public voucher tiles */}
-                {!appliedPromo && publicVouchers.length > 0 && (
-                  <div className="space-y-2 mb-3">
-                    {publicVouchers.map((v) => {
-                      const discountLabel = v.discount_type === 'percentage'
-                        ? `${v.discount_value}% off`
-                        : formatCurrencyPrice(v.discount_value, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })
-                      const minLabel = v.min_purchase_amount
-                        ? `Min. ${formatCurrencyPrice(v.min_purchase_amount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}`
-                        : null
-                      return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => applyPromoCode(v.code)}
-                          disabled={isApplyingPromo}
-                          className="w-full flex items-center justify-between p-3 rounded-lg border border-dashed border-luxury-gold bg-luxury-gold/5 hover:bg-luxury-gold/10 transition-colors text-left group"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-luxury-gold font-mono tracking-wide">{v.code}</p>
-                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                              {minLabel && (
-                                <span className="text-[10px] text-gray-500">{minLabel}</span>
-                              )}
-                              {v.valid_until && (
-                                <VoucherExpiryInfo validUntil={v.valid_until} />
-                              )}
-                            </div>
-                          </div>
-                          <div className="ml-3 flex-shrink-0 flex flex-col items-end gap-2">
-                            <span className="text-sm font-bold text-luxury-gold">{discountLabel}</span>
-                            <span className="text-xs font-semibold text-luxury-gold border border-luxury-gold px-3 py-1 rounded-md group-hover:bg-luxury-gold group-hover:text-white transition-colors">
-                              Apply
-                            </span>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {appliedPromo ? (
-                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-green-900">
-                        {appliedPromo.code || appliedPromo.promo_code?.code}
-                        {appliedPromo.promo_code && (
-                          <span className="font-normal text-green-700">
-                            {' '}— {appliedPromo.promo_code.discount_type === 'percentage'
-                              ? `${appliedPromo.promo_code.discount_value}% off`
-                              : `${formatCurrencyPrice(appliedPromo.promo_code.discount_value, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })} off`
-                            } applied
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-green-700">You save {formatCurrencyPrice(displayDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</p>
-                    </div>
-                    <button
-                      onClick={removePromoCode}
-                      className="text-green-700 hover:text-green-900 text-sm font-medium"
-                    >
-                      {t.checkout.remove}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      type="text"
-                      placeholder={t.checkout.enterCode}
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      className="flex-1 text-sm"
-                    />
-                    <Button
-                      onClick={() => applyPromoCode()}
-                      disabled={isApplyingPromo || !promoCode.trim()}
-                      variant="outline"
-                      size="sm"
-                      className="px-4 min-w-[90px]"
-                    >
-                      {isApplyingPromo ? (
-                        <span className="flex items-center gap-2">
-                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                          {t.checkout.applying}
-                        </span>
-                      ) : t.checkout.apply}
-                    </Button>
-                  </div>
-                )}
-              </div>}
-
-              {/* Price Breakdown */}
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{t.checkout.subtotal}</span>
-                  <span className="font-medium text-gray-900">
-                    {formatCurrencyPrice(displaySubtotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}
-                  </span>
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>{t.checkout.discount}</span>
-                    <span className="font-medium">-{formatCurrencyPrice(displayDiscount, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span className="flex items-center gap-2">
-                    {t.checkout.shipping}
-                    {isLoadingShipping && (
-                      <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        Calculating...
-                      </span>
-                    )}
-                  </span>
-                  <span className={`font-medium ${shippingCost === null || shippingCost === 0 ? 'text-gray-500' : 'text-gray-900'}`}>
-                    {shippingCost === null ? (
-                      <span className="text-xs italic">{t.checkout.shippingCalculated}</span>
-                    ) : shippingCost === 0 ? (
-                      <span className="text-green-600">{t.checkout.free}</span>
-                    ) : (
-                      formatCurrencyPrice(displayShipping, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })
-                    )}
-                  </span>
-                </div>
-                {tax > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>{t.checkout.tax}</span>
-                    <span className="font-medium text-gray-900">{formatCurrencyPrice(displayTax, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Total */}
-              <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                <span className="text-base font-bold text-gray-900">{t.checkout.total}</span>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-luxury-navy">{formatCurrencyPrice(displayTotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
-                  </p>
-                </div>
-              </div>
-              {/* Checkout Button - For both logged-in and guest users */}
-              <div className="mt-6">
-              {!isGuest ? (
-                <>
-                  <Button
-                    onClick={handlePlaceOrder}
-                    disabled={isProcessing || !selectedAddressId || allItems.length === 0}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-semibold py-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        {t.checkout.preparingOrder}
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        {!pendingOrder && <Lock className="h-5 w-5" />}
-                        {pendingOrder ? 'Continue Payment' : t.checkout.placeOrder} · {formatCurrencyPrice(displayTotal, (region?.currency_code || currency) as any, { currencyDisplay: 'code' })}
-                      </span>
-                    )}
-                  </Button>
-
-                  {/* Payment Methods */}
-                  <div className="mt-4">
-                    <PaymentMethods size="small" showTitle />
-                  </div>
-
-                  {!selectedAddressId && savedAddresses.length === 0 && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-700 text-center font-medium">
-                        {t.checkout.pleaseAddAddress}
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Button
-                    onClick={() => setShowCheckoutModal(true)}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-semibold py-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-                    size="lg"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <Lock className="h-5 w-5" />
-                      {t.checkout.continueToCheckout}
-                    </span>
-                  </Button>
-
-                  {/* Payment Methods */}
-                  <div className="mt-4">
-                    <PaymentMethods size="small" showTitle />
-                  </div>
-                </>
-              )}
-
-              {/* Trust Badges */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <Lock className="h-3 w-3" />
-                    <span>{t.checkout.secureCheckout}</span>
-                  </div>
-                  <div className="w-px h-4 bg-gray-300"></div>
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span>{t.checkout.safePayment}</span>
-                  </div>
-                </div>
-              </div>
-              </div>
-            </div>
-          </div>
+          <OrderSummary
+            allItems={allItems}
+            publicVouchers={publicVouchers}
+            appliedPromo={appliedPromo}
+            promoCode={promoCode}
+            setPromoCode={setPromoCode}
+            isApplyingPromo={isApplyingPromo}
+            discount={discount}
+            displaySubtotal={displaySubtotal}
+            displayShipping={displayShipping}
+            displayTax={displayTax}
+            displayDiscount={displayDiscount}
+            displayTotal={displayTotal}
+            shippingCost={shippingCost}
+            isLoadingShipping={isLoadingShipping}
+            tax={tax}
+            regionCurrency={region?.currency_code || currency}
+            isGuest={isGuest}
+            isProcessing={isProcessing}
+            selectedAddressId={selectedAddressId || ''}
+            savedAddresses={savedAddresses}
+            pendingOrder={pendingOrder}
+            onApplyPromo={applyPromoCode}
+            onRemovePromo={removePromoCode}
+            onPlaceOrder={handlePlaceOrder}
+            onShowCheckoutModal={() => setShowCheckoutModal(true)}
+            t={t}
+          />
         </div>
       </div>
 
