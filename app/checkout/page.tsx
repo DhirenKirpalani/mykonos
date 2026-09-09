@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -123,6 +123,7 @@ export default function CheckoutPage() {
   const { validateAddress, isValidating, validationResult } = useAddressValidation()
   const wasAlreadySignedIn = useRef(false)
   const promoRestoredRef = useRef(false)
+  const prefetchedExchangeRateRef = useRef<number | null>(null)
   const [userId, setUserId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -300,6 +301,20 @@ export default function CheckoutPage() {
       setPromoCode(savedCode)
     } catch {}
   }, [cartItems])
+
+  // Prefetch exchange rates for non-USD regions to speed up order placement
+  useEffect(() => {
+    if (!region?.currency_code || region.currency_code === 'USD') return
+    if (prefetchedExchangeRateRef.current !== null) return
+    fetch('/api/exchange-rates')
+      .then(res => res.ok ? res.json() : null)
+      .then(rates => {
+        if (rates && rates[region.currency_code!]) {
+          prefetchedExchangeRateRef.current = 1 / rates[region.currency_code!]
+        }
+      })
+      .catch(() => {})
+  }, [region?.currency_code])
 
   const initializeCheckout = async () => {
     try {
@@ -1030,22 +1045,23 @@ export default function CheckoutPage() {
           })
           .filter(Boolean)
         
-        // Calculate exchange rate for non-USD currencies
+        // Use prefetched exchange rate, or fetch if not available
         let exchangeRate = null
         if (region?.currency_code && region.currency_code !== 'USD') {
-          // Fetch current exchange rate
-          try {
-            const ratesResponse = await fetch('/api/exchange-rates')
-            if (ratesResponse.ok) {
-              const rates = await ratesResponse.json()
-              if (rates[region.currency_code]) {
-                // Store the rate from USD to local currency (e.g., 1 USD = 36 THB)
-                // But we want to store the reverse (1 THB = X USD) for historical accuracy
-                exchangeRate = 1 / rates[region.currency_code]
+          if (prefetchedExchangeRateRef.current !== null) {
+            exchangeRate = prefetchedExchangeRateRef.current
+          } else {
+            try {
+              const ratesResponse = await fetch('/api/exchange-rates')
+              if (ratesResponse.ok) {
+                const rates = await ratesResponse.json()
+                if (rates[region.currency_code]) {
+                  exchangeRate = 1 / rates[region.currency_code]
+                }
               }
+            } catch (error) {
+              console.error('Failed to fetch exchange rates:', error)
             }
-          } catch (error) {
-            console.error('Failed to fetch exchange rates:', error)
           }
         }
 
@@ -2180,11 +2196,13 @@ export default function CheckoutPage() {
     }
   }
 
-  // Fetch shipping cost when address is selected (wait for region to load)
+  // Fetch shipping cost when address is selected (debounced to avoid rapid API calls)
   useEffect(() => {
-    if (selectedAddressId && savedAddresses.length > 0 && region) {
+    if (!selectedAddressId || savedAddresses.length === 0 || !region) return
+    const timer = setTimeout(() => {
       fetchShippingCost()
-    }
+    }, 400)
+    return () => clearTimeout(timer)
   }, [selectedAddressId, region])
 
   const fetchShippingCost = async (address?: any): Promise<number | null> => {
@@ -2382,8 +2400,51 @@ export default function CheckoutPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="min-h-screen bg-white font-montserrat">
+        {/* Hero Header Skeleton */}
+        <div className="border-b border-border/40 bg-luxury-gray-light py-10 md:py-12">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="h-10 w-48 bg-gray-200 rounded-lg animate-pulse mb-2" />
+            <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+          <div className="grid lg:grid-cols-3 gap-4 lg:gap-8">
+            {/* Left column skeleton */}
+            <div className="lg:col-span-2 space-y-4">
+              {[1, 2].map(i => (
+                <div key={i} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 animate-pulse">
+                  <div className="flex gap-4">
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-3/4 bg-gray-200 rounded" />
+                      <div className="h-3 w-1/3 bg-gray-200 rounded" />
+                      <div className="h-4 w-1/4 bg-gray-200 rounded mt-4" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Address skeleton */}
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse mt-6">
+                <div className="h-6 w-40 bg-gray-200 rounded mb-4" />
+                <div className="h-20 w-full bg-gray-100 rounded-lg" />
+              </div>
+            </div>
+            {/* Right column skeleton */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse sticky top-4">
+                <div className="h-6 w-32 bg-gray-200 rounded mb-4" />
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between"><div className="h-4 w-16 bg-gray-200 rounded" /><div className="h-4 w-20 bg-gray-200 rounded" /></div>
+                  <div className="flex justify-between"><div className="h-4 w-16 bg-gray-200 rounded" /><div className="h-4 w-20 bg-gray-200 rounded" /></div>
+                </div>
+                <div className="h-px bg-gray-200 my-4" />
+                <div className="flex justify-between"><div className="h-6 w-16 bg-gray-200 rounded" /><div className="h-6 w-28 bg-gray-200 rounded" /></div>
+                <div className="h-12 w-full bg-gray-200 rounded-lg mt-6" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -2417,6 +2478,65 @@ export default function CheckoutPage() {
           <p className="font-playfair text-lg text-muted-foreground">
             {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
           </p>
+        </div>
+      </div>
+
+      {/* Checkout Progress Indicator */}
+      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {/* Step 1: Address */}
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+              selectedAddressId || isGuest
+                ? 'bg-luxury-navy text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}>
+              {selectedAddressId || isGuest ? (
+                <CheckCircle2 className="h-5 w-5" />
+              ) : '1'}
+            </div>
+            <span className={`text-sm font-medium hidden sm:inline ${
+              selectedAddressId || isGuest ? 'text-gray-900' : 'text-gray-500'
+            }`}>
+              {t.checkout.stepAddress}
+            </span>
+          </div>
+          {/* Connector */}
+          <div className={`h-px w-8 sm:w-16 ${selectedAddressId || isGuest ? 'bg-luxury-navy' : 'bg-gray-200'}`} />
+          {/* Step 2: Review */}
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+              allItems.length > 0
+                ? 'bg-luxury-navy text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}>
+              {allItems.length > 0 ? (
+                <CheckCircle2 className="h-5 w-5" />
+              ) : '2'}
+            </div>
+            <span className={`text-sm font-medium hidden sm:inline ${
+              allItems.length > 0 ? 'text-gray-900' : 'text-gray-500'
+            }`}>
+              {t.checkout.stepReview}
+            </span>
+          </div>
+          {/* Connector */}
+          <div className={`h-px w-8 sm:w-16 ${isProcessing ? 'bg-luxury-navy' : 'bg-gray-200'}`} />
+          {/* Step 3: Payment */}
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+              isProcessing
+                ? 'bg-luxury-navy text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}>
+              3
+            </div>
+            <span className={`text-sm font-medium hidden sm:inline ${
+              isProcessing ? 'text-gray-900' : 'text-gray-500'
+            }`}>
+              {t.checkout.stepPayment}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -2982,9 +3102,14 @@ export default function CheckoutPage() {
                       disabled={isApplyingPromo || !promoCode.trim()}
                       variant="outline"
                       size="sm"
-                      className="px-4"
+                      className="px-4 min-w-[90px]"
                     >
-                      {isApplyingPromo ? t.checkout.applying : t.checkout.apply}
+                      {isApplyingPromo ? (
+                        <span className="flex items-center gap-2">
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                          {t.checkout.applying}
+                        </span>
+                      ) : t.checkout.apply}
                     </Button>
                   </div>
                 )}
@@ -3054,8 +3179,8 @@ export default function CheckoutPage() {
                   >
                     {isProcessing ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="animate-spin">⏳</span>
-                        {t.checkout.processing}
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        {t.checkout.preparingOrder}
                       </span>
                     ) : (
                       <span className="flex items-center justify-center gap-2">
