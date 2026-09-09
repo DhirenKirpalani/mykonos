@@ -76,6 +76,9 @@ type Address = {
   is_default: boolean
 }
 
+const isDev = process.env.NODE_ENV === 'development'
+const debugLog = isDev ? console.log.bind(console) : () => {}
+
 function VoucherExpiryInfo({ validUntil }: { validUntil: string }) {
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(null)
 
@@ -172,13 +175,6 @@ export default function CheckoutPage() {
     
     // Load payment gateway config once
     fetchPaymentGatewayConfig().then(setPaymentGatewayConfig)
-    
-    // Load Midtrans Snap script
-    const snapScript = document.createElement('script')
-    snapScript.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
-    snapScript.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '')
-    snapScript.async = true
-    document.head.appendChild(snapScript)
 
     // Check if this is a Buy Now flow
     const urlParams = new URLSearchParams(window.location.search)
@@ -200,7 +196,7 @@ export default function CheckoutPage() {
     const handlePageShow = (event: PageTransitionEvent) => {
       // If page is loaded from bfcache (browser back button), reinitialize
       if (event.persisted) {
-        console.log('🔄 [CHECKOUT] Page loaded from bfcache, reinitializing...')
+        debugLog('🔄 [CHECKOUT] Page loaded from bfcache, reinitializing...')
         setIsLoading(true)
         initializeCheckout()
       }
@@ -209,64 +205,39 @@ export default function CheckoutPage() {
 
     // Listen for cart updates only in cart flow (not buy now or order again flow)
     const handleCartUpdate = async () => {
-      console.log('🔔 [CHECKOUT] Received cart-updated event')
-      // Only refetch if we're in cart flow, not buy now or order again flow
       const urlParams = new URLSearchParams(window.location.search)
       const isBuyNowFlow = urlParams.get('buyNow') === 'true'
       const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
       
-      console.log('🔍 [CHECKOUT] Is buy now flow?', isBuyNowFlow)
-      console.log('🔍 [CHECKOUT] Is order again flow?', isOrderAgainFlow)
-      
       if (!isBuyNowFlow && !isOrderAgainFlow) {
-        console.log('🔄 [CHECKOUT] Refetching cart items...')
         // Small delay to ensure database has been updated
         await new Promise(resolve => setTimeout(resolve, 100))
-        // Refetch cart items when cart is updated
-        await initializeCheckout()
-        console.log('✅ [CHECKOUT] Cart items refetched')
-      } else {
-        console.log('⚠️ [CHECKOUT] Skipping refetch (buy now or order again flow)')
+        // Only refetch cart items and discounts, not addresses/recommended/vouchers
+        await refetchCartOnly()
       }
     }
     window.addEventListener('cart-updated', handleCartUpdate)
-    console.log('👂 [CHECKOUT] Event listener registered for cart-updated')
 
     // Listen for auth state changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 [CHECKOUT] Auth state changed:', event, session?.user?.id)
-      
       if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
-        // Skip if user was already signed in (Supabase fires SIGNED_IN on session
-        // refresh/desktop switch — not a real new login)
         if (wasAlreadySignedIn.current) return
 
-        // Check if page is about to reload (flag set by CheckoutModal)
         const isReloading = sessionStorage.getItem('checkout_reloading')
-        if (isReloading) {
-          console.log('⏭️ [CHECKOUT] Skipping re-initialization, page is reloading...')
-          return
-        }
+        if (isReloading) return
         
-        console.log('✅ [CHECKOUT] User signed in, waiting for cart merge...')
         // Wait a bit for cart merge to complete
         await new Promise(resolve => setTimeout(resolve, 500))
-        // Refetch cart items after login
         const urlParams = new URLSearchParams(window.location.search)
         const isBuyNowFlow = urlParams.get('buyNow') === 'true'
         const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
         if (!isBuyNowFlow && !isOrderAgainFlow) {
-          console.log('🔄 [CHECKOUT] Refetching cart after login...')
-          await initializeCheckout()
+          await refetchCartOnly()
         }
       }
     })
 
     return () => {
-      // Cleanup script on unmount
-      if (snapScript.parentNode) {
-        snapScript.parentNode.removeChild(snapScript)
-      }
       window.removeEventListener('cart-updated', handleCartUpdate)
       window.removeEventListener('pageshow', handlePageShow)
       subscription.unsubscribe()
@@ -274,6 +245,31 @@ export default function CheckoutPage() {
       try { sessionStorage.removeItem('checkout_applied_promo') } catch {}
     }
   }, [])
+
+  // Conditionally load Midtrans Snap script only when Midtrans is enabled
+  useEffect(() => {
+    if (!paymentGatewayConfig) return
+    const enabledGateways = [
+      ...(paymentGatewayConfig.ID?.enabled || []),
+      ...(paymentGatewayConfig.global?.enabled || []),
+    ]
+    if (!enabledGateways.includes('midtrans')) return
+
+    const existing = document.querySelector('script[src*="midtrans.com/snap/snap.js"]')
+    if (existing) return
+
+    const snapScript = document.createElement('script')
+    snapScript.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
+    snapScript.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '')
+    snapScript.async = true
+    document.head.appendChild(snapScript)
+
+    return () => {
+      if (snapScript.parentNode) {
+        snapScript.parentNode.removeChild(snapScript)
+      }
+    }
+  }, [paymentGatewayConfig])
 
   // Clear promo when cart becomes empty
   useEffect(() => {
@@ -321,7 +317,6 @@ export default function CheckoutPage() {
       setIsLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       
-      // Set user email and ID for address formatting
       if (session?.user?.email) {
         setUserEmail(session.user.email)
       }
@@ -329,47 +324,34 @@ export default function CheckoutPage() {
         setUserId(session.user.id)
       }
       
-      console.log('🔍 [CHECKOUT INIT] Session info:', {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        isAnonymous: session?.user?.is_anonymous
-      })
-      
-      // Check if guest or logged-in user
       const guestUser = !session || session.user.is_anonymous === true
       setIsGuest(guestUser)
       if (!guestUser) wasAlreadySignedIn.current = true
 
-      // Check for Buy Now items in sessionStorage
       const buyNowItemsStr = sessionStorage.getItem('buyNowItems')
-      console.log('🔍 [CHECKOUT INIT] Buy now items in storage:', buyNowItemsStr ? 'YES' : 'NO')
-      
-      // Check for Order Again items in sessionStorage
       const orderAgainItemsStr = sessionStorage.getItem('orderAgainItems')
-      console.log('🔍 [CHECKOUT INIT] Order again items in storage:', orderAgainItemsStr ? 'YES' : 'NO')
       
-      // Check URL params to determine flow
       const urlParams = new URLSearchParams(window.location.search)
       const isBuyNowFlow = urlParams.get('buyNow') === 'true'
       const isOrderAgainFlow = urlParams.get('orderAgain') === 'true'
-      console.log('🔍 [CHECKOUT INIT] Is buy now flow from URL?', isBuyNowFlow)
-      console.log('🔍 [CHECKOUT INIT] Is order again flow from URL?', isOrderAgainFlow)
       
-      // Clear buyNowItems if not in buy now flow to prevent interference
       if (buyNowItemsStr && !isBuyNowFlow) {
-        console.log('⚠️ [CHECKOUT INIT] Clearing stale buyNowItems from sessionStorage')
         sessionStorage.removeItem('buyNowItems')
       }
-      
-      // Clear orderAgainItems if not in order again flow to prevent interference
       if (orderAgainItemsStr && !isOrderAgainFlow) {
-        console.log('⚠️ [CHECKOUT INIT] Clearing stale orderAgainItems from sessionStorage')
         sessionStorage.removeItem('orderAgainItems')
       }
-      
+
+      // Start address fetch in parallel (independent of cart flow)
+      const addressPromise = (session && !session.user.is_anonymous)
+        ? supabase
+            .from('shipping_addresses')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('is_default', { ascending: false })
+        : Promise.resolve({ data: null, error: null } as any)
+
       if (orderAgainItemsStr && isOrderAgainFlow) {
-        // Handle Order Again flow - fetch product details for multiple products
-        console.log('🔄 [CHECKOUT INIT] Using ORDER AGAIN flow')
         const orderAgainItems = JSON.parse(orderAgainItemsStr)
         
         if (!Array.isArray(orderAgainItems) || orderAgainItems.length === 0) {
@@ -379,31 +361,39 @@ export default function CheckoutPage() {
           return
         }
         
-        // Get unique product IDs from order items
         const productIds = Array.from(new Set(orderAgainItems.map((item: any) => item.product_id)))
-        
-        // Fetch all products
-        const { data: products, error: productsError } = await supabase
-          .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
-          .in('id', productIds)
+        const orderNow = new Date().toISOString()
 
-        if (productsError || !products || products.length === 0) {
+        // Fetch products and discounts in parallel with addresses
+        const [productsResult, orderDiscountsResult, addressResult] = await Promise.all([
+          supabase
+            .from('products')
+            .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants')
+            .in('id', productIds),
+          supabase
+            .from('discount_products')
+            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
+            .eq('is_active', true)
+            .eq('discounts.is_active', true)
+            .lte('discounts.start_date', orderNow)
+            .gte('discounts.end_date', orderNow)
+            .in('product_id', productIds),
+          addressPromise,
+        ])
+
+        if (productsResult.error || !productsResult.data || productsResult.data.length === 0) {
           toast.error('Products not found')
           sessionStorage.removeItem('orderAgainItems')
           router.push('/checkout')
           return
         }
 
-        // Create a map of products by ID for easy lookup
-        const productMap = new Map(products.map((p: any) => [p.id, p]))
+        const productMap = new Map(productsResult.data.map((p: any) => [p.id, p]))
 
-        // Create cart items structure for Order Again
         const orderAgainCartItems = orderAgainItems
           .map((item: any, index: number) => {
             const product = productMap.get(item.product_id)
             if (!product) return null
-
             return {
               id: `order-again-temp-${index}`,
               product_id: product.id,
@@ -423,23 +413,9 @@ export default function CheckoutPage() {
           })
           .filter((item: any) => item !== null) as CartItem[]
 
-        console.log('✅ [CHECKOUT INIT] Order again cart items created:', orderAgainCartItems.length)
-        console.log('📦 [CHECKOUT INIT] Order again items:', orderAgainCartItems)
         setCartItems(orderAgainCartItems)
-        setIsBuyNow(true) // Treat order again like buy now (don't refetch cart)
+        setIsBuyNow(true)
         
-        // Fetch active vouchers AND discounts for order again items in parallel
-        const orderAgainProductIds = orderAgainCartItems.map((item: any) => item.product_id)
-        const orderNow = new Date().toISOString()
-        const orderDiscountsResult = await supabase
-            .from('discount_products')
-            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
-            .eq('is_active', true)
-            .eq('discounts.is_active', true)
-            .lte('discounts.start_date', orderNow)
-            .gte('discounts.end_date', orderNow)
-            .in('product_id', orderAgainProductIds)
-
         if (orderDiscountsResult.data && orderDiscountsResult.data.length > 0) {
           const discMap = new Map<string, any>()
           orderDiscountsResult.data.forEach((d: any) => {
@@ -450,9 +426,19 @@ export default function CheckoutPage() {
           })
           setActiveDiscounts(discMap)
         }
+
+        // Process address result
+        if (addressResult.data) {
+          const addresses = (addressResult.data as Address[]) || []
+          setSavedAddresses(addresses)
+          const defaultAddress = addresses.find((a: Address) => a.is_default)
+          if (defaultAddress) {
+            setSelectedAddressId(defaultAddress.id)
+          } else if (addresses.length > 0) {
+            setSelectedAddressId(addresses[0].id)
+          }
+        }
       } else if (buyNowItemsStr && isBuyNowFlow) {
-        // Handle Buy Now flow - fetch product details
-        console.log('🛍️ [CHECKOUT INIT] Using BUY NOW flow')
         const buyNowItems = JSON.parse(buyNowItemsStr)
         
         if (!Array.isArray(buyNowItems) || buyNowItems.length === 0) {
@@ -462,26 +448,36 @@ export default function CheckoutPage() {
           return
         }
         
-        // Get unique product ID (all items should be from same product)
         const productId = buyNowItems[0].product_id
-        
-        const { data: product, error: productError } = await supabase
-          .from('products')
-          .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled')
-          .eq('id', productId)
-          .single()
+        const buyNowNow = new Date().toISOString()
 
-        if (productError || !product) {
+        // Fetch product, discounts, and addresses in parallel
+        const [productResult, buyNowDiscountsResult, addressResult] = await Promise.all([
+          supabase
+            .from('products')
+            .select('id, name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled')
+            .eq('id', productId)
+            .single(),
+          supabase
+            .from('discount_products')
+            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
+            .eq('is_active', true)
+            .eq('discounts.is_active', true)
+            .lte('discounts.start_date', buyNowNow)
+            .gte('discounts.end_date', buyNowNow)
+            .eq('product_id', productId),
+          addressPromise,
+        ])
+
+        if (productResult.error || !productResult.data) {
           toast.error('Product not found')
           sessionStorage.removeItem('buyNowItems')
           router.push('/checkout')
           return
         }
 
-        // Type assertion for product data
-        const typedProduct = product as any
+        const typedProduct = productResult.data as any
 
-        // Create cart items structure for Buy Now (one item per variant)
         const buyNowCartItems = buyNowItems.map((item, index) => ({
           id: `buy-now-temp-${index}`,
           product_id: typedProduct.id,
@@ -504,17 +500,6 @@ export default function CheckoutPage() {
 
         setCartItems(buyNowCartItems)
         
-        // Fetch campaign discounts for buy now items
-        const buyNowNow = new Date().toISOString()
-        const buyNowDiscountsResult = await supabase
-            .from('discount_products')
-            .select(`product_id, variant_id, discounted_price, discounts!inner(start_date, end_date, is_active)`)
-            .eq('is_active', true)
-            .eq('discounts.is_active', true)
-            .lte('discounts.start_date', buyNowNow)
-            .gte('discounts.end_date', buyNowNow)
-            .eq('product_id', productId)
-
         if (buyNowDiscountsResult.data && buyNowDiscountsResult.data.length > 0) {
           const discMap = new Map<string, any>()
           buyNowDiscountsResult.data.forEach((d: any) => {
@@ -525,113 +510,91 @@ export default function CheckoutPage() {
           })
           setActiveDiscounts(discMap)
         }
-      } else {
-        // Regular cart flow - fetch cart items
-        console.log('🛒 [CHECKOUT INIT] Using CART flow')
-        let cart: any[] = []
-        let cartError: any = null
 
-        if (session?.user) {
-          // Use user_id for both anonymous and authenticated users (matches cart drawer)
-          console.log('🔍 [CHECKOUT INIT] Querying cart with user_id:', session.user.id, '(anonymous:', session.user.is_anonymous, ')')
-          console.log('🔍 [CHECKOUT INIT] About to execute cart query...')
-          const { data, error } = await supabase
+        // Process address result
+        if (addressResult.data) {
+          const addresses = (addressResult.data as Address[]) || []
+          setSavedAddresses(addresses)
+          const defaultAddress = addresses.find((a: Address) => a.is_default)
+          if (defaultAddress) {
+            setSelectedAddressId(defaultAddress.id)
+          } else if (addresses.length > 0) {
+            setSelectedAddressId(addresses[0].id)
+          }
+        }
+      } else {
+        // Regular cart flow - fetch cart, discounts, and addresses in parallel
+        if (!session?.user) {
+          setCartItems([])
+        } else {
+          const { data: cart, error: cartError } = await supabase
             .from('cart_items')
             .select(`
               *,
               product:products(name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled)
             `)
             .eq('user_id', session.user.id)
-          console.log('🔍 [CHECKOUT INIT] Cart query completed, processing results...')
-          cart = data || []
-          cartError = error
-          console.log('🔍 [CHECKOUT INIT] Cart result:', { 
-            itemCount: cart.length, 
-            error: cartError,
-            rawData: data,
-            items: cart.map((item: any) => ({ 
-              id: item.id, 
-              product_id: item.product_id, 
-              quantity: item.quantity,
-              product_name: item.product?.name 
-            }))
-          })
-        } else {
-          console.log('⚠️ [CHECKOUT INIT] No session.user found')
-        }
 
-        if (cartError) {
-          console.error('❌ [CHECKOUT INIT] Cart query error:', cartError)
-          throw cartError
-        }
+          if (cartError) throw cartError
 
-        if (!cart || cart.length === 0) {
-          console.log('⚠️ [CHECKOUT INIT] Cart is empty, showing empty state')
-          setCartItems([])
-        } else {
-          console.log('✅ [CHECKOUT INIT] Setting cart items:', cart.length)
-          setCartItems(cart as any)
-          
-          // Fetch campaign discounts for cart items
-          const productIds = cart.map((item: any) => item.product_id)
-          const now = new Date().toISOString()
-          const discountsResult = await supabase
-              .from('discount_products')
-              .select(`
-                product_id,
-                variant_id,
-                discounted_price,
-                discounts!inner(
-                  id,
-                  start_date,
-                  end_date,
-                  is_active
-                )
-              `)
-              .eq('is_active', true)
-              .eq('discounts.is_active', true)
-              .lte('discounts.start_date', now)
-              .gte('discounts.end_date', now)
-              .in('product_id', productIds)
+          if (!cart || cart.length === 0) {
+            setCartItems([])
+          } else {
+            setCartItems(cart as any)
+            
+            // Fetch discounts and addresses in parallel (discounts depend on cart product IDs)
+            const productIds = cart.map((item: any) => item.product_id)
+            const now = new Date().toISOString()
 
-          // Build activeDiscounts map: key = "productId-variantName" or "productId"
-          if (discountsResult.data && discountsResult.data.length > 0) {
-            const discountMap = new Map<string, any>()
-            discountsResult.data.forEach((d: any) => {
-              const key = d.variant_id ? `${d.product_id}-${d.variant_id}` : d.product_id
-              // Keep lower price if multiple discounts for same key
-              if (!discountMap.has(key) || d.discounted_price < discountMap.get(key).discounted_price) {
-                discountMap.set(key, d)
+            const [discountsResult, addressResult] = await Promise.all([
+              supabase
+                .from('discount_products')
+                .select(`
+                  product_id,
+                  variant_id,
+                  discounted_price,
+                  discounts!inner(
+                    id,
+                    start_date,
+                    end_date,
+                    is_active
+                  )
+                `)
+                .eq('is_active', true)
+                .eq('discounts.is_active', true)
+                .lte('discounts.start_date', now)
+                .gte('discounts.end_date', now)
+                .in('product_id', productIds),
+              addressPromise,
+            ])
+
+            if (discountsResult.data && discountsResult.data.length > 0) {
+              const discountMap = new Map<string, any>()
+              discountsResult.data.forEach((d: any) => {
+                const key = d.variant_id ? `${d.product_id}-${d.variant_id}` : d.product_id
+                if (!discountMap.has(key) || d.discounted_price < discountMap.get(key).discounted_price) {
+                  discountMap.set(key, d)
+                }
+              })
+              setActiveDiscounts(discountMap)
+            }
+
+            // Process address result
+            if (addressResult.data) {
+              const addresses = (addressResult.data as Address[]) || []
+              setSavedAddresses(addresses)
+              const defaultAddress = addresses.find((a: Address) => a.is_default)
+              if (defaultAddress) {
+                setSelectedAddressId(defaultAddress.id)
+              } else if (addresses.length > 0) {
+                setSelectedAddressId(addresses[0].id)
               }
-            })
-            setActiveDiscounts(discountMap)
+            }
           }
         }
       }
 
-      // Fetch addresses only for logged-in users
-      if (session && !session.user.is_anonymous) {
-        const { data: addressData, error: addressError } = await supabase
-          .from('shipping_addresses')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('is_default', { ascending: false })
-
-        if (addressError) throw addressError
-
-        const addresses = (addressData as Address[]) || []
-        setSavedAddresses(addresses)
-        
-        // Select default address
-        const defaultAddress = addresses.find((a: Address) => a.is_default)
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress.id)
-        } else if (addresses.length > 0) {
-          setSelectedAddressId(addresses[0].id)
-        }
-      }
-
-      // Fetch recommended products for quick add
+      // Fire-and-forget: recommended products and vouchers (non-blocking)
       fetchRecommendedProducts()
       fetchPublicVouchers()
 
@@ -640,6 +603,61 @@ export default function CheckoutPage() {
       console.error('Failed to initialize checkout:', error)
       toast.error('Failed to load checkout')
       setIsLoading(false)
+    }
+  }
+
+  // Lightweight cart refetch — only fetches cart items and discounts, skips addresses/recommended/vouchers
+  const refetchCartOnly = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+
+      const { data: cart, error: cartError } = await supabase
+        .from('cart_items')
+        .select(`
+          *,
+          product:products(name, slug, image_urls, price_usd, price_idr, stock_quantity, min_purchase_quantity, max_purchase_quantity, variants, tax_enabled)
+        `)
+        .eq('user_id', session.user.id)
+
+      if (cartError) throw cartError
+
+      if (!cart || cart.length === 0) {
+        setCartItems([])
+        return
+      }
+
+      setCartItems(cart as any)
+
+      // Fetch discounts for cart items
+      const productIds = cart.map((item: any) => item.product_id)
+      const now = new Date().toISOString()
+      const { data: discountsData } = await supabase
+        .from('discount_products')
+        .select(`
+          product_id,
+          variant_id,
+          discounted_price,
+          discounts!inner(id, start_date, end_date, is_active)
+        `)
+        .eq('is_active', true)
+        .eq('discounts.is_active', true)
+        .lte('discounts.start_date', now)
+        .gte('discounts.end_date', now)
+        .in('product_id', productIds)
+
+      if (discountsData && discountsData.length > 0) {
+        const discountMap = new Map<string, any>()
+        discountsData.forEach((d: any) => {
+          const key = d.variant_id ? `${d.product_id}-${d.variant_id}` : d.product_id
+          if (!discountMap.has(key) || d.discounted_price < discountMap.get(key).discounted_price) {
+            discountMap.set(key, d)
+          }
+        })
+        setActiveDiscounts(discountMap)
+      }
+    } catch (error: any) {
+      console.error('Failed to refetch cart:', error)
     }
   }
 
@@ -753,7 +771,7 @@ export default function CheckoutPage() {
     // Users should explicitly navigate to their order details page and click
     // "Continue Payment" there if they want to resume a pending order.
     
-    console.log('⚠️ [CHECKOUT] Pending order check disabled - always showing "Place Order"')
+    debugLog('⚠️ [CHECKOUT] Pending order check disabled - always showing "Place Order"')
     return
     
     /* Original code commented out:
@@ -784,7 +802,7 @@ export default function CheckoutPage() {
               const order = data[0] as any
               if (!order.expiry_time || new Date(order.expiry_time) > new Date()) {
                 setPendingOrder(order)
-                console.log('✅ [CHECKOUT] Found pending order:', order.order_number)
+                debugLog('✅ [CHECKOUT] Found pending order:', order.order_number)
               }
             }
           })
@@ -801,7 +819,7 @@ export default function CheckoutPage() {
               const order = data[0] as any
               if (!order.expiry_time || new Date(order.expiry_time) > new Date()) {
                 setPendingOrder(order)
-                console.log('✅ [CHECKOUT] Found pending order:', order.order_number)
+                debugLog('✅ [CHECKOUT] Found pending order:', order.order_number)
               }
             }
           })
@@ -885,7 +903,7 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
-    console.log('🚀 [ORDER] handlePlaceOrder called')
+    debugLog('🚀 [ORDER] handlePlaceOrder called')
     
     // Validate cart quantities before proceeding
     if (!validateCartQuantities()) {
@@ -894,7 +912,7 @@ export default function CheckoutPage() {
     
     // For guests, show modal to collect email and shipping info
     if (isGuest) {
-      console.log('👤 [ORDER] Guest user detected, showing checkout modal')
+      debugLog('👤 [ORDER] Guest user detected, showing checkout modal')
       setShowCheckoutModal(true)
       return
     }
@@ -906,14 +924,14 @@ export default function CheckoutPage() {
       return
     }
 
-    console.log('✅ [ORDER] Starting order placement for authenticated user')
-    console.log('📦 [ORDER] Cart items:', cartItems.length)
-    console.log('📍 [ORDER] Selected address ID:', selectedAddressId)
+    debugLog('✅ [ORDER] Starting order placement for authenticated user')
+    debugLog('📦 [ORDER] Cart items:', cartItems.length)
+    debugLog('📍 [ORDER] Selected address ID:', selectedAddressId)
     
     setIsProcessing(true)
     try {
       // Get current user session
-      console.log('🔐 [ORDER] Getting user session...')
+      debugLog('🔐 [ORDER] Getting user session...')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         console.error('❌ [ORDER] No session found')
@@ -921,13 +939,13 @@ export default function CheckoutPage() {
         setIsProcessing(false)
         return
       }
-      console.log('✅ [ORDER] Session found, user ID:', session.user.id)
+      debugLog('✅ [ORDER] Session found, user ID:', session.user.id)
 
       // Check if this is a Buy Now or Order Again flow with items still in sessionStorage
       const buyNowItemsStr = sessionStorage.getItem('buyNowItems')
       const orderAgainItemsStr = sessionStorage.getItem('orderAgainItems')
-      console.log('🛒 [ORDER] Buy Now items in storage:', buyNowItemsStr ? 'Yes' : 'No')
-      console.log('🔄 [ORDER] Order Again items in storage:', orderAgainItemsStr ? 'Yes' : 'No')
+      debugLog('🛒 [ORDER] Buy Now items in storage:', buyNowItemsStr ? 'Yes' : 'No')
+      debugLog('🔄 [ORDER] Order Again items in storage:', orderAgainItemsStr ? 'Yes' : 'No')
       
       let sessionData
       
@@ -937,7 +955,7 @@ export default function CheckoutPage() {
       const isOrderAgainFlow = orderAgainItemsStr && cartItems.length > 0 && cartItems[0].id?.startsWith('order-again-temp')
       
       if (isBuyNowFlow || isOrderAgainFlow) {
-        console.log(`🎯 [ORDER] Using ${isBuyNowFlow ? 'Buy Now' : 'Order Again'} flow with manual cart snapshot`)
+        debugLog(`🎯 [ORDER] Using ${isBuyNowFlow ? 'Buy Now' : 'Order Again'} flow with manual cart snapshot`)
         // For Buy Now/Order Again: Create checkout session with manual cart snapshot
         
         // Build cart snapshot from cart items in state
@@ -981,26 +999,26 @@ export default function CheckoutPage() {
           }
         })
         
-        console.log('📝 [ORDER] Creating manual checkout session...')
-        console.log('📦 [BUY NOW] Cart snapshot:', cartSnapshot)
+        debugLog('📝 [ORDER] Creating manual checkout session...')
+        debugLog('📦 [BUY NOW] Cart snapshot:', cartSnapshot)
         
         // Calculate tax only for taxable items in manual checkout
         const manualTaxableAmount = cartSnapshot.reduce((total: number, item: any) => {
-          console.log(`🔍 [BUY NOW] Tax check for product ${item.product_id}:`, {
+          debugLog(`🔍 [BUY NOW] Tax check for product ${item.product_id}:`, {
             tax_enabled: item.tax_enabled,
             price: item.price,
             quantity: item.quantity
           })
           if (item.tax_enabled) {
             const itemAmount = item.price * item.quantity
-            console.log(`  ✅ [BUY NOW] Adding to taxable amount: ${itemAmount}`)
+            debugLog(`  ✅ [BUY NOW] Adding to taxable amount: ${itemAmount}`)
             return total + itemAmount
           }
-          console.log(`  ❌ [BUY NOW] Tax disabled, skipping`)
+          debugLog(`  ❌ [BUY NOW] Tax disabled, skipping`)
           return total
         }, 0)
         const manualTax = manualTaxableAmount * 0.1
-        console.log(`💰 [BUY NOW] Taxable amount: ${manualTaxableAmount}, Tax (10%): ${manualTax}`)
+        debugLog(`💰 [BUY NOW] Taxable amount: ${manualTaxableAmount}, Tax (10%): ${manualTax}`)
         const manualShipping = shippingCost ?? 0
 
         const sessionResponse = await fetch('/api/checkout/session/manual', {
@@ -1021,17 +1039,17 @@ export default function CheckoutPage() {
         })
         
         sessionData = await sessionResponse.json()
-        console.log('📋 [ORDER] Manual session response:', sessionData)
+        debugLog('📋 [ORDER] Manual session response:', sessionData)
         if (!sessionResponse.ok) {
           console.error('❌ [ORDER] Failed to create manual checkout session:', sessionData.error)
           throw new Error(sessionData.error || 'Failed to create checkout session')
         }
-        console.log('✅ [ORDER] Manual checkout session created:', sessionData.session_id)
+        debugLog('✅ [ORDER] Manual checkout session created:', sessionData.session_id)
       } else {
         // Regular cart flow: Create checkout session from cart
         // This includes Buy Now items that have been transferred to cart after login
-        console.log('🛍️ [ORDER] Using regular cart flow')
-        console.log('📝 [ORDER] Creating checkout session from cart...')
+        debugLog('🛍️ [ORDER] Using regular cart flow')
+        debugLog('📝 [ORDER] Creating checkout session from cart...')
         
         // Build item discounts to pass to API (so cart_snapshot stores discounted prices)
         const itemDiscountsForSession = cartItems
@@ -1080,16 +1098,16 @@ export default function CheckoutPage() {
         })
 
         sessionData = await sessionResponse.json()
-        console.log('📋 [ORDER] Session response:', sessionData)
+        debugLog('📋 [ORDER] Session response:', sessionData)
         if (!sessionResponse.ok) {
           console.error('❌ [ORDER] Failed to create checkout session:', sessionData.error)
           throw new Error(sessionData.error || 'Failed to create checkout session')
         }
-        console.log('✅ [ORDER] Checkout session created:', sessionData.session_id)
+        debugLog('✅ [ORDER] Checkout session created:', sessionData.session_id)
       }
 
       // Update with shipping address
-      console.log('📦 [ORDER] Updating session with shipping address...')
+      debugLog('📦 [ORDER] Updating session with shipping address...')
       const updateResponse = await fetch('/api/checkout/session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -1106,7 +1124,7 @@ export default function CheckoutPage() {
         console.error('❌ [ORDER] Failed to update shipping info:', updateData.error)
         throw new Error(updateData.error || 'Failed to update shipping info')
       }
-      console.log('✅ [ORDER] Session updated with shipping address')
+      debugLog('✅ [ORDER] Session updated with shipping address')
 
       const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId)
       if (!selectedAddress) {
@@ -1129,7 +1147,7 @@ export default function CheckoutPage() {
 
       // Resolve the payment gateway based on CMS config and region
       const activeGateway = resolveCheckoutGateway(region?.code, paymentGatewayConfig)
-      console.log('💳 [CHECKOUT] Resolved payment gateway:', activeGateway, 'for region:', region?.code)
+      debugLog('💳 [CHECKOUT] Resolved payment gateway:', activeGateway, 'for region:', region?.code)
 
       // Build items array including shipping and tax
       const itemsForMidtrans = [
@@ -1179,7 +1197,7 @@ export default function CheckoutPage() {
       ]
 
       // ⭐ CRITICAL: Save shipping address to checkout session BEFORE creating order
-      console.log('📍 [CHECKOUT] Saving shipping address to checkout session...')
+      debugLog('📍 [CHECKOUT] Saving shipping address to checkout session...')
       try {
         await fetch('/api/checkout/session', {
           method: 'PATCH',
@@ -1198,14 +1216,14 @@ export default function CheckoutPage() {
             }
           })
         })
-        console.log('✅ [CHECKOUT] Shipping address saved to checkout session')
+        debugLog('✅ [CHECKOUT] Shipping address saved to checkout session')
       } catch (error) {
         console.error('❌ [CHECKOUT] Failed to save shipping address:', error)
         throw new Error('Failed to save shipping address')
       }
 
       // ⭐ STEP 1: Create order FIRST (before token generation)
-      console.log('📝 [ORDER] Creating order before payment...')
+      debugLog('📝 [ORDER] Creating order before payment...')
       const initialOrderResponse = await fetch('/api/orders/create-before-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1222,13 +1240,13 @@ export default function CheckoutPage() {
         console.error('❌ [ORDER] Failed to create order:', orderData.error)
         throw new Error(orderData.error || 'Failed to create order')
       }
-      console.log('✅ [ORDER] Order created:', orderData.order_number)
+      debugLog('✅ [ORDER] Order created:', orderData.order_number)
       // Immediately reset cart badge
       window.dispatchEvent(new Event('cart-updated'))
       
       // Route to the configured payment gateway
       if (activeGateway === 'stripe') {
-        console.log('💳 [STRIPE] Creating Stripe checkout session...')
+        debugLog('💳 [STRIPE] Creating Stripe checkout session...')
         const stripeCurrency = isIDRegion ? 'idr' : 'usd'
         
         // Compute Stripe line items ensuring they sum exactly to checkout total
@@ -1295,31 +1313,31 @@ export default function CheckoutPage() {
           throw new Error(stripeData.error || 'Failed to create Stripe session')
         }
         
-        console.log('✅ [STRIPE] Redirecting to Stripe checkout...')
+        debugLog('✅ [STRIPE] Redirecting to Stripe checkout...')
         setIsProcessing(false)
         window.location.href = stripeData.url
         return
       }
       
       // For Midtrans gateway
-      console.log('💳 [MIDTRANS] Processing payment via Midtrans...')
+      debugLog('💳 [MIDTRANS] Processing payment via Midtrans...')
       
       // Check if this is a guest user
       const isGuest = session?.user?.is_anonymous
-      console.log('🔵 [DEBUG] Is guest user?', isGuest)
-      console.log('🔵 [DEBUG] Session:', session)
+      debugLog('🔵 [DEBUG] Is guest user?', isGuest)
+      debugLog('🔵 [DEBUG] Session:', session)
 
       // Check for existing pending order FIRST (applies to both guests and logged-in users)
       // This prevents duplicate inventory reservations
       if (orderData.is_existing) {
-        console.log('♻️ [ORDER] Reusing existing pending order')
+        debugLog('♻️ [ORDER] Reusing existing pending order')
         toast.info(t.checkout.continuingPendingOrder)
 
         // For guest orders, always redirect to tracking page
         if (isGuest) {
           const customerEmail = orderData.customer_email || ''
           const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
-          console.log('🔵 [GUEST REUSE] Redirecting guest to existing order tracking:', redirectUrl)
+          debugLog('🔵 [GUEST REUSE] Redirecting guest to existing order tracking:', redirectUrl)
           setIsProcessing(false)
           setTimeout(() => {
             window.location.href = redirectUrl
@@ -1329,7 +1347,7 @@ export default function CheckoutPage() {
 
         // For Stripe orders, reuse existing checkout session URL
         if (orderData.payment_gateway === 'stripe' && orderData.stripe_session_id) {
-          console.log('💳 [STRIPE] Reusing existing Stripe checkout session:', orderData.stripe_session_id)
+          debugLog('💳 [STRIPE] Reusing existing Stripe checkout session:', orderData.stripe_session_id)
           try {
             const response = await fetch(`/api/stripe/checkout-session/${orderData.stripe_session_id}`)
             const data = await response.json()
@@ -1349,37 +1367,37 @@ export default function CheckoutPage() {
         if (orderData.snap_token && orderData.expiry_time) {
           const expiryDate = new Date(orderData.expiry_time)
           if (expiryDate > new Date()) {
-            console.log('✅ [ORDER] Reusing existing snap_token')
+            debugLog('✅ [ORDER] Reusing existing snap_token')
             
             // Logged-in users: open payment modal with existing token
             const redirectUrl = '/account/orders/' + orderData.order_id
-            console.log('🔵 [USER REUSE] Redirect URL for logged-in user:', redirectUrl)
+            debugLog('🔵 [USER REUSE] Redirect URL for logged-in user:', redirectUrl)
             
             if (typeof window !== 'undefined' && (window as any).snap) {
               ;(window as any).snap.pay(orderData.snap_token, {
                 onSuccess: (result: any) => {
-                  console.log('✅ [PAYMENT] Payment successful!', result)
+                  debugLog('✅ [PAYMENT] Payment successful!', result)
                   toast.success('Payment successful! Processing your order...')
-                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
                   router.push(redirectUrl)
                   setIsProcessing(false)
                 },
                 onPending: (result: any) => {
-                  console.log('⏳ [PAYMENT] Payment pending', result)
+                  debugLog('⏳ [PAYMENT] Payment pending', result)
                   toast.info('Payment pending. You can continue payment later.')
-                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
                   router.push(redirectUrl)
                   setIsProcessing(false)
                 },
                 onError: (result: any) => {
                   console.error('❌ [PAYMENT] Payment error', result)
                   toast.error('Payment failed. You can retry later.')
-                  console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+                  debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
                   router.push(redirectUrl)
                   setIsProcessing(false)
                 },
                 onClose: () => {
-                  console.log('🚪 [PAYMENT] Payment modal closed by user')
+                  debugLog('🚪 [PAYMENT] Payment modal closed by user')
                   toast.info(t.checkout.continuePaymentLater)
                   router.push(redirectUrl)
                   setIsProcessing(false)
@@ -1388,7 +1406,7 @@ export default function CheckoutPage() {
               return // Exit early, no need to generate new token
             }
           } else {
-            console.log('⏰ [ORDER] Existing snap_token expired, generating new one')
+            debugLog('⏰ [ORDER] Existing snap_token expired, generating new one')
           }
         }
       }
@@ -1397,7 +1415,7 @@ export default function CheckoutPage() {
       if (isGuest) {
         const customerEmail = orderData.customer_email || ''
         const redirectUrl = '/track-order?order=' + orderData.order_number + '&email=' + encodeURI(customerEmail)
-        console.log('🔵 [GUEST] Redirecting guest immediately to:', redirectUrl)
+        debugLog('🔵 [GUEST] Redirecting guest immediately to:', redirectUrl)
         toast.success('Order created! Redirecting to tracking page...')
         setIsProcessing(false)
         setTimeout(() => {
@@ -1407,12 +1425,12 @@ export default function CheckoutPage() {
       }
 
       // ⭐ STEP 2: Generate Midtrans token using order_number
-      console.log('💳 [ORDER] Creating Midtrans payment token...')
-      console.log('💰 [ORDER] Total amount (IDR):', convertToIDR(total))
-      console.log('📋 [ORDER] Selected Address:', selectedAddress)
-      console.log('📋 [ORDER] Full Name:', selectedAddress.full_name)
-      console.log('📋 [ORDER] Phone:', selectedAddress.phone)
-      console.log('📋 [ORDER] Email:', session.user.email)
+      debugLog('💳 [ORDER] Creating Midtrans payment token...')
+      debugLog('💰 [ORDER] Total amount (IDR):', convertToIDR(total))
+      debugLog('📋 [ORDER] Selected Address:', selectedAddress)
+      debugLog('📋 [ORDER] Full Name:', selectedAddress.full_name)
+      debugLog('📋 [ORDER] Phone:', selectedAddress.phone)
+      debugLog('📋 [ORDER] Email:', session.user.email)
       
       // Safely extract customer details with fallbacks
       const addressData = selectedAddress as any // Cast to any for fallback checks
@@ -1421,11 +1439,11 @@ export default function CheckoutPage() {
       const lastName = fullName.split(' ').slice(1).join(' ') || ''
       const phone = selectedAddress.phone || addressData.phone_number || session.user.user_metadata?.phone || '0000000000'
       
-      console.log('📋 [ORDER] Extracted - First Name:', firstName)
-      console.log('📋 [ORDER] Extracted - Last Name:', lastName)
-      console.log('📋 [ORDER] Extracted - Phone:', phone)
-      console.log('📦 [ORDER] Items for Midtrans:', itemsForMidtrans)
-      console.log('📦 [ORDER] Items count:', itemsForMidtrans?.length || 0)
+      debugLog('📋 [ORDER] Extracted - First Name:', firstName)
+      debugLog('📋 [ORDER] Extracted - Last Name:', lastName)
+      debugLog('📋 [ORDER] Extracted - Phone:', phone)
+      debugLog('📦 [ORDER] Items for Midtrans:', itemsForMidtrans)
+      debugLog('📦 [ORDER] Items count:', itemsForMidtrans?.length || 0)
       
       // Ensure items is always an array
       const safeItems = Array.isArray(itemsForMidtrans) && itemsForMidtrans.length > 0 
@@ -1437,7 +1455,7 @@ export default function CheckoutPage() {
             quantity: 1
           }]
       
-      console.log('📦 [ORDER] Safe Items:', safeItems)
+      debugLog('📦 [ORDER] Safe Items:', safeItems)
       
       const midtransResponse = await fetch('/api/midtrans/create-token', {
         method: 'POST',
@@ -1469,14 +1487,14 @@ export default function CheckoutPage() {
       })
 
       const midtransData = await midtransResponse.json()
-      console.log('🎫 [ORDER] Midtrans response:', midtransData)
+      debugLog('🎫 [ORDER] Midtrans response:', midtransData)
 
       if (!midtransResponse.ok) {
         console.error('❌ [ORDER] Failed to create payment token:', midtransData.error)
         throw new Error(midtransData.error || 'Failed to create payment token')
       }
-      console.log('✅ [ORDER] Payment token created successfully')
-      console.log('📊 [TOKEN DEBUG] Midtrans token details:', {
+      debugLog('✅ [ORDER] Payment token created successfully')
+      debugLog('📊 [TOKEN DEBUG] Midtrans token details:', {
         token_preview: midtransData.token?.substring(0, 20) + '...',
         token_length: midtransData.token?.length,
         has_redirect_url: !!midtransData.redirect_url,
@@ -1484,8 +1502,8 @@ export default function CheckoutPage() {
       })
 
       // ⭐ STEP 3: Save snap_token back to order
-      console.log('💾 [TOKEN DEBUG] Saving snap_token to order...')
-      console.log('📤 [TOKEN DEBUG] Update request payload:', {
+      debugLog('💾 [TOKEN DEBUG] Saving snap_token to order...')
+      debugLog('📤 [TOKEN DEBUG] Update request payload:', {
         order_id: orderData.order_id,
         token_length: midtransData.token?.length,
         has_redirect_url: !!midtransData.redirect_url
@@ -1501,7 +1519,7 @@ export default function CheckoutPage() {
         }),
       })
 
-      console.log('📥 [TOKEN DEBUG] Update response status:', updateTokenResponse.status)
+      debugLog('📥 [TOKEN DEBUG] Update response status:', updateTokenResponse.status)
 
       if (!updateTokenResponse.ok) {
         const errorData = await updateTokenResponse.json().catch(() => ({ error: 'Unknown error' }))
@@ -1514,43 +1532,43 @@ export default function CheckoutPage() {
         console.error('⚠️ [ORDER] Failed to save snap_token, but continuing...')
       } else {
         const successData = await updateTokenResponse.json().catch(() => ({}))
-        console.log('✅ [TOKEN DEBUG] snap_token saved successfully!', successData)
-        console.log('✅ [ORDER] snap_token saved to order')
+        debugLog('✅ [TOKEN DEBUG] snap_token saved successfully!', successData)
+        debugLog('✅ [ORDER] snap_token saved to order')
       }
 
       // Guest users should have already been redirected earlier
       // This code only runs for logged-in users
       
       // Logged-in users: open payment modal here
-      console.log('🪟 [ORDER] Opening Midtrans payment modal for logged-in user...')
+      debugLog('🪟 [ORDER] Opening Midtrans payment modal for logged-in user...')
       const redirectUrl = '/account/orders/' + orderData.order_id
-      console.log('🔵 [USER] Redirect URL for logged-in user:', redirectUrl)
+      debugLog('🔵 [USER] Redirect URL for logged-in user:', redirectUrl)
       
       if (typeof window !== 'undefined' && (window as any).snap) {
         ;(window as any).snap.pay(midtransData.token, {
           onSuccess: (result: any) => {
-            console.log('✅ [PAYMENT] Payment successful!', result)
+            debugLog('✅ [PAYMENT] Payment successful!', result)
             toast.success('Payment successful! Processing your order...')
-            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
             router.push(redirectUrl)
             setIsProcessing(false)
           },
           onPending: (result: any) => {
-            console.log('⏳ [PAYMENT] Payment pending', result)
+            debugLog('⏳ [PAYMENT] Payment pending', result)
             toast.info('Payment pending. You can continue payment later.')
-            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
             router.push(redirectUrl)
             setIsProcessing(false)
           },
           onError: (result: any) => {
             console.error('❌ [PAYMENT] Payment error', result)
             toast.error('Payment failed. You can retry later.')
-            console.log('🔄 [REDIRECT] Redirecting to:', redirectUrl)
+            debugLog('🔄 [REDIRECT] Redirecting to:', redirectUrl)
             router.push(redirectUrl)
             setIsProcessing(false)
           },
           onClose: () => {
-            console.log('🚪 [PAYMENT] Payment modal closed by user')
+            debugLog('🚪 [PAYMENT] Payment modal closed by user')
             toast.info(t.checkout.continuePaymentLater)
             router.push(redirectUrl)
             setIsProcessing(false)
@@ -1605,7 +1623,7 @@ export default function CheckoutPage() {
   }
 
   const handleGuestCheckout = async (guestData: any) => {
-    console.log('🚀 [GUEST] handleGuestCheckout called')
+    debugLog('🚀 [GUEST] handleGuestCheckout called')
     
     // Validate cart quantities before proceeding
     if (!validateCartQuantities()) {
@@ -1621,11 +1639,11 @@ export default function CheckoutPage() {
         throw new Error('No session found. Please refresh the page.')
       }
 
-      console.log('🔵 [GUEST] Session:', session)
-      console.log('🔵 [GUEST] Is anonymous?', session.user.is_anonymous)
+      debugLog('🔵 [GUEST] Session:', session)
+      debugLog('🔵 [GUEST] Is anonymous?', session.user.is_anonymous)
 
       // Fetch DHL shipping cost for guest address
-      console.log('🚀 [GUEST] Fetching shipping cost for guest address...')
+      debugLog('🚀 [GUEST] Fetching shipping cost for guest address...')
       const guestShippingCost = await fetchShippingCost(guestData)
       const guestShipping = guestShippingCost ?? 0
 
@@ -1710,10 +1728,10 @@ export default function CheckoutPage() {
         throw new Error(sessionData.error || 'Failed to create checkout session')
       }
 
-      console.log('✅ [GUEST] Checkout session created:', sessionData.session_id)
+      debugLog('✅ [GUEST] Checkout session created:', sessionData.session_id)
 
       // ⭐ STEP 1: Create order FIRST (before token generation) - ORDER-FIRST ARCHITECTURE
-      console.log('📝 [GUEST] Creating order before payment...')
+      debugLog('📝 [GUEST] Creating order before payment...')
       const initialOrderResponse = await fetch('/api/orders/create-before-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1732,15 +1750,15 @@ export default function CheckoutPage() {
         throw new Error(orderData.error || 'Failed to create order')
       }
 
-      console.log('✅ [GUEST] Order created:', orderData.order_number)
-      console.log('🔵 [GUEST] Order data:', orderData)
+      debugLog('✅ [GUEST] Order created:', orderData.order_number)
+      debugLog('🔵 [GUEST] Order data:', orderData)
       // Immediately reset cart badge
       window.dispatchEvent(new Event('cart-updated'))
 
       // Resolve the payment gateway for this guest based on CMS config
       const guestIsIDRegion = region?.code === 'ID'
       const guestActiveGateway = resolveCheckoutGateway(region?.code, paymentGatewayConfig)
-      console.log('💳 [GUEST CHECKOUT] Resolved gateway:', guestActiveGateway, 'for region:', region?.code)
+      debugLog('💳 [GUEST CHECKOUT] Resolved gateway:', guestActiveGateway, 'for region:', region?.code)
 
       // Persist guest order info for tracking/continue payment
       const orderInfo = JSON.stringify({
@@ -1762,12 +1780,12 @@ export default function CheckoutPage() {
         orderHistory.unshift(orderHistoryItem)
         orderHistory = orderHistory.slice(0, 10)
         localStorage.setItem('orderHistory', JSON.stringify(orderHistory))
-        console.log('📚 [GUEST] Order added to session history')
+        debugLog('📚 [GUEST] Order added to session history')
       }
 
       // Stripe path for guests
       if (guestActiveGateway === 'stripe') {
-        console.log('💳 [GUEST STRIPE] Creating Stripe checkout session...')
+        debugLog('💳 [GUEST STRIPE] Creating Stripe checkout session...')
         const stripeCurrency = guestIsIDRegion ? 'idr' : 'usd'
 
         const rawStripeItems = [...cartItems, ...quickAddedItems].map(item => {
@@ -1811,7 +1829,7 @@ export default function CheckoutPage() {
           console.error('❌ [GUEST STRIPE] Failed to create checkout session:', stripeData.error)
           throw new Error(stripeData.error || 'Failed to create Stripe session')
         }
-        console.log('✅ [GUEST STRIPE] Redirecting to Stripe checkout...')
+        debugLog('✅ [GUEST STRIPE] Redirecting to Stripe checkout...')
         setIsProcessing(false)
         window.location.href = stripeData.url
         return
@@ -1821,17 +1839,17 @@ export default function CheckoutPage() {
       if (orderData.snap_token && orderData.expiry_time) {
         const expiryDate = new Date(orderData.expiry_time)
         if (expiryDate > new Date()) {
-          console.log('✅ [GUEST] Reusing existing snap_token')
+          debugLog('✅ [GUEST] Reusing existing snap_token')
 
           if (typeof window !== 'undefined' && (window as any).snap) {
             ;(window as any).snap.pay(orderData.snap_token, {
               onSuccess: (result: any) => {
-                console.log('✅ [PAYMENT] Payment successful!', result)
+                debugLog('✅ [PAYMENT] Payment successful!', result)
                 toast.success('Payment successful! Processing your order...')
                 window.location.href = '/track-order'
               },
               onPending: (result: any) => {
-                console.log('⏳ [PAYMENT] Payment pending', result)
+                debugLog('⏳ [PAYMENT] Payment pending', result)
                 toast.info('Payment pending. You can continue payment later.')
                 window.location.href = '/track-order'
                 setIsProcessing(false)
@@ -1843,7 +1861,7 @@ export default function CheckoutPage() {
                 setIsProcessing(false)
               },
               onClose: () => {
-                console.log('🚪 [PAYMENT] Payment modal closed by user')
+                debugLog('🚪 [PAYMENT] Payment modal closed by user')
                 toast.info('You can continue payment anytime from the order tracking page')
                 window.location.href = '/track-order'
                 setIsProcessing(false)
@@ -1855,7 +1873,7 @@ export default function CheckoutPage() {
       }
 
       // Generate new Midtrans token for guest
-      console.log('💳 [GUEST] Generating new Midtrans token...')
+      debugLog('💳 [GUEST] Generating new Midtrans token...')
       
       const USD_TO_IDR = 15000
       const convertToIDR = (amount: number) => {
@@ -1938,12 +1956,12 @@ export default function CheckoutPage() {
       if (typeof window !== 'undefined' && (window as any).snap) {
         ;(window as any).snap.pay(midtransData.token, {
           onSuccess: (result: any) => {
-            console.log('✅ [PAYMENT] Payment successful!', result)
+            debugLog('✅ [PAYMENT] Payment successful!', result)
             toast.success('Payment successful! Processing your order...')
             window.location.href = '/track-order'
           },
           onPending: (result: any) => {
-            console.log('⏳ [PAYMENT] Payment pending', result)
+            debugLog('⏳ [PAYMENT] Payment pending', result)
             toast.info('Payment pending. You can continue payment later.')
             window.location.href = '/track-order'
             setIsProcessing(false)
@@ -1955,7 +1973,7 @@ export default function CheckoutPage() {
             setIsProcessing(false)
           },
           onClose: () => {
-            console.log('🚪 [PAYMENT] Payment modal closed by user')
+            debugLog('🚪 [PAYMENT] Payment modal closed by user')
             toast.info('You can continue payment anytime from the order tracking page')
             window.location.href = '/track-order'
             setIsProcessing(false)
@@ -2210,12 +2228,12 @@ export default function CheckoutPage() {
     try {
       const targetAddress = address || savedAddresses.find(a => a.id === selectedAddressId)
       if (!targetAddress) {
-        console.log('⚠️ [SHIPPING] No address available for rate calculation')
+        debugLog('⚠️ [SHIPPING] No address available for rate calculation')
         setShippingCost(null)
         return null
       }
 
-      console.log('🚀 [SHIPPING] Fetching DHL rates for address:', targetAddress.city, targetAddress.postal_code)
+      debugLog('🚀 [SHIPPING] Fetching DHL rates for address:', targetAddress.city, targetAddress.postal_code)
 
       const res = await fetch('/api/shipping/dhl/rates', {
         method: 'POST',
@@ -2248,7 +2266,7 @@ export default function CheckoutPage() {
 
       // Pick the cheapest rate
       const cheapest = data.rates.reduce((min: any, r: any) => r.totalPrice < min.totalPrice ? r : min, data.rates[0])
-      console.log('✅ [SHIPPING] Cheapest DHL rate:', cheapest.serviceType, cheapest.totalPrice, cheapest.currency)
+      debugLog('✅ [SHIPPING] Cheapest DHL rate:', cheapest.serviceType, cheapest.totalPrice, cheapest.currency)
 
       // Convert DHL rate to match checkout base currency
       // DHL returns IDR for Indonesia domestic; checkout base is IDR if region=ID, else USD
@@ -2261,12 +2279,12 @@ export default function CheckoutPage() {
 
       if (dhlCurrency === 'IDR' && !isIDRegion) {
         convertedShipping = dhlPrice / USD_TO_IDR
-        console.log('💱 [SHIPPING] Converted', dhlPrice, 'IDR →', convertedShipping.toFixed(2), 'USD')
+        debugLog('💱 [SHIPPING] Converted', dhlPrice, 'IDR →', convertedShipping.toFixed(2), 'USD')
       } else if (dhlCurrency === 'USD' && isIDRegion) {
         convertedShipping = dhlPrice * USD_TO_IDR
-        console.log('💱 [SHIPPING] Converted', dhlPrice, 'USD →', convertedShipping.toFixed(0), 'IDR')
+        debugLog('💱 [SHIPPING] Converted', dhlPrice, 'USD →', convertedShipping.toFixed(0), 'IDR')
       } else {
-        console.log('💱 [SHIPPING] No conversion needed:', dhlPrice, dhlCurrency)
+        debugLog('💱 [SHIPPING] No conversion needed:', dhlPrice, dhlCurrency)
       }
 
       const roundedShipping = Math.round(convertedShipping * 100) / 100
@@ -2327,76 +2345,61 @@ export default function CheckoutPage() {
   }
 
   // Combine cart items and quick-added items for total calculation
-  const allItems = [...cartItems, ...quickAddedItems]
+  const allItems = useMemo(() => [...cartItems, ...quickAddedItems], [cartItems, quickAddedItems])
   
   // Helper to convert USD to local currency (matches formatPrice logic)
-  const convertToLocalCurrency = (usdAmount: number): number => {
+  const convertToLocalCurrency = useCallback((usdAmount: number): number => {
     const currencyCode = region?.currency_code || currency
     if (currencyCode === 'USD') return usdAmount
     if (currencyCode === 'IDR') return usdAmount // IDR prices are pre-converted
-    
-    // Parse the formatted price to extract the numeric value with conversion applied
-    // This ensures we use the same conversion logic as formatPrice
     const formatted = formatPrice(usdAmount, currencyCode)
     const numericValue = parseFloat(formatted.replace(/[^0-9.-]+/g, ''))
     return isNaN(numericValue) ? usdAmount : numericValue
-  }
+  }, [region?.currency_code, currency])
   
-  const subtotal = allItems.reduce((total, item) => {
+  const subtotal = useMemo(() => allItems.reduce((total, item) => {
     const basePrice = getBasePrice(item.product, (item as any).variant_sku)
     const salePrice = getEffectivePrice(basePrice, null)
-    // Apply campaign discount if available (takes priority over sale price)
     const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
     const price = discounted !== null ? discounted : salePrice
     return total + (price * item.quantity)
-  }, 0)
+  }, 0), [allItems, region, activeDiscounts])
 
-  const shipping = shippingCost ?? 0 // null = not yet calculated; use 0 for total until API is integrated
+  const shipping = shippingCost ?? 0
   
-  // Calculate tax only for products with tax_enabled = true
-  const taxableAmount = cartItems.reduce((total, item) => {
-    const product = item.product as any
-    console.log(`🔍 Tax calculation for ${product.name}:`, {
-      tax_enabled: product.tax_enabled,
-      product_id: item.product_id,
-      variant_sku: (item as any).variant_sku
-    })
-    if (product.tax_enabled) {
-      // Use getBasePrice to handle variant prices correctly
-      const basePrice = getBasePrice(product, (item as any).variant_sku)
-      const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
-      const price = discounted !== null ? discounted : basePrice
-      const itemTaxableAmount = price * item.quantity
-      console.log(`  ✅ Taxable amount: ${itemTaxableAmount} (base: ${basePrice}, discounted: ${discounted})`)
-      return total + itemTaxableAmount
-    }
-    console.log(`  ❌ Tax disabled for this product`)
-    return total
-  }, 0)
+  const tax = useMemo(() => {
+    const taxableAmount = cartItems.reduce((total, item) => {
+      const product = item.product as any
+      if (product.tax_enabled) {
+        const basePrice = getBasePrice(product, (item as any).variant_sku)
+        const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
+        const price = discounted !== null ? discounted : basePrice
+        return total + (price * item.quantity)
+      }
+      return total
+    }, 0)
+    return Math.round(taxableAmount * 0.1 * 100) / 100
+  }, [cartItems, region, activeDiscounts])
+
+  const total = useMemo(() => 
+    Math.round((subtotal + shipping + tax - discount) * 100) / 100,
+  [subtotal, shipping, tax, discount])
   
-  const tax = Math.round(taxableAmount * 0.1 * 100) / 100
-  console.log(`💰 Total taxable amount: ${taxableAmount}, Tax (10%): ${tax}`)
-  const total = Math.round((subtotal + shipping + tax - discount) * 100) / 100
-  
-  // For display: calculate by summing converted individual items to match what customer sees
-  // This must exactly match what's displayed in the cart for each item
-  console.log('💵 [DISPLAY SUBTOTAL] Calculating with allItems:', allItems.length, 'items')
-  const displaySubtotal = allItems.reduce((total, item) => {
+  const displaySubtotal = useMemo(() => allItems.reduce((total, item) => {
     const basePrice = getBasePrice(item.product, (item as any).variant_sku)
     const salePrice = getEffectivePrice(basePrice, null)
     const discounted = getDiscountedPrice(item.product, item.product_id, (item as any).variant_name)
     const priceUSD = discounted !== null ? discounted : salePrice
-    
-    // Subtotal = original price before voucher
     const itemTotalUSD = priceUSD * item.quantity
     const priceLocal = convertToLocalCurrency(itemTotalUSD)
     return total + priceLocal
-  }, 0)
+  }, 0), [allItems, region, activeDiscounts, convertToLocalCurrency])
   
-  const displayShipping = Math.round(convertToLocalCurrency(shipping) * 100) / 100
-  const displayTax = Math.round(convertToLocalCurrency(tax) * 100) / 100
-  const displayDiscount = Math.round(convertToLocalCurrency(discount) * 100) / 100
-  const displayTotal = Math.round((displaySubtotal + displayShipping + displayTax - displayDiscount) * 100) / 100
+  const displayShipping = useMemo(() => Math.round(convertToLocalCurrency(shipping) * 100) / 100, [shipping, convertToLocalCurrency])
+  const displayTax = useMemo(() => Math.round(convertToLocalCurrency(tax) * 100) / 100, [tax, convertToLocalCurrency])
+  const displayDiscount = useMemo(() => Math.round(convertToLocalCurrency(discount) * 100) / 100, [discount, convertToLocalCurrency])
+  const displayTotal = useMemo(() => Math.round((displaySubtotal + displayShipping + displayTax - displayDiscount) * 100) / 100,
+  [displaySubtotal, displayShipping, displayTax, displayDiscount])
 
   if (isLoading) {
     return (
