@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TrendingUp, DollarSign, ShoppingCart, Users, Package, Tag } from 'lucide-react'
+import { Dropdown } from '@/components/ui/dropdown'
 
 interface AnalyticsData {
   revenue: {
@@ -47,8 +48,38 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-gray-500">Loading analytics...</div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-40 rounded-lg bg-gray-200 animate-pulse" />
+          <div className="h-10 w-32 rounded-lg bg-gray-200 animate-pulse" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-10 w-10 rounded-lg bg-gray-200 animate-pulse" />
+                <div className="h-6 w-16 rounded-full bg-gray-100 animate-pulse" />
+              </div>
+              <div className="h-3 w-24 rounded bg-gray-100 animate-pulse mb-2" />
+              <div className="h-8 w-28 rounded bg-gray-200 animate-pulse" />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+              <div className="h-5 w-32 rounded bg-gray-200 animate-pulse mb-4" />
+              <div className="space-y-3">
+                {[...Array(5)].map((_, j) => (
+                  <div key={j} className="flex items-center justify-between">
+                    <div className="h-4 w-32 rounded bg-gray-200 animate-pulse" />
+                    <div className="h-4 w-16 rounded bg-gray-200 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -96,16 +127,17 @@ export default function AnalyticsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
           <p className="mt-2 text-gray-600">Track your store performance</p>
         </div>
-        <select
+        <Dropdown
           value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          className="rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-        >
-          <option value="7d">Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-          <option value="90d">Last 90 days</option>
-          <option value="1y">Last year</option>
-        </select>
+          onChange={setPeriod}
+          options={[
+            { value: '7d', label: 'Last 7 days' },
+            { value: '30d', label: 'Last 30 days' },
+            { value: '90d', label: 'Last 90 days' },
+            { value: '1y', label: 'Last year' },
+          ]}
+          className="w-40"
+        />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

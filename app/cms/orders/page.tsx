@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 import { Search, Package, Truck, CheckCircle, Clock, ChevronDown, ChevronRight, MapPin, User, CreditCard, ExternalLink, Copy, Download, FileText, AlertTriangle, RefreshCw, Mail, Phone, Home, CheckCircle2, Circle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
 import { AuditLogModal } from '@/components/AuditLogModal'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils/region'
 import type { Region } from '@/lib/types/region'
 import { getCurrencyInfo } from '@/lib/utils/currency'
+import { supabase } from '@/lib/supabase/client'
 
 interface Order {
   id: string
@@ -81,7 +83,7 @@ export default function OrdersPage() {
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [productNameFilter, setProductNameFilter] = useState('')
+  const [productNameFilter, setProductNameFilter] = useState('') // kept for compatibility
   const [createdAtFilter, setCreatedAtFilter] = useState('')
   const [updatedAtFilter, setUpdatedAtFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -89,6 +91,7 @@ export default function OrdersPage() {
   const [auditOrder, setAuditOrder] = useState<Order | null>(null)
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null)
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
   const [orderDetails, setOrderDetails] = useState<Map<string, OrderDetails>>(new Map())
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set())
@@ -325,6 +328,39 @@ export default function OrdersPage() {
     setSelectedOrders(newSelected)
   }
 
+  const handleRefund = async (orderId: string, orderNumber: string) => {
+    if (!confirm(`Refund PayPal payment for order ${orderNumber}? This action cannot be undone.`)) {
+      return
+    }
+    setRefundingOrderId(orderId)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Authentication required')
+        return
+      }
+      const response = await fetch('/api/paypal/refund', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        toast.error(data.error || 'Refund failed')
+        return
+      }
+      toast.success(`Refund processed — ${data.refundStatus}`)
+      fetchOrders()
+    } catch (err: any) {
+      toast.error(err.message || 'Refund failed')
+    } finally {
+      setRefundingOrderId(null)
+    }
+  }
+
   const fetchTrackingData = async (trackingNumber: string, orderId: string, forceRefresh = false) => {
     if (!forceRefresh && (trackingData.has(orderId) || loadingTracking.has(orderId))) {
       return // Already loaded or loading
@@ -530,7 +566,7 @@ export default function OrdersPage() {
         const idrAmount = usdAmount * 15000
         
         return (
-          <div className="text-right">
+          <div className="text-left">
             <div className="font-semibold text-gray-900">{formatWithCode(order.total_amount, currencyCode, region)}</div>
             <div className="text-xs text-gray-600 mt-0.5">≈ {formatWithCode(usdAmount, 'USD', usdRegion)}</div>
             <div className="text-xs text-gray-500">≈ {formatWithCode(idrAmount, 'IDR', idrRegion)}</div>
@@ -543,7 +579,7 @@ export default function OrdersPage() {
     if (currencyCode === 'USD') {
       const idrAmount = order.total_amount * 15000
       return (
-        <div className="text-right">
+        <div className="text-left">
           <div className="font-semibold text-gray-900">{formatWithCode(order.total_amount, 'USD', region)}</div>
           <div className="text-xs text-gray-500 mt-0.5">≈ {formatWithCode(idrAmount, 'IDR', idrRegion)}</div>
         </div>
@@ -554,7 +590,7 @@ export default function OrdersPage() {
     if (currencyCode === 'IDR') {
       const usdAmount = order.total_amount / 15000
       return (
-        <div className="text-right">
+        <div className="text-left">
           <div className="font-semibold text-gray-900">{formatWithCode(order.total_amount, 'IDR', region)}</div>
           <div className="text-xs text-gray-500 mt-0.5">≈ {formatWithCode(usdAmount, 'USD', usdRegion)}</div>
         </div>
@@ -602,18 +638,17 @@ export default function OrdersPage() {
   }
 
   const filteredOrders = orders.filter(order => {
-    // Search query filter
+    // Search query filter (order ID, customer, email, AND product name)
     const query = searchQuery.toLowerCase()
+    const details = orderDetails.get(order.id)
+    const productNames = details?.items?.map(item => item.product_name.toLowerCase()).join(' ') || ''
     const matchesSearch = !query || 
       order.order_number.toLowerCase().includes(query) ||
       (order.customer_name?.toLowerCase().includes(query)) ||
       (order.customer_email?.toLowerCase().includes(query)) ||
-      (order.user?.email?.toLowerCase().includes(query))
-    
-    // Product name filter
-    const details = orderDetails.get(order.id)
-    const productNames = details?.items?.map(item => item.product_name.toLowerCase()).join(' ') || ''
-    const matchesProduct = !productNameFilter || productNames.includes(productNameFilter.toLowerCase())
+      (order.user?.email?.toLowerCase().includes(query)) ||
+      (order.first_product_name?.toLowerCase().includes(query)) ||
+      productNames.includes(query)
     
     // Created date filter
     const orderCreatedDate = order.created_at ? new Date(order.created_at).toISOString().split('T')[0] : ''
@@ -623,7 +658,7 @@ export default function OrdersPage() {
     const orderUpdatedDate = order.updated_at ? new Date(order.updated_at).toISOString().split('T')[0] : ''
     const matchesUpdatedDate = !updatedAtFilter || orderUpdatedDate === updatedAtFilter
     
-    return matchesSearch && matchesProduct && matchesCreatedDate && matchesUpdatedDate
+    return matchesSearch && matchesCreatedDate && matchesUpdatedDate
   })
 
   // Get all processing and packed orders across all pages for bulk selection
@@ -667,18 +702,19 @@ export default function OrdersPage() {
     <>
       {Array.from({ length: 8 }).map((_, i) => (
         <tr key={i} className="animate-pulse">
-          <td className="py-4"><div className="h-4 w-28 rounded bg-gray-200" /></td>
-          <td className="py-4">
+          <td className="py-4 pl-4 sm:pl-0 pr-2"><div className="h-4 w-4 rounded bg-gray-200" /></td>
+          <td className="py-4 pr-4"><div className="h-4 w-28 rounded bg-gray-200" /></td>
+          <td className="py-4 pr-4">
             <div className="space-y-1.5">
               <div className="h-4 w-32 rounded bg-gray-200" />
               <div className="h-3 w-40 rounded bg-gray-100" />
             </div>
           </td>
-          <td className="py-4"><div className="h-4 w-20 rounded bg-gray-200" /></td>
-          <td className="py-4"><div className="h-4 w-16 rounded bg-gray-200" /></td>
-          <td className="py-4"><div className="h-6 w-24 rounded-full bg-gray-200" /></td>
-          <td className="py-4"><div className="h-6 w-6 rounded bg-gray-200" /></td>
-          <td className="py-4"><div className="h-7 w-7 rounded bg-gray-200" /></td>
+          <td className="py-4 pr-4"><div className="h-4 w-20 rounded bg-gray-200" /></td>
+          <td className="py-4 pr-4"><div className="h-4 w-16 rounded bg-gray-200" /></td>
+          <td className="py-4 pr-4"><div className="h-4 w-16 rounded bg-gray-200" /></td>
+          <td className="py-4 pr-4"><div className="h-6 w-24 rounded-full bg-gray-200" /></td>
+          <td className="py-4 pr-2"><div className="h-6 w-24 rounded-full bg-gray-200" /></td>
         </tr>
       ))}
     </>
@@ -693,13 +729,13 @@ export default function OrdersPage() {
 
       <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
         {/* Search and Filters */}
-        <div className="mb-4 sm:mb-6 space-y-3">
+        <div className="mb-4 sm:mb-6 space-y-4">
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by order ID, customer, or email..."
+              placeholder="Search by order ID, customer, email, or product..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-gray-300 py-2 pl-9 sm:pl-10 pr-4 text-sm sm:text-base focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
@@ -707,36 +743,19 @@ export default function OrdersPage() {
           </div>
           
           {/* Filter Inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <input
-                type="text"
-                placeholder="Filter by product name..."
-                value={productNameFilter}
-                onChange={(e) => setProductNameFilter(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
-            </div>
-            <div>
-              <input
-                type="date"
-                placeholder="Created date"
-                value={createdAtFilter}
-                onChange={(e) => setCreatedAtFilter(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
-              <label className="text-xs text-gray-500 mt-1 block">Created Date</label>
-            </div>
-            <div>
-              <input
-                type="date"
-                placeholder="Updated date"
-                value={updatedAtFilter}
-                onChange={(e) => setUpdatedAtFilter(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              />
-              <label className="text-xs text-gray-500 mt-1 block">Updated Date</label>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <DatePicker
+              label="Created Date"
+              value={createdAtFilter}
+              onChange={setCreatedAtFilter}
+              placeholder="Select created date"
+            />
+            <DatePicker
+              label="Updated Date"
+              value={updatedAtFilter}
+              onChange={setUpdatedAtFilter}
+              placeholder="Select updated date"
+            />
           </div>
         </div>
 
@@ -849,7 +868,7 @@ export default function OrdersPage() {
             <table className="min-w-full">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-xs sm:text-sm font-medium text-gray-500">
-                  <th className="pb-2 sm:pb-3 pl-4 sm:pl-0 whitespace-nowrap">
+                  <th className="pb-3 pl-4 sm:pl-0 pr-2 whitespace-nowrap align-middle">
                     {allSelectableOrders.length > 0 && (
                       <input
                         type="checkbox"
@@ -859,14 +878,13 @@ export default function OrdersPage() {
                       />
                     )}
                   </th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Order ID</th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Product Name</th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Customer</th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Created At</th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Updated At</th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Total</th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Status</th>
-                  <th className="pb-2 sm:pb-3 whitespace-nowrap">Audit</th>
+                  <th className="pb-3 pr-4 whitespace-nowrap align-middle">Order ID</th>
+                  <th className="pb-3 pr-4 whitespace-nowrap align-middle">Product Name</th>
+                  <th className="pb-3 pr-4 whitespace-nowrap align-middle">Customer</th>
+                  <th className="pb-3 pr-4 whitespace-nowrap align-middle">Created At</th>
+                  <th className="pb-3 pr-4 whitespace-nowrap align-middle">Updated At</th>
+                  <th className="pb-3 pr-4 whitespace-nowrap align-middle">Total</th>
+                  <th className="pb-3 pr-2 whitespace-nowrap align-middle">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -880,7 +898,7 @@ export default function OrdersPage() {
                   return (
                   <>
                   <tr key={order.id} className="text-xs sm:text-sm hover:bg-gray-50">
-                    <td className="py-3 sm:py-4 pl-4 sm:pl-0">
+                    <td className="py-4 pl-4 sm:pl-0 pr-2 align-middle">
                       <div className="flex items-center gap-2">
                         {(order.status === 'processing' || order.status === 'packed') && (
                           <input
@@ -902,10 +920,10 @@ export default function OrdersPage() {
                         </button>
                       </div>
                     </td>
-                    <td className="py-3 sm:py-4">
+                    <td className="py-4 pr-4 align-middle">
                       <div className="font-medium text-gray-900 whitespace-nowrap">{order.order_number}</div>
                     </td>
-                    <td className="py-3 sm:py-4">
+                    <td className="py-4 pr-4 align-middle">
                       <div className="text-gray-900 text-sm max-w-[200px] truncate">
                         {order.first_product_name || 'N/A'}
                         {order.items_count && order.items_count > 1 && (
@@ -913,44 +931,31 @@ export default function OrdersPage() {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 sm:py-4">
+                    <td className="py-4 pr-4 align-middle">
                       <div className="text-gray-900 max-w-[150px] sm:max-w-none truncate">
                         {order.customer_name || `${order.user?.first_name || ''} ${order.user?.last_name || ''}`.trim() || 'N/A'}
                       </div>
                       <div className="text-gray-500 text-xs max-w-[150px] sm:max-w-none truncate">{order.customer_email || order.user?.email || 'N/A'}</div>
                     </td>
-                    <td className="py-3 sm:py-4 text-gray-600 whitespace-nowrap">
+                    <td className="py-4 pr-4 text-gray-600 whitespace-nowrap align-middle">
                       {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="py-3 sm:py-4 text-gray-600 whitespace-nowrap">
+                    <td className="py-4 pr-4 text-gray-600 whitespace-nowrap align-middle">
                       {new Date(order.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="py-3 sm:py-4 whitespace-nowrap">
+                    <td className="py-4 pr-4 whitespace-nowrap align-middle">
                       {formatOrderAmount(order)}
                     </td>
-                    <td className="py-3 sm:py-4">
+                    <td className="py-4 pr-2 align-middle">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:py-1 text-xs font-medium ${getStatusColor(order.status)}`}>
                       {getStatusIcon(order.status)}
                       {getStatusLabel(order.status)}
                     </span>
                     </td>
-                    <td className="py-3 sm:py-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setAuditOrder(order)
-                          setAuditLogOpen(true)
-                        }}
-                        className="text-luxury-gold hover:text-luxury-gold/80 h-7 w-7 sm:h-8 sm:w-8 p-0"
-                      >
-                        <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                    </td>
                   </tr>
                   {isExpanded && (
                     <tr key={`${order.id}-details`} className="bg-gray-50">
-                      <td colSpan={10} className="px-4 py-4">
+                      <td colSpan={9} className="px-4 py-4">
                         {isLoadingDetails ? (
                           <div className="flex items-center justify-center py-8">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -1781,6 +1786,84 @@ export default function OrdersPage() {
                                 })()}
                               </div>
                             </div>
+
+                            {/* Price Breakdown */}
+                            {(() => {
+                              const region = getRegionFromOrder(details.order)
+                              const orderData = details.order as any
+                              const totalAmount = orderData.total_amount ?? 0
+                              const discountAmount = orderData.discount_amount ?? 0
+                              const taxAmount = orderData.tax_amount ?? 0
+
+                              // Compute subtotal from items if the stored value is missing/zero
+                              const itemsSubtotal = details.items.reduce(
+                                (sum: number, item: any) => sum + (item.price * item.quantity), 0
+                              )
+                              const storedSubtotal = orderData.subtotal ?? orderData.subtotal_amount ?? 0
+                              const subtotal = storedSubtotal > 0 ? storedSubtotal : itemsSubtotal
+
+                              // Compute shipping: total - subtotal - tax + discount
+                              const storedShipping = orderData.shipping_cost ?? orderData.shipping_amount ?? 0
+                              const computedShipping = totalAmount - subtotal - taxAmount + discountAmount
+                              const shippingCost = storedShipping > 0 ? storedShipping : Math.max(0, computedShipping)
+
+                              return (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <p className="text-gray-500 text-sm mb-3">Price Breakdown</p>
+                                  <div className="space-y-1.5 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Subtotal</span>
+                                      <span className="font-medium text-gray-900">{formatPrice(subtotal, region)}</span>
+                                    </div>
+                                    {discountAmount > 0 && (
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-600">Discount</span>
+                                        <span className="font-medium text-green-600">-{formatPrice(discountAmount, region)}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Shipping</span>
+                                      <span className="font-medium text-gray-900">
+                                        {shippingCost > 0 ? formatPrice(shippingCost, region) : 'Free'}
+                                      </span>
+                                    </div>
+                                    {taxAmount > 0 && (
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-600">Tax</span>
+                                        <span className="font-medium text-gray-900">{formatPrice(taxAmount, region)}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                                      <span className="font-semibold text-gray-900">Total</span>
+                                      <span className="font-bold text-gray-900">{formatPrice(totalAmount, region)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })()}
+
+                            {/* Refund Button for PayPal orders */}
+                            {(details.order as any).payment_gateway === 'paypal' && details.order.payment_status === 'paid' && (
+                              <div className="mt-4 pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={() => handleRefund(order.id, order.order_number)}
+                                  disabled={refundingOrderId === order.id}
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {refundingOrderId === order.id ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                      Processing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RefreshCw className="w-4 h-4" />
+                                      Refund Payment
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <p className="text-center text-gray-500 py-4">Failed to load order details</p>
@@ -1803,71 +1886,73 @@ export default function OrdersPage() {
 
         {/* Pagination */}
         {!loading && filteredOrders.length > 0 && (
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-600">
               Showing {startIndex + 1} to {endIndex} of {totalOrders} orders
             </p>
-            <div className="flex gap-2">
-              <Button
+            <div className="flex items-center gap-2">
+              <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                variant="outline"
-                size="sm"
+                className="rounded-lg border border-luxury-gold/40 bg-luxury-navy px-3 py-1.5 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
-              </Button>
+              </button>
               <div className="flex items-center gap-1">
                 {totalPages <= 10 ? (
                   Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
+                    <button
                       key={`page-${page}`}
                       onClick={() => setCurrentPage(page)}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      className="w-8"
+                      className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === page
+                          ? 'bg-luxury-gold text-luxury-navy'
+                          : 'border border-luxury-gold/30 text-luxury-navy hover:bg-luxury-gold/10'
+                      }`}
                     >
                       {page}
-                    </Button>
+                    </button>
                   ))
                 ) : (
                   <>
                     {currentPage > 3 && (
                       <>
-                        <Button key="page-1" onClick={() => setCurrentPage(1)} variant="outline" size="sm" className="w-8">1</Button>
+                        <button key="page-1" onClick={() => setCurrentPage(1)} className="h-8 w-8 rounded-lg border border-luxury-gold/30 text-luxury-navy text-sm font-medium hover:bg-luxury-gold/10 transition-colors">1</button>
                         <span key="ellipsis-start" className="px-2">...</span>
                       </>
                     )}
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       const page = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4))
                       return (
-                        <Button
+                        <button
                           key={`page-${page}`}
                           onClick={() => setCurrentPage(page)}
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          className="w-8"
+                          className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === page
+                              ? 'bg-luxury-gold text-luxury-navy'
+                              : 'border border-luxury-gold/30 text-luxury-navy hover:bg-luxury-gold/10'
+                          }`}
                         >
                           {page}
-                        </Button>
+                        </button>
                       )
                     })}
                     {currentPage < totalPages - 2 && (
                       <>
                         <span key="ellipsis-end" className="px-2">...</span>
-                        <Button key={`page-${totalPages}`} onClick={() => setCurrentPage(totalPages)} variant="outline" size="sm" className="w-8">{totalPages}</Button>
+                        <button key={`page-${totalPages}`} onClick={() => setCurrentPage(totalPages)} className="h-8 w-8 rounded-lg border border-luxury-gold/30 text-luxury-navy text-sm font-medium hover:bg-luxury-gold/10 transition-colors">{totalPages}</button>
                       </>
                     )}
                   </>
                 )}
               </div>
-              <Button
+              <button
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                variant="outline"
-                size="sm"
+                className="rounded-lg border border-luxury-gold/40 bg-luxury-navy px-3 py-1.5 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Next
-              </Button>
+              </button>
             </div>
           </div>
         )}

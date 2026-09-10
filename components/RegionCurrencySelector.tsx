@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Globe, ChevronDown, X, Languages } from 'lucide-react'
 import { useRegion } from '@/contexts/RegionContext'
 import { useUserRole } from '@/hooks/useUserRole'
+import { checkFeatureClient } from '@/lib/system-settings'
 
 // ─── Country data (maps to region for pricing) ────────────────────────────────
 
@@ -100,6 +101,8 @@ export function RegionCurrencySelector() {
   const { setRegion, detectionResult, isLoading: regionLoading } = useRegion()
   const [isOpen, setIsOpen]       = useState(false)
   const [activeTab, setActiveTab] = useState<Group | 'all'>('all')
+  const [multiCurrencyEnabled, setMultiCurrencyEnabled] = useState(true)
+  const [multiCurrencyChecked, setMultiCurrencyChecked] = useState(false)
   
   // Initialize with saved, detected, or default country
   const getInitialCountry = () => {
@@ -128,6 +131,11 @@ export function RegionCurrencySelector() {
   useEffect(() => {
     const pageLang = localStorage.getItem('page_lang') || ''
     setCurrentLang(pageLang)
+
+    checkFeatureClient('multi_currency_enabled').then((result) => {
+      setMultiCurrencyEnabled(result)
+      setMultiCurrencyChecked(true)
+    })
 
     const saved = localStorage.getItem(COUNTRY_KEY)
     if (saved) {
@@ -213,6 +221,7 @@ export function RegionCurrencySelector() {
   const isAdmin = !roleLoading && (role === 'admin' || role === 'staff')
 
   if (!isAdmin) {
+    if (multiCurrencyChecked && !multiCurrencyEnabled) return null
     return (
       <div className="flex items-center gap-1.5 text-white/80" title={`Region: ${selected.name}`}>
         <Globe className="h-4 w-4 flex-shrink-0" />

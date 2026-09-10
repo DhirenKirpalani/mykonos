@@ -3,15 +3,27 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
+import { checkFeatureClient } from '@/lib/system-settings'
 
 export function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false)
+  const [checked, setChecked] = useState(false)
 
   useEffect(() => {
-    const consent = localStorage.getItem('cookie-consent')
-    if (!consent) {
-      setIsVisible(true)
-    }
+    let cancelled = false
+    checkFeatureClient('cookie_consent_enabled').then((enabled) => {
+      if (cancelled) return
+      if (!enabled) {
+        setChecked(true)
+        return
+      }
+      const consent = localStorage.getItem('cookie-consent')
+      if (!consent) {
+        setIsVisible(true)
+      }
+      setChecked(true)
+    })
+    return () => { cancelled = true }
   }, [])
 
   const handleAcceptAll = () => {
@@ -29,6 +41,7 @@ export function CookieConsent() {
     console.log('Open cookie settings')
   }
 
+  if (!checked) return null
   if (!isVisible) return null
 
   return (

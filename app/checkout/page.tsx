@@ -13,6 +13,7 @@ import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Lock, MapPin, CheckCircle2, ShoppingBag, ChevronDown, Ticket, Timer } from 'lucide-react'
+import { checkFeatureClient } from '@/lib/system-settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CheckoutModal } from '@/components/CheckoutModal'
@@ -138,6 +139,10 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
   const [isGuest, setIsGuest] = useState(false)
+  const [guestCheckoutEnabled, setGuestCheckoutEnabled] = useState(true)
+  const [taxEnabled, setTaxEnabled] = useState(true)
+  const [shippingEnabled, setShippingEnabled] = useState(true)
+  const [backordersEnabled, setBackordersEnabled] = useState(true)
   const [isBuyNow, setIsBuyNow] = useState(false)
   const [isEditingAddress, setIsEditingAddress] = useState(false)
   const [showEditMap, setShowEditMap] = useState(false)
@@ -313,6 +318,21 @@ export default function CheckoutPage() {
       })
       .catch(() => {})
   }, [region?.currency_code])
+
+  // Load feature flags
+  useEffect(() => {
+    Promise.all([
+      checkFeatureClient('guest_checkout_enabled'),
+      checkFeatureClient('tax_calculation_enabled'),
+      checkFeatureClient('shipping_enabled'),
+      checkFeatureClient('backorders_enabled'),
+    ]).then(([guest, tax, shipping, backorders]) => {
+      setGuestCheckoutEnabled(guest)
+      setTaxEnabled(tax)
+      setShippingEnabled(shipping)
+      setBackordersEnabled(backorders)
+    })
+  }, [])
 
   const initializeCheckout = async () => {
     try {
@@ -842,8 +862,14 @@ export default function CheckoutPage() {
       return
     }
     
-    // For guests, show modal to collect email and shipping info
+    // For guests, show modal to collect email and shipping info (unless guest checkout is disabled)
     if (isGuest) {
+      if (!guestCheckoutEnabled) {
+        toast.error('Please log in to place an order', {
+          description: 'Guest checkout is currently disabled',
+        })
+        return
+      }
       debugLog('👤 [ORDER] Guest user detected, showing checkout modal')
       setShowCheckoutModal(true)
       return
@@ -1576,6 +1602,11 @@ export default function CheckoutPage() {
       }
       
       // Validate stock quantity (only if stock tracking is enabled for this product/variant)
+      // Skip stock validation when backorders are enabled globally
+      if (backordersEnabled && effectiveStock !== null && effectiveStock !== undefined && effectiveStock === 0) {
+        // Allow backorder for out-of-stock items when backorders are enabled
+        continue
+      }
       if (effectiveStock !== null && effectiveStock !== undefined && item.quantity > effectiveStock) {
         toast.error(`${item.variant_name || item.product.name}: Only ${effectiveStock} items available. Please reduce quantity in cart.`)
         return false
@@ -2208,12 +2239,12 @@ export default function CheckoutPage() {
 
   // Fetch shipping cost when address is selected (debounced to avoid rapid API calls)
   useEffect(() => {
-    if (!selectedAddressId || savedAddresses.length === 0 || !region) return
+    if (!selectedAddressId || savedAddresses.length === 0 || !region || !shippingEnabled) return
     const timer = setTimeout(() => {
       fetchShippingCost()
     }, 400)
     return () => clearTimeout(timer)
-  }, [selectedAddressId, region])
+  }, [selectedAddressId, region, shippingEnabled])
 
   const fetchShippingCost = async (address?: any): Promise<number | null> => {
     setIsLoadingShipping(true)
@@ -2360,6 +2391,7 @@ export default function CheckoutPage() {
   const shipping = shippingCost ?? 0
   
   const tax = useMemo(() => {
+    if (!taxEnabled) return 0
     const taxableAmount = cartItems.reduce((total, item) => {
       const product = item.product as any
       if (product.tax_enabled) {
@@ -2371,7 +2403,7 @@ export default function CheckoutPage() {
       return total
     }, 0)
     return Math.round(taxableAmount * 0.1 * 100) / 100
-  }, [cartItems, region, activeDiscounts])
+  }, [cartItems, region, activeDiscounts, taxEnabled])
 
   const total = useMemo(() => 
     Math.round((subtotal + shipping + tax - discount) * 100) / 100,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Power, ShieldAlert, Globe, Tag, Wrench, Save, AlertTriangle, ShoppingCart, X, Truck, UserPlus, Heart, Mail, Bell, CreditCard } from 'lucide-react'
+import { Power, ShieldAlert, Globe, Tag, Wrench, Save, AlertTriangle, ShoppingCart, X, Truck, UserPlus, Heart, Mail, Bell, CreditCard, MessageCircle, Search, MessageSquare, Cookie, Calculator, Package, EyeOff, Star, Coins, FileSearch } from 'lucide-react'
 import { toast } from 'sonner'
 import { ReasonDialog } from '@/components/ui/reason-dialog'
 import { supabase } from '@/lib/supabase/client'
@@ -289,89 +289,211 @@ export default function SystemSettingsPage() {
     )
   }
 
-  const killSwitches = [
+  const killSwitchCategories = [
     {
-      key: 'checkout_enabled',
-      icon: ShoppingCart,
-      title: 'Checkout',
-      description: 'Allow customers to complete checkout and place orders',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
+      title: 'Commerce & Checkout',
+      description: 'Controls for ordering, payments, and fulfillment',
+      switches: [
+        {
+          key: 'checkout_enabled',
+          icon: ShoppingCart,
+          title: 'Checkout',
+          description: 'Allow customers to complete checkout and place orders',
+          color: 'text-blue-600',
+          bgColor: 'bg-blue-100'
+        },
+        {
+          key: 'payments_enabled',
+          icon: Power,
+          title: 'Payment Processing',
+          description: 'Enable payment gateway processing for orders',
+          color: 'text-green-600',
+          bgColor: 'bg-green-100'
+        },
+        {
+          key: 'guest_checkout_enabled',
+          icon: UserPlus,
+          title: 'Guest Checkout',
+          description: 'Allow customers to checkout without creating an account',
+          color: 'text-teal-600',
+          bgColor: 'bg-teal-100'
+        },
+        {
+          key: 'promo_codes_enabled',
+          icon: Tag,
+          title: 'Promo Codes',
+          description: 'Allow customers to apply discount codes at checkout',
+          color: 'text-purple-600',
+          bgColor: 'bg-purple-100'
+        },
+        {
+          key: 'tax_calculation_enabled',
+          icon: Calculator,
+          title: 'Tax Calculation',
+          description: 'Calculate and display tax at checkout',
+          color: 'text-red-600',
+          bgColor: 'bg-red-100'
+        },
+        {
+          key: 'shipping_enabled',
+          icon: Truck,
+          title: 'Shipping Processing',
+          description: 'Allow customers to select shipping methods at checkout',
+          color: 'text-orange-600',
+          bgColor: 'bg-orange-100'
+        },
+        {
+          key: 'backorders_enabled',
+          icon: Package,
+          title: 'Backorders',
+          description: 'Allow customers to order out-of-stock products for later fulfillment',
+          color: 'text-gray-600',
+          bgColor: 'bg-gray-100'
+        },
+        {
+          key: 'dhl_auto_pickup',
+          icon: Truck,
+          title: 'DHL Auto-Pickup',
+          description: 'Automatically request DHL pickup when creating shipments',
+          color: 'text-orange-600',
+          bgColor: 'bg-orange-100'
+        },
+      ]
     },
     {
-      key: 'payments_enabled',
-      icon: Power,
-      title: 'Payment Processing',
-      description: 'Enable payment gateway processing for orders',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
+      title: 'Storefront & Catalog',
+      description: 'Controls for product display, search, and SEO',
+      switches: [
+        {
+          key: 'product_search_enabled',
+          icon: Search,
+          title: 'Product Search',
+          description: 'Allow customers to search for products',
+          color: 'text-indigo-600',
+          bgColor: 'bg-indigo-100'
+        },
+        {
+          key: 'hide_sold_out_products',
+          icon: EyeOff,
+          title: 'Hide Sold-Out Products',
+          description: 'Hide out-of-stock products from the storefront',
+          color: 'text-slate-600',
+          bgColor: 'bg-slate-100'
+        },
+        {
+          key: 'reviews_enabled',
+          icon: Star,
+          title: 'Product Reviews',
+          description: 'Allow customers to submit and view product reviews',
+          color: 'text-yellow-600',
+          bgColor: 'bg-yellow-100'
+        },
+        {
+          key: 'multi_currency_enabled',
+          icon: Coins,
+          title: 'Multi-Currency Display',
+          description: 'Allow customers to switch between currencies',
+          color: 'text-emerald-600',
+          bgColor: 'bg-emerald-100'
+        },
+        {
+          key: 'seo_meta_enabled',
+          icon: FileSearch,
+          title: 'SEO Meta Tags',
+          description: 'Generate meta tags for search engine indexing',
+          color: 'text-violet-600',
+          bgColor: 'bg-violet-100'
+        },
+      ]
     },
     {
-      key: 'promo_codes_enabled',
-      icon: Tag,
-      title: 'Promo Codes',
-      description: 'Allow customers to apply discount codes at checkout',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
+      title: 'Customer Engagement',
+      description: 'Controls for customer communication and interaction',
+      switches: [
+        {
+          key: 'user_registration_enabled',
+          icon: UserPlus,
+          title: 'User Registration',
+          description: 'Allow new users to create accounts',
+          color: 'text-indigo-600',
+          bgColor: 'bg-indigo-100'
+        },
+        {
+          key: 'wishlist_enabled',
+          icon: Heart,
+          title: 'Wishlist',
+          description: 'Allow customers to add products to wishlist',
+          color: 'text-pink-600',
+          bgColor: 'bg-pink-100'
+        },
+        {
+          key: 'newsletter_enabled',
+          icon: Mail,
+          title: 'Newsletter Signup',
+          description: 'Allow customers to subscribe to the newsletter',
+          color: 'text-purple-600',
+          bgColor: 'bg-purple-100'
+        },
+        {
+          key: 'live_chat_enabled',
+          icon: MessageCircle,
+          title: 'Live Chat',
+          description: 'Show live chat widget for customer support',
+          color: 'text-blue-600',
+          bgColor: 'bg-blue-100'
+        },
+        {
+          key: 'whatsapp_enabled',
+          icon: MessageSquare,
+          title: 'WhatsApp Button',
+          description: 'Show floating WhatsApp contact button',
+          color: 'text-green-600',
+          bgColor: 'bg-green-100'
+        },
+        {
+          key: 'cookie_consent_enabled',
+          icon: Cookie,
+          title: 'Cookie Consent',
+          description: 'Show cookie consent banner to visitors',
+          color: 'text-amber-600',
+          bgColor: 'bg-amber-100'
+        },
+        {
+          key: 'email_notifications_enabled',
+          icon: Mail,
+          title: 'Email Notifications',
+          description: 'Send automated emails to customers (orders, shipping, etc)',
+          color: 'text-cyan-600',
+          bgColor: 'bg-cyan-100'
+        },
+        {
+          key: 'order_notifications_enabled',
+          icon: Bell,
+          title: 'Order Notifications',
+          description: 'Send order status update notifications to customers',
+          color: 'text-yellow-600',
+          bgColor: 'bg-yellow-100'
+        },
+      ]
     },
-    {
-      key: 'dhl_auto_pickup',
-      icon: Truck,
-      title: 'DHL Auto-Pickup',
-      description: 'Automatically request DHL pickup when creating shipments',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100'
-    },
-    {
-      key: 'user_registration_enabled',
-      icon: UserPlus,
-      title: 'User Registration',
-      description: 'Allow new users to create accounts',
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-100'
-    },
-    {
-      key: 'wishlist_enabled',
-      icon: Heart,
-      title: 'Wishlist',
-      description: 'Allow customers to add products to wishlist',
-      color: 'text-pink-600',
-      bgColor: 'bg-pink-100'
-    },
-    {
-      key: 'email_notifications_enabled',
-      icon: Mail,
-      title: 'Email Notifications',
-      description: 'Send automated emails to customers (orders, shipping, etc)',
-      color: 'text-cyan-600',
-      bgColor: 'bg-cyan-100'
-    },
-    {
-      key: 'order_notifications_enabled',
-      icon: Bell,
-      title: 'Order Notifications',
-      description: 'Send order status update notifications to customers',
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100'
-    }
   ]
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">System Settings</h1>
-        <p className="mt-2 text-gray-600">Manage operational controls and kill switches</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">System Settings</h1>
+        <p className="mt-2 text-sm sm:text-base text-gray-600">Manage operational controls and kill switches</p>
       </div>
 
       {/* Maintenance Mode */}
-      <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-        <div className="flex items-start justify-between">
+      <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="rounded-full bg-red-100 p-3">
+            <div className="rounded-full bg-red-100 p-3 shrink-0">
               <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">Maintenance Mode</h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Maintenance Mode</h2>
               <p className="mt-1 text-sm text-gray-600">
                 Enable site-wide maintenance mode to prevent customer access
               </p>
@@ -398,7 +520,7 @@ export default function SystemSettingsPage() {
           <button
             onClick={toggleMaintenanceMode}
             disabled={saving === 'maintenance_mode'}
-            className={`rounded-lg px-6 py-2 text-sm font-medium transition-colors ${
+            className={`shrink-0 rounded-lg px-6 py-2 text-sm font-medium transition-colors ${
               settings.maintenance_mode?.setting_value?.enabled
                 ? 'bg-red-600 text-white hover:bg-red-700'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -410,56 +532,63 @@ export default function SystemSettingsPage() {
         </div>
       </div>
 
-      {/* Kill Switches */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Operational Kill Switches</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {killSwitches.map((item) => {
-            const isEnabled = settings[item.key]?.setting_value?.enabled ?? true
-            return (
-              <div
-                key={item.key}
-                className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`rounded-full ${item.bgColor} p-3`}>
-                    <item.icon className={`h-5 w-5 ${item.color}`} />
-                  </div>
-                  <button
-                    onClick={() => toggleKillSwitch(item.key, isEnabled)}
-                    disabled={saving === item.key}
-                    className={`rounded-lg px-4 py-1.5 text-xs font-medium transition-colors ${
-                      isEnabled
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : 'bg-red-100 text-red-700 hover:bg-red-200'
-                    } disabled:opacity-50`}
+      {/* Kill Switches — categorized */}
+      <div className="space-y-8">
+        {killSwitchCategories.map((category) => (
+          <div key={category.title}>
+            <div className="mb-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{category.title}</h2>
+              <p className="mt-1 text-sm text-gray-500">{category.description}</p>
+            </div>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {category.switches.map((item) => {
+                const isEnabled = settings[item.key]?.setting_value?.enabled ?? true
+                return (
+                  <div
+                    key={item.key}
+                    className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200"
                   >
-                    {saving === item.key ? '...' : isEnabled ? 'Enabled' : 'Disabled'}
-                  </button>
-                </div>
-                <h3 className="font-semibold text-gray-900">{item.title}</h3>
-                <p className="mt-1 text-sm text-gray-600">{item.description}</p>
-              </div>
-            )
-          })}
-        </div>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`rounded-full ${item.bgColor} p-3`}>
+                        <item.icon className={`h-5 w-5 ${item.color}`} />
+                      </div>
+                      <button
+                        onClick={() => toggleKillSwitch(item.key, isEnabled)}
+                        disabled={saving === item.key}
+                        className={`rounded-lg px-4 py-1.5 text-xs font-medium transition-colors ${
+                          isEnabled
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                        } disabled:opacity-50`}
+                      >
+                        {saving === item.key ? '...' : isEnabled ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                    <h3 className="font-semibold text-gray-900">{item.title}</h3>
+                    <p className="mt-1 text-sm text-gray-600">{item.description}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Payment Gateway Configuration */}
-      <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+      <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
         <div className="flex items-start gap-4 mb-6">
-          <div className="rounded-full bg-emerald-100 p-3">
+          <div className="rounded-full bg-emerald-100 p-3 shrink-0">
             <CreditCard className="h-6 w-6 text-emerald-600" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">Payment Gateway Configuration</h2>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Payment Gateway Configuration</h2>
             <p className="mt-1 text-sm text-gray-600">
               Choose which payment gateways are enabled for each region, and which one is used by default at checkout.
             </p>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2">
           {(['ID', 'global'] as PaymentRegionKey[]).map((regionKey) => {
             const regionConfig = gatewayConfig[regionKey]
             return (
@@ -512,14 +641,14 @@ export default function SystemSettingsPage() {
           })}
         </div>
 
-        <div className="mt-4 flex items-center justify-between rounded-lg bg-blue-50 p-3 border border-blue-200">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg bg-blue-50 p-3 border border-blue-200">
           <p className="text-sm text-blue-800">
             <strong>Note:</strong> Orders will use the gateway marked as <strong>Default</strong> for the customer's region. PayPal is now fully integrated for international (non-IDR) payments.
           </p>
           <button
             onClick={saveGatewayConfig}
             disabled={savingGateways}
-            className="ml-4 shrink-0 rounded-lg bg-luxury-navy px-4 py-2 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-luxury-navy px-4 py-2 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-50"
           >
             {savingGateways ? 'Saving...' : 'Save Changes'}
           </button>
@@ -528,20 +657,20 @@ export default function SystemSettingsPage() {
 
       {/* DHL Pickup Configuration */}
       {settings.dhl_auto_pickup?.setting_value?.enabled && (
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+        <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
           <div className="flex items-start gap-4 mb-6">
-            <div className="rounded-full bg-orange-100 p-3">
+            <div className="rounded-full bg-orange-100 p-3 shrink-0">
               <Truck className="h-6 w-6 text-orange-600" />
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">DHL Pickup Configuration</h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">DHL Pickup Configuration</h2>
               <p className="mt-1 text-sm text-gray-600">
                 Configure when and where DHL should pick up packages
               </p>
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pickup Close Time
@@ -596,8 +725,8 @@ export default function SystemSettingsPage() {
       )}
 
       {/* Audit Trail Link */}
-      <div className="rounded-lg bg-gray-50 p-6">
-        <div className="flex items-center justify-between">
+      <div className="rounded-lg bg-gray-50 p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="font-semibold text-gray-900">System Settings Audit Log</h3>
             <p className="mt-1 text-sm text-gray-600">
@@ -607,7 +736,7 @@ export default function SystemSettingsPage() {
           <button 
             onClick={fetchAuditLog}
             disabled={loadingAudit}
-            className="rounded-lg bg-luxury-navy px-4 py-2 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-luxury-navy px-4 py-2 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-50"
           >
             {loadingAudit ? 'Loading...' : 'View Audit Log'}
           </button>
@@ -650,7 +779,7 @@ export default function SystemSettingsPage() {
               <div className="space-y-4">
                 {auditLogs.map((log) => (
                   <div key={log.id} className="rounded-lg border border-gray-200 p-4">
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between mb-2">
                       <div>
                         <h4 className="font-semibold text-gray-900">
                           {log.setting_key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -659,11 +788,11 @@ export default function SystemSettingsPage() {
                           Changed by: {log.user_email || 'Unknown'}
                         </p>
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-500 shrink-0">
                         {new Date(log.created_at).toLocaleString()}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 text-sm">
                       <div>
                         <p className="text-gray-600 font-medium">Old Value:</p>
                         <pre className="mt-1 bg-gray-50 p-2 rounded text-xs overflow-x-auto">

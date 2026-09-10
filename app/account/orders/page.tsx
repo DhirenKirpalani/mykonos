@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { Package, ChevronRight, ChevronLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { cn } from '@/lib/utils'
+import { cn, formatPrice } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 type Order = {
@@ -275,14 +275,10 @@ export default function OrdersPage() {
                     }
                   </span>
                   <span className="font-semibold text-xs sm:text-sm whitespace-nowrap">
-                    {(() => {
-                      const computedTotal = (order.subtotal_amount ?? 0) - (order.discount_amount ?? 0) + (order.shipping_amount ?? 0) + (order.tax_amount ?? 0)
-                      return order.currency_code === 'IDR'
-                        ? `Rp. ${computedTotal.toLocaleString('id-ID')}`
-                        : order.currency_code === 'USD'
-                        ? `$${computedTotal.toFixed(2)}`
-                        : `${order.currency_code} ${computedTotal.toFixed(2)}`
-                    })()}
+                    {formatPrice(
+                      (order.subtotal_amount ?? 0) - (order.discount_amount ?? 0) + (order.shipping_amount ?? 0) + (order.tax_amount ?? 0),
+                      order.currency_code
+                    )}
                   </span>
                 </div>
               </div>

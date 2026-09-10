@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { Search, ShoppingBag, User, Settings, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { checkFeatureClient } from '@/lib/system-settings'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { RegionCurrencySelector } from '@/components/RegionCurrencySelector'
 import { NotificationIcon } from '@/components/notification-icon'
@@ -20,6 +21,7 @@ import { useUserProfile } from '@/hooks/useUserProfile'
 
 export function HeaderDesktop() {
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchEnabled, setSearchEnabled] = useState(true)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [wishlistOpen, setWishlistOpen] = useState(false)
@@ -35,6 +37,7 @@ export function HeaderDesktop() {
 
   useEffect(() => {
     setMounted(true)
+    checkFeatureClient('product_search_enabled').then(setSearchEnabled)
   }, [])
 
   // Fetch notifications from database
@@ -354,6 +357,7 @@ export function HeaderDesktop() {
                 <Settings className="h-5 w-5" aria-hidden="true" />
               </Link>
             )}
+            {searchEnabled && (
             <button 
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-95",
@@ -368,6 +372,7 @@ export function HeaderDesktop() {
             >
               <Search className="h-5 w-5" aria-hidden="true" />
             </button>
+            )}
             <NotificationIcon 
               count={unreadCount} 
               onClick={() => setNotificationsOpen(!notificationsOpen)}
@@ -475,7 +480,7 @@ export function HeaderDesktop() {
         </div>
       </nav>
 
-      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      {searchEnabled && <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />}
       <CartModal isOpen={cartOpen} onClose={() => setCartOpen(false)} />
       <WishlistModal isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
       <NotificationDialog

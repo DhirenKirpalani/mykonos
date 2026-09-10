@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { useCartCount } from '@/hooks/useCartCount'
 import { useWishlistCount } from '@/hooks/useWishlistCount'
+import { useUserProfile } from '@/hooks/useUserProfile'
 
 export function HeaderMobile() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -29,6 +30,8 @@ export function HeaderMobile() {
   const { role } = useUserRole()
   const { count: cartCount } = useCartCount()
   const { count: wishlistCount, isAuthenticated: wishlistAuthed } = useWishlistCount()
+  const { getInitials } = useUserProfile()
+  const userInitials = getInitials()
 
   useEffect(() => {
     setMounted(true)
@@ -343,25 +346,6 @@ export function HeaderMobile() {
           </Link>
 
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
-            <NotificationIcon 
-              count={unreadCount} 
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
-              isActive={notificationsOpen}
-            />
-            {wishlistAuthed && (
-            <button
-              onClick={() => setWishlistOpen(true)}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10 hover:bg-white/10"
-              aria-label="Wishlist"
-            >
-              <Heart className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-luxury-gold text-[10px] font-bold text-luxury-navy">
-                  {wishlistCount}
-                </span>
-              )}
-            </button>
-            )}
             <button
               onClick={() => {
                 setCartOpen(true)
@@ -379,14 +363,18 @@ export function HeaderMobile() {
             <Link 
               href="/account"
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10",
+                "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10 font-semibold text-sm",
                 pathname.startsWith('/account')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"
               )}
               aria-label="Account"
             >
-              <User className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
+              {userInitials ? (
+                <span className="font-serif">{userInitials}</span>
+              ) : (
+                <User className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
+              )}
             </Link>
           </div>
         </div>
@@ -456,6 +444,52 @@ export function HeaderMobile() {
                 </Link>
               ))}
             </nav>
+
+            {/* Divider */}
+            <div className="my-4 border-t border-white/10" />
+
+            {/* Account actions */}
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setNotificationsOpen(true)
+                }}
+                className="flex items-center gap-3 w-full px-4 py-3.5 text-sm font-medium uppercase tracking-[0.12em] text-white/80 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+              >
+                <div className="relative flex-shrink-0">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-luxury-gold text-[9px] font-bold text-luxury-navy">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
+                {t.header.notifications || 'Notifications'}
+              </button>
+
+              {wishlistAuthed && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    setWishlistOpen(true)
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-3.5 text-sm font-medium uppercase tracking-[0.12em] text-white/80 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                >
+                  <div className="relative flex-shrink-0">
+                    <Heart className="h-4 w-4" aria-hidden="true" />
+                    {wishlistCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-luxury-gold text-[9px] font-bold text-luxury-navy">
+                        {wishlistCount}
+                      </span>
+                    )}
+                  </div>
+                  {t.header.wishlist || 'Wishlist'}
+                </button>
+              )}
+            </div>
 
             {/* Divider */}
             <div className="my-4 border-t border-white/10" />

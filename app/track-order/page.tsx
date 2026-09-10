@@ -7,12 +7,13 @@ import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Package, Mail, MapPin, Calendar, Truck, CheckCircle2, Clock, UserPlus, LogIn, ChevronRight, Tag } from 'lucide-react'
-import { formatPrice } from '@/lib/utils/currency'
+import { formatPrice } from '@/lib/utils'
 import { getCountryName } from '@/lib/utils/country'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
+import { PayPalCheckout } from '@/components/PayPalCheckout'
 import { OrderDetailsModal } from '@/components/OrderDetailsModal'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
@@ -97,6 +98,7 @@ export default function TrackOrderPage() {
   const [notFound, setNotFound] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, number>>(new Map())
+  const [paypalOrderData, setPaypalOrderData] = useState<{ orderId: string; orderNumber: string; amount: number; currency: string; items: any[]; shippingCost: number } | null>(null)
 
   // Helper function to translate order status
   const getTranslatedStatus = (status: string) => {
@@ -478,12 +480,33 @@ export default function TrackOrderPage() {
     // Check if this is a Stripe order (non-ID region)
     const stripeSessionId = (currentOrder as any)?.stripe_session_id
     const paypalOrderId = (currentOrder as any)?.paypal_order_id
-    if (paypalOrderId || (currentOrder as any)?.payment_gateway === 'paypal') {
-      debugLog('💳 [PAYPAL] Detected PayPal order, redirecting to checkout...')
-      toast.info('Redirecting to PayPal checkout...')
-      window.location.href = '/checkout'
+    const orderCurrency = (currentOrder as any)?.currency_code
+
+    // For PayPal orders or non-IDR orders with no payment tokens — show inline PayPal buttons
+    if (paypalOrderId || (currentOrder as any)?.payment_gateway === 'paypal' || (orderCurrency && orderCurrency !== 'IDR' && !currentOrder.snap_token && !stripeSessionId)) {
+      debugLog('💳 [PAYPAL] Detected PayPal/non-IDR order, showing inline PayPal buttons...')
+      const currency = (currentOrder as any)?.payment_metadata?.currency_code || orderCurrency || 'USD'
+      const subtotal = (currentOrder as any)?.subtotal_amount ?? 0
+      const shipping = (currentOrder as any)?.shipping_amount ?? 0
+      const discount = (currentOrder as any)?.discount_amount ?? 0
+      const tax = (currentOrder as any)?.tax_amount ?? 0
+      const total = subtotal - discount + shipping + tax
+      const paypalItems = (currentOrder.order_items || []).map((item: any) => ({
+        name: item.variant_name ? `${item.product.name} - ${item.variant_name}` : item.product.name,
+        price: Math.round(item.price_at_purchase * 100) / 100,
+        quantity: item.quantity,
+      }))
+      setPaypalOrderData({
+        orderId: currentOrder.id,
+        orderNumber: currentOrder.order_number,
+        amount: total,
+        currency: currency.toLowerCase(),
+        items: paypalItems,
+        shippingCost: shipping,
+      })
       return
     }
+
     if (stripeSessionId) {
       debugLog('💳 [STRIPE] Detected Stripe order, redirecting to Stripe checkout...')
       
@@ -833,7 +856,7 @@ export default function TrackOrderPage() {
                               : sessionOrder.status === 'packed' ? (lang === 'id' ? '📦 Dikemas' : '📦 Packed')
                               : sessionOrder.status === 'cancelled' ? (lang === 'id' ? '❌ Dibatalkan' : '❌ Cancelled')
                               : sessionOrder.payment_status === 'completed' ? (lang === 'id' ? '⏳ Diproses' : '⏳ Processing')
-                              : (lang === 'id' ? '💳 Menunggu Pembayaran' : '💳 Awaiting Payment')
+                              : (lang === 'id' ? '💳 Menunggu Pembayaran' : '💳 Pending Payment')
                             }
                           </span>
                         </div>
@@ -1587,9 +1610,113 @@ export default function TrackOrderPage() {
         }}
         lang={lang}
         t={t}
-        onContinuePayment={() => modalOrder && handleContinuePayment(modalOrder)}
+        onContinuePayment={() => {
+          if (modalOrder) {
+            setIsModalOpen(false)
+            setModalOrder(null)
+            setSelectedOrderId(null)
+            // Defer to allow Radix Dialog to fully unmount (focus trap release) before opening PayPal modal
+            setTimeout(() => handleContinuePayment(modalOrder), 300)
+          }
+        }}
         isProcessingPayment={isProcessingPayment}
       />
+
+      {/* PayPal Inline Checkout Modal */}
+      {paypalOrderData && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-md sm:mx-4 ring-1 ring-luxury-gold/20">
+            {/* Header */}
+            <div className="bg-luxury-navy px-4 sm:px-6 py-4 sm:py-5 relative">
+              <button
+                onClick={() => setPaypalOrderData(null)}
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 text-white/50 hover:text-luxury-gold transition-colors"
+                aria-label="Close"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <h3 className="font-caslon text-lg sm:text-xl text-white tracking-wide">Complete Your Payment</h3>
+              <p className="font-montserrat text-[10px] sm:text-xs text-white/60 mt-2 tracking-wider uppercase text-left">
+                Secure checkout via PayPal
+              </p>
+            </div>
+
+            {/* Order Summary */}
+            <div className="p-4 sm:p-6">
+              <div className="mb-4 sm:mb-5 p-3 sm:p-4 bg-luxury-gray-light rounded-lg border border-luxury-gold/10">
+                <div className="flex items-center justify-between mb-3 pb-3 border-b border-luxury-gold/10 gap-2">
+                  <span className="font-montserrat text-[10px] sm:text-xs text-luxury-gray-dark tracking-wider uppercase shrink-0">
+                    Order
+                  </span>
+                  <span className="font-mono text-xs sm:text-sm text-luxury-navy font-medium truncate">
+                    {paypalOrderData.orderNumber || paypalOrderData.orderId.slice(0, 8)}
+                  </span>
+                </div>
+
+                {/* Items */}
+                {paypalOrderData.items?.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {paypalOrderData.items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between gap-2 text-sm">
+                        <span className="font-lato text-luxury-gray-dark min-w-0 flex-1">
+                          <span className="block truncate">{item.name}</span>
+                          <span className="text-xs text-luxury-gray-dark/70">Qty: {item.quantity} × {formatPrice(item.price, paypalOrderData.currency.toUpperCase())}</span>
+                        </span>
+                        <span className="font-lato text-luxury-gray-dark whitespace-nowrap shrink-0">
+                          {formatPrice(item.price * item.quantity, paypalOrderData.currency.toUpperCase())}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Shipping */}
+                {paypalOrderData.shippingCost > 0 && (
+                  <div className="flex justify-between text-sm mb-3 pt-3 border-t border-luxury-gold/10">
+                    <span className="font-lato text-luxury-gray-dark">Shipping</span>
+                    <span className="font-lato text-luxury-gray-dark">
+                      {formatPrice(paypalOrderData.shippingCost, paypalOrderData.currency.toUpperCase())}
+                    </span>
+                  </div>
+                )}
+
+                {/* Total */}
+                <div className="flex justify-between items-center pt-3 border-t border-luxury-gold/20">
+                  <span className="font-montserrat text-xs sm:text-sm text-luxury-navy font-semibold tracking-wide uppercase">
+                    Total
+                  </span>
+                  <span className="font-caslon text-xl sm:text-2xl text-luxury-navy font-bold">
+                    {formatPrice(paypalOrderData.amount, paypalOrderData.currency.toUpperCase())}
+                  </span>
+                </div>
+              </div>
+
+              <PayPalCheckout
+                orderId={paypalOrderData.orderId}
+                amount={paypalOrderData.amount}
+                currency={paypalOrderData.currency}
+                items={paypalOrderData.items}
+                shippingCost={paypalOrderData.shippingCost}
+                onSuccess={() => {
+                  toast.success('Payment successful! Your order is being processed.')
+                  setPaypalOrderData(null)
+                  setTimeout(() => window.location.reload(), 1000)
+                }}
+                onError={(err) => {
+                  console.error('PayPal error:', err)
+                  toast.error('Payment failed. Please try again.')
+                }}
+              />
+
+              <p className="font-lato text-[11px] text-center text-luxury-gray-dark/60 mt-4">
+                Your payment is secured by PayPal. We never store your card details.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

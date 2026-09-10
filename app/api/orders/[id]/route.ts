@@ -26,7 +26,7 @@ export async function GET(
 
     const { order_number } = params
 
-    // Fetch order with all related data
+    // Fetch order with all related data (narrow product columns to avoid heavy JSONB)
     const { data: order, error } = await supabase
       .from('orders')
       .select(`
@@ -34,7 +34,7 @@ export async function GET(
         shipping_address:shipping_addresses(*),
         order_items(
           *,
-          product:products(*)
+          product:products(id, name, slug, image_urls, variants)
         )
       `)
       .eq('order_number', order_number)

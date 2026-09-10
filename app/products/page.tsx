@@ -10,6 +10,7 @@ import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useRegion } from '@/contexts/RegionContext'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { checkFeatureClient } from '@/lib/system-settings'
 
 type Product = Database['public']['Tables']['products']['Row']
 
@@ -233,6 +234,14 @@ function ProductsContent() {
 
     async function fetchSoldOutProducts() {
       setIsSoldOutLoading(true)
+
+      // Skip if hide_sold_out_products is enabled
+      const hideSoldOut = await checkFeatureClient('hide_sold_out_products')
+      if (hideSoldOut) {
+        setSoldOutProducts([])
+        setIsSoldOutLoading(false)
+        return
+      }
 
       const now = new Date().toISOString()
 

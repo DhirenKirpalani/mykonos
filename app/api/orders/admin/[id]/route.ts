@@ -77,32 +77,31 @@ export async function GET(
       );
     }
 
-    // Fetch user data separately
-    const { data: orderUserData } = await supabase
-      .from('users')
-      .select('first_name, last_name, email')
-      .eq('id', order.user_id)
-      .single();
+    // Fetch user data, order items, and shipping address in parallel
+    const [orderUserRes, orderItemsRes] = await Promise.all([
+      order.user_id
+        ? supabase.from('users').select('first_name, last_name, email').eq('id', order.user_id).single()
+        : Promise.resolve({ data: null, error: null }),
+      supabase.from('order_items').select('id, quantity, unit_price, product_id, variant_name').eq('order_id', order.id)
+    ]);
 
-    // Fetch order items separately
-    const { data: orderItems } = await supabase
-      .from('order_items')
-      .select('id, quantity, unit_price, product_id')
-      .eq('order_id', order.id);
+    const orderUserData = orderUserRes.data;
 
-    // Fetch product details for each order item
-    if (orderItems && orderItems.length > 0) {
-      const productIds = orderItems.map(item => item.product_id);
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, name, sku')
-        .in('id', productIds);
+    // Fetch product details for order items (batched)
+    let orderItems = orderItemsRes.data || [];
+    if (orderItems.length > 0) {
+      const productIds = Array.from(new Set(orderItems.map(item => item.product_id).filter(Boolean)));
+      if (productIds.length > 0) {
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, name, sku, image_urls')
+          .in('id', productIds);
 
-      // Attach product data to order items
-      orderItems.forEach(item => {
-        const product = products?.find(p => p.id === item.product_id);
-        (item as any).product = product;
-      });
+        orderItems.forEach(item => {
+          const product = products?.find(p => p.id === item.product_id);
+          (item as any).product = product;
+        });
+      }
     }
 
     // Combine all data

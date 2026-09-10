@@ -15,16 +15,19 @@ export async function GET(
 
     const discountId = params.id
 
-    // Fetch discount products with product details
+    // Fetch discount products with product details (explicit columns only)
     const { data: discountProducts, error } = await supabase
       .from('discount_products')
       .select(`
-        *,
+        id, product_id, variant_id, discount_type, discount_value,
+        discounted_price, promo_stock, min_purchase, is_active,
         products!inner(
           id,
           name,
           image_urls,
-          variants
+          variants,
+          price_idr,
+          stock_quantity
         )
       `)
       .eq('discount_id', discountId)

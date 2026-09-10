@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 export const dynamic = 'force-dynamic'
 import { getEffectivePrice } from '@/lib/utils/pricing'
+import { isFeatureEnabled } from '@/lib/system-settings'
 
 type CartItem = Database['public']['Tables']['cart_items']['Row']
 type Product = Database['public']['Tables']['products']['Row']
@@ -184,11 +185,16 @@ export async function POST(request: Request) {
     })
     
     if (isExplicitlyOutOfStock) {
-      console.error('❌ [CART API] Product is out of stock')
-      return NextResponse.json(
-        { error: 'This product is out of stock' },
-        { status: 400 }
-      )
+      // Allow adding to cart if backorders are enabled globally AND the product allows backorder
+      const backordersEnabled = await isFeatureEnabled('backorders_enabled')
+      const productAllowsBackorder = (typedProduct as any).allow_backorder === true
+      if (!(backordersEnabled && productAllowsBackorder)) {
+        console.error('❌ [CART API] Product is out of stock')
+        return NextResponse.json(
+          { error: 'This product is out of stock' },
+          { status: 400 }
+        )
+      }
     }
 
     // Validate quantity constraints (use variant-specific limits)

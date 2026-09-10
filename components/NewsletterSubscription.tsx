@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mail, Loader2, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
+import { checkFeatureClient } from '@/lib/system-settings'
 
 export default function NewsletterSubscription() {
   const { t } = useLanguage()
@@ -11,6 +12,21 @@ export default function NewsletterSubscription() {
   const [consent, setConsent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [checked, setChecked] = useState(false)
+  const [enabled, setEnabled] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    checkFeatureClient('newsletter_enabled').then((result) => {
+      if (cancelled) return
+      setEnabled(result)
+      setChecked(true)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  if (!checked) return null
+  if (!enabled) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

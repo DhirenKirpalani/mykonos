@@ -37,6 +37,7 @@ export default function CMSLayout({
   const router = useRouter()
   const { role, isLoading: roleLoading } = useUserRole()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [sidebarHovered, setSidebarHovered] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const { prefetchProducts, prefetchOrders, prefetchCustomers } = usePrefetchCMSData()
@@ -179,90 +180,113 @@ export default function CMSLayout({
   return (
     <div className="fixed inset-0 bg-gray-50">
       <Toaster position="top-center" richColors closeButton />
-      {/* Mobile menu button */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between bg-luxury-navy px-4 lg:hidden">
-        <Link href="/cms" className="font-serif text-xl font-medium tracking-wider text-luxury-gold">
-          MYKONOS CMS
-        </Link>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="rounded-lg p-2 text-white hover:bg-white/10"
+
+      {/* Top Navbar — visible on all screen sizes */}
+      <header className="fixed top-0 left-0 right-0 z-[60] flex h-16 items-center justify-between bg-luxury-navy px-4 lg:px-6 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          {/* Mobile menu toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="rounded-lg p-2 text-white hover:bg-white/10 lg:hidden"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+          <Link href="/cms" className="font-montserrat text-xl font-semibold tracking-normal whitespace-nowrap"
+            style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+          >
+            MYKONOS CMS
+          </Link>
+        </div>
+        <Link
+          href="/"
+          className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
         >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
+          <span>←</span>
+          <span className="hidden sm:inline">Back to Store</span>
+        </Link>
+      </header>
 
       {/* Mobile menu overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 top-16 z-40 bg-black/50 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      <div className="flex h-full">
-        <aside className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-luxury-navy text-white transition-transform duration-300 lg:translate-x-0",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
-          <div className="flex h-full flex-col">
-            <div className="flex h-16 items-center border-b border-white/10 px-6">
-              <Link href="/cms" className="font-serif text-xl font-medium tracking-wider text-luxury-gold">
-                MYKONOS CMS
-              </Link>
-            </div>
-            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-              {navigation.map((item) => {
-                // Highlight if exact match or if current path starts with the item's path (for child routes)
-                const isActive = pathname === item.href || 
-                  (item.href !== '/cms' && pathname.startsWith(item.href + '/'))
-                
-                // Determine prefetch handler based on route
-                const handleMouseEnter = () => {
-                  if (item.href.includes('/products')) {
-                    prefetchProducts()
-                  } else if (item.href.includes('/orders')) {
-                    prefetchOrders()
-                  } else if (item.href.includes('/customers')) {
-                    prefetchCustomers()
-                  }
+      {/* Sidebar — collapses to icons on desktop, expands on hover */}
+      <aside
+        onMouseEnter={() => setSidebarHovered(true)}
+        onMouseLeave={() => setSidebarHovered(false)}
+        className={cn(
+          "fixed top-16 bottom-0 left-0 z-50 bg-luxury-navy text-white transition-all duration-300 overflow-hidden border-r border-white/10",
+          // Mobile: toggle via menu button, always full width
+          mobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full w-64",
+          // Desktop: collapse to icon-only, expand on hover
+          "lg:translate-x-0",
+          sidebarHovered ? "lg:w-64" : "lg:w-16"
+        )}
+      >
+        <nav className="flex h-full flex-col px-2 py-4">
+          <div className="flex-1 space-y-1">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || 
+                (item.href !== '/cms' && pathname.startsWith(item.href + '/'))
+              
+              const handleMouseEnter = () => {
+                if (item.href.includes('/products')) {
+                  prefetchProducts()
+                } else if (item.href.includes('/orders')) {
+                  prefetchOrders()
+                } else if (item.href.includes('/customers')) {
+                  prefetchCustomers()
                 }
-                
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    onMouseEnter={handleMouseEnter}
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-luxury-gold text-luxury-navy'
-                        : 'text-white hover:bg-white/10'
-                    )}
-                  >
-                    <item.icon className="h-5 w-5" />
+              }
+              
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  onMouseEnter={handleMouseEnter}
+                  title={!sidebarHovered ? item.name : undefined}
+                  className={cn(
+                    'flex items-center rounded-lg py-2.5 text-sm font-montserrat font-medium uppercase tracking-wider transition-colors whitespace-nowrap',
+                    // Mobile: full padding with gap. Desktop: centered when collapsed
+                    "px-3 gap-3",
+                    !sidebarHovered && "lg:px-2 lg:justify-center lg:gap-0",
+                    isActive
+                      ? 'bg-luxury-gold text-luxury-navy'
+                      : 'text-white hover:bg-white/10'
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className={cn(
+                    "whitespace-nowrap transition-opacity duration-200",
+                    // Mobile: always visible. Desktop: hidden when collapsed
+                    "opacity-100",
+                    !sidebarHovered && "lg:hidden"
+                  )}>
                     {item.name}
-                  </Link>
-                )
-              })}
-            </nav>
-            <div className="border-t border-white/10 p-4">
-              <Link
-                href="/"
-                className="flex items-center gap-2 text-sm text-white/70 hover:text-white"
-              >
-                ← Back to Store
-              </Link>
-            </div>
+                  </span>
+                </Link>
+              )
+            })}
           </div>
-        </aside>
-        <main className="ml-0 flex-1 overflow-y-auto pt-16 lg:ml-64 lg:pt-0">
-          <div className="mx-auto w-full px-3 py-4 sm:px-4 sm:py-6 lg:container lg:px-8 lg:py-8">
-            {children}
-          </div>
-        </main>
-      </div>
+        </nav>
+      </aside>
+
+      {/* Main content — offset for navbar + sidebar */}
+      <main className={cn(
+        "h-[calc(100%-4rem)] mt-16 overflow-y-auto transition-[margin] duration-300",
+        "ml-0 lg:ml-16",
+        sidebarHovered && "lg:ml-64"
+      )}>
+        <div className="mx-auto w-full px-3 py-4 sm:px-4 sm:py-6 lg:container lg:px-8 lg:py-8">
+          {children}
+        </div>
+      </main>
     </div>
   )
 }

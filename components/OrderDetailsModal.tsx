@@ -142,7 +142,7 @@ export function OrderDetailsModal({ order, isOpen, onClose, lang = 'id', t, onCo
             if (paymentStatus === 'settlement' || paymentStatus === 'capture') return lang === 'id' ? 'Diproses' : 'Processing'
             if (paymentStatus === 'authorize') return lang === 'id' ? 'Diotorisasi' : 'Authorized'
             if (paymentStatus === 'challenge') return lang === 'id' ? 'Dalam Peninjauan' : 'Under Review'
-            if (paymentStatus === 'pending') return lang === 'id' ? 'Menunggu Pembayaran' : 'Awaiting Payment'
+            if (paymentStatus === 'pending') return lang === 'id' ? 'Menunggu Pembayaran' : 'Pending Payment'
             if (paymentStatus === 'refund') return lang === 'id' ? 'Dikembalikan' : 'Refunded'
             if (paymentStatus === 'partial_refund') return lang === 'id' ? 'Dikembalikan Sebagian' : 'Partially Refunded'
             if (paymentStatus === 'chargeback') return lang === 'id' ? 'Disengketakan' : 'Disputed'

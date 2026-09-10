@@ -7,6 +7,8 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import NewsletterSubscription from '@/components/NewsletterSubscription'
+import { WhatsAppButton } from '@/components/WhatsAppButton'
+import { CookieConsent } from '@/components/CookieConsent'
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -27,6 +29,8 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
       {pathname === '/' && <NewsletterSubscription />}
       <Footer />
       <ScrollToTop />
+      <WhatsAppButton />
+      <CookieConsent />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, X, Send, Minimize2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import { checkFeatureClient } from '@/lib/system-settings'
 
 interface Message {
   id: string
@@ -21,6 +22,8 @@ interface LiveChatWidgetProps {
 
 export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
   const { user } = useAuth()
+  const [enabled, setEnabled] = useState(true)
+  const [checked, setChecked] = useState(false)
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('chat_is_open') === 'true'
@@ -42,6 +45,16 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
   const [userName, setUserName] = useState<string>('')
   const [unreadCount, setUnreadCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    checkFeatureClient('live_chat_enabled').then((result) => {
+      if (cancelled) return
+      setEnabled(result)
+      setChecked(true)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   // Persist open state; reset unread count when opened
   useEffect(() => {
@@ -425,6 +438,9 @@ export function LiveChatWidget({ orderId, orderNumber }: LiveChatWidgetProps) {
       </button>
     )
   }
+
+  if (!checked) return null
+  if (!enabled) return null
 
   return (
     <div

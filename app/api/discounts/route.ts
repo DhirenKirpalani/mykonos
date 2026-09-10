@@ -15,7 +15,7 @@ export async function GET() {
     const { data: discounts, error } = await supabase
       .from('discounts')
       .select(`
-        *,
+        id, name, start_date, end_date, is_active, created_at,
         discount_products(
           id,
           product_id,

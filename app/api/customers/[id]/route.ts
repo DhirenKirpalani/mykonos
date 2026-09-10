@@ -40,12 +40,26 @@ export async function GET(
 
     const { id } = params
 
-    // Get customer profile
-    const { data: customer, error: customerError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single()
+    // Get customer profile, tags, and shipping addresses in parallel
+    const [customerRes, tagsRes, addressesRes] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, email, first_name, last_name, phone, country, created_at, role')
+        .eq('id', id)
+        .single(),
+      supabase
+        .from('customer_tag_assignments')
+        .select('id, tag_id, assigned_at, tag:customer_tags(id, name, color)')
+        .eq('user_id', id),
+      supabase
+        .from('shipping_addresses')
+        .select('id, full_name, phone, address_line1, address_line2, city, state, postal_code, country, is_default')
+        .eq('user_id', id)
+        .order('is_default', { ascending: false })
+    ])
+
+    const customer = customerRes.data
+    const customerError = customerRes.error
 
     if (customerError || !customer) {
       return NextResponse.json(
@@ -54,23 +68,10 @@ export async function GET(
       )
     }
 
-    // Get customer tags
-    const { data: tags } = await supabase
-      .from('customer_tag_assignments')
-      .select('*, tag:customer_tags(*)')
-      .eq('user_id', id)
-
-    // Get shipping addresses
-    const { data: addresses } = await supabase
-      .from('shipping_addresses')
-      .select('*')
-      .eq('user_id', id)
-      .order('is_default', { ascending: false })
-
     return NextResponse.json({
       customer,
-      tags: tags || [],
-      addresses: addresses || [],
+      tags: tagsRes.data || [],
+      addresses: addressesRes.data || [],
     })
   } catch (error: any) {
     console.error('Customer profile fetch error:', error)

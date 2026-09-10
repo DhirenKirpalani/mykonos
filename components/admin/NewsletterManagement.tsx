@@ -315,8 +315,31 @@ export default function NewsletterManagement() {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-left"><div className="h-4 w-4 rounded bg-gray-200 animate-pulse" /></th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Source</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Subscribed</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {[...Array(6)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-4 py-3"><div className="h-4 w-4 rounded bg-gray-200" /></td>
+                    <td className="px-4 py-3"><div className="h-4 w-40 rounded bg-gray-200" /></td>
+                    <td className="px-4 py-3"><div className="h-6 w-16 rounded-full bg-gray-200" /></td>
+                    <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-gray-200" /></td>
+                    <td className="px-4 py-3"><div className="h-4 w-24 rounded bg-gray-200" /></td>
+                    <td className="px-4 py-3"><div className="h-7 w-20 rounded bg-gray-200" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : subscribers.length === 0 ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
