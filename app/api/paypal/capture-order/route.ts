@@ -82,30 +82,25 @@ export async function POST(request: NextRequest) {
     const paymentStatus = capture?.status
 
     if (paymentStatus === 'COMPLETED') {
-      const { data: order } = await supabase
-        .from('orders')
-        .select('user_id')
-        .eq('id', orderId)
-        .single()
+      // Use atomic RPC to prevent double capture and complete reservation
+      const { data: captureResult, error: captureError } = await supabase.rpc('capture_payment_safe', {
+        p_order_id: orderId,
+        p_payment_metadata: {
+          paypal_order_id: paypalOrderId,
+          paypal_capture_id: capture.id,
+          transaction_time: new Date().toISOString(),
+          captured_via: 'client',
+        },
+        p_captured_via: 'client',
+      })
 
-      await supabase
-        .from('orders')
-        .update({
-          payment_status: 'paid',
-          status: 'processing',
-          paid_at: new Date().toISOString(),
-          payment_metadata: {
-            paypal_order_id: paypalOrderId,
-            paypal_capture_id: capture.id,
-            transaction_time: new Date().toISOString(),
-            captured_via: 'client',
-          },
+      if (captureError) {
+        console.error('[PAYPAL-CAPTURE] Atomic capture failed:', captureError)
+        await logPaymentAudit(orderId, 'capture.failed', 'failed', {
+          paypal_order_id: paypalOrderId,
+          error: captureError.message,
         })
-        .eq('id', orderId)
-
-      // Clear cart for authenticated users
-      if (order?.user_id) {
-        await supabase.from('cart_items').delete().eq('user_id', order.user_id)
+        return NextResponse.json({ error: 'Failed to update order after capture' }, { status: 500 })
       }
 
       await logPaymentAudit(orderId, 'capture.completed', 'paid', {

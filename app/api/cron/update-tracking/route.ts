@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { dhlClient } from '@/lib/dhl/client'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60 // 60 seconds max execution time
+export const maxDuration = 10 // Vercel Hobby plan limit: 10 seconds
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -31,23 +31,19 @@ export async function GET(request: Request) {
   const cronId = `CRON-${Date.now()}`
   
   try {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`🔄 Tracking Update Cron Started [${cronId}]`)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('⏰ Time:', new Date().toISOString())
-    
-    // Verify cron secret (optional security - only in production)
+    console.log(`[Tracking Cron] Started [${cronId}] at ${new Date().toISOString()}`)
+
+    // Verify cron secret
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
-    
-    // Only enforce auth if CRON_SECRET is explicitly set and not empty
-    if (cronSecret && cronSecret.trim() !== '' && authHeader !== `Bearer ${cronSecret}`) {
-      console.log('❌ Unauthorized: Invalid cron secret')
+
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      console.error('[Tracking Cron] Unauthorized: Invalid cron secret')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    
+
     // Get all orders with tracking numbers that are not delivered
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
@@ -55,19 +51,19 @@ export async function GET(request: Request) {
       .in('status', ['pending_shipment', 'shipped'])
       .not('tracking_number', 'is', null)
       .order('updated_at', { ascending: true })
-      .limit(50) // Process max 50 orders per run
-    
+      .limit(10) // Process max 10 orders per run (Vercel Hobby 10s limit)
+
     if (ordersError) {
-      console.error('❌ Failed to fetch orders:', ordersError)
+      console.error('[Tracking Cron] Failed to fetch orders:', ordersError)
       return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
     }
-    
-    console.log(`📦 Found ${orders?.length || 0} orders to check`)
-    
+
+    console.log(`[Tracking Cron] Found ${orders?.length || 0} orders to check`)
+
     if (!orders || orders.length === 0) {
-      console.log('✅ No orders to process')
-      return NextResponse.json({ 
-        success: true, 
+      console.log('[Tracking Cron] No orders to process')
+      return NextResponse.json({
+        success: true,
         message: 'No orders to process',
         processed: 0
       })
@@ -80,40 +76,32 @@ export async function GET(request: Request) {
     // Process each order
     for (const order of orders) {
       const trackingNumber = order.tracking_number || order.dhl_shipment_number
-      
-      if (!trackingNumber) {
-        console.log(`⏭️  Skipping order ${order.order_number}: No tracking number`)
-        continue
-      }
-      
+
+      if (!trackingNumber) continue
+
       try {
-        console.log(`🔍 Checking ${order.order_number} (${trackingNumber})...`)
-        
         // Fetch tracking data from DHL
         const tracking = await dhlClient.trackShipment(trackingNumber)
-        
+
         if (!tracking.shipments || tracking.shipments.length === 0) {
-          console.log(`⚠️  No tracking data for ${trackingNumber}`)
           failed++
           continue
         }
-        
+
         const shipment = tracking.shipments[0]
         const events = shipment.events || []
-        
+
         // Check if delivered
-        const deliveredEvent = events.find((e: any) => 
+        const deliveredEvent = events.find((e: any) =>
           e.description?.toLowerCase().includes('delivered')
         )
-        
+
         if (deliveredEvent && order.status !== 'delivered') {
-          console.log(`✅ Order ${order.order_number} is delivered!`)
-          
           // Update order to delivered
-          const deliveredTime = deliveredEvent.date && deliveredEvent.time 
+          const deliveredTime = deliveredEvent.date && deliveredEvent.time
             ? `${deliveredEvent.date}T${deliveredEvent.time}:00Z`
             : new Date().toISOString()
-          
+
           const { error: updateError } = await supabase
             .from('orders')
             .update({
@@ -122,29 +110,28 @@ export async function GET(request: Request) {
               updated_at: new Date().toISOString()
             })
             .eq('id', order.id)
-          
+
           if (updateError) {
-            console.error(`❌ Failed to update ${order.order_number}:`, updateError)
+            console.error(`[Tracking Cron] Failed to update ${order.order_number}:`, updateError)
             failed++
           } else {
             updated++
-            
+            console.log(`[Tracking Cron] ${order.order_number} -> delivered`)
+
             // Send delivery email (optional)
             try {
               await sendDeliveryNotification(order, trackingNumber, deliveredTime)
             } catch (emailError) {
-              console.error(`⚠️  Failed to send email for ${order.order_number}`)
+              console.error(`[Tracking Cron] Email failed for ${order.order_number}`)
             }
           }
         } else if (events.length > 0 && order.status === 'pending_shipment') {
           // Has events but not delivered - mark as shipped
-          console.log(`📦 Order ${order.order_number} is now shipped`)
-          
           const firstEvent = events[events.length - 1]
           const shippedTime = firstEvent.date && firstEvent.time
             ? `${firstEvent.date}T${firstEvent.time}:00Z`
             : new Date().toISOString()
-          
+
           const { error: updateError } = await supabase
             .from('orders')
             .update({
@@ -153,40 +140,31 @@ export async function GET(request: Request) {
               updated_at: new Date().toISOString()
             })
             .eq('id', order.id)
-          
+
           if (updateError) {
-            console.error(`❌ Failed to update ${order.order_number}:`, updateError)
+            console.error(`[Tracking Cron] Failed to update ${order.order_number}:`, updateError)
             failed++
           } else {
             updated++
+            console.log(`[Tracking Cron] ${order.order_number} -> shipped`)
           }
         } else {
-          console.log(`ℹ️  No status change for ${order.order_number}`)
           unchanged++
         }
-        
+
         // Rate limiting: wait 100ms between requests
         await new Promise(resolve => setTimeout(resolve, 100))
-        
+
       } catch (error: any) {
-        console.error(`❌ Error processing ${order.order_number}:`, error.message)
+        console.error(`[Tracking Cron] Error processing ${order.order_number}:`, error.message)
         failed++
       }
     }
     
     const duration = Date.now() - startTime
-    
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`✨ Cron Job Completed [${cronId}]`)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📊 Summary:')
-    console.log(`   Total Orders: ${orders.length}`)
-    console.log(`   ✅ Updated: ${updated}`)
-    console.log(`   ⏭️  Unchanged: ${unchanged}`)
-    console.log(`   ❌ Failed: ${failed}`)
-    console.log(`   ⏱️  Duration: ${duration}ms`)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
+
+    console.log(`[Tracking Cron] Completed [${cronId}]: ${orders.length} total, ${updated} updated, ${unchanged} unchanged, ${failed} failed, ${duration}ms`)
+
     return NextResponse.json({
       success: true,
       message: 'Tracking update completed',
@@ -198,15 +176,10 @@ export async function GET(request: Request) {
         duration
       }
     })
-    
+
   } catch (error: any) {
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.error(`💥 Cron Job Failed [${cronId}]`)
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.error('⚠️  Error:', error.message)
-    console.error('📚 Stack:', error.stack)
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
+    console.error(`[Tracking Cron] Failed [${cronId}]:`, error.message)
+
     return NextResponse.json(
       { 
         success: false,

@@ -92,7 +92,7 @@ GET /track/shipments?shipmentTrackingNumber={trackingNumber}
 **Best for**: Production environments with scheduled tasks
 
 ```typescript
-// app/api/cron/poll-dhl-tracking/route.ts
+// app/api/cron/update-tracking/route.ts
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase/client'
 import { dhlClient } from '@/lib/dhl/client'
@@ -200,7 +200,7 @@ function mapDHLStatusToOurStatus(typeCode: string): string {
 {
   "crons": [
     {
-      "path": "/api/cron/poll-dhl-tracking",
+      "path": "/api/cron/update-tracking",
       "schedule": "0 */2 * * *"
     }
   ]
@@ -210,7 +210,7 @@ function mapDHLStatusToOurStatus(typeCode: string): string {
 **Setup Cron Job (Linux)**:
 ```bash
 # Run every 2 hours
-0 */2 * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://mykonos.com/api/cron/poll-dhl-tracking
+0 */2 * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://mykonos.com/api/cron/update-tracking
 ```
 
 ---
@@ -416,7 +416,7 @@ WHERE tracking_number IS NOT NULL;
 ## 📝 Implementation Checklist
 
 - [ ] Add database fields (`last_tracking_poll`, `tracking_events`)
-- [ ] Create cron endpoint `/api/cron/poll-dhl-tracking`
+- [ ] Create cron endpoint `/api/cron/update-tracking`
 - [ ] Set up Vercel cron job (every 2 hours)
 - [ ] Implement smart interval logic
 - [ ] Add email notifications for status changes

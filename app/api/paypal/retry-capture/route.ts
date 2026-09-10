@@ -21,6 +21,14 @@ const supabase = createClient(
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verify CRON_SECRET — this endpoint is called by Vercel cron and admins
+    const authHeader = request.headers.get('authorization')
+    const expectedAuth = `Bearer ${process.env.CRON_SECRET}`
+
+    if (!process.env.CRON_SECRET || authHeader !== expectedAuth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json().catch(() => ({}))
     const { orderId } = body
 
@@ -130,21 +138,21 @@ async function retryOrderInternal(orderId: string, paypalOrderId: string) {
   if (paypalStatus === 'COMPLETED') {
     const capture = paypalData.purchase_units?.[0]?.payments?.captures?.[0]
     if (capture?.status === 'COMPLETED') {
-      // Already captured — sync our DB
-      await supabase
-        .from('orders')
-        .update({
-          payment_status: 'paid',
-          status: 'processing',
-          paid_at: new Date().toISOString(),
-          payment_metadata: {
-            paypal_order_id: paypalOrderId,
-            paypal_capture_id: capture.id,
-            transaction_time: new Date().toISOString(),
-            captured_via: 'retry',
-          },
-        })
-        .eq('id', orderId)
+      // Already captured — sync our DB with atomic RPC
+      const { error: captureError } = await supabase.rpc('capture_payment_safe', {
+        p_order_id: orderId,
+        p_payment_metadata: {
+          paypal_order_id: paypalOrderId,
+          paypal_capture_id: capture.id,
+          transaction_time: new Date().toISOString(),
+          captured_via: 'retry',
+        },
+        p_captured_via: 'retry',
+      })
+
+      if (captureError) {
+        console.error('[RETRY-CAPTURE] Sync failed:', captureError)
+      }
 
       await supabase.from('audit_logs').insert({
         entity_type: 'payment',
@@ -178,29 +186,20 @@ async function retryOrderInternal(orderId: string, paypalOrderId: string) {
   const captureStatus = capture?.status
 
   if (captureStatus === 'COMPLETED') {
-    const { data: orderUser } = await supabase
-      .from('orders')
-      .select('user_id')
-      .eq('id', orderId)
-      .single()
+    // Use atomic RPC to prevent double capture and complete reservation
+    const { error: captureError } = await supabase.rpc('capture_payment_safe', {
+      p_order_id: orderId,
+      p_payment_metadata: {
+        paypal_order_id: paypalOrderId,
+        paypal_capture_id: capture.id,
+        transaction_time: new Date().toISOString(),
+        captured_via: 'retry',
+      },
+      p_captured_via: 'retry',
+    })
 
-    await supabase
-      .from('orders')
-      .update({
-        payment_status: 'paid',
-        status: 'processing',
-        paid_at: new Date().toISOString(),
-        payment_metadata: {
-          paypal_order_id: paypalOrderId,
-          paypal_capture_id: capture.id,
-          transaction_time: new Date().toISOString(),
-          captured_via: 'retry',
-        },
-      })
-      .eq('id', orderId)
-
-    if (orderUser?.user_id) {
-      await supabase.from('cart_items').delete().eq('user_id', orderUser.user_id)
+    if (captureError) {
+      console.error('[RETRY-CAPTURE] Capture failed:', captureError)
     }
 
     await supabase.from('audit_logs').insert({

@@ -17,15 +17,9 @@ import type {
   DHLAddress,
 } from './types'
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 class DHLClient {
-  private baseUrl: string
-  private authHeader: string
-
-  constructor() {
-    this.baseUrl = getDHLBaseUrl()
-    this.authHeader = getDHLAuthHeader()
-  }
-
   /**
    * Make authenticated request to DHL API
    */
@@ -33,33 +27,26 @@ class DHLClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`
+    // Resolve credentials lazily on each call so env changes take effect without
+    // relying on module-level caching across serverless invocations.
+    const baseUrl = getDHLBaseUrl()
+    const authHeader = getDHLAuthHeader()
+    const url = `${baseUrl}${endpoint}`
     const requestId = `DHL-${Date.now()}`
-    
+
     const headers = {
-      'Authorization': this.authHeader,
+      'Authorization': authHeader,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       ...options.headers,
     }
 
-    // Detailed request logging
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`🚀 DHL API Request [${requestId}]`)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📍 URL:', url)
-    console.log('🔧 Method:', options.method || 'GET')
-    console.log('🔑 Environment:', process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'SANDBOX')
-    console.log('📦 Headers:', {
-      ...headers,
-      Authorization: headers.Authorization.substring(0, 20) + '...' // Mask credentials
-    })
-    if (options.body) {
-      console.log('📄 Request Body:')
-      console.log(JSON.stringify(JSON.parse(options.body as string), null, 2))
+    if (!isProduction) {
+      console.log(`[DHL] -> ${options.method || 'GET'} ${url} [${requestId}]`)
+      if (options.body) {
+        console.log('[DHL] Request body:', options.body as string)
+      }
     }
-    console.log('⏰ Timestamp:', new Date().toISOString())
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
     try {
       const startTime = Date.now()
@@ -71,23 +58,15 @@ class DHLClient {
 
       const data = await response.json()
 
-      // Detailed response logging
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-      console.log(`✅ DHL API Response [${requestId}]`)
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-      console.log('📊 Status:', response.status, response.statusText)
-      console.log('⏱️  Duration:', `${duration}ms`)
-      console.log('📄 Response Data:', JSON.stringify(data, null, 2))
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      if (!isProduction) {
+        console.log(`[DHL] <- ${response.status} ${response.statusText} (${duration}ms) [${requestId}]`)
+      }
 
       if (!response.ok) {
         const error = data as any
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-        console.error(`❌ DHL API Error [${requestId}]`)
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-        console.error('🔴 Status:', response.status)
-        console.error('📝 Full Error:', JSON.stringify(error, null, 2))
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        if (!isProduction) {
+          console.error(`[DHL] Error [${requestId}]:`, JSON.stringify(error))
+        }
 
         // DHL uses several error formats: message, detail, title, or reasons[].msg
         const reasonMsg = Array.isArray(error.reasons) && error.reasons[0]?.msg
@@ -99,13 +78,9 @@ class DHLClient {
 
       return data as T
     } catch (error: any) {
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-      console.error(`💥 DHL API Exception [${requestId}]`)
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-      console.error('⚠️  Error Type:', error.name)
-      console.error('💬 Error Message:', error.message)
-      console.error('📚 Stack Trace:', error.stack)
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      if (!isProduction) {
+        console.error(`[DHL] Exception [${requestId}]:`, error.message)
+      }
       throw error
     }
   }
@@ -205,9 +180,9 @@ class DHLClient {
     trackingView?: 'all-checkpoints' | 'last-checkpoint' | 'shipment-details-only'
     levelOfDetail?: 'all' | 'shipment' | 'piece'
   }): Promise<DHLTrackingResponse> {
-    // Return mock data for test tracking numbers
-    if (trackingNumber.startsWith('TEST-') || trackingNumber.startsWith('7777')) {
-      console.log('🎭 Using mock tracking data for test number:', trackingNumber)
+    // Return mock data for test tracking numbers (non-production only)
+    if (!isProduction && (trackingNumber.startsWith('TEST-') || trackingNumber.startsWith('7777'))) {
+      console.log('[DHL] Using mock tracking data for test number:', trackingNumber)
       return this.getMockTrackingData(trackingNumber)
     }
 

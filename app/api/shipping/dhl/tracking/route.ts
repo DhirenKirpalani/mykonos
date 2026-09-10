@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server'
 import { dhlClient } from '@/lib/dhl/client'
+import { verifyUserAuth } from '@/lib/auth/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/shipping/dhl/tracking?trackingNumber=XXX
  * Track DHL Express shipment(s)
+ * Requires authentication — any logged-in user can query tracking.
  */
 export async function GET(request: Request) {
   try {
+    const auth = await verifyUserAuth(request)
+    if (!auth.ok) return auth.response
+
     const { searchParams } = new URL(request.url)
     const trackingNumber = searchParams.get('trackingNumber')
     const trackingNumbers = searchParams.getAll('trackingNumber')

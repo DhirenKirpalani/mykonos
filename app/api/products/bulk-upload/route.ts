@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+export const maxDuration = 10 // Vercel Hobby plan limit: 10 seconds
 
 /**
  * Parse number from string, removing commas

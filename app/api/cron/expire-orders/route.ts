@@ -25,30 +25,30 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
  */
 export async function GET(request: Request) {
   try {
-    // Verify cron secret in production
+    // Verify cron secret
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      console.error('❌ [CRON] Unauthorized cron request')
+
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      console.error('[CRON] Unauthorized cron request')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    console.log('🔵 [CRON] Running auto_cancel_expired_orders...')
+    console.log('[CRON] Running auto_cancel_expired_orders...')
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { data, error } = await supabase.rpc('auto_cancel_expired_orders')
 
     if (error) {
-      console.error('❌ [CRON] Error running auto_cancel_expired_orders:', error)
+      console.error('[CRON] Error running auto_cancel_expired_orders:', error)
       throw error
     }
 
     const expiredCount = data?.[0]?.expired_count || 0
-    console.log(`✅ [CRON] Auto-expired ${expiredCount} orders`)
+    console.log(`[CRON] Auto-expired ${expiredCount} orders`)
 
     return NextResponse.json({
       success: true,
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString()
     })
   } catch (error: any) {
-    console.error('❌ [CRON] Auto-expire orders error:', error)
+    console.error('[CRON] Auto-expire orders error:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to expire orders' },
       { status: 500 }

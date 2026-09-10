@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { dhlClient } from '@/lib/dhl/client'
+import { verifyUserAuth } from '@/lib/auth/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,18 +11,24 @@ export const dynamic = 'force-dynamic'
  * /rates validates the FULL address: street, city, postal, country.
  * A dummy 1kg package is used for the rate request.
  *
+ * Requires authentication — any logged-in user can validate an address.
+ *
  * NOTE: POST /rates uses a FLAT customerDetails structure:
  *   shipperDetails: { postalCode, cityName, countryCode, addressLine1, ... }
  * NOT the nested { postalAddress: {...}, contactInformation: {...} } structure.
  */
 export async function POST(request: Request) {
   const requestId = `VALIDATE-${Date.now()}`
+  const isProduction = process.env.NODE_ENV === 'production'
 
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log(`📍 DHL Full Address Validation [${requestId}]`)
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  if (!isProduction) {
+    console.log(`[DHL Validate] Address validation [${requestId}]`)
+  }
 
   try {
+    const auth = await verifyUserAuth(request)
+    if (!auth.ok) return auth.response
+
     const body = await request.json()
 
     // Validate required fields
@@ -35,28 +42,39 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log('📋 Validating Full Address:', {
-      country: body.countryCode,
-      postalCode: body.postalCode,
-      city: body.cityName,
-      addressLine1: body.addressLine1,
-      countyName: body.countyName,
-      fullName: body.full_name,
-      phone: body.phone,
-      type: body.type || 'delivery',
-    })
-    console.log('📥 Incoming Request Body:', JSON.stringify(body, null, 2))
+    if (!isProduction) {
+      console.log(`[DHL Validate] Country: ${body.countryCode}, Postal: ${body.postalCode}, City: ${body.cityName}`)
+    }
 
     // Build DHL Rate Request with FULL receiver address
-    // Shipper = company address from env vars
+    // Shipper = company address from env vars (required — no silent fallback)
     // Receiver = customer's complete address (street, name, phone, city, postal, country)
+    const shipperPostalCode = process.env.DHL_SHIPPER_POSTAL_CODE
+    const shipperCity = process.env.DHL_SHIPPER_CITY
+    const shipperCountry = process.env.DHL_SHIPPER_COUNTRY
+    const shipperAddress = process.env.DHL_SHIPPER_ADDRESS
+
+    if (!shipperPostalCode || !shipperCity || !shipperCountry || !shipperAddress) {
+      console.error(`[DHL Validate] Missing DHL_SHIPPER_* env vars [${requestId}]`)
+      return NextResponse.json(
+        {
+          success: false,
+          isValid: false,
+          warnings: ['Shipping configuration error. Please contact support.'],
+          suggestions: [],
+          message: 'Shipper address not configured',
+        },
+        { status: 500 }
+      )
+    }
+
     const rateRequest = {
       customerDetails: {
         shipperDetails: {
-          postalCode: process.env.DHL_SHIPPER_POSTAL_CODE || '13920',
-          cityName: process.env.DHL_SHIPPER_CITY || 'Jakarta',
-          countryCode: process.env.DHL_SHIPPER_COUNTRY || 'ID',
-          addressLine1: (process.env.DHL_SHIPPER_ADDRESS || 'Kawasan Industri Pulogadung').substring(0, 45),
+          postalCode: shipperPostalCode,
+          cityName: shipperCity,
+          countryCode: shipperCountry,
+          addressLine1: shipperAddress.substring(0, 45),
         },
         receiverDetails: {
           postalCode: body.postalCode,
@@ -83,8 +101,6 @@ export async function POST(request: Request) {
       ],
     }
 
-    console.log('🚀 Calling DHL /rates (POST) with full address...')
-    console.log('📤 Outgoing DHL Rate Request:', JSON.stringify(rateRequest, null, 2))
     // Use POST /rates directly (not getRates() which falls back to GET for 1 package)
     // POST sends the full JSON body including street, name, phone
     const rates = await (dhlClient as any).request('/rates', {
@@ -92,9 +108,9 @@ export async function POST(request: Request) {
       body: JSON.stringify(rateRequest),
     })
 
-    console.log('✅ DHL /rates returned rates — address is VALID')
-    console.log('📊 Products found:', rates.products?.length || 0)
-    console.log('📥 DHL Response Body:', JSON.stringify(rates, null, 2))
+    if (!isProduction) {
+      console.log(`[DHL Validate] Address is VALID, products: ${rates.products?.length || 0}`)
+    }
 
     return NextResponse.json({
       success: true,
@@ -105,11 +121,9 @@ export async function POST(request: Request) {
       products: rates.products?.map((p: any) => p.productName) || [],
     })
   } catch (error: any) {
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.error(`❌ DHL Full Address Validation Failed [${requestId}]`)
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.error('💬 Error:', error.message)
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    if (!isProduction) {
+      console.error(`[DHL Validate] Failed [${requestId}]: ${error.message}`)
+    }
 
     // Extract validation warnings from DHL error messages
     const warnings: string[] = []

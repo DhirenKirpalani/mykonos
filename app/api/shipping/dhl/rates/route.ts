@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { dhlClient } from '@/lib/dhl/client'
+import { verifyUserAuth } from '@/lib/auth/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,9 +8,13 @@ export const dynamic = 'force-dynamic'
  * POST /api/shipping/dhl/rates
  * Get shipping rates from DHL Express using flat POST /rates structure
  * NOTE: POST /rates uses flat customerDetails (no postalAddress/contactInformation wrappers)
+ * Requires authentication — any logged-in user can query rates.
  */
 export async function POST(request: Request) {
   try {
+    const auth = await verifyUserAuth(request)
+    if (!auth.ok) return auth.response
+
     const body = await request.json()
 
     // Validate required fields
@@ -64,16 +69,11 @@ export async function POST(request: Request) {
       })),
     }
 
-    console.log('🚀 [DHL RATES] Calling POST /rates with flat structure')
-    console.log('📤 Request:', JSON.stringify(rateRequest, null, 2))
-
     // Use POST /rates directly with flat structure
     const rates = await (dhlClient as any).request('/rates', {
       method: 'POST',
       body: JSON.stringify(rateRequest),
     })
-
-    console.log('✅ [DHL RATES] Response:', JSON.stringify(rates, null, 2))
 
     // Transform response for frontend
     // Filter out products with price 0 (customer agreement products like EXPRESS EASY)
@@ -103,8 +103,7 @@ export async function POST(request: Request) {
       exchangeRates: rates.exchangeRates,
     })
   } catch (error: any) {
-    console.error('❌ DHL Rates API Error:', error.message)
-    console.error('❌ DHL Detail:', error.dhlDetail)
+    console.error('[DHL Rates] Error:', error.message)
     return NextResponse.json(
       {
         success: false,
