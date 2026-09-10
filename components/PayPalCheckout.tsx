@@ -155,7 +155,7 @@ export function PayPalCheckout(props: PayPalCheckoutProps) {
     <PayPalScriptProvider
       options={{
         clientId,
-        currency: props.currency.toLowerCase(),
+        currency: props.currency.toUpperCase(),
         intent: 'capture',
       }}
     >
