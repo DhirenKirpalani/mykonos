@@ -155,31 +155,28 @@ export async function POST(request: NextRequest) {
         const captureStatus = capture?.status
 
         if (captureStatus === 'COMPLETED') {
-          await supabase
-            .from('orders')
-            .update({
-              payment_status: 'paid',
-              status: 'processing',
-              paid_at: new Date().toISOString(),
-              payment_metadata: {
-                paypal_order_id: paypalOrderId,
-                paypal_capture_id: capture.id,
-                transaction_time: new Date().toISOString(),
-                captured_via: 'webhook',
-              },
-            })
-            .eq('id', order.id)
+          // Use atomic RPC to prevent double capture and complete reservation
+          const { error: captureError } = await supabase.rpc('capture_payment_safe', {
+            p_order_id: order.id,
+            p_payment_metadata: {
+              paypal_order_id: paypalOrderId,
+              paypal_capture_id: capture.id,
+              transaction_time: new Date().toISOString(),
+              captured_via: 'webhook',
+            },
+            p_captured_via: 'webhook',
+          })
 
-          // Clear cart if user is authenticated
-          if (order.user_id) {
-            await supabase.from('cart_items').delete().eq('user_id', order.user_id)
+          if (captureError) {
+            console.error(`[PAYPAL-WEBHOOK] Atomic capture failed for order ${order.id}:`, captureError)
+          } else {
+            console.log(`[PAYPAL-WEBHOOK] Order ${order.id} captured and marked paid`)
           }
 
           await logPaymentAudit(order.id, 'capture.completed', 'paid', {
             paypal_capture_id: capture.id,
             captured_via: 'webhook',
           })
-          console.log(`[PAYPAL-WEBHOOK] Order ${order.id} captured and marked paid`)
         } else if (captureStatus === 'PENDING') {
           await supabase
             .from('orders')
@@ -227,23 +224,20 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ received: true })
         }
 
-        await supabase
-          .from('orders')
-          .update({
-            payment_status: 'paid',
-            status: 'processing',
-            paid_at: new Date().toISOString(),
-            payment_metadata: {
-              paypal_order_id: paypalOrderId,
-              paypal_capture_id: capture.id,
-              transaction_time: new Date().toISOString(),
-              captured_via: 'webhook',
-            },
-          })
-          .eq('id', order.id)
+        // Use atomic RPC to prevent double capture and complete reservation
+        const { error: captureError } = await supabase.rpc('capture_payment_safe', {
+          p_order_id: order.id,
+          p_payment_metadata: {
+            paypal_order_id: paypalOrderId,
+            paypal_capture_id: capture.id,
+            transaction_time: new Date().toISOString(),
+            captured_via: 'webhook',
+          },
+          p_captured_via: 'webhook',
+        })
 
-        if (order.user_id) {
-          await supabase.from('cart_items').delete().eq('user_id', order.user_id)
+        if (captureError) {
+          console.error(`[PAYPAL-WEBHOOK] Atomic capture failed for order ${order.id}:`, captureError)
         }
 
         await logPaymentAudit(order.id, 'capture.completed', 'paid', {

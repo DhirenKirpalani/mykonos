@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server'
 import { dhlClient } from '@/lib/dhl/client'
+import { verifyAdminAuth } from '@/lib/auth/admin-auth'
 import type { DHLShipmentRequest } from '@/lib/dhl/types'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/shipping/dhl/shipment
- * Create a DHL Express shipment
+ * Create a DHL Express shipment (admin/inventory_manager only)
  */
 export async function POST(request: Request) {
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const body = await request.json()
     
     // Validate required fields

@@ -99,30 +99,22 @@ export async function GET(request: NextRequest) {
     // If PayPal says paid but our DB doesn't, fix it
     if (actualPaymentStatus === 'paid' && dbStatus !== 'paid') {
       console.log(`[PAYPAL-VERIFY] Syncing order ${orderId} to paid (was ${dbStatus})`)
-      const { data: orderUser } = await supabase
-        .from('orders')
-        .select('user_id')
-        .eq('id', orderId)
-        .single()
+      
+      // Use atomic RPC to prevent double capture and complete reservation
+      const { error: captureError } = await supabase.rpc('capture_payment_safe', {
+        p_order_id: orderId,
+        p_payment_metadata: {
+          ...(order as any).payment_metadata,
+          paypal_order_id: paypalOrderId,
+          paypal_capture_id: captures?.id,
+          transaction_time: new Date().toISOString(),
+          verified_via: 'verify-endpoint',
+        },
+        p_captured_via: 'verify-endpoint',
+      })
 
-      await supabase
-        .from('orders')
-        .update({
-          payment_status: 'paid',
-          status: 'processing',
-          paid_at: new Date().toISOString(),
-          payment_metadata: {
-            ...(order as any).payment_metadata,
-            paypal_order_id: paypalOrderId,
-            paypal_capture_id: captures?.id,
-            transaction_time: new Date().toISOString(),
-            verified_via: 'verify-endpoint',
-          },
-        })
-        .eq('id', orderId)
-
-      if (orderUser?.user_id) {
-        await supabase.from('cart_items').delete().eq('user_id', orderUser.user_id)
+      if (captureError) {
+        console.error('[PAYPAL-VERIFY] Sync failed:', captureError)
       }
 
       // Audit log the correction

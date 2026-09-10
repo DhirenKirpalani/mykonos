@@ -29,11 +29,11 @@ jobs:
             exit 1
           fi
           
-          echo "🌐 Polling: $APP_URL/api/cron/poll-dhl-tracking"
+          echo "🌐 Polling: $APP_URL/api/cron/update-tracking"
           echo "⏰ Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
-          
+
           # Make request with error handling
-          response=$(curl -s -w "\n%{http_code}" -X GET "$APP_URL/api/cron/poll-dhl-tracking" \
+          response=$(curl -s -w "\n%{http_code}" -X GET "$APP_URL/api/cron/update-tracking" \
             -H "Authorization: Bearer $CRON_SECRET" \
             -H "Content-Type: application/json" \
             --max-time 120 \

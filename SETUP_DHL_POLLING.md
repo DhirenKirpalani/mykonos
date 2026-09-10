@@ -6,12 +6,12 @@ Complete setup guide for automated DHL tracking polling on Vercel Free Plan.
 
 ## ✅ What's Been Created
 
-1. **GitHub Actions Workflow**: `.github/workflows/poll-dhl-tracking.yml`
+1. **GitHub Actions Workflow**: `.github/workflows/update-tracking.yml`
    - Runs every 2 hours automatically
    - Can be triggered manually
    - Includes error handling and logging
 
-2. **API Endpoint**: `app/api/cron/poll-dhl-tracking/route.ts`
+2. **API Endpoint**: `app/api/cron/update-tracking/route.ts`
    - Polls DHL tracking API
    - Updates order status
    - Sends email notifications
@@ -90,7 +90,7 @@ git push
 npm run dev
 
 # In another terminal, test the endpoint
-curl -X GET "http://localhost:3000/api/cron/poll-dhl-tracking" \
+curl -X GET "http://localhost:3000/api/cron/update-tracking" \
   -H "Authorization: Bearer your-cron-secret"
 ```
 
@@ -106,7 +106,7 @@ Expected response:
 
 #### Test on Vercel:
 ```bash
-curl -X GET "https://your-app.vercel.app/api/cron/poll-dhl-tracking" \
+curl -X GET "https://your-app.vercel.app/api/cron/update-tracking" \
   -H "Authorization: Bearer your-cron-secret"
 ```
 
@@ -173,7 +173,7 @@ The GitHub Action runs **every 2 hours** at:
 ### View Vercel Logs
 
 1. Go to: **Vercel Dashboard → Your Project → Logs**
-2. Filter by: `/api/cron/poll-dhl-tracking`
+2. Filter by: `/api/cron/update-tracking`
 3. Look for detailed logs:
    ```
    🔄 Starting DHL tracking poll...
@@ -220,7 +220,7 @@ LIMIT 5;
 
 **Error: "404 Not Found"**
 - Make sure you deployed to Vercel
-- Check the API endpoint exists: `/api/cron/poll-dhl-tracking/route.ts`
+- Check the API endpoint exists: `/api/cron/update-tracking/route.ts`
 
 **Error: "500 Internal Server Error"**
 - Check Vercel logs for details

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300 // 5 minutes for bulk uploads
+export const maxDuration = 10 // Vercel Hobby plan limit: 10 seconds
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB per file
 const MAX_FILES_PER_REQUEST = 20

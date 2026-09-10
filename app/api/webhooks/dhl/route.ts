@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { sendOrderShippedEmail } from '@/lib/email/order-emails'
 import {
   sendOutForDeliveryEmail,
@@ -15,9 +16,66 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 /**
+ * Verify the DHL webhook signature using HMAC-SHA256.
+ *
+ * DHL sends the raw request body and a signature header. We recompute the
+ * HMAC over the raw body using the shared secret and compare in constant time.
+ *
+ * Supported header names:
+ *  - x-dhl-signature        (commonly used by DHL)
+ *  - x-dhl-hmac-signature   (alternate)
+ *
+ * If DHL_WEBHOOK_SECRET is not configured, verification is skipped with a
+ * loud warning so it is obvious during development. In production this
+ * MUST be set.
+ */
+function verifyDHLSignature(rawBody: string, headers: Headers): boolean {
+  const secret = process.env.DHL_WEBHOOK_SECRET
+
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[DHL Webhook] DHL_WEBHOOK_SECRET is not set — rejecting webhook in production')
+      return false
+    }
+    console.warn('[DHL Webhook] DHL_WEBHOOK_SECRET not set — skipping verification (non-production)')
+    return true
+  }
+
+  const signature = headers.get('x-dhl-signature') || headers.get('x-dhl-hmac-signature')
+  if (!signature) {
+    console.error('[DHL Webhook] Missing signature header')
+    return false
+  }
+
+  try {
+    const expected = createHmac('sha256', secret).update(rawBody).digest('hex')
+    const received = signature.trim()
+
+    // DHL may send the signature as hex or base64; try hex first, then base64
+    const expectedBuf = Buffer.from(expected, 'hex')
+    let receivedBuf = Buffer.from(received, 'hex')
+
+    // If hex decoding produces empty/garbage, try base64
+    if (receivedBuf.length === 0 || receivedBuf.length !== expectedBuf.length) {
+      receivedBuf = Buffer.from(received, 'base64')
+    }
+
+    if (receivedBuf.length !== expectedBuf.length) {
+      console.error('[DHL Webhook] Signature length mismatch')
+      return false
+    }
+
+    return timingSafeEqual(expectedBuf, receivedBuf)
+  } catch (err) {
+    console.error('[DHL Webhook] Signature verification error:', err)
+    return false
+  }
+}
+
+/**
  * DHL Webhook Handler
  * Receives delivery status updates from DHL
- * 
+ *
  * Events:
  * - shipment-picked-up: Package picked up by DHL
  * - shipment-in-transit: Package in transit
@@ -28,37 +86,42 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
  */
 export async function POST(request: Request) {
   const requestId = Math.random().toString(36).substring(7)
-  
+  const isProduction = process.env.NODE_ENV === 'production'
+
   try {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`📨 DHL Webhook Received [${requestId}]`)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
+    if (!isProduction) {
+      console.log(`[DHL Webhook] Received [${requestId}]`)
+    }
+
+    // Read the raw body first for signature verification
+    const rawBody = await request.text()
+
+    // Verify DHL webhook signature
+    if (!verifyDHLSignature(rawBody, request.headers)) {
+      console.error(`[DHL Webhook] Signature verification failed [${requestId}]`)
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
     // Parse webhook payload
-    const payload = await request.json()
-    console.log('📦 Webhook Payload:', JSON.stringify(payload, null, 2))
-    
-    // Verify DHL signature (if configured)
-    const signature = request.headers.get('x-dhl-signature')
-    if (process.env.DHL_WEBHOOK_SECRET && signature) {
-      // TODO: Implement signature verification
-      console.log('🔐 Signature verification:', signature)
+    const payload = JSON.parse(rawBody)
+    if (!isProduction) {
+      console.log('[DHL Webhook] Payload:', JSON.stringify(payload, null, 2))
     }
     
     // Extract event data
     const event = payload.event || payload.eventType
     const trackingNumber = payload.trackingNumber || payload.shipmentTrackingNumber
     const timestamp = payload.timestamp || new Date().toISOString()
-    
-    console.log('📋 Event Type:', event)
-    console.log('🔢 Tracking Number:', trackingNumber)
-    console.log('⏰ Timestamp:', timestamp)
-    
+
+    if (!isProduction) {
+      console.log(`[DHL Webhook] Event: ${event}, Tracking: ${trackingNumber}, Time: ${timestamp}`)
+    }
+
     if (!trackingNumber) {
-      console.error('❌ No tracking number in webhook payload')
+      console.error(`[DHL Webhook] No tracking number in payload [${requestId}]`)
       return NextResponse.json({ error: 'Missing tracking number' }, { status: 400 })
     }
-    
+
     // Find order by tracking number
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const { data: order, error: orderError } = await supabase
@@ -66,26 +129,27 @@ export async function POST(request: Request) {
       .select('*')
       .or(`tracking_number.eq.${trackingNumber},dhl_shipment_number.eq.${trackingNumber}`)
       .single()
-    
+
     if (orderError || !order) {
-      console.error('❌ Order not found for tracking number:', trackingNumber)
+      console.error(`[DHL Webhook] Order not found for tracking number: ${trackingNumber}`)
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
-    
-    console.log('✅ Order found:', order.order_number)
-    
+
+    if (!isProduction) {
+      console.log(`[DHL Webhook] Order found: ${order.order_number}`)
+    }
+
     // Process event based on type
     let updateData: any = {
       updated_at: new Date().toISOString()
     }
-    
+
     let shouldSendEmail = false
     let emailType: 'shipped' | 'delivered' | 'out-for-delivery' | 'delivery-attempted' | 'delayed' | 'exception' | 'returned' = 'shipped'
-    
+
     switch (event) {
       case 'shipment-picked-up':
       case 'PICKUP':
-        console.log('📦 Package picked up')
         updateData.status = 'shipped'
         if (!order.shipped_at) {
           updateData.shipped_at = timestamp
@@ -93,120 +157,97 @@ export async function POST(request: Request) {
           emailType = 'shipped'
         }
         break
-        
+
       case 'shipment-in-transit':
       case 'TRANSIT':
-        console.log('🚚 Package in transit')
         updateData.status = 'shipped'
         break
-        
+
       case 'shipment-out-for-delivery':
       case 'OUT_FOR_DELIVERY':
-        console.log('🚛 Out for delivery')
         updateData.status = 'shipped'
         shouldSendEmail = true
         emailType = 'out-for-delivery'
         break
-        
+
       case 'shipment-delivered':
       case 'DELIVERED':
-        console.log('✅ Package delivered')
         updateData.status = 'delivered'
         updateData.delivered_at = timestamp
         shouldSendEmail = true
         emailType = 'delivered'
         break
-        
+
       case 'shipment-exception':
       case 'EXCEPTION':
-        console.log('⚠️  Delivery exception')
         updateData.internal_notes = `Delivery exception: ${payload.description || 'Unknown issue'}`
         shouldSendEmail = true
         emailType = 'exception'
         break
-        
+
       case 'delivery-attempted':
       case 'DELIVERY_ATTEMPTED':
-        console.log('📭 Delivery attempted')
         updateData.internal_notes = `Delivery attempted: ${payload.description || 'No one available to receive'}`
         shouldSendEmail = true
         emailType = 'delivery-attempted'
         break
-        
+
       case 'shipment-delayed':
       case 'DELAYED':
-        console.log('⏰ Shipment delayed')
         updateData.internal_notes = `Shipment delayed: ${payload.description || 'Unknown reason'}`
         shouldSendEmail = true
         emailType = 'delayed'
         break
-        
+
       case 'shipment-returned':
       case 'RETURNED':
-        console.log('↩️  Package returned to sender')
         updateData.status = 'cancelled'
         updateData.internal_notes = `Package returned: ${payload.description || 'Unknown reason'}`
         shouldSendEmail = true
         emailType = 'returned'
         break
-        
+
       default:
-        console.log('ℹ️  Unknown event type:', event)
+        if (!isProduction) {
+          console.log(`[DHL Webhook] Unknown event type: ${event}`)
+        }
     }
-    
+
     // Update order in database
-    console.log('💾 Updating order...')
     const { error: updateError } = await supabase
       .from('orders')
       .update(updateData)
       .eq('id', order.id)
-    
+
     if (updateError) {
-      console.error('❌ Failed to update order:', updateError)
+      console.error(`[DHL Webhook] Failed to update order:`, updateError)
       return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
     }
-    
-    console.log('✅ Order updated successfully')
-    
+
     // Send email notification if needed
     if (shouldSendEmail && order.customer_email) {
-      console.log('📧 Sending email notification...')
       try {
-        // Get customer name with proper fallback
-        console.log('📝 Customer name data:', {
-          shipping_name: order.shipping_address?.name,
-          shipping_full_name: order.shipping_address?.full_name,
-          first_name: order.customer_first_name,
-          last_name: order.customer_last_name,
-          email: order.customer_email,
-          user_id: order.user_id
-        })
-        
-        let customerName = order.shipping_address?.name 
+        let customerName = order.shipping_address?.name
           || order.shipping_address?.full_name
-          || (order.customer_first_name && order.customer_last_name 
-              ? `${order.customer_first_name} ${order.customer_last_name}` 
+          || (order.customer_first_name && order.customer_last_name
+              ? `${order.customer_first_name} ${order.customer_last_name}`
               : null)
-        
+
         // If still no name, try to get from user profile
         if (!customerName && order.user_id) {
-          console.log('🔍 Fetching user profile for name...')
           const { data: authUser } = await supabase.auth.admin.getUserById(order.user_id)
           if (authUser?.user?.user_metadata) {
             const meta = authUser.user.user_metadata
-            customerName = meta.full_name 
+            customerName = meta.full_name
               || (meta.first_name && meta.last_name ? `${meta.first_name} ${meta.last_name}` : null)
               || meta.name
-            console.log('✅ Found name in user profile:', customerName)
           }
         }
-        
+
         // Final fallback to email username
         if (!customerName) {
           customerName = order.customer_email.split('@')[0]
         }
-        
-        console.log('✅ Using customer name:', customerName)
         
         const emailData = {
           orderId: order.id,
@@ -268,35 +309,31 @@ export async function POST(request: Request) {
             break
         }
         
-        console.log('✅ Email sent successfully')
+        if (!isProduction) {
+          console.log(`[DHL Webhook] Email sent for ${order.order_number}`)
+        }
       } catch (emailError: any) {
-        console.error('⚠️  Failed to send email:', emailError.message)
+        console.error(`[DHL Webhook] Failed to send email: ${emailError.message}`)
         // Don't fail the webhook if email fails
       }
     }
-    
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`✨ Webhook Processed Successfully [${requestId}]`)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
-    return NextResponse.json({ 
+
+    if (!isProduction) {
+      console.log(`[DHL Webhook] Processed successfully [${requestId}]`)
+    }
+
+    return NextResponse.json({
       success: true,
       message: 'Webhook processed successfully',
       orderNumber: order.order_number,
       event
     })
-    
+
   } catch (error: any) {
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.error(`💥 Webhook Processing Failed [${requestId}]`)
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.error('⚠️  Error Type:', error.name)
-    console.error('💬 Error Message:', error.message)
-    console.error('📚 Stack Trace:', error.stack)
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
+    console.error(`[DHL Webhook] Processing failed [${requestId}]:`, error.message)
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: error.message || 'Failed to process webhook'
       },

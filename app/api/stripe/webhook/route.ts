@@ -29,33 +29,21 @@ export async function POST(request: NextRequest) {
         const orderId = session.metadata?.order_id
 
         if (orderId) {
-          // Get order details to find user_id
-          const { data: order } = await supabase
-            .from('orders')
-            .select('user_id')
-            .eq('id', orderId)
-            .single()
+          // Use atomic RPC to prevent double capture and complete reservation
+          const { error: captureError } = await supabase.rpc('capture_payment_safe', {
+            p_order_id: orderId,
+            p_payment_metadata: {
+              stripe_session_id: session.id,
+              transaction_time: new Date().toISOString(),
+              captured_via: 'stripe-webhook',
+            },
+            p_captured_via: 'stripe-webhook',
+          })
 
-          // Update order status to paid
-          await supabase
-            .from('orders')
-            .update({
-              payment_status: 'paid',
-              status: 'processing',
-              paid_at: new Date().toISOString(),
-            })
-            .eq('id', orderId)
-
-          console.log(`✅ Order ${orderId} marked as paid via Stripe`)
-
-          // Clear cart items now that payment is successful
-          if (order?.user_id) {
-            console.log(`🗑️ Clearing cart for user ${order.user_id} after successful Stripe payment`)
-            await supabase
-              .from('cart_items')
-              .delete()
-              .eq('user_id', order.user_id)
-            console.log(`✅ Cart cleared for user ${order.user_id}`)
+          if (captureError) {
+            console.error(`❌ Atomic capture failed for order ${orderId}:`, captureError)
+          } else {
+            console.log(`✅ Order ${orderId} marked as paid via Stripe`)
           }
         }
         break

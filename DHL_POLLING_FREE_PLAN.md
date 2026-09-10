@@ -28,7 +28,7 @@ But we can still poll DHL tracking using **external free services**!
 
 #### 1. Create GitHub Action Workflow
 
-Create file: `.github/workflows/poll-dhl-tracking.yml`
+Create file: `.github/workflows/update-tracking.yml`
 
 ```yaml
 name: Poll DHL Tracking
@@ -48,7 +48,7 @@ jobs:
     steps:
       - name: Poll DHL Tracking API
         run: |
-          curl -X GET "${{ secrets.APP_URL }}/api/cron/poll-dhl-tracking" \
+          curl -X GET "${{ secrets.APP_URL }}/api/cron/update-tracking" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"
       
@@ -66,7 +66,7 @@ Add these secrets:
 
 #### 3. Create API Endpoint
 
-Create file: `app/api/cron/poll-dhl-tracking/route.ts`
+Create file: `app/api/cron/update-tracking/route.ts`
 
 ```typescript
 import { NextResponse } from 'next/server'
@@ -292,7 +292,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 **Test the endpoint directly:**
 ```bash
-curl -X GET "https://your-app.vercel.app/api/cron/poll-dhl-tracking" \
+curl -X GET "https://your-app.vercel.app/api/cron/update-tracking" \
   -H "Authorization: Bearer your-cron-secret"
 ```
 
@@ -314,7 +314,7 @@ curl -X GET "https://your-app.vercel.app/api/cron/poll-dhl-tracking" \
 
 1. **Sign up**: https://www.easycron.com/
 2. **Create Cron Job**:
-   - URL: `https://your-app.vercel.app/api/cron/poll-dhl-tracking`
+   - URL: `https://your-app.vercel.app/api/cron/update-tracking`
    - Schedule: `0 */2 * * *` (every 2 hours)
    - HTTP Method: GET
    - Custom Headers: `Authorization: Bearer your-cron-secret`
@@ -339,7 +339,7 @@ curl -X GET "https://your-app.vercel.app/api/cron/poll-dhl-tracking" \
 1. **Sign up**: https://cron-job.org/
 2. **Create Cron Job**:
    - Title: "Poll DHL Tracking"
-   - URL: `https://your-app.vercel.app/api/cron/poll-dhl-tracking`
+   - URL: `https://your-app.vercel.app/api/cron/update-tracking`
    - Schedule: Every 2 hours
    - Request Method: GET
    - Headers: Add `Authorization: Bearer your-cron-secret`
@@ -363,7 +363,7 @@ curl -X GET "https://your-app.vercel.app/api/cron/poll-dhl-tracking" \
 1. **Sign up**: https://render.com/
 2. **Create Cron Job**:
    - Type: Cron Job
-   - Command: `curl -X GET "https://your-app.vercel.app/api/cron/poll-dhl-tracking" -H "Authorization: Bearer $CRON_SECRET"`
+   - Command: `curl -X GET "https://your-app.vercel.app/api/cron/update-tracking" -H "Authorization: Bearer $CRON_SECRET"`
    - Schedule: `0 */2 * * *`
 3. **Add Environment Variable**: `CRON_SECRET`
 
@@ -404,7 +404,7 @@ curl -X GET "https://your-app.vercel.app/api/cron/poll-dhl-tracking" \
 mkdir -p .github/workflows
 ```
 
-**2. Copy the YAML above** to `.github/workflows/poll-dhl-tracking.yml`
+**2. Copy the YAML above** to `.github/workflows/update-tracking.yml`
 
 **3. Add GitHub secrets:**
 - `APP_URL`: Your Vercel app URL
