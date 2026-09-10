@@ -34,10 +34,10 @@ export async function GET(request: Request) {
       throw error
     }
 
-    // Fetch all orders including guest orders
+    // Fetch all orders including guest orders (join shipping_addresses for guest name)
     const { data: allOrders } = await supabase
       .from('orders')
-      .select('user_id, customer_name, customer_email, total_amount, created_at')
+      .select('user_id, customer_email, total_amount, created_at, shipping_address:shipping_addresses(full_name)')
 
     // Calculate order counts and total spent per customer
     const orderStats = new Map()
@@ -52,11 +52,12 @@ export async function GET(request: Request) {
           total: existing.total + (order.total_amount || 0)
         })
       } else if (order.customer_email) {
-        // Guest order
+        // Guest order — derive name from shipping address
+        const fullName = (order as any).shipping_address?.full_name || ''
         const existing = guestCustomers.get(order.customer_email) || {
           email: order.customer_email,
-          first_name: order.customer_name?.split(' ')[0] || 'Guest',
-          last_name: order.customer_name?.split(' ').slice(1).join(' ') || '',
+          first_name: fullName?.split(' ')[0] || 'Guest',
+          last_name: fullName?.split(' ').slice(1).join(' ') || '',
           phone: null,
           country: '',
           created_at: order.created_at,

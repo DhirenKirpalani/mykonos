@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Search, Edit, Trash2, Eye, EyeOff, Upload, Package, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Dropdown } from '@/components/ui/dropdown'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { StockEditModal } from '@/components/StockEditModal'
@@ -602,19 +603,20 @@ export default function ProductsPage() {
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 pt-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <span>Show</span>
-              <select
+              <Dropdown
                 value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value))
+                onChange={(v) => {
+                  setPageSize(Number(v))
                   setCurrentPage(1)
                 }}
-                className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+                options={[
+                  { value: 10, label: '10' },
+                  { value: 20, label: '20' },
+                  { value: 50, label: '50' },
+                  { value: 100, label: '100' },
+                ]}
+                className="w-20"
+              />
               <span>per page</span>
               <span className="ml-2 text-gray-500">
                 Showing {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length}
@@ -625,7 +627,7 @@ export default function ProductsPage() {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="rounded-lg border border-luxury-gold/40 bg-luxury-navy px-3 py-1.5 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
@@ -650,7 +652,7 @@ export default function ProductsPage() {
                       className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === pageNum
                           ? 'bg-luxury-gold text-luxury-navy'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          : 'border border-luxury-gold/30 text-luxury-navy hover:bg-luxury-gold/10'
                       }`}
                     >
                       {pageNum}
@@ -662,7 +664,7 @@ export default function ProductsPage() {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="rounded-lg border border-luxury-gold/40 bg-luxury-navy px-3 py-1.5 text-sm font-medium text-white hover:bg-luxury-navy/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>

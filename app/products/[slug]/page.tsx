@@ -15,6 +15,7 @@ import { LoadingSpinner } from '@/components/common'
 import { Database } from '@/lib/supabase/database.types'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useState, useEffect } from 'react'
+import { checkFeatureClient } from '@/lib/system-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,6 +65,11 @@ export default function ProductDetailPage({
   const [showDescription, setShowDescription] = useState(false)
   const [showFragranceNotes, setShowFragranceNotes] = useState(false)
   const [showShipping, setShowShipping] = useState(false)
+  const [reviewsEnabled, setReviewsEnabled] = useState(true)
+
+  useEffect(() => {
+    checkFeatureClient('reviews_enabled').then(setReviewsEnabled)
+  }, [])
 
   useEffect(() => {
     async function loadProduct() {
@@ -203,7 +209,7 @@ export default function ProductDetailPage({
               <h1 className="mb-4 font-montserrat text-2xl md:text-4xl font-bold text-luxury-navy leading-tight">
                 {product.name}
               </h1>
-              {((product as any).rating > 0 || (product as any).products_sold > 0) && (
+              {reviewsEnabled && ((product as any).rating > 0 || (product as any).products_sold > 0) && (
                 <div className="flex items-center gap-3 text-base">
                   {(product as any).rating > 0 && (
                     <div className="flex items-center gap-1.5">

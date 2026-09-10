@@ -7,13 +7,9 @@ export const PAYPAL_API_BASE =
     : 'https://api-m.sandbox.paypal.com')
 
 export function getPayPalAccessToken(): Promise<string> {
-  console.log('🔵 [PAYPAL-API] Getting access token...')
-  console.log('🔵 [PAYPAL-API] Client ID:', PAYPAL_CLIENT_ID ? `${PAYPAL_CLIENT_ID.substring(0, 10)}...` : 'MISSING')
-  console.log('🔵 [PAYPAL-API] Client Secret:', PAYPAL_CLIENT_SECRET ? 'SET' : 'MISSING')
-  console.log('🔵 [PAYPAL-API] API Base:', PAYPAL_API_BASE)
-
   if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
-    console.error('❌ [PAYPAL-API] Missing credentials! PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is not set')
+    console.error('[PAYPAL-API] Missing credentials! PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is not set')
+    return Promise.reject(new Error('PayPal credentials not configured'))
   }
 
   const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64')
@@ -25,16 +21,11 @@ export function getPayPalAccessToken(): Promise<string> {
     },
     body: 'grant_type=client_credentials',
   })
-    .then((res) => {
-      console.log('📡 [PAYPAL-API] OAuth response status:', res.status)
-      return res.json()
-    })
+    .then((res) => res.json())
     .then((data) => {
-      console.log('📡 [PAYPAL-API] OAuth response:', { hasToken: !!data.access_token, error: data.error, errorDesc: data.error_description })
       if (!data.access_token) {
         throw new Error(`Failed to get PayPal access token: ${data.error || 'unknown'} - ${data.error_description || ''}`)
       }
-      console.log('✅ [PAYPAL-API] Access token obtained')
       return data.access_token as string
     })
 }

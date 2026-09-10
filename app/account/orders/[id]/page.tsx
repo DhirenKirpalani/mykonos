@@ -210,6 +210,19 @@ export default function OrderDetailsPage() {
       }
       setOrder(orderData)
 
+      // Verify PayPal payment server-side if this is a PayPal order marked as paid
+      if (orderData?.payment_gateway === 'paypal' && orderData?.payment_status === 'paid' && orderData?.paypal_order_id) {
+        fetch(`/api/paypal/verify-payment?orderId=${orderData.id}`)
+          .then(res => res.json())
+          .then(verifyData => {
+            if (verifyData.synced) {
+              // Order status was corrected by the verify endpoint — refetch
+              fetchOrderDetails()
+            }
+          })
+          .catch(() => { /* non-blocking */ })
+      }
+
       // Fetch active discounts for order items
       if (orderData?.order_items?.length > 0) {
         const productIds = orderData.order_items.map((i: any) => i.product_id)
@@ -388,11 +401,19 @@ export default function OrderDetailsPage() {
       if (paypalOrderId || paymentGateway === 'paypal' || (orderCurrency !== 'IDR' && !snapToken && !stripeSessionId)) {
         console.log('💳 [PAYPAL] Detected PayPal/non-IDR order, showing inline PayPal buttons...')
         const currency = (order as any)?.payment_metadata?.currency_code || order.currency_code || 'USD'
-        const subtotal = (order as any)?.subtotal_amount ?? 0
-        const shipping = (order as any)?.shipping_amount ?? 0
+        const storedSubtotal = (order as any)?.subtotal_amount ?? 0
+        const storedShipping = (order as any)?.shipping_amount ?? 0
         const discount = order.discount_amount ?? 0
         const tax = order.tax_amount ?? 0
-        const total = subtotal - discount + shipping + tax
+        const totalAmount = (order as any)?.total_amount ?? 0
+        // Compute subtotal from order_items if stored value is missing/zero
+        const itemsSubtotal = (order.order_items || []).reduce(
+          (sum: number, item: any) => sum + (item.price_at_purchase * item.quantity), 0
+        )
+        const subtotal = storedSubtotal > 0 ? storedSubtotal : itemsSubtotal
+        // Compute shipping: total - subtotal - tax + discount
+        const shipping = storedShipping > 0 ? storedShipping : Math.max(0, totalAmount - subtotal - tax + discount)
+        const total = totalAmount > 0 ? totalAmount : (subtotal - discount + shipping + tax)
         const paypalItems = (order.order_items || []).map((item: any) => ({
           name: item.variant_name ? `${item.product.name} - ${item.variant_name}` : item.product.name,
           price: Math.round(item.price_at_purchase * 100) / 100,

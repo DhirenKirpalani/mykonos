@@ -856,7 +856,7 @@ export default function TrackOrderPage() {
                               : sessionOrder.status === 'packed' ? (lang === 'id' ? '📦 Dikemas' : '📦 Packed')
                               : sessionOrder.status === 'cancelled' ? (lang === 'id' ? '❌ Dibatalkan' : '❌ Cancelled')
                               : sessionOrder.payment_status === 'completed' ? (lang === 'id' ? '⏳ Diproses' : '⏳ Processing')
-                              : (lang === 'id' ? '💳 Menunggu Pembayaran' : '💳 Awaiting Payment')
+                              : (lang === 'id' ? '💳 Menunggu Pembayaran' : '💳 Pending Payment')
                             }
                           </span>
                         </div>

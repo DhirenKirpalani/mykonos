@@ -166,11 +166,17 @@ export default function DiscountsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500">
-                    Loading...
-                  </td>
-                </tr>
+                <>
+                  {[...Array(6)].map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="py-4"><div className="h-4 w-32 rounded bg-gray-200" /></td>
+                      <td className="py-4"><div className="h-4 w-24 rounded bg-gray-200" /></td>
+                      <td className="py-4"><div className="h-4 w-16 rounded bg-gray-200" /></td>
+                      <td className="py-4"><div className="h-6 w-20 rounded-full bg-gray-200" /></td>
+                      <td className="py-4"><div className="h-7 w-20 rounded bg-gray-200" /></td>
+                    </tr>
+                  ))}
+                </>
               ) : filteredDiscounts.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-gray-500">

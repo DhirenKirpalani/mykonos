@@ -44,10 +44,14 @@ export async function GET(
     const limit = parseInt(searchParams.get('limit') || '20')
     const offset = (page - 1) * limit
 
-    // Get customer orders
+    // Get customer orders (select only fields rendered in the detail page)
     const { data: orders, error, count } = await supabase
       .from('orders')
-      .select('*, shipping_address:shipping_addresses(*), order_items(*)', { count: 'exact' })
+      .select(`
+        id, order_number, status, total_amount, currency_code, created_at,
+        shipping_address:shipping_addresses(full_name, city, country),
+        order_items(id, quantity, unit_price)
+      `, { count: 'exact' })
       .eq('user_id', id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)

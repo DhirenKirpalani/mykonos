@@ -64,8 +64,46 @@ export default function CustomerDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-gray-500">Loading customer details...</div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="h-8 w-20 rounded-lg bg-gray-200 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-8 w-48 rounded-lg bg-gray-200 animate-pulse" />
+            <div className="h-4 w-32 rounded bg-gray-100 animate-pulse" />
+          </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+              <div className="h-5 w-40 rounded bg-gray-200 animate-pulse mb-4" />
+              <div className="space-y-4">
+                {[...Array(3)].map((_, j) => (
+                  <div key={j} className="flex items-center gap-3">
+                    <div className="h-5 w-5 rounded bg-gray-200 animate-pulse" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-3 w-16 rounded bg-gray-100 animate-pulse" />
+                      <div className="h-4 w-32 rounded bg-gray-200 animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <div className="h-5 w-32 rounded bg-gray-200 animate-pulse mb-4" />
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3">
+                <div className="h-4 w-24 rounded bg-gray-200 animate-pulse" />
+                <div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
+                <div className="h-6 w-16 rounded-full bg-gray-100 animate-pulse" />
+                <div className="h-4 w-16 rounded bg-gray-200 animate-pulse" />
+                <div className="h-8 w-16 rounded bg-gray-100 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

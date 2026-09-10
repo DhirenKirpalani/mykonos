@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Shield, Search, ChevronDown } from 'lucide-react'
+import { Shield, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Dropdown } from '@/components/ui/dropdown'
 
 type User = {
   id: string
@@ -161,24 +162,12 @@ export default function UsersPage() {
                         {new Date(user.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="relative inline-block">
-                          <select
-                            value={user.role}
-                            onChange={(e) => updateUserRole(user.id, e.target.value)}
-                            disabled={updatingUserId === user.id}
-                            className={cn(
-                              "appearance-none rounded-md border border-input bg-background px-3 py-1.5 pr-8 text-sm font-medium transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-                              updatingUserId === user.id && "cursor-wait"
-                            )}
-                          >
-                            {ROLES.map((role) => (
-                              <option key={role.value} value={role.value}>
-                                {role.label}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        </div>
+                        <Dropdown
+                          value={user.role}
+                          onChange={(v) => updateUserRole(user.id, v)}
+                          options={ROLES.map(r => ({ value: r.value, label: r.label }))}
+                          className="w-32"
+                        />
                       </td>
                     </tr>
                   )

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Search, Edit, Trash2, Copy, ShoppingBag, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Dropdown } from '@/components/ui/dropdown'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -206,17 +207,18 @@ export default function PromoCodesPage() {
               className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
             />
           </div>
-          <select
+          <Dropdown
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-lg border border-gray-300 px-4 py-2 focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold/20"
-          >
-            <option value="all">All Status</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="coming_soon">Coming Soon</option>
-            <option value="expired">Expired</option>
-            <option value="inactive">Inactive</option>
-          </select>
+            onChange={(v) => setStatusFilter(v as any)}
+            options={[
+              { value: 'all', label: 'All Status' },
+              { value: 'ongoing', label: 'Ongoing' },
+              { value: 'coming_soon', label: 'Coming Soon' },
+              { value: 'expired', label: 'Expired' },
+              { value: 'inactive', label: 'Inactive' },
+            ]}
+            className="w-40"
+          />
         </div>
 
         <div className="overflow-x-auto">

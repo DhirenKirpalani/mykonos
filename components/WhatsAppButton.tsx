@@ -1,9 +1,27 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useRegion } from '@/contexts/RegionContext'
+import { checkFeatureClient } from '@/lib/system-settings'
 
 export function WhatsAppButton() {
   const { region } = useRegion()
+  const [enabled, setEnabled] = useState(true)
+  const [checked, setChecked] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    checkFeatureClient('whatsapp_enabled').then((result) => {
+      if (cancelled) return
+      setEnabled(result)
+      setChecked(true)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  if (!checked) return null
+  if (!enabled) return null
+
   const isIndonesia = region?.code === 'ID'
   
   const whatsappNumberID = '6285780218514'

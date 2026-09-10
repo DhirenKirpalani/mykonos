@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isFeatureEnabled } from '@/lib/system-settings'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 60 // Cache for 60 seconds
@@ -81,11 +82,12 @@ export async function GET(request: Request) {
     }
 
     // Separate in-stock and sold-out products
+    const hideSoldOut = await isFeatureEnabled('hide_sold_out_products')
     const [inStockResult, soldOutResult] = await Promise.all([
       query
         .gt('stock_quantity', 0)
         .range(offset, offset + limit - 1),
-      sale === 'true' ? { data: [], count: 0 } : query
+      (sale === 'true' || hideSoldOut) ? { data: [], count: 0 } : query
         .eq('stock_quantity', 0)
         .limit(4)
     ])
