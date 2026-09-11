@@ -37,27 +37,43 @@ export async function GET(request: Request) {
     // Fetch all orders including guest orders (join shipping_addresses for guest name)
     const { data: allOrders } = await supabase
       .from('orders')
-      .select('user_id, customer_email, total_amount, created_at, shipping_address:shipping_addresses(full_name)')
+      .select('user_id, customer_email, total_amount, currency_code, created_at, shipping_address:shipping_addresses(full_name)')
+
+    // Convert amount to USD based on currency_code
+    const toUSD = (amount: number, currency: string) => {
+      if (!amount) return 0
+      const c = (currency || '').toUpperCase()
+      if (c === 'IDR') return amount / 15000
+      if (c === 'EUR') return amount * 1.08
+      if (c === 'GBP') return amount * 1.27
+      if (c === 'CAD') return amount * 0.73
+      if (c === 'AUD') return amount * 0.65
+      if (c === 'SGD') return amount * 0.74
+      return amount // USD or unknown → assume USD
+    }
 
     // Calculate order counts and total spent per customer
     const orderStats = new Map()
     const guestCustomers = new Map()
 
     allOrders?.forEach((order: any) => {
+      const usdAmount = toUSD(order.total_amount || 0, order.currency_code)
       if (order.user_id) {
         // Registered user order
         const existing = orderStats.get(order.user_id) || { count: 0, total: 0 }
         orderStats.set(order.user_id, {
           count: existing.count + 1,
-          total: existing.total + (order.total_amount || 0)
+          total: existing.total + usdAmount
         })
       } else if (order.customer_email) {
         // Guest order — derive name from shipping address
         const fullName = (order as any).shipping_address?.full_name || ''
+        const firstName = fullName?.split(' ')[0] || ''
+        const lastName = fullName?.split(' ').slice(1).join(' ') || ''
         const existing = guestCustomers.get(order.customer_email) || {
           email: order.customer_email,
-          first_name: fullName?.split(' ')[0] || 'Guest',
-          last_name: fullName?.split(' ').slice(1).join(' ') || '',
+          first_name: firstName,
+          last_name: lastName,
           phone: null,
           country: '',
           created_at: order.created_at,
@@ -68,7 +84,7 @@ export async function GET(request: Request) {
         guestCustomers.set(order.customer_email, {
           ...existing,
           order_count: existing.order_count + 1,
-          total_spent: existing.total_spent + (order.total_amount || 0),
+          total_spent: existing.total_spent + usdAmount,
           created_at: order.created_at < existing.created_at ? order.created_at : existing.created_at
         })
       }

@@ -449,7 +449,7 @@ export default function ProductsPage() {
                         <img
                           src={imageUrls[0]}
                           alt={product.name}
-                          className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg object-cover border border-gray-200"
+                          className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg object-contain bg-gray-50 border border-gray-200 p-1"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
@@ -543,17 +543,18 @@ export default function ProductsPage() {
                           {product.variants.map((variant, idx) => (
                             <div key={idx} className="flex items-center justify-between bg-white rounded-lg p-3 border border-gray-200">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
-                                {variant.image_url && (
-                                  <img
-                                    src={variant.image_url}
-                                    alt={variant.name}
-                                    className="h-12 w-12 rounded-lg object-cover border border-gray-200 flex-shrink-0"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.style.display = 'none';
-                                    }}
-                                  />
-                                )}
+                                {(() => {
+                                  const raw = variant.image_url
+                                  const src = Array.isArray(raw) ? raw[0] : typeof raw === 'string' ? raw : null
+                                  return src ? (
+                                    <img
+                                      src={src}
+                                      alt={variant.name}
+                                      className="h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-200 p-1 flex-shrink-0"
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                    />
+                                  ) : null
+                                })()}
                                 <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
                                   <div className="font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{variant.name}</div>
                                   <div className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-none">{variant.sku}</div>

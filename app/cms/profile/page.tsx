@@ -11,6 +11,8 @@ interface UserProfile {
   email: string
   role: string
   created_at: string
+  first_name?: string
+  last_name?: string
   full_name?: string
 }
 
@@ -35,7 +37,7 @@ export default function ProfilePage() {
       // Try to get user data from users table
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, role, created_at')
+        .select('id, email, role, created_at, first_name, last_name')
         .eq('id', user.id)
         .single()
 
@@ -127,7 +129,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <h2 className="text-2xl font-semibold text-gray-900">
-                {profile.full_name || profile.email.split('@')[0]}
+                {[profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.full_name || profile.email.split('@')[0]}
               </h2>
               <div className="mt-2 flex items-center gap-2">
                 <Shield className="h-4 w-4 text-gray-500" />

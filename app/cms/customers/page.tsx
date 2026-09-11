@@ -111,7 +111,7 @@ export default function CustomersPage() {
                   <td className="py-4">
                     <div>
                       <div className="font-medium text-gray-900">
-                        {customer.first_name} {customer.last_name}
+                        {[customer.first_name, customer.last_name].filter(Boolean).join(' ') || customer.email.split('@')[0]}
                         {customer.is_guest && (
                           <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                             Guest

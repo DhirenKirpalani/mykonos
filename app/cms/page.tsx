@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase/client'
 import { formatPrice } from '@/lib/utils/region'
 import type { Region } from '@/lib/types/region'
 import { getCurrencyInfo } from '@/lib/utils/currency'
+import { getCountryName } from '@/lib/utils/country'
 
 interface DashboardMetrics {
   revenue: {
@@ -120,7 +121,7 @@ export default function CMSPage() {
       // One query with all columns needed by every section
       const { data: allOrders } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, status, payment_status, payment_method_type, payment_gateway, discount_amount, subtotal_amount, shipping_amount, tax_amount, expiry_time, created_at, packed_at, shipped_at, completed_at, customer_email, user_id, currency_code, payment_metadata, shipping_address, order_items(id, product_id, quantity)')
+        .select('id, order_number, total_amount, status, payment_status, payment_method_type, payment_gateway, discount_amount, subtotal_amount, shipping_amount, tax_amount, expiry_time, created_at, packed_at, shipped_at, completed_at, customer_email, user_id, currency_code, payment_metadata, shipping_address, paypal_order_id, stripe_session_id, snap_token, order_items(id, product_id, quantity, variant_name, product:products(name))')
         .order('created_at', { ascending: false })
 
       // Split into current and previous period
@@ -145,7 +146,9 @@ export default function CMSPage() {
         if (currencyCode === 'USD') return amount * 15000
         return amount * 15000
       }
-      const getCurrency = (o: any) => (o.payment_metadata as any)?.currency_code || o.currency_code || (o.total_amount < 1000 ? 'USD' : 'IDR')
+      // Prefer the order's currency_code column; only fall back to payment_metadata if currency_code is missing
+      // (payment_metadata.currency_code can be wrong for Midtrans IDR orders, which store USD in metadata)
+      const getCurrency = (o: any) => o.currency_code || (o.payment_metadata as any)?.currency_code || (o.total_amount < 1000 ? 'USD' : 'IDR')
 
       // === METRICS (was fetchMetrics) ===
       // Only count revenue from non-cancelled orders (paid/completed/pending)
@@ -170,7 +173,7 @@ export default function CMSPage() {
         supabase.from('products').select('*', { count: 'exact', head: true }),
         supabase.from('products').select('*', { count: 'exact', head: true }).lte('stock_quantity', 10).gt('stock_quantity', 0).eq('is_visible', true),
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock_quantity', 0).eq('is_visible', true),
-        supabase.from('products').select('id, name, price_idr, stock_quantity, image_urls').eq('is_visible', true),
+        supabase.from('products').select('id, name, price_idr, stock_quantity, image_urls, variants').eq('is_visible', true),
       ])
 
       setMetrics({
@@ -221,7 +224,8 @@ export default function CMSPage() {
           currencyMap[cc].revenueUSD += usdAmount
         }
         const sa = o.shipping_address as any
-        const country = sa?.country || sa?.state_province || 'Unknown'
+        const rawCountry = sa?.country || sa?.state_province || 'Unknown'
+        const country = getCountryName(rawCountry) || rawCountry
         if (!countryMap[country]) countryMap[country] = { orders: 0, customers: new Set() }
         countryMap[country].orders++
         if (o.customer_email) countryMap[country].customers.add(o.customer_email)
@@ -241,17 +245,24 @@ export default function CMSPage() {
       const methodMap: Record<string, { orders: number; revenue: number }> = {}
       currentOrders.forEach(o => {
         const isValid = o.status !== 'cancelled' && o.payment_status !== 'failed' && o.payment_status !== 'expired'
-        const method = o.payment_method_type || o.payment_gateway || 'Unknown'
-        const label = method.toLowerCase().includes('paypal') ? 'PayPal' : method.toLowerCase().includes('stripe') ? 'Stripe' : method.toLowerCase().includes('midtrans') ? 'Midtrans' : method.charAt(0).toUpperCase() + method.slice(1)
+        // Infer gateway from identifiers if not stored explicitly
+        const inferredGateway = o.payment_gateway || 
+          (o.paypal_order_id ? 'paypal' : o.stripe_session_id ? 'stripe' : o.snap_token ? 'midtrans' : null)
+        const method = o.payment_method_type || inferredGateway || 'Unknown'
+        const label = method.toLowerCase().includes('paypal') ? 'PayPal' 
+          : method.toLowerCase().includes('stripe') ? 'Stripe' 
+          : method.toLowerCase().includes('midtrans') || method.toLowerCase().includes('snap') ? 'Midtrans' 
+          : method.toLowerCase() === 'unknown' ? 'Unknown'
+          : method.charAt(0).toUpperCase() + method.slice(1).replace('_', ' ')
         if (!methodMap[label]) methodMap[label] = { orders: 0, revenue: 0 }
         methodMap[label].orders++
         if (isValid) methodMap[label].revenue += convertToUSD(o.total_amount || 0, getCurrency(o))
       })
       const paymentMethods = Object.entries(methodMap).map(([method, d]) => ({ method, ...d })).sort((a, b) => b.orders - a.orders)
 
-      // Cart abandonment (count pending + already expired orders)
+      // Cart abandonment — only unpaid orders (exclude completed/paid orders even if expiry_time is past)
       const pendingPaymentOrders = currentOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'expired')
-      const expiredOrders = currentOrders.filter(o => o.payment_status === 'expired' || (o.expiry_time && new Date(o.expiry_time) < new Date()))
+      const expiredOrders = currentOrders.filter(o => o.payment_status === 'expired' || (o.payment_status === 'pending' && o.expiry_time && new Date(o.expiry_time) < new Date()))
       const cartAbandonment = { total: pendingPaymentOrders.length, expired: expiredOrders.length, rate: pendingPaymentOrders.length > 0 ? (expiredOrders.length / pendingPaymentOrders.length) * 100 : 0 }
 
       // Vouchers
@@ -1172,10 +1183,21 @@ export default function CMSPage() {
               <p className="text-center text-gray-500 py-8">No products found</p>
             ) : (
               topProducts.map((product, index) => {
-                // Parse image_urls (may be JSON string or array)
-                const rawImgs = product.image_urls
-                const imgUrls: string[] = Array.isArray(rawImgs) ? rawImgs : (() => { try { return JSON.parse(rawImgs as any) || [] } catch { return [] } })()
-                const img = imgUrls.find(u => u && !u.includes('placehold.co')) || null
+                const parseImgField = (raw: any): string[] => {
+                  if (!raw) return []
+                  if (Array.isArray(raw)) return raw.filter(Boolean)
+                  try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean) : [] } catch { return [] }
+                }
+                // Try product image_urls first, then fall back to first variant image
+                const imgUrls = parseImgField(product.image_urls)
+                let img = imgUrls.find((u: string) => u && !u.includes('placehold.co')) || null
+                if (!img && product.variants) {
+                  for (const v of (product.variants as any[])) {
+                    const varImgs = parseImgField(v.image_url)
+                    const found = varImgs.find((u: string) => u && !u.includes('placehold.co'))
+                    if (found) { img = found; break }
+                  }
+                }
 
                 return (
                 <div key={product.id} className="flex items-center gap-4">
@@ -1227,6 +1249,10 @@ export default function CMSPage() {
             ) : (
               recentOrders.map((order) => {
                 const badge = getStatusBadge(order.status)
+                const firstItem = (order.order_items as any[])?.[0]
+                const productName = firstItem?.product?.name
+                const variantName = firstItem?.variant_name
+                const extraCount = ((order.order_items as any[])?.length || 0) - 1
                 return (
                   <Link 
                     key={order.id} 
@@ -1239,8 +1265,15 @@ export default function CMSPage() {
                         {order.status.replace('_', ' ')}
                       </span>
                     </div>
+                    {productName && (
+                      <p className="text-sm font-medium text-gray-800 mb-1 truncate">
+                        {productName}
+                        {variantName && <span className="text-gray-500 font-normal"> ({variantName})</span>}
+                        {extraCount > 0 && <span className="text-gray-400 font-normal"> +{extraCount} more</span>}
+                      </p>
+                    )}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">{order.customer_email}</span>
+                      <span className="text-gray-600 truncate mr-2">{order.customer_email}</span>
                       {formatOrderAmount(order)}
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
