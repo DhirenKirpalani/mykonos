@@ -46,12 +46,32 @@ export async function GET(
 
       // Helper: resolve a possibly-relative Supabase storage path to a full public URL
       const resolveImageUrl = (url: string | null | undefined): string | null => {
-        if (!url || url.trim() === '') return null
+        if (!url || typeof url !== 'string' || url.trim() === '') return null
         if (url.startsWith('http://') || url.startsWith('https://')) return url
         // Relative path — prepend the Supabase project URL
         const base = supabaseUrl.replace(/\/$/, '')
         const path = url.startsWith('/') ? url : `/storage/v1/object/public/${url}`
         return `${base}${path}`
+      }
+      // Helper: extract first valid URL from a field that may be a string, array, or JSON string
+      const resolveImageField = (field: any): string | null => {
+        if (!field) return null
+        if (Array.isArray(field)) {
+          for (const u of field) {
+            const r = resolveImageUrl(u)
+            if (r) return r
+          }
+          return null
+        }
+        if (typeof field === 'string') {
+          // Could be a JSON-stringified array
+          try {
+            const parsed = JSON.parse(field)
+            if (Array.isArray(parsed)) return resolveImageField(parsed)
+          } catch {}
+          return resolveImageUrl(field)
+        }
+        return null
       }
 
       // If variant_id exists, find the variant details
@@ -60,7 +80,7 @@ export async function GET(
         if (variant) {
           originalPrice = variant.price_idr || 0
           stock = variant.stock_quantity || 0
-          productImage = resolveImageUrl(variant.image_url)
+          productImage = resolveImageField(variant.image_url)
         }
       } else {
         // No variant, use product price
@@ -70,10 +90,7 @@ export async function GET(
 
       // Fall back to product.image_urls if no variant image resolved
       if (!productImage) {
-        const validUrls = (product.image_urls || [])
-          .map((url: string) => resolveImageUrl(url))
-          .filter((url: string | null) => url && !url.includes('placehold.co'))
-        productImage = validUrls[0] || null
+        productImage = resolveImageField(product.image_urls)
       }
 
       return {
