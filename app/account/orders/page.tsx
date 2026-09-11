@@ -257,6 +257,8 @@ export default function OrdersPage() {
                     <p className="text-xs text-muted-foreground">
                       {new Date(order.created_at).toLocaleDateString('en-US', {
                         month: 'short', day: 'numeric', year: 'numeric',
+                      })} · {new Date(order.created_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit', minute: '2-digit'
                       })} · {totalItems} {totalItems === 1 ? t.account.item : t.account.items}
                     </p>
                   </div>
