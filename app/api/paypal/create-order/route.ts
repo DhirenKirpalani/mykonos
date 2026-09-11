@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
-    const { orderId, items, shippingCost, totalAmount, currency = 'USD' } = body
+    const { orderId, items, shippingCost, totalAmount, currency = 'USD', discount = 0, tax = 0 } = body
 
     if (!orderId || !items || !totalAmount) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -66,6 +66,21 @@ export async function POST(request: NextRequest) {
       return sum + item.price * item.quantity
     }, 0)
 
+    // Calculate discount if not provided (item_total + shipping - total = discount + tax adjustment)
+    const calculatedDiscount = discount || Math.max(0, itemTotal + (shippingCost || 0) - totalAmount - tax)
+
+    // Build breakdown — PayPal requires: item_total + shipping + tax - discount = total
+    const breakdown: any = {
+      item_total: { currency_code: currencyUpper, value: itemTotal.toFixed(2) },
+      shipping: { currency_code: currencyUpper, value: (shippingCost || 0).toFixed(2) },
+    }
+    if (tax > 0) {
+      breakdown.tax = { currency_code: currencyUpper, value: tax.toFixed(2) }
+    }
+    if (calculatedDiscount > 0) {
+      breakdown.discount = { currency_code: currencyUpper, value: calculatedDiscount.toFixed(2) }
+    }
+
     const paypalOrder = {
       intent: 'CAPTURE',
       purchase_units: [
@@ -74,13 +89,7 @@ export async function POST(request: NextRequest) {
           amount: {
             currency_code: currencyUpper,
             value: totalAmount.toFixed(2),
-            breakdown: {
-              item_total: { currency_code: currencyUpper, value: itemTotal.toFixed(2) },
-              shipping: {
-                currency_code: currencyUpper,
-                value: (shippingCost || 0).toFixed(2),
-              },
-            },
+            breakdown,
           },
           items: items.map((item: any) => ({
             name: item.name,

@@ -116,7 +116,20 @@ export async function GET(request: Request) {
 
     const { data: products, error, count } = await query
 
-    if (error) throw error
+    if (error) {
+      // Supabase returns "Requested range not satisfiable" when offset > total rows.
+      // Return empty results instead of a 500 error so the frontend doesn't crash.
+      if (error.code === 'PGRST103' || error.message?.includes('range not satisfiable')) {
+        return NextResponse.json({
+          products: [],
+          total: 0,
+          page,
+          per_page: perPage,
+          total_pages: 0,
+        })
+      }
+      throw error
+    }
 
     const totalPages = count ? Math.ceil(count / perPage) : 0
 
