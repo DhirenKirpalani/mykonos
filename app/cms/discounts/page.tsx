@@ -222,7 +222,7 @@ export default function DiscountsPage() {
                                   <img
                                     src={product.image_url}
                                     alt={product.name}
-                                    className="h-6 w-6 rounded object-cover"
+                                    className="h-6 w-6 rounded object-contain bg-gray-50 p-0.5"
                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                   />
                                 )}
@@ -238,14 +238,12 @@ export default function DiscountsPage() {
                     </td>
                     <td className="py-4">
                       <div className="flex items-center gap-2">
-                        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                          discount.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {discount.is_active ? 'Active' : 'Inactive'}
+                        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusBadge(discount.status)}`}>
+                          {discount.status ? discount.status.charAt(0).toUpperCase() + discount.status.slice(1) : 'Unknown'}
                         </span>
-                        {discount.status !== 'active' && (
-                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusBadge(discount.status)}`}>
-                            {discount.status ? discount.status.charAt(0).toUpperCase() + discount.status.slice(1) : ''}
+                        {!discount.is_active && discount.status === 'active' && (
+                          <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-red-100 text-red-800">
+                            Inactive
                           </span>
                         )}
                       </div>
@@ -295,13 +293,13 @@ export default function DiscountsPage() {
                           <table className="w-full">
                             <thead className="bg-gray-100">
                               <tr className="text-xs font-medium text-gray-600">
-                                <th className="px-4 py-2 text-left">Produk</th>
-                                <th className="px-4 py-2 text-right">Harga Awal</th>
-                                <th className="px-4 py-2 text-right">Harga Diskon</th>
-                                <th className="px-4 py-2 text-center">% Diskon</th>
-                                <th className="px-4 py-2 text-center">Stok</th>
-                                <th className="px-4 py-2 text-center">Stok Promosi</th>
-                                <th className="px-4 py-2 text-center">Min. Pembelian</th>
+                                <th className="px-4 py-2 text-left">Product</th>
+                                <th className="px-4 py-2 text-right">Original Price</th>
+                                <th className="px-4 py-2 text-right">Discount Price</th>
+                                <th className="px-4 py-2 text-center">% Off</th>
+                                <th className="px-4 py-2 text-center">Stock</th>
+                                <th className="px-4 py-2 text-center">Promo Stock</th>
+                                <th className="px-4 py-2 text-center">Min. Purchase</th>
                                 <th className="px-4 py-2 text-center">Status</th>
                               </tr>
                             </thead>
@@ -314,7 +312,7 @@ export default function DiscountsPage() {
                                         <img
                                           src={product.product_image}
                                           alt={product.variant_name || product.product_name}
-                                          className="h-8 w-8 rounded object-cover"
+                                          className="h-8 w-8 rounded object-contain bg-gray-50 p-1"
                                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                         />
                                       )}

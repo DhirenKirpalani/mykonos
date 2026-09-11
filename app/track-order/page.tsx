@@ -206,10 +206,22 @@ export default function TrackOrderPage() {
             }
           }
           
-          // Fetch summary only — full detail loaded on-demand when user clicks
+          // Fetch summary + order_items for card display (matching account/orders style)
           const { data, error } = await supabase
             .from('orders')
-            .select('id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, paypal_order_id, expiry_time, payment_metadata, shipping_address')
+            .select(`
+              id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, paypal_order_id, expiry_time, payment_metadata, shipping_address,
+              order_items (
+                id,
+                quantity,
+                variant_name,
+                product:products (
+                  name,
+                  image_urls,
+                  variants
+                )
+              )
+            `)
             .eq('customer_email', authenticatedEmail)
             .order('created_at', { ascending: false })
             .limit(5)
@@ -217,7 +229,7 @@ export default function TrackOrderPage() {
           if (error) {
             console.error('Error fetching orders:', error)
           } else if (data) {
-            setSessionOrders(data as Order[])
+            setSessionOrders(data as unknown as Order[])
             debugLog('✅ [ORDER HISTORY] Loaded', data.length, 'orders for authenticated user')
           }
         } else {
@@ -247,10 +259,22 @@ export default function TrackOrderPage() {
           if (mostRecentEmail) {
             debugLog('📚 [ORDER HISTORY] Fetching guest orders for:', mostRecentEmail)
             
-            // Fetch summary only — full detail loaded on-demand when user clicks
+            // Fetch summary + order_items for card display (matching account/orders style)
             const { data, error } = await supabase
               .from('orders')
-              .select('id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, paypal_order_id, expiry_time, payment_metadata, shipping_address')
+              .select(`
+                id, order_number, status, payment_status, total_amount, subtotal_amount, discount_amount, shipping_amount, tax_amount, currency_code, created_at, customer_email, snap_token, stripe_session_id, stripe_payment_intent_id, paypal_order_id, expiry_time, payment_metadata, shipping_address,
+                order_items (
+                  id,
+                  quantity,
+                  variant_name,
+                  product:products (
+                    name,
+                    image_urls,
+                    variants
+                  )
+                )
+              `)
               .eq('customer_email', mostRecentEmail)
               .order('created_at', { ascending: false })
               .limit(5)
@@ -258,7 +282,7 @@ export default function TrackOrderPage() {
             if (error) {
               console.error('Error fetching orders:', error)
             } else if (data) {
-              setSessionOrders(data as Order[])
+              setSessionOrders(data as unknown as Order[])
               debugLog('✅ [ORDER HISTORY] Loaded', data.length, 'guest orders from database')
             }
           } else {
@@ -803,13 +827,46 @@ export default function TrackOrderPage() {
               {t('trackOrder.yourRecentOrders')}
             </h2>
             <div className="space-y-2 sm:space-y-3">
-              {sessionOrders.map((sessionOrder) => (
+              {sessionOrders.map((sessionOrder) => {
+                const firstItem = (sessionOrder as any).order_items?.[0]
+                const firstProduct = firstItem?.product
+                const totalItems = (sessionOrder as any).order_items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0
+                const extraCount = ((sessionOrder as any).order_items?.length || 0) - 1
+
+                // Parse image field that may be a JSON string, array, or plain string
+                const parseImg = (raw: any): string | null => {
+                  if (!raw) return null
+                  if (Array.isArray(raw)) return raw.filter(Boolean)[0] || null
+                  if (typeof raw === 'string') {
+                    try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean)[0] || null : raw } catch { return raw }
+                  }
+                  return null
+                }
+
+                let displayImage: string | null = null
+                if (firstItem?.variant_name && firstProduct?.variants) {
+                  const variant = firstProduct.variants.find((v: any) => v.name === firstItem.variant_name)
+                  if (variant?.image_url) displayImage = parseImg(variant.image_url)
+                }
+                if (!displayImage && firstProduct?.image_urls) {
+                  const raw = firstProduct.image_urls
+                  const urls: string[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw as any) } catch { return [] } })()
+                  displayImage = urls.find((u: string) => u && !u.includes('placehold.co')) || null
+                }
+                if (!displayImage && firstProduct?.variants) {
+                  for (const v of firstProduct.variants) {
+                    const img = parseImg((v as any).image_url)
+                    if (img) { displayImage = img; break }
+                  }
+                }
+
+                return (
                 <div
                   key={sessionOrder.id}
-                  className={`rounded-lg shadow-sm p-3 sm:p-4 hover:shadow-md transition-all cursor-pointer ${
+                  className={`group rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden ${
                     selectedOrderId === sessionOrder.id
                       ? 'bg-luxury-navy/5 border-2 border-luxury-navy'
-                      : 'bg-white border border-gray-200'
+                      : 'bg-white border border-gray-200 hover:border-luxury-gold hover:bg-luxury-gold/5'
                   }`}
                   onClick={async () => {
                     setSelectedOrderId(sessionOrder.id)
@@ -832,72 +889,95 @@ export default function TrackOrderPage() {
                     }
                   }}
                 >
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-mono font-semibold text-sm text-gray-900 mb-1.5">
-                          {sessionOrder.order_number}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-                            sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
-                              ? 'bg-red-100 text-red-800'
-                              : sessionOrder.status === 'shipped' ? 'bg-indigo-100 text-indigo-800'
-                              : sessionOrder.status === 'delivered' ? 'bg-green-100 text-green-800'
-                              : sessionOrder.status === 'packed' ? 'bg-purple-100 text-purple-800'
-                              : sessionOrder.status === 'cancelled' ? 'bg-red-100 text-red-800'
-                              : sessionOrder.payment_status === 'completed' ? 'bg-blue-100 text-blue-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
-                              ? (lang === 'id' ? '⏰ Kadaluarsa' : '⏰ Expired')
-                              : sessionOrder.status === 'shipped' ? (lang === 'id' ? '🚚 Dikirim' : '🚚 Shipped')
-                              : sessionOrder.status === 'delivered' ? (lang === 'id' ? '✅ Terkirim' : '✅ Delivered')
-                              : sessionOrder.status === 'packed' ? (lang === 'id' ? '📦 Dikemas' : '📦 Packed')
-                              : sessionOrder.status === 'cancelled' ? (lang === 'id' ? '❌ Dibatalkan' : '❌ Cancelled')
-                              : sessionOrder.payment_status === 'completed' ? (lang === 'id' ? '⏳ Diproses' : '⏳ Processing')
-                              : (lang === 'id' ? '💳 Menunggu Pembayaran' : '💳 Pending Payment')
-                            }
-                          </span>
+                  <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
+                    {/* Product Image */}
+                    {firstProduct && (
+                      <div className="flex-shrink-0 relative w-16 h-16 sm:w-20 sm:h-20">
+                        {displayImage ? (
+                          <img
+                            src={displayImage}
+                            alt={firstItem?.variant_name || firstProduct.name}
+                            className="w-full h-full object-contain rounded-lg bg-gray-50 p-1"
+                            onError={(e) => { e.currentTarget.style.display = 'none' }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
+                            <Package className="h-8 w-8 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-montserrat font-semibold text-sm sm:text-base mb-0.5">{sessionOrder.order_number}</h3>
+                          {firstProduct && (
+                            <p className="text-xs sm:text-sm text-gray-700 mb-1 line-clamp-2">
+                              {firstProduct.name}
+                              {firstItem?.variant_name && (
+                                <span className="text-gray-500 ml-1">({firstItem.variant_name})</span>
+                              )}
+                              {extraCount > 0 && (
+                                <span className="text-muted-foreground ml-1">+{extraCount} more</span>
+                              )}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(sessionOrder.created_at).toLocaleDateString('en-US', {
+                              month: 'short', day: 'numeric', year: 'numeric',
+                            })} · {new Date(sessionOrder.created_at).toLocaleTimeString('en-US', {
+                              hour: '2-digit', minute: '2-digit'
+                            })} · {totalItems} {totalItems === 1 ? (lang === 'id' ? 'item' : 'item') : (lang === 'id' ? 'item' : 'items')}
+                          </p>
                         </div>
-                        <p className="text-sm text-gray-600 font-semibold">
+                        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-luxury-gold flex-shrink-0 mt-0.5 group-hover:translate-x-1 transition-transform" />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 mt-2">
+                        <span className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                          sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
+                            ? 'bg-red-100 text-red-700'
+                            : sessionOrder.status === 'shipped' ? 'bg-indigo-100 text-indigo-700'
+                            : sessionOrder.status === 'delivered' ? 'bg-green-100 text-green-700'
+                            : sessionOrder.status === 'packed' ? 'bg-purple-100 text-purple-700'
+                            : sessionOrder.status === 'cancelled' ? 'bg-red-100 text-red-700'
+                            : sessionOrder.payment_status === 'completed' ? 'bg-blue-100 text-blue-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) < new Date()
+                            ? (lang === 'id' ? 'Kadaluarsa' : 'Expired')
+                            : sessionOrder.status === 'shipped' ? (lang === 'id' ? 'Dikirim' : 'Shipped')
+                            : sessionOrder.status === 'delivered' ? (lang === 'id' ? 'Terkirim' : 'Delivered')
+                            : sessionOrder.status === 'packed' ? (lang === 'id' ? 'Dikemas' : 'Packed')
+                            : sessionOrder.status === 'cancelled' ? (lang === 'id' ? 'Dibatalkan' : 'Cancelled')
+                            : sessionOrder.payment_status === 'completed' ? (lang === 'id' ? 'Diproses' : 'Processing')
+                            : (lang === 'id' ? 'Menunggu Pembayaran' : 'Pending Payment')
+                          }
+                        </span>
+                        <span className="font-semibold text-xs sm:text-sm whitespace-nowrap">
                           {formatPrice(
                             (sessionOrder.subtotal_amount ?? 0) - (sessionOrder.discount_amount ?? 0) + (sessionOrder.shipping_amount ?? 0) + (sessionOrder.tax_amount ?? 0),
                             ((sessionOrder.payment_metadata as any)?.currency_code || sessionOrder.currency_code) as any
                           )}
-                        </p>
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-end gap-1">
-                          <p className="text-xs text-gray-500">
-                            {new Date(sessionOrder.created_at).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(sessionOrder.created_at).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
+
+                      {/* Action hint */}
+                      {sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) >= new Date() && (
+                        <div className="flex items-center gap-2 text-xs text-luxury-gold mt-2 pt-2 border-t border-gray-100">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                          </svg>
+                          <span className="font-medium">{lang === 'id' ? 'Klik untuk melanjutkan pembayaran' : 'Click to continue payment'}</span>
                         </div>
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      </div>
+                      )}
                     </div>
-                    {/* Action hint */}
-                    {sessionOrder.payment_status === 'pending' && sessionOrder.expiry_time && new Date(sessionOrder.expiry_time) >= new Date() && (
-                      <div className="flex items-center gap-2 text-xs text-luxury-gold">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
-                        <span className="font-medium">{lang === 'id' ? 'Klik untuk melanjutkan pembayaran' : 'Click to continue payment'}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
             <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 flex items-center justify-between gap-3">
               <p className="text-xs sm:text-sm text-gray-500">
@@ -1526,7 +1606,7 @@ export default function TrackOrderPage() {
                           )}
                           {displayPhone !== '-' && (
                             <p className="pt-2 text-gray-600">
-                              Telepon: {displayPhone}
+                              {lang === 'id' ? 'Telepon' : 'Phone'}: {displayPhone}
                             </p>
                           )}
                         </>

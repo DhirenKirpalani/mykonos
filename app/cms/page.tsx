@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase/client'
 import { formatPrice } from '@/lib/utils/region'
 import type { Region } from '@/lib/types/region'
 import { getCurrencyInfo } from '@/lib/utils/currency'
+import { getCountryName } from '@/lib/utils/country'
 
 interface DashboardMetrics {
   revenue: {
@@ -120,7 +121,7 @@ export default function CMSPage() {
       // One query with all columns needed by every section
       const { data: allOrders } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, status, payment_status, payment_method_type, payment_gateway, discount_amount, subtotal_amount, shipping_amount, tax_amount, expiry_time, created_at, packed_at, shipped_at, completed_at, customer_email, user_id, currency_code, payment_metadata, shipping_address, order_items(quantity)')
+        .select('id, order_number, total_amount, status, payment_status, payment_method_type, payment_gateway, discount_amount, subtotal_amount, shipping_amount, tax_amount, expiry_time, created_at, packed_at, shipped_at, completed_at, customer_email, user_id, currency_code, payment_metadata, shipping_address, paypal_order_id, stripe_session_id, snap_token, order_items(id, product_id, quantity, variant_name, product:products(name))')
         .order('created_at', { ascending: false })
 
       // Split into current and previous period
@@ -145,16 +146,21 @@ export default function CMSPage() {
         if (currencyCode === 'USD') return amount * 15000
         return amount * 15000
       }
-      const getCurrency = (o: any) => (o.payment_metadata as any)?.currency_code || o.currency_code || (o.total_amount < 1000 ? 'USD' : 'IDR')
+      // Prefer the order's currency_code column; only fall back to payment_metadata if currency_code is missing
+      // (payment_metadata.currency_code can be wrong for Midtrans IDR orders, which store USD in metadata)
+      const getCurrency = (o: any) => o.currency_code || (o.payment_metadata as any)?.currency_code || (o.total_amount < 1000 ? 'USD' : 'IDR')
 
       // === METRICS (was fetchMetrics) ===
+      // Only count revenue from non-cancelled orders (paid/completed/pending)
+      const validOrders = currentOrders.filter(o => o.status !== 'cancelled' && o.payment_status !== 'failed' && o.payment_status !== 'expired')
       let currentRevenueIDR = 0, currentRevenueUSD = 0
-      currentOrders.forEach(o => {
+      validOrders.forEach(o => {
         const cc = getCurrency(o)
         currentRevenueIDR += convertToIDR(o.total_amount || 0, cc)
         currentRevenueUSD += convertToUSD(o.total_amount || 0, cc)
       })
-      const prevRevenueIDR = previousOrders.reduce((sum, o) => sum + convertToIDR(o.total_amount || 0, getCurrency(o)), 0)
+      const prevValidOrders = previousOrders.filter(o => o.status !== 'cancelled' && o.payment_status !== 'failed' && o.payment_status !== 'expired')
+      const prevRevenueIDR = prevValidOrders.reduce((sum, o) => sum + convertToIDR(o.total_amount || 0, getCurrency(o)), 0)
       const revenueChange = prevRevenueIDR > 0 ? ((currentRevenueIDR - prevRevenueIDR) / prevRevenueIDR) * 100 : 0
       const currentOrderCount = currentOrders.length
       const previousOrderCount = previousOrders.length
@@ -165,9 +171,9 @@ export default function CMSPage() {
         supabase.from('users').select('*', { count: 'exact', head: true }).neq('role', 'admin'),
         supabase.from('users').select('*', { count: 'exact', head: true }).neq('role', 'admin').gte('created_at', startDate.toISOString()),
         supabase.from('products').select('*', { count: 'exact', head: true }),
-        supabase.from('products').select('*', { count: 'exact', head: true }).lte('stock_quantity', 10).gt('stock_quantity', 0).eq('is_active', true),
-        supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock_quantity', 0).eq('is_active', true),
-        supabase.from('products').select('id, name, price_idr, products_sold, stock_quantity, image_urls').eq('is_active', true).order('products_sold', { ascending: false, nullsFirst: false }).limit(5),
+        supabase.from('products').select('*', { count: 'exact', head: true }).lte('stock_quantity', 10).gt('stock_quantity', 0).eq('is_visible', true),
+        supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock_quantity', 0).eq('is_visible', true),
+        supabase.from('products').select('id, name, price_idr, stock_quantity, image_urls, variants').eq('is_visible', true),
       ])
 
       setMetrics({
@@ -183,8 +189,20 @@ export default function CMSPage() {
       allOrders?.forEach(o => { if (stats.hasOwnProperty(o.status)) (stats as any)[o.status]++ })
       setOrderStats(stats)
 
-      // === TOP PRODUCTS ===
-      setTopProducts(topProdRes.data || [])
+      // === TOP PRODUCTS (calculate actual sold from order_items, not marketing products_sold field) ===
+      const actualSoldMap: Record<string, number> = {}
+      allOrders?.forEach(o => {
+        // Only count valid (non-cancelled) orders
+        if (o.status === 'cancelled' || o.payment_status === 'failed' || o.payment_status === 'expired') return
+        ;(o.order_items || []).forEach((item: any) => {
+          if (item.product_id) actualSoldMap[item.product_id] = (actualSoldMap[item.product_id] || 0) + (item.quantity || 0)
+        })
+      })
+      const topProductsData = (topProdRes.data || []).map((p: any) => ({
+        ...p,
+        actual_sold: actualSoldMap[p.id] || 0
+      })).filter((p: any) => p.actual_sold > 0).sort((a: any, b: any) => b.actual_sold - a.actual_sold).slice(0, 5)
+      setTopProducts(topProductsData)
 
       // === RECENT ORDERS (first 5 from allOrders, already sorted desc) ===
       setRecentOrders((allOrders || []).slice(0, 5))
@@ -192,18 +210,22 @@ export default function CMSPage() {
       // === SALES DATA (current period, sorted asc) ===
       setSalesData(currentOrders.slice().reverse())
 
-      // === REGIONAL STATS (derive from currentOrders) ===
+      // === REGIONAL STATS (order counts from all orders, revenue from valid only) ===
       const currencyMap: Record<string, { orders: number; revenue: number; revenueUSD: number }> = {}
       const countryMap: Record<string, { orders: number; customers: Set<string> }> = {}
       currentOrders.forEach(o => {
         const cc = getCurrency(o)
-        const usdAmount = convertToUSD(o.total_amount || 0, cc)
+        const isValid = o.status !== 'cancelled' && o.payment_status !== 'failed' && o.payment_status !== 'expired'
+        const usdAmount = isValid ? convertToUSD(o.total_amount || 0, cc) : 0
         if (!currencyMap[cc]) currencyMap[cc] = { orders: 0, revenue: 0, revenueUSD: 0 }
         currencyMap[cc].orders++
-        currencyMap[cc].revenue += o.total_amount || 0
-        currencyMap[cc].revenueUSD += usdAmount
+        if (isValid) {
+          currencyMap[cc].revenue += o.total_amount || 0
+          currencyMap[cc].revenueUSD += usdAmount
+        }
         const sa = o.shipping_address as any
-        const country = sa?.country || sa?.state_province || 'Unknown'
+        const rawCountry = sa?.country || sa?.state_province || 'Unknown'
+        const country = getCountryName(rawCountry) || rawCountry
         if (!countryMap[country]) countryMap[country] = { orders: 0, customers: new Set() }
         countryMap[country].orders++
         if (o.customer_email) countryMap[country].customers.add(o.customer_email)
@@ -218,35 +240,43 @@ export default function CMSPage() {
         }
       })
 
-      // === BUSINESS STATS (derive from currentOrders + previousOrders) ===
+      // === BUSINESS STATS (order counts from all, revenue from valid) ===
       // Payment methods
       const methodMap: Record<string, { orders: number; revenue: number }> = {}
       currentOrders.forEach(o => {
-        const method = o.payment_method_type || o.payment_gateway || 'Unknown'
-        const label = method.toLowerCase().includes('paypal') ? 'PayPal' : method.toLowerCase().includes('stripe') ? 'Stripe' : method.toLowerCase().includes('midtrans') ? 'Midtrans' : method.charAt(0).toUpperCase() + method.slice(1)
+        const isValid = o.status !== 'cancelled' && o.payment_status !== 'failed' && o.payment_status !== 'expired'
+        // Infer gateway from identifiers if not stored explicitly
+        const inferredGateway = o.payment_gateway || 
+          (o.paypal_order_id ? 'paypal' : o.stripe_session_id ? 'stripe' : o.snap_token ? 'midtrans' : null)
+        const method = o.payment_method_type || inferredGateway || 'Unknown'
+        const label = method.toLowerCase().includes('paypal') ? 'PayPal' 
+          : method.toLowerCase().includes('stripe') ? 'Stripe' 
+          : method.toLowerCase().includes('midtrans') || method.toLowerCase().includes('snap') ? 'Midtrans' 
+          : method.toLowerCase() === 'unknown' ? 'Unknown'
+          : method.charAt(0).toUpperCase() + method.slice(1).replace('_', ' ')
         if (!methodMap[label]) methodMap[label] = { orders: 0, revenue: 0 }
         methodMap[label].orders++
-        methodMap[label].revenue += convertToUSD(o.total_amount || 0, getCurrency(o))
+        if (isValid) methodMap[label].revenue += convertToUSD(o.total_amount || 0, getCurrency(o))
       })
       const paymentMethods = Object.entries(methodMap).map(([method, d]) => ({ method, ...d })).sort((a, b) => b.orders - a.orders)
 
-      // Cart abandonment
-      const pendingPaymentOrders = currentOrders.filter(o => o.payment_status === 'pending')
-      const expiredOrders = pendingPaymentOrders.filter(o => o.expiry_time && new Date(o.expiry_time) < new Date())
+      // Cart abandonment — only unpaid orders (exclude completed/paid orders even if expiry_time is past)
+      const pendingPaymentOrders = currentOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'expired')
+      const expiredOrders = currentOrders.filter(o => o.payment_status === 'expired' || (o.payment_status === 'pending' && o.expiry_time && new Date(o.expiry_time) < new Date()))
       const cartAbandonment = { total: pendingPaymentOrders.length, expired: expiredOrders.length, rate: pendingPaymentOrders.length > 0 ? (expiredOrders.length / pendingPaymentOrders.length) * 100 : 0 }
 
       // Vouchers
-      const ordersWithDiscount = currentOrders.filter(o => (o.discount_amount || 0) > 0)
+      const ordersWithDiscount = validOrders.filter(o => (o.discount_amount || 0) > 0)
       const totalDiscount = ordersWithDiscount.reduce((s, o) => s + convertToUSD(o.discount_amount || 0, getCurrency(o)), 0)
       const vouchers = { used: ordersWithDiscount.length, totalDiscount, ordersWithVoucher: ordersWithDiscount.length }
 
       // Fulfillment
-      const paidOrders = currentOrders.filter(o => o.payment_status === 'completed')
+      const paidOrders = validOrders.filter(o => o.payment_status === 'completed' || o.payment_status === 'paid')
       const packedWithTimes = paidOrders.filter(o => o.packed_at && o.created_at)
       const avgTimeMs = packedWithTimes.length > 0 ? packedWithTimes.reduce((s, o) => s + (new Date(o.packed_at).getTime() - new Date(o.created_at).getTime()), 0) / packedWithTimes.length : 0
       const fulfillment = { awaiting: paidOrders.filter(o => ['pending', 'processing'].includes(o.status)).length, avgTimeHours: avgTimeMs / (1000 * 60 * 60), shipped: paidOrders.filter(o => o.shipped_at).length, delivered: paidOrders.filter(o => o.status === 'delivered').length }
 
-      // Customer metrics
+      // Customer metrics (count from all orders)
       const customerOrderMap: Record<string, number> = {}
       currentOrders.forEach(o => { if (o.customer_email) customerOrderMap[o.customer_email] = (customerOrderMap[o.customer_email] || 0) + 1 })
       const totalCustomers = Object.keys(customerOrderMap).length
@@ -257,29 +287,30 @@ export default function CMSPage() {
       const cancelledOrders = currentOrders.filter(o => o.status === 'cancelled').length
       const cancellationRate = { cancelled: cancelledOrders, total: currentOrderCount, rate: currentOrderCount > 0 ? (cancelledOrders / currentOrderCount) * 100 : 0 }
 
-      // AOV
-      const currentAOV = currentOrderCount > 0 ? currentOrders.reduce((s, o) => s + convertToUSD(o.total_amount || 0, getCurrency(o)), 0) / currentOrderCount : 0
-      const prevAOV = previousOrderCount > 0 ? previousOrders.reduce((s, o) => s + convertToUSD(o.total_amount || 0, getCurrency(o)), 0) / previousOrderCount : 0
+      // AOV (only from valid/non-cancelled orders)
+      const currentAOV = validOrders.length > 0 ? validOrders.reduce((s, o) => s + convertToUSD(o.total_amount || 0, getCurrency(o)), 0) / validOrders.length : 0
+      const prevAOV = prevValidOrders.length > 0 ? prevValidOrders.reduce((s, o) => s + convertToUSD(o.total_amount || 0, getCurrency(o)), 0) / prevValidOrders.length : 0
       const aov = { current: currentAOV, previous: prevAOV, change: prevAOV > 0 ? ((currentAOV - prevAOV) / prevAOV) * 100 : 0 }
 
-      // Basket size
+      // Basket size (from all orders)
       const totalItems = currentOrders.reduce((s, o) => { const items = (o as any).order_items as any[]; return s + (items?.reduce((is: number, i: any) => is + (i.quantity || 0), 0) || 0) }, 0)
       const basketSize = { avgItems: currentOrderCount > 0 ? totalItems / currentOrderCount : 0, totalItems, orders: currentOrderCount }
 
-      // Tax & shipping
-      const taxCollected = currentOrders.reduce((s, o) => s + convertToUSD(o.tax_amount || 0, getCurrency(o)), 0)
-      const shippingCollected = currentOrders.reduce((s, o) => s + convertToUSD(o.shipping_amount || 0, getCurrency(o)), 0)
+      // Tax & shipping (from valid orders only)
+      const taxCollected = validOrders.reduce((s, o) => s + convertToUSD(o.tax_amount || 0, getCurrency(o)), 0)
+      const shippingCollected = validOrders.reduce((s, o) => s + convertToUSD(o.shipping_amount || 0, getCurrency(o)), 0)
       const paidCount = paidOrders.length
       const taxShipping = { taxCollected, shippingCollected, avgShipping: paidCount > 0 ? shippingCollected / paidCount : 0 }
 
-      // Top customers
+      // Top customers (order count from all, revenue from valid only)
       const customerRevenueMap: Record<string, { orders: number; revenue: number; lastOrder: string }> = {}
       currentOrders.forEach(o => {
         if (!o.customer_email) return
-        const usdAmount = convertToUSD(o.total_amount || 0, getCurrency(o))
+        const isValid = o.status !== 'cancelled' && o.payment_status !== 'failed' && o.payment_status !== 'expired'
+        const usdAmount = isValid ? convertToUSD(o.total_amount || 0, getCurrency(o)) : 0
         if (!customerRevenueMap[o.customer_email]) customerRevenueMap[o.customer_email] = { orders: 0, revenue: 0, lastOrder: '' }
         customerRevenueMap[o.customer_email].orders++
-        customerRevenueMap[o.customer_email].revenue += usdAmount
+        if (isValid) customerRevenueMap[o.customer_email].revenue += usdAmount
         const od = new Date(o.created_at).toISOString()
         if (od > customerRevenueMap[o.customer_email].lastOrder) customerRevenueMap[o.customer_email].lastOrder = od
       })
@@ -291,22 +322,23 @@ export default function CMSPage() {
       currentOrders.forEach(o => { const h = new Date(o.created_at).getHours(); hourMap[h]++ })
       const peakHours = Object.entries(hourMap).map(([hour, orders]) => ({ hour: parseInt(hour), orders })).filter(h => h.orders > 0).sort((a, b) => b.orders - a.orders).slice(0, 6)
 
-      // Revenue split
+      // Revenue split (order count from all, revenue from valid only)
       let newCustomers = 0, returningCustomers = 0, newRevenue = 0, returningRevenue = 0
       currentOrders.forEach(o => {
         if (!o.customer_email) return
-        const usdAmount = convertToUSD(o.total_amount || 0, getCurrency(o))
+        const isValid = o.status !== 'cancelled' && o.payment_status !== 'failed' && o.payment_status !== 'expired'
+        const usdAmount = isValid ? convertToUSD(o.total_amount || 0, getCurrency(o)) : 0
         if (customerOrderMap[o.customer_email] === 1) { newCustomers++; newRevenue += usdAmount }
         else { returningCustomers++; returningRevenue += usdAmount }
       })
       const revenueSplit = { newCustomers, returningCustomers, newRevenue, returningRevenue }
 
-      // Inventory turnover
-      const { data: productData } = await supabase.from('products').select('products_sold, stock_quantity').eq('is_active', true)
-      const totalSold = productData?.reduce((s, p) => s + (p.products_sold || 0), 0) || 0
+      // Inventory turnover (use actual sold from order_items, not marketing products_sold)
+      const { data: productData } = await supabase.from('products').select('id, stock_quantity').eq('is_visible', true)
       const totalStock = productData?.reduce((s, p) => s + (p.stock_quantity || 0), 0) || 0
-      const lowSellers = productData?.filter(p => (p.products_sold || 0) === 0).length || 0
-      const inventoryTurnover = { totalSold, totalStock, turnoverRate: totalStock > 0 ? (totalSold / totalStock) * 100 : 0, lowSellers }
+      const totalActualSold = Object.values(actualSoldMap).reduce((s, v) => s + v, 0)
+      const lowSellers = productData?.filter(p => !actualSoldMap[p.id]).length || 0
+      const inventoryTurnover = { totalSold: totalActualSold, totalStock, turnoverRate: totalStock > 0 ? (totalActualSold / totalStock) * 100 : 0, lowSellers }
 
       setBusinessStats({ paymentMethods, cartAbandonment, vouchers, fulfillment, customerMetrics, cancellationRate, aov, basketSize, taxShipping, topCustomers, peakHours, revenueSplit, inventoryTurnover })
     } catch (error) {
@@ -1150,22 +1182,43 @@ export default function CMSPage() {
             {topProducts.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No products found</p>
             ) : (
-              topProducts.map((product, index) => (
+              topProducts.map((product, index) => {
+                const parseImgField = (raw: any): string[] => {
+                  if (!raw) return []
+                  if (Array.isArray(raw)) return raw.filter(Boolean)
+                  try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean) : [] } catch { return [] }
+                }
+                // Try product image_urls first, then fall back to first variant image
+                const imgUrls = parseImgField(product.image_urls)
+                let img = imgUrls.find((u: string) => u && !u.includes('placehold.co')) || null
+                if (!img && product.variants) {
+                  for (const v of (product.variants as any[])) {
+                    const varImgs = parseImgField(v.image_url)
+                    const found = varImgs.find((u: string) => u && !u.includes('placehold.co'))
+                    if (found) { img = found; break }
+                  }
+                }
+
+                return (
                 <div key={product.id} className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-lg font-bold text-gray-600">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-lg font-bold text-gray-600">
                     #{index + 1}
                   </div>
-                  {product.image_urls && product.image_urls[0] && (
-                    <img 
-                      src={product.image_urls[0]} 
+                  {img ? (
+                    <img
+                      src={img}
                       alt={product.name}
-                      className="h-12 w-12 rounded-lg object-cover"
+                      className="h-14 w-14 flex-shrink-0 rounded-lg object-contain bg-gray-100 p-1 border border-gray-200"
                     />
+                  ) : (
+                    <div className="h-14 w-14 flex-shrink-0 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+                      <Package className="h-7 w-7 text-gray-400" />
+                    </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 truncate">{product.name}</p>
                     <div className="flex items-center gap-3 text-sm text-gray-500">
-                      <span>{product.products_sold || 0} sold</span>
+                      <span>{product.actual_sold || 0} sold</span>
                       <span>•</span>
                       <span className={product.stock_quantity <= 10 ? 'text-red-600 font-medium' : ''}>
                         Stock: {product.stock_quantity || 0}
@@ -1176,7 +1229,8 @@ export default function CMSPage() {
                     {formatPrice(product.price_idr, { id: '', code: 'IDR', name: '', currency_code: 'IDR', currency_symbol: 'Rp', tax_rate: 0, is_active: true, created_at: '' })}
                   </p>
                 </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
@@ -1195,6 +1249,10 @@ export default function CMSPage() {
             ) : (
               recentOrders.map((order) => {
                 const badge = getStatusBadge(order.status)
+                const firstItem = (order.order_items as any[])?.[0]
+                const productName = firstItem?.product?.name
+                const variantName = firstItem?.variant_name
+                const extraCount = ((order.order_items as any[])?.length || 0) - 1
                 return (
                   <Link 
                     key={order.id} 
@@ -1207,8 +1265,15 @@ export default function CMSPage() {
                         {order.status.replace('_', ' ')}
                       </span>
                     </div>
+                    {productName && (
+                      <p className="text-sm font-medium text-gray-800 mb-1 truncate">
+                        {productName}
+                        {variantName && <span className="text-gray-500 font-normal"> ({variantName})</span>}
+                        {extraCount > 0 && <span className="text-gray-400 font-normal"> +{extraCount} more</span>}
+                      </p>
+                    )}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">{order.customer_email}</span>
+                      <span className="text-gray-600 truncate mr-2">{order.customer_email}</span>
                       {formatOrderAmount(order)}
                     </div>
                     <p className="mt-1 text-xs text-gray-500">

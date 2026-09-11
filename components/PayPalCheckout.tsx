@@ -9,11 +9,13 @@ interface PayPalCheckoutProps {
   currency: string
   items: { name: string; price: number; quantity: number }[]
   shippingCost: number
+  discount?: number
+  tax?: number
   onSuccess: (data: { orderID: string; status: string }) => void
   onError?: (error: any) => void
 }
 
-function PayPalButtonInner({ orderId, amount, currency, items, shippingCost, onSuccess, onError }: PayPalCheckoutProps) {
+function PayPalButtonInner({ orderId, amount, currency, items, shippingCost, discount = 0, tax = 0, onSuccess, onError }: PayPalCheckoutProps) {
   const [{ isPending, isRejected }] = usePayPalScriptReducer()
   const [captured, setCaptured] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -58,7 +60,7 @@ function PayPalButtonInner({ orderId, amount, currency, items, shippingCost, onS
             const response = await fetch('/api/paypal/create-order', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId, items, shippingCost, totalAmount: amount, currency }),
+              body: JSON.stringify({ orderId, items, shippingCost, totalAmount: amount, currency, discount, tax }),
             })
             const data = await response.json()
             if (!response.ok) {

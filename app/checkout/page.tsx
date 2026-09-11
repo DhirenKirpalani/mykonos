@@ -161,7 +161,7 @@ export default function CheckoutPage() {
   const [pendingOrder, setPendingOrder] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string>('')
   const [paymentGatewayConfig, setPaymentGatewayConfig] = useState<PaymentGatewayConfig | null>(null)
-  const [paypalOrderData, setPaypalOrderData] = useState<{ orderId: string; amount: number; currency: string; items: any[]; shippingCost: number } | null>(null)
+  const [paypalOrderData, setPaypalOrderData] = useState<{ orderId: string; amount: number; currency: string; items: any[]; shippingCost: number; discount: number; tax: number } | null>(null)
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
@@ -1303,6 +1303,8 @@ export default function CheckoutPage() {
           currency: paypalCurrency,
           items: paypalItems,
           shippingCost: shipping,
+          discount,
+          tax,
         })
         setIsProcessing(false)
         return
@@ -1853,6 +1855,8 @@ export default function CheckoutPage() {
           currency: 'usd',
           items: paypalItems,
           shippingCost: guestShipping,
+          discount,
+          tax,
         })
         setIsProcessing(false)
         return
@@ -3025,6 +3029,8 @@ export default function CheckoutPage() {
                     currency={paypalOrderData.currency}
                     items={paypalOrderData.items}
                     shippingCost={paypalOrderData.shippingCost}
+                    discount={paypalOrderData.discount}
+                    tax={paypalOrderData.tax}
                     onSuccess={(data) => {
                       setPaypalOrderData(null)
                       if (data.status === 'paid') {

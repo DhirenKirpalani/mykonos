@@ -37,13 +37,24 @@ BEGIN
     updated_at = NOW()
   WHERE id = p_order_id;
   
-  -- Complete the inventory reservation for this order
+  -- Complete the inventory reservation for this order AND deduct stock
+  -- The stock deduction must happen in the same transaction as the
+  -- reservation completion to prevent overselling.
   UPDATE inventory_reservations
   SET 
     status = 'completed',
     released_at = NOW()
   WHERE order_id = p_order_id
     AND status = 'active';
+
+  -- Deduct stock for each reserved item
+  -- (was missing — stock_quantity was never decremented in the order-first flow)
+  UPDATE products
+  SET stock_quantity = products.stock_quantity - r.quantity
+  FROM inventory_reservations r
+  WHERE r.order_id = p_order_id
+    AND r.status = 'completed'
+    AND products.id = r.product_id;
   
   -- Clear cart for authenticated users
   IF v_order.status IS NOT NULL THEN
