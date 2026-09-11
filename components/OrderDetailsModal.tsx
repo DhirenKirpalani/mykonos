@@ -8,6 +8,24 @@ import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline'
 import { formatPrice } from '@/lib/utils'
 import { getCountryName } from '@/lib/utils/country'
 
+interface OrderItem {
+  id: string
+  product_id: string
+  quantity: number
+  price_at_purchase: number
+  variant_name?: string | null
+  variant_sku?: string | null
+  product: {
+    name: string
+    image_urls: string[]
+    variants?: Array<{
+      name: string
+      sku: string
+      image_url?: string
+    }>
+  }
+}
+
 interface Order {
   id: string
   order_number: string
@@ -35,8 +53,9 @@ interface Order {
     payment_type?: string
     channel?: string
     expiry_time?: string
+    currency_code?: string
   }
-  items?: any[]
+  order_items?: OrderItem[]
   shipping_address?: any
 }
 
@@ -197,6 +216,73 @@ export function OrderDetailsModal({ order, isOpen, onClose, lang = 'id', t, onCo
         </div>
       ) : null}
 
+      {/* Product Items */}
+      {order.order_items && order.order_items.length > 0 && (
+        <div className="pt-4 border-t">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">{lang === 'id' ? 'Produk' : 'Products'}</h4>
+          <div className="space-y-3">
+            {order.order_items.map((item) => {
+              // Parse image field that may be a JSON string, array, or plain string
+              const parseImg = (raw: any): string | null => {
+                if (!raw) return null
+                if (Array.isArray(raw)) return raw.filter(Boolean)[0] || null
+                if (typeof raw === 'string') {
+                  try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter(Boolean)[0] || null : raw } catch { return raw }
+                }
+                return null
+              }
+              // Prefer variant-specific image
+              let itemImage: string | null = null
+              if (item.variant_name && item.product.variants) {
+                const variant = item.product.variants.find(v => v.name === item.variant_name)
+                if (variant?.image_url) itemImage = parseImg(variant.image_url)
+              }
+              // Fallback to product images
+              if (!itemImage) {
+                const raw = item.product.image_urls
+                const urls: string[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw as any) } catch { return [] } })()
+                itemImage = urls.find(u => u && !u.includes('placehold.co')) || null
+              }
+              // Fallback to any variant image
+              if (!itemImage && item.product.variants) {
+                for (const v of item.product.variants) {
+                  const img = parseImg(v.image_url)
+                  if (img) { itemImage = img; break }
+                }
+              }
+
+              return (
+                <div key={item.id} className="flex gap-3">
+                  {itemImage ? (
+                    <img
+                      src={itemImage}
+                      alt={item.variant_name || item.product.name}
+                      className="w-16 h-16 object-contain rounded-lg bg-gray-50 p-1 flex-shrink-0"
+                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-gray-100 flex items-center justify-center">
+                      <Package className="w-7 h-7 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{item.variant_name || item.product.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatPrice(item.price_at_purchase, ((order.payment_metadata as any)?.currency_code || order.currency_code) as any)} × {item.quantity}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {formatPrice(item.price_at_purchase * item.quantity, ((order.payment_metadata as any)?.currency_code || order.currency_code) as any)}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Order Details Grid */}
       <div className="grid grid-cols-2 gap-3 text-sm pt-4 border-t">
         <div>
@@ -214,10 +300,12 @@ export function OrderDetailsModal({ order, isOpen, onClose, lang = 'id', t, onCo
                   hour: '2-digit',
                   minute: '2-digit'
                 })
-              : new Date(order.created_at).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', {
+              : new Date(order.created_at).toLocaleString(lang === 'id' ? 'id-ID' : 'en-US', {
+                  day: 'numeric',
+                  month: 'short',
                   year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
+                  hour: '2-digit',
+                  minute: '2-digit'
                 })
             }
           </p>
@@ -324,7 +412,7 @@ export function OrderDetailsModal({ order, isOpen, onClose, lang = 'id', t, onCo
             </p>
             {order.shipping_address.country && <p>{getCountryName(order.shipping_address.country)}</p>}
             {order.shipping_address.phone && order.shipping_address.phone.trim() && (
-              <p className="pt-2 text-gray-600">Telepon: {order.shipping_address.phone}</p>
+              <p className="pt-2 text-gray-600">{lang === 'id' ? 'Telepon' : 'Phone'}: {order.shipping_address.phone}</p>
             )}
           </div>
         </div>

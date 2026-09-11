@@ -1606,7 +1606,7 @@ export default function TrackOrderPage() {
                           )}
                           {displayPhone !== '-' && (
                             <p className="pt-2 text-gray-600">
-                              Telepon: {displayPhone}
+                              {lang === 'id' ? 'Telepon' : 'Phone'}: {displayPhone}
                             </p>
                           )}
                         </>
