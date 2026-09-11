@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Mail, Phone, MapPin, ShoppingBag, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth'
 
 interface Customer {
   id: string
@@ -42,8 +43,8 @@ export default function CustomerDetailPage() {
   const fetchCustomerDetails = async () => {
     try {
       const [customerRes, ordersRes] = await Promise.all([
-        fetch(`/api/customers/${customerId}`),
-        fetch(`/api/customers/${customerId}/orders`)
+        fetchWithAuth(`/api/customers/${customerId}`),
+        fetchWithAuth(`/api/customers/${customerId}/orders`)
       ])
 
       if (customerRes.ok) {

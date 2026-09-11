@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/utils/region'
 import type { Region } from '@/lib/types/region'
 import { getCurrencyInfo } from '@/lib/utils/currency'
 import { supabase } from '@/lib/supabase/client'
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth'
 
 interface Order {
   id: string
@@ -123,7 +124,7 @@ export default function OrdersPage() {
 
   const fetchAllOrders = async () => {
     try {
-      const response = await fetch('/api/orders/admin?limit=1000')
+      const response = await fetchWithAuth('/api/orders/admin?limit=1000')
       if (response.ok) {
         const data = await response.json()
         setAllOrders(data.orders || [])
@@ -150,7 +151,7 @@ export default function OrdersPage() {
       const url = `/api/orders/admin?${params.toString()}`
       
       console.log('📡 [ORDERS] Fetching from URL:', url)
-      const response = await fetch(url)
+      const response = await fetchWithAuth(url)
       console.log('📥 [ORDERS] Response status:', response.status, response.statusText)
       
       if (response.ok) {
@@ -187,7 +188,7 @@ export default function OrdersPage() {
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/orders/${orderId}/status`, {
+      const response = await fetchWithAuth(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -225,7 +226,7 @@ export default function OrdersPage() {
         const shipmentPromises = Array.from(selectedOrders).map(async (orderId, index) => {
           try {
             // Create DHL shipment
-            const shipmentResponse = await fetch(`/api/orders/${orderId}/create-shipment`, {
+            const shipmentResponse = await fetchWithAuth(`/api/orders/${orderId}/create-shipment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -290,7 +291,7 @@ export default function OrdersPage() {
       } else {
         // For other status changes, use the regular status update
         const promises = Array.from(selectedOrders).map(orderId =>
-          fetch(`/api/orders/${orderId}/status`, {
+          fetchWithAuth(`/api/orders/${orderId}/status`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: newStatus }),
@@ -386,7 +387,7 @@ export default function OrdersPage() {
           if (order && order.status !== 'delivered') {
             // Update order status to delivered
             try {
-              await fetch(`/api/orders/${orderId}`, {
+              await fetchWithAuth(`/api/orders/${orderId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'delivered' })
@@ -445,7 +446,7 @@ export default function OrdersPage() {
     try {
       const url = `/api/orders/${orderId}/details`
       console.log('📡 [ORDER DETAILS] Fetching from URL:', url)
-      const response = await fetch(url)
+      const response = await fetchWithAuth(url)
       console.log('📥 [ORDER DETAILS] Response status:', response.status)
       
       if (response.ok) {
@@ -480,7 +481,7 @@ export default function OrdersPage() {
 
   const markAsPacked = async (orderId: string) => {
     try {
-      const response = await fetch(`/api/orders/${orderId}/status`, {
+      const response = await fetchWithAuth(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'packed' }),
@@ -497,7 +498,7 @@ export default function OrdersPage() {
 
   const fulfillOrder = async (orderId: string) => {
     try {
-      const response = await fetch(`/api/orders/${orderId}/status`, {
+      const response = await fetchWithAuth(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'shipped' }),
@@ -1050,7 +1051,7 @@ export default function OrdersPage() {
                                       onClick={async () => {
                                         const toastId = toast.loading('Creating DHL shipment...')
                                         try {
-                                          const response = await fetch(`/api/orders/${order.id}/create-shipment`, {
+                                          const response = await fetchWithAuth(`/api/orders/${order.id}/create-shipment`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                           })

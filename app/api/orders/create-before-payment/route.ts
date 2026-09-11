@@ -129,7 +129,7 @@ export async function POST(request: Request) {
                 
                 if (userData && (userData.first_name || userData.last_name)) {
                   customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
-                  console.log('✅ [API] Customer name from users table:', customerName)
+                  console.log('[API] Customer name resolved from users table')
                 }
               }
               
@@ -138,11 +138,11 @@ export async function POST(request: Request) {
                 const shippingAddress = orderData.shipping_address || {}
                 console.log('📍 [API] Shipping address:', shippingAddress)
                 customerName = shippingAddress.full_name || orderData.customer_email.split('@')[0] || 'Customer'
-                console.log('⚠️ [API] Using fallback customer name:', customerName)
+                console.log('[API] Using fallback customer name')
               }
               
               console.log('📧 [API] Sending order confirmation email for reused order...')
-              console.log('📧 [API] Email to:', orderData.customer_email, 'Name:', customerName)
+              console.log('[API] Sending order confirmation email')
               
               sendOrderConfirmationEmail({
                 orderId: typedOrder.id,
@@ -153,22 +153,35 @@ export async function POST(request: Request) {
                 console.error('❌ [API] Failed to send email (non-blocking):', error)
               })
               
-              // Create notification for reused order
+              // Create notification for reused order (only if one doesn't already exist)
               if (orderData.user_id) {
-                console.log('🔔 [API] Creating notification for reused order...')
-                const { error: notifError } = await supabase.from('notifications').insert({
-                  user_id: orderData.user_id,
-                  title: 'Order Reminder',
-                  message: `Your order #${orderData.order_number} is still pending. Please complete payment to process your order.`,
-                  type: 'order',
-                  link: `/account/orders/${typedOrder.id}`,
-                  read: false
-                })
-                
-                if (notifError) {
-                  console.error('❌ [API] Failed to create notification (non-blocking):', notifError)
+                console.log('🔔 [API] Checking for existing reminder notification...')
+                const { data: existingNotif } = await supabase
+                  .from('notifications')
+                  .select('id')
+                  .eq('user_id', orderData.user_id)
+                  .eq('title', 'Order Reminder')
+                  .ilike('message', `%${orderData.order_number}%`)
+                  .limit(1)
+
+                if (!existingNotif || existingNotif.length === 0) {
+                  console.log('🔔 [API] Creating notification for reused order...')
+                  const { error: notifError } = await supabase.from('notifications').insert({
+                    user_id: orderData.user_id,
+                    title: 'Order Reminder',
+                    message: `Your order #${orderData.order_number} is still pending. Please complete payment to process your order.`,
+                    type: 'order',
+                    link: `/account/orders/${typedOrder.id}`,
+                    read: false
+                  })
+
+                  if (notifError) {
+                    console.error('❌ [API] Failed to create notification (non-blocking):', notifError)
+                  } else {
+                    console.log('✅ [API] Notification created successfully')
+                  }
                 } else {
-                  console.log('✅ [API] Notification created successfully')
+                  console.log('⏭️ [API] Reminder notification already exists, skipping')
                 }
               }
             } else {
@@ -283,7 +296,7 @@ export async function POST(request: Request) {
         
         if (userData && (userData.first_name || userData.last_name)) {
           customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
-          console.log('✅ [API] Customer name from users table:', customerName)
+          console.log('[API] Customer name resolved from users table')
         }
       }
       
@@ -292,11 +305,11 @@ export async function POST(request: Request) {
         const shippingAddress = typedOrder.shipping_address || {}
         console.log('📍 [API] Shipping address:', shippingAddress)
         customerName = shippingAddress.name || typedOrder.customer_email.split('@')[0] || 'Customer'
-        console.log('⚠️ [API] Using fallback customer name:', customerName)
+        console.log('[API] Using fallback customer name')
       }
       
       console.log('📧 [API] Sending order confirmation email...')
-      console.log('📧 [API] To:', typedOrder.customer_email, 'Name:', customerName, 'Order:', orderNumber)
+      console.log('[API] Sending order confirmation for order:', orderNumber)
       
       sendOrderConfirmationEmail({
         orderId: orderId,
@@ -324,7 +337,7 @@ export async function POST(request: Request) {
       } else {
         notificationData.order_id = orderId
         notificationData.customer_email = typedOrder.customer_email
-        console.log('🔔 [API] Creating notification for guest user:', typedOrder.customer_email)
+        console.log('[API] Creating notification for guest user')
       }
       
       const { error: notifError } = await supabase.from('notifications').insert(notificationData)

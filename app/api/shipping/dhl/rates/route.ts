@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { dhlClient } from '@/lib/dhl/client'
-import { verifyUserAuth } from '@/lib/auth/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,13 +7,10 @@ export const dynamic = 'force-dynamic'
  * POST /api/shipping/dhl/rates
  * Get shipping rates from DHL Express using flat POST /rates structure
  * NOTE: POST /rates uses flat customerDetails (no postalAddress/contactInformation wrappers)
- * Requires authentication — any logged-in user can query rates.
+ * Public endpoint — no auth required (used during checkout including guest checkout).
  */
 export async function POST(request: Request) {
   try {
-    const auth = await verifyUserAuth(request)
-    if (!auth.ok) return auth.response
-
     const body = await request.json()
 
     // Validate required fields

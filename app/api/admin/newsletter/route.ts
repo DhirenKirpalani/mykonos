@@ -1,43 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyAdminAuth } from '@/lib/auth/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    
+
     if (!supabaseServiceKey) {
       throw new Error('Service role key not configured')
-    }
-
-    // Get auth token from request headers
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Create client with anon key to verify user
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
-      }
-    })
-
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
     }
 
     // Use service role key for data operations
@@ -95,39 +71,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    
+
     if (!supabaseServiceKey) {
       throw new Error('Service role key not configured')
-    }
-
-    // Get auth token from request headers
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Create client with anon key to verify user
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
-      }
-    })
-
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
     }
 
     // Use service role key for data operations
@@ -172,39 +123,14 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    
+
     if (!supabaseServiceKey) {
       throw new Error('Service role key not configured')
-    }
-
-    // Get auth token from request headers
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Create client with anon key to verify user
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
-      }
-    })
-
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
     }
 
     // Use service role key for data operations

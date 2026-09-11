@@ -166,7 +166,17 @@ export function HeaderMobile() {
         }
         
         if (data) {
-          const formattedNotifications = data.map((notif: any) => ({
+          // Deduplicate notifications by title + message (keep most recent)
+          const seen = new Map<string, any>()
+          for (const notif of data) {
+            const key = `${notif.title}|${notif.message}`
+            if (!seen.has(key)) {
+              seen.set(key, notif)
+            }
+          }
+          const dedupedData = Array.from(seen.values())
+
+          const formattedNotifications = dedupedData.map((notif: any) => ({
             id: notif.id,
             title: notif.title,
             message: notif.message,
@@ -303,7 +313,7 @@ export function HeaderMobile() {
       <header className="sticky top-10 z-50 w-full bg-luxury-navy text-white lg:hidden relative border-b border-white/10">
         <nav className="container mx-auto px-4">
           <div className="flex h-14 items-center justify-between">
-            <button className="flex h-9 w-9 items-center justify-center transition-all hover:bg-white/10">
+            <button className="flex h-11 w-11 items-center justify-center transition-all hover:bg-white/10">
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
             <Link href="/" className="absolute left-1/2 -translate-x-1/2">
@@ -324,7 +334,7 @@ export function HeaderMobile() {
         <div className="flex h-14 items-center justify-between">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex h-9 w-9 items-center justify-center transition-all hover:bg-white/10 active:scale-95 focus:outline-none"
+            className="flex h-11 w-11 items-center justify-center transition-all hover:bg-white/10 active:scale-95 focus:outline-none"
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-menu"
@@ -350,7 +360,7 @@ export function HeaderMobile() {
               onClick={() => {
                 setCartOpen(true)
               }}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10 hover:bg-white/10"
+              className="relative flex h-11 w-11 items-center justify-center rounded-lg transition-all active:scale-95 hover:bg-white/10"
               aria-label="Shopping Cart"
             >
               <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
@@ -363,7 +373,7 @@ export function HeaderMobile() {
             <Link 
               href="/account"
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-all active:scale-95 md:h-10 md:w-10 font-semibold text-sm",
+                "flex h-11 w-11 items-center justify-center rounded-lg transition-all active:scale-95 font-semibold text-sm",
                 pathname.startsWith('/account')
                   ? "bg-white/10 text-luxury-gold"
                   : "text-white hover:bg-white/10"

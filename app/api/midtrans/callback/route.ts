@@ -112,13 +112,13 @@ export async function GET(request: NextRequest) {
           
           if (userData && (userData.first_name || userData.last_name)) {
             customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
-            console.log('✅ [CALLBACK] Customer name from users table:', customerName)
+            console.log('[CALLBACK] Customer name resolved from users table')
           }
         }
         if (customerName === 'Customer') {
           const addr = typedOrder.shipping_address || {}
           customerName = addr.full_name || typedOrder.customer_email?.split('@')[0] || 'Customer'
-          console.log('⚠️ [CALLBACK] Using fallback customer name:', customerName)
+          console.log('[CALLBACK] Using fallback customer name')
         }
         
         // Send email immediately (BLOCKING to ensure it completes)
@@ -127,8 +127,8 @@ export async function GET(request: NextRequest) {
           console.error('❌ [CALLBACK] Order data:', typedOrder)
         } else {
           console.log('\n📧 [CALLBACK] SENDING PAYMENT SUCCESS EMAIL')
-          console.log('📧 [CALLBACK] To:', typedOrder.customer_email)
-          console.log('📧 [CALLBACK] Name:', customerName)
+          console.log('[CALLBACK] Sending payment success email')
+          
           console.log('📧 [CALLBACK] Order:', typedOrder.order_number)
           console.log('📧 [CALLBACK] Order ID:', typedOrder.id)
           

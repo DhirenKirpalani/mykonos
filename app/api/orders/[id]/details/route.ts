@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { verifyAdminAuth } from '@/lib/auth/admin-auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -10,6 +11,9 @@ export async function GET(
 ) {
   console.log('🔄 [API ORDER DETAILS] Route called for order ID:', params.id)
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {

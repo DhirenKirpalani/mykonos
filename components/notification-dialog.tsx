@@ -118,6 +118,33 @@ export function NotificationDialog({
     return date.toLocaleDateString()
   }
 
+  // Group notifications by date label
+  const getDateLabel = (date: Date): string => {
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / 86400000)
+    if (days < 1) return 'Today'
+    if (days < 2) return 'Yesterday'
+    if (days < 7) return 'This Week'
+    return 'Earlier'
+  }
+
+  const groupedNotifications = (() => {
+    const groups: { label: string; items: Notification[] }[] = []
+    const labelMap = new Map<string, number>()
+    for (const n of displayedNotifications) {
+      const label = getDateLabel(n.timestamp)
+      const idx = labelMap.get(label)
+      if (idx === undefined) {
+        labelMap.set(label, groups.length)
+        groups.push({ label, items: [n] })
+      } else {
+        groups[idx].items.push(n)
+      }
+    }
+    return groups
+  })()
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -170,30 +197,37 @@ export function NotificationDialog({
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {displayedNotifications.map((notification) => (
+                  {groupedNotifications.map((group) => (
+                    <div key={group.label}>
+                      <div className="bg-gray-50/95 px-4 py-1.5 border-b border-gray-100">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{group.label}</span>
+                      </div>
+                      {group.items.map((notification) => (
                     <motion.div key={notification.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className={cn("group relative transition-all", !notification.read && "bg-luxury-gold/5 border-l-4 border-luxury-gold")}>
-                      <div onClick={() => handleNotificationClick(notification)} className="flex gap-3 p-4 cursor-pointer active:bg-gray-50">
-                        <div className={cn("flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full", getIconColor(notification.type))}>
+                      className={cn("group relative transition-all", !notification.read && "bg-luxury-gold/5")}>
+                      <div onClick={() => handleNotificationClick(notification)} className="flex gap-3 px-4 py-3 cursor-pointer active:bg-gray-50">
+                        <div className={cn("flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full", getIconColor(notification.type))}>
                           {getIcon(notification.type)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <h3 className={cn("text-sm font-montserrat font-semibold leading-tight", notification.read ? "text-gray-700" : "text-luxury-navy")}>
+                          <div className="flex items-start justify-between gap-2 mb-0.5">
+                            <h3 className={cn("text-sm font-montserrat font-semibold leading-tight", notification.read ? "text-gray-600" : "text-luxury-navy")}>
                               {translateNotification(notification).title}
                             </h3>
                             {!notification.read && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-luxury-gold mt-1" />}
                           </div>
-                          <p className={cn("text-sm font-montserrat line-clamp-2 leading-relaxed", notification.read ? "text-gray-500" : "text-gray-700")}>
+                          <p className={cn("text-xs font-montserrat line-clamp-2 leading-relaxed mb-1.5", notification.read ? "text-gray-400" : "text-gray-600")}>
                             {translateNotification(notification).message}
                           </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <p className="text-xs text-gray-400">{formatTimestamp(notification.timestamp)}</p>
-                            {notification.link && <span className="text-xs text-luxury-gold">{t.notifications.viewDetails} →</span>}
+                          <div className="flex items-center gap-3">
+                            <p className="text-[11px] text-gray-400">{formatTimestamp(notification.timestamp)}</p>
+                            {notification.link && <span className="text-[11px] text-luxury-gold font-medium">{t.notifications.viewDetails} →</span>}
                           </div>
                         </div>
                       </div>
                     </motion.div>
+                      ))}
+                    </div>
                   ))}
                   {hasMore && (
                     <div className="p-4 text-center">
@@ -260,23 +294,29 @@ export function NotificationDialog({
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {displayedNotifications.map((notification) => (
+                  {groupedNotifications.map((group) => (
+                    <div key={group.label}>
+                      {/* Date section header */}
+                      <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm px-4 py-1.5 border-b border-gray-100">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{group.label}</span>
+                      </div>
+                      {group.items.map((notification) => (
                     <motion.div
                       key={notification.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       className={cn(
                         "group relative transition-all",
-                        !notification.read && "bg-luxury-gold/5 border-l-4 border-luxury-gold"
+                        !notification.read && "bg-luxury-gold/5"
                       )}
                     >
-                      <div 
+                      <div
                         onClick={() => handleNotificationClick(notification)}
-                        className="flex gap-3 p-4 cursor-pointer hover:bg-gray-50/80 transition-colors"
+                        className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50/80 transition-colors"
                       >
                         {/* Icon */}
                         <div className={cn(
-                          "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full transition-transform group-hover:scale-110",
+                          "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-transform group-hover:scale-110",
                           getIconColor(notification.type)
                         )}>
                           {getIcon(notification.type)}
@@ -284,31 +324,29 @@ export function NotificationDialog({
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex items-start justify-between gap-2 mb-0.5">
                             <h3 className={cn(
                               "text-sm font-montserrat font-semibold leading-tight",
-                              notification.read ? "text-gray-700" : "text-luxury-navy"
+                              notification.read ? "text-gray-600" : "text-luxury-navy"
                             )}>
                               {translateNotification(notification).title}
                             </h3>
                             {!notification.read && (
-                              <div className="flex items-center gap-1">
-                                <span className="h-2 w-2 flex-shrink-0 rounded-full bg-luxury-gold animate-pulse" />
-                              </div>
+                              <span className="h-2 w-2 flex-shrink-0 rounded-full bg-luxury-gold mt-1" />
                             )}
                           </div>
                           <p className={cn(
-                            "text-sm font-montserrat line-clamp-2 leading-relaxed",
-                            notification.read ? "text-gray-500" : "text-gray-700"
+                            "text-xs font-montserrat line-clamp-2 leading-relaxed mb-1.5",
+                            notification.read ? "text-gray-400" : "text-gray-600"
                           )}>
                             {translateNotification(notification).message}
                           </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <p className="text-xs text-gray-400 font-medium">
+                          <div className="flex items-center gap-3">
+                            <p className="text-[11px] text-gray-400 font-medium">
                               {formatTimestamp(notification.timestamp)}
                             </p>
                             {notification.link && (
-                              <span className="text-xs text-luxury-gold group-hover:underline">
+                              <span className="text-[11px] text-luxury-gold group-hover:underline font-medium">
                                 {t.notifications.viewDetails} →
                               </span>
                             )}
@@ -322,15 +360,17 @@ export function NotificationDialog({
                               e.stopPropagation()
                               onMarkAsRead(notification.id)
                             }}
-                            className="flex-shrink-0 rounded-full p-2 opacity-0 transition-all hover:bg-luxury-gold/20 group-hover:opacity-100 hover:scale-110"
+                            className="flex-shrink-0 rounded-full p-1.5 opacity-0 transition-all hover:bg-luxury-gold/20 group-hover:opacity-100 hover:scale-110"
                             aria-label="Mark as read"
                             title="Mark as read"
                           >
-                            <Check className="h-4 w-4 text-luxury-gold" />
+                            <Check className="h-3.5 w-3.5 text-luxury-gold" />
                           </button>
                         )}
                       </div>
                     </motion.div>
+                      ))}
+                    </div>
                   ))}
                   
                   {/* Load More Button */}

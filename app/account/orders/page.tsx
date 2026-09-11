@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Package, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Package, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn, formatPrice } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { Pagination } from '@/components/Pagination'
 
 type Order = {
   id: string
@@ -121,12 +122,27 @@ export default function OrdersPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  if (!user) return null
-
   if (authLoading || isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-luxury-gold/30 border-t-luxury-gold" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+        <Package className="h-12 w-12 text-gray-300 mb-4" />
+        <h2 className="font-playfair text-2xl font-bold text-luxury-navy mb-2">
+          {t.account?.orders || 'Orders'}
+        </h2>
+        <p className="text-sm text-gray-500 mb-6 max-w-sm">
+          {t.account?.loginToViewOrders || 'Please sign in to view your order history.'}
+        </p>
+        <Link href="/login" className="inline-flex items-center justify-center rounded-full bg-luxury-navy px-8 py-3 text-sm font-montserrat font-semibold text-white transition-all hover:bg-luxury-navy/90 active:scale-95">
+          {t.auth?.signIn || 'Sign In'}
+        </Link>
       </div>
     )
   }
@@ -229,6 +245,7 @@ export default function OrdersPage() {
                         sizes="(max-width: 640px) 64px, 80px"
                         className="object-contain rounded-lg bg-gray-50 p-1"
                         loading="lazy"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; const sib = (e.target as HTMLImageElement).nextElementSibling; if (sib) sib.classList.remove('hidden') }}
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
@@ -290,66 +307,15 @@ export default function OrdersPage() {
       })}
 
       {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-6 pb-2">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="flex items-center gap-1 px-3 py-2 rounded-md border border-border/40 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-luxury-gray-light transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="text-sm hidden sm:inline">{t.common?.previous || 'Previous'}</span>
-          </button>
-
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(page => {
-                // Show first, last, current, and adjacent pages
-                return page === 1 || 
-                       page === totalPages || 
-                       Math.abs(page - currentPage) <= 1
-              })
-              .map((page, idx, arr) => {
-                // Add ellipsis
-                const prevPage = arr[idx - 1]
-                const showEllipsis = prevPage && page - prevPage > 1
-                
-                return (
-                  <div key={page} className="flex items-center gap-1">
-                    {showEllipsis && <span className="px-2 text-gray-400">...</span>}
-                    <button
-                      onClick={() => handlePageChange(page)}
-                      className={cn(
-                        'w-8 h-8 sm:w-10 sm:h-10 rounded-md text-sm font-medium transition-colors',
-                        page === currentPage
-                          ? 'bg-luxury-gold text-white'
-                          : 'border border-border/40 hover:bg-luxury-gray-light'
-                      )}
-                    >
-                      {page}
-                    </button>
-                  </div>
-                )
-              })}
-          </div>
-
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="flex items-center gap-1 px-3 py-2 rounded-md border border-border/40 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-luxury-gray-light transition-colors"
-          >
-            <span className="text-sm hidden sm:inline">{t.common?.next || 'Next'}</span>
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Page info */}
-      {totalOrders > 0 && (
-        <p className="text-center text-sm text-muted-foreground pb-4">
-          {t.common?.showing || 'Showing'} {((currentPage - 1) * ORDERS_PER_PAGE) + 1}-{Math.min(currentPage * ORDERS_PER_PAGE, totalOrders)} {t.common?.of || 'of'} {totalOrders} {totalOrders === 1 ? t.account.order || 'order' : t.account.orders || 'orders'}
-        </p>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalOrders}
+        itemsPerPage={ORDERS_PER_PAGE}
+        onPageChange={handlePageChange}
+        itemLabel={totalOrders === 1 ? (t.account?.order || 'order') : (t.account?.orders || 'orders')}
+        className="mt-6"
+      />
     </div>
   )
 }

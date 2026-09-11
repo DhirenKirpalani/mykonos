@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ChevronDown } from 'lucide-react'
+import { sanitizeHtml } from '@/lib/utils/sanitize'
 
 interface CollapsibleDescriptionProps {
   description: string
@@ -30,7 +31,7 @@ export function CollapsibleDescription({ description }: CollapsibleDescriptionPr
               WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 50%, transparent 100%)' : 'none',
               maskImage: !isExpanded ? 'linear-gradient(to bottom, black 50%, transparent 100%)' : 'none'
             }}
-            dangerouslySetInnerHTML={{ __html: description }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(description) }}
           />
         </div>
         

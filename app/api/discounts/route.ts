@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyAdminAuth } from '@/lib/auth/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * Get all discounts
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -82,6 +86,9 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const supabase = createClient(supabaseUrl, supabaseServiceKey)

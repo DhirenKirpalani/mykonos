@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
+import { verifyAdminAuth } from '@/lib/auth/admin-auth'
 export const dynamic = 'force-dynamic'
 
 /**
@@ -11,18 +12,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
 
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { id } = params
     const body = await request.json()

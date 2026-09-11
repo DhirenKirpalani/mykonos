@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase/client'
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth'
 
 interface PromoCode {
   id: string
@@ -42,7 +43,7 @@ export default function PromoCodesPage() {
 
   const fetchPromoCodes = async () => {
     try {
-      const response = await fetch('/api/promo-codes')
+      const response = await fetchWithAuth('/api/promo-codes')
       if (response.ok) {
         const data = await response.json()
         setPromoCodes(data)
@@ -82,7 +83,7 @@ export default function PromoCodesPage() {
 
   const handleDuplicate = async (promo: PromoCode) => {
     try {
-      const response = await fetch('/api/promo-codes', {
+      const response = await fetchWithAuth('/api/promo-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

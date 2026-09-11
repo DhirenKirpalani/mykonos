@@ -53,18 +53,39 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [pendingVariantName, setPendingVariantName] = useState<string | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isInWishlist, setIsInWishlist] = useState(false)
 
-  // Check auth status on mount
+  // Check auth status and wishlist on mount
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      setIsLoggedIn(!!session && !session.user.is_anonymous)
+      const loggedIn = !!session && !session.user.is_anonymous
+      setIsLoggedIn(loggedIn)
+
+      // Check if product is already in wishlist
+      if (loggedIn) {
+        const { data: wishlistItem } = await supabase
+          .from('wishlist_items')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .eq('product_id', productId)
+          .maybeSingle()
+        setIsInWishlist(!!wishlistItem)
+      }
     }
     checkAuth()
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       checkAuth()
     })
-    return () => subscription.unsubscribe()
+
+    // Listen for wishlist updates (add/remove from wishlist modal)
+    const handleWishlistUpdate = () => checkAuth()
+    window.addEventListener('wishlist-updated', handleWishlistUpdate)
+
+    return () => {
+      subscription.unsubscribe()
+      window.removeEventListener('wishlist-updated', handleWishlistUpdate)
+    }
   }, [])
 
   // Check if product is out of stock
@@ -274,6 +295,7 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         // Show success toast
         const variantText = selectedVariants?.variant_name ? ` (${selectedVariants.variant_name})` : ''
         toast.success(`${productName}${variantText} added to wishlist!`)
+        setIsInWishlist(true)
         // Dispatch event to update wishlist badge
         window.dispatchEvent(new Event('wishlist-updated'))
       }
@@ -464,16 +486,16 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
           {isAddingToCart ? t('common.loading') : t('product.addToCart')}
         </Button>
         {isLoggedIn && (
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="w-full font-montserrat font-semibold uppercase tracking-wider py-3 text-base"
+          <Button
+            variant="outline"
+            size="lg"
+            className={`w-full font-montserrat font-semibold uppercase tracking-wider py-3 text-base ${isInWishlist ? 'border-red-400 text-red-500 hover:bg-red-50' : ''}`}
             onClick={() => handleAddToWishlist()}
-            disabled={isAddingToWishlist || isOutOfStock}
+            disabled={isAddingToWishlist || isOutOfStock || isInWishlist}
             style={isOutOfStock ? { pointerEvents: 'none' } : {}}
           >
-            <Heart className="mr-2 h-5 w-5" />
-            {isAddingToWishlist ? t('common.loading') : t('product.addToWishlist')}
+            <Heart className={`mr-2 h-5 w-5 ${isInWishlist ? 'fill-red-500 text-red-500' : ''}`} />
+            {isAddingToWishlist ? t('common.loading') : isInWishlist ? (t('product.inWishlist') || 'In Wishlist') : t('product.addToWishlist')}
           </Button>
         )}
       </div>
@@ -484,13 +506,13 @@ export function ProductDetailClient({ productId, productName, productSlug, minQu
         {/* Wishlist Icon - only for logged-in users */}
         {isLoggedIn && (
           <>
-            <button 
+            <button
               onClick={() => handleAddToWishlist()}
-              disabled={isAddingToWishlist || isOutOfStock}
+              disabled={isAddingToWishlist || isOutOfStock || isInWishlist}
               style={isOutOfStock ? { pointerEvents: 'none' } : {}}
-              className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+              className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 border rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 ${isInWishlist ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
             >
-              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+              <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${isInWishlist ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
             </button>
             
             {/* Divider */}

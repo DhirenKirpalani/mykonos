@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useRegion } from '@/contexts/RegionContext'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { PaymentMethods } from '@/components/PaymentMethods'
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth'
 import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/common'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
@@ -134,6 +135,7 @@ export default function CheckoutPage() {
   const [userId, setUserId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
@@ -2193,6 +2195,7 @@ export default function CheckoutPage() {
   }
 
   const handleSaveAddress = async () => {
+    setIsSavingAddress(true)
     try {
       // Auto-validate with DHL before saving
       // Warnings are non-blocking — address still saves, user sees toast warnings
@@ -2238,6 +2241,8 @@ export default function CheckoutPage() {
     } catch (error: any) {
       console.error('Failed to update address:', error)
       toast.error('Failed to update address')
+    } finally {
+      setIsSavingAddress(false)
     }
   }
 
@@ -2480,6 +2485,41 @@ export default function CheckoutPage() {
     )
   }
 
+  // Empty cart state
+  if (allItems.length === 0 && !isLoading) {
+    return (
+      <div className="min-h-screen bg-white font-montserrat">
+        <div className="border-b border-border/40 bg-luxury-gray-light py-10 md:py-12">
+          <div className="container mx-auto px-4 lg:px-8">
+            <h1 className="mb-2 font-montserrat text-4xl font-bold lg:text-5xl">
+              {t.checkout.title}
+            </h1>
+            <p className="font-playfair text-lg text-muted-foreground">0 {t.checkout.items}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
+            <svg className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h2 className="font-playfair text-2xl font-bold text-luxury-navy mb-2">
+            {t.cart?.empty || 'Your cart is empty'}
+          </h2>
+          <p className="text-sm text-gray-500 mb-8 max-w-sm">
+            {t.cart?.emptyDescription || 'Looks like you haven\'t added any products yet. Explore our collection of luxury fragrances.'}
+          </p>
+          <Link
+            href="/products"
+            className="inline-flex items-center justify-center rounded-full bg-luxury-navy px-8 py-3.5 text-sm font-montserrat font-semibold text-white transition-all hover:bg-luxury-navy/90 active:scale-95"
+          >
+            {t.cart?.shopNow || 'Shop Now'}
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white font-montserrat">
       {/* Hero Header */}
@@ -2509,65 +2549,6 @@ export default function CheckoutPage() {
           <p className="font-playfair text-lg text-muted-foreground">
             {allItems.reduce((sum, item) => sum + item.quantity, 0)} {allItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? t.checkout.item : t.checkout.items}
           </p>
-        </div>
-      </div>
-
-      {/* Checkout Progress Indicator */}
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="flex items-center justify-center gap-2 sm:gap-4">
-          {/* Step 1: Address */}
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
-              selectedAddressId || isGuest
-                ? 'bg-luxury-navy text-white'
-                : 'bg-gray-200 text-gray-500'
-            }`}>
-              {selectedAddressId || isGuest ? (
-                <CheckCircle2 className="h-5 w-5" />
-              ) : '1'}
-            </div>
-            <span className={`text-sm font-medium hidden sm:inline ${
-              selectedAddressId || isGuest ? 'text-gray-900' : 'text-gray-500'
-            }`}>
-              {t.checkout.stepAddress}
-            </span>
-          </div>
-          {/* Connector */}
-          <div className={`h-px w-8 sm:w-16 ${selectedAddressId || isGuest ? 'bg-luxury-navy' : 'bg-gray-200'}`} />
-          {/* Step 2: Review */}
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
-              allItems.length > 0
-                ? 'bg-luxury-navy text-white'
-                : 'bg-gray-200 text-gray-500'
-            }`}>
-              {allItems.length > 0 ? (
-                <CheckCircle2 className="h-5 w-5" />
-              ) : '2'}
-            </div>
-            <span className={`text-sm font-medium hidden sm:inline ${
-              allItems.length > 0 ? 'text-gray-900' : 'text-gray-500'
-            }`}>
-              {t.checkout.stepReview}
-            </span>
-          </div>
-          {/* Connector */}
-          <div className={`h-px w-8 sm:w-16 ${isProcessing ? 'bg-luxury-navy' : 'bg-gray-200'}`} />
-          {/* Step 3: Payment */}
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
-              isProcessing
-                ? 'bg-luxury-navy text-white'
-                : 'bg-gray-200 text-gray-500'
-            }`}>
-              3
-            </div>
-            <span className={`text-sm font-medium hidden sm:inline ${
-              isProcessing ? 'text-gray-900' : 'text-gray-500'
-            }`}>
-              {t.checkout.stepPayment}
-            </span>
-          </div>
         </div>
       </div>
 
@@ -2878,10 +2859,10 @@ export default function CheckoutPage() {
                         <Button
                           type="button"
                           onClick={handleSaveAddress}
-                          disabled={isValidating || !editForm.postal_code || !editForm.city || !editForm.address_line1}
+                          disabled={isValidating || isSavingAddress || !editForm.postal_code || !editForm.city || !editForm.address_line1}
                           className="flex-1 bg-luxury-navy hover:bg-luxury-navy-light"
                         >
-                          {t.checkout.saveChanges}
+                          {isSavingAddress ? 'Saving...' : t.checkout.saveChanges}
                         </Button>
                       </div>
                     </div>

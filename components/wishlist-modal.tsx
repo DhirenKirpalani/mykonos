@@ -561,16 +561,17 @@ export function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
               if (!region) return null
               return (
                 <div className="border-t border-gray-200 px-6 sm:px-8 py-4">
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600">{t.cart.subtotal}</span>
-                      <span className="text-sm font-medium text-gray-900">{formatPrice(wishlistSubtotal, region)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                  <div className="flex items-center justify-between mb-4">
                     <span className="text-base font-semibold text-gray-900">{t.cart.total}</span>
                     <span className="text-xl font-bold text-gray-900">{formatPrice(wishlistSubtotal, region)}</span>
                   </div>
+                  <Link
+                    href="/products"
+                    onClick={onClose}
+                    className="block w-full bg-luxury-navy text-white py-3.5 text-center text-sm font-semibold uppercase rounded-lg transition-all duration-300 hover:bg-luxury-navy/90"
+                  >
+                    {t.wishlist.continueShopping || 'Continue Shopping'}
+                  </Link>
                 </div>
               )
             })()}

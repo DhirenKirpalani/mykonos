@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Plus, Search, Edit, Trash2, Calendar, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth'
 
 interface Discount {
   id: string
@@ -43,7 +44,7 @@ export default function DiscountsPage() {
 
   const fetchDiscountDetails = async (discountId: string) => {
     try {
-      const response = await fetch(`/api/discounts/${discountId}/products`)
+      const response = await fetchWithAuth(`/api/discounts/${discountId}/products`)
       if (response.ok) {
         const data = await response.json()
         setDiscountDetails(prev => new Map(prev).set(discountId, data))
@@ -59,7 +60,7 @@ export default function DiscountsPage() {
 
   const fetchDiscounts = async () => {
     try {
-      const response = await fetch('/api/discounts')
+      const response = await fetchWithAuth('/api/discounts')
       if (response.ok) {
         const data = await response.json()
         setDiscounts(data)
@@ -73,7 +74,7 @@ export default function DiscountsPage() {
 
   const deleteDiscount = async (discountId: string, discountName: string) => {
     try {
-      const response = await fetch(`/api/discounts/${discountId}`, {
+      const response = await fetchWithAuth(`/api/discounts/${discountId}`, {
         method: 'DELETE',
       })
       
@@ -93,7 +94,7 @@ export default function DiscountsPage() {
 
   const duplicateDiscount = async (discountId: string, discountName: string) => {
     try {
-      const response = await fetch(`/api/discounts/${discountId}/duplicate`, {
+      const response = await fetchWithAuth(`/api/discounts/${discountId}/duplicate`, {
         method: 'POST',
       })
       
