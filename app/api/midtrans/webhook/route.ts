@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
         
         if (userData && (userData.first_name || userData.last_name)) {
           customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
-          console.log('✅ [WEBHOOK] Customer name from users table:', customerName)
+          console.log('[WEBHOOK] Customer name resolved from users table')
         }
       }
       
@@ -254,13 +254,13 @@ export async function POST(request: NextRequest) {
       if (customerName === 'Customer') {
         const shippingAddress = typedOrder.shipping_address || {}
         customerName = shippingAddress.full_name || typedOrder.customer_email?.split('@')[0] || 'Customer'
-        console.log('⚠️ [WEBHOOK] Using fallback customer name:', customerName)
+        console.log('[WEBHOOK] Using fallback customer name')
       }
       
       // Send email notification for payment status update
       console.log('\n🔍 [WEBHOOK EMAIL DEBUG] Starting email check...')
-      console.log('🔍 [WEBHOOK EMAIL DEBUG] Customer Email:', typedOrder.customer_email)
-      console.log('🔍 [WEBHOOK EMAIL DEBUG] Customer Name:', customerName)
+      console.log('[WEBHOOK] Email check started')
+      
       console.log('🔍 [WEBHOOK EMAIL DEBUG] Transaction Status:', transaction_status)
       console.log('🔍 [WEBHOOK EMAIL DEBUG] Payment Status:', typedOrder.payment_status)
       

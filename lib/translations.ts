@@ -179,6 +179,10 @@ export const translations = {
       empty: "Your wishlist is empty",
       emptyDescription: "Save your favorite items here",
       continueShopping: "Continue Shopping",
+      addToCart: "Add to Cart",
+      remove: "Remove",
+      outOfStock: "Out of Stock",
+      adding: "Adding..."
     },
     cart: {
       title: "Cart",
@@ -269,6 +273,7 @@ export const translations = {
       buyNow: "Buy Now",
       addToCart: "Add to Cart",
       addToWishlist: "Add to Wishlist",
+      inWishlist: "In Wishlist",
       removeFromWishlist: "Remove from Wishlist",
       outOfStock: "Out of Stock",
       inStock: "In Stock",
@@ -1089,6 +1094,7 @@ export const translations = {
       buyNow: "Beli Sekarang",
       addToCart: "Tambah ke Keranjang",
       addToWishlist: "Tambah ke Wishlist",
+      inWishlist: "Di Wishlist",
       removeFromWishlist: "Hapus dari Wishlist",
       outOfStock: "Stok Habis",
       inStock: "Tersedia",

@@ -6,6 +6,7 @@ import { ArrowLeft, Save, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth'
 
 interface DiscountProduct {
   id: string
@@ -171,7 +172,7 @@ export default function EditDiscountPage() {
 
   const fetchDiscount = async () => {
     try {
-      const response = await fetch(`/api/discounts/${discountId}`)
+      const response = await fetchWithAuth(`/api/discounts/${discountId}`)
       if (response.ok) {
         const data = await response.json()
         setFormData({
@@ -225,7 +226,7 @@ export default function EditDiscountPage() {
       const startDateUTC = new Date(formData.start_date + ':00+07:00').toISOString()
       const endDateUTC = new Date(formData.end_date + ':00+07:00').toISOString()
 
-      const response = await fetch(`/api/discounts/${discountId}`, {
+      const response = await fetchWithAuth(`/api/discounts/${discountId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

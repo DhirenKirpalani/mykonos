@@ -8,6 +8,7 @@ import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { ArrowLeft, Info, ChevronDown, Truck, Droplets } from 'lucide-react'
 import Link from 'next/link'
 import { ProductImageGallery } from '@/components/product-image-gallery'
+import { sanitizeHtml } from '@/lib/utils/sanitize'
 import { ProductPriceDisplay } from '@/components/ProductPriceDisplay'
 import { ProductShippingInfo } from '@/components/ProductShippingInfo'
 import { ExpandableSpecifications } from '@/components/ExpandableSpecifications'
@@ -21,18 +22,14 @@ export const dynamic = 'force-dynamic'
 
 type Product = Database['public']['Tables']['products']['Row']
 
-async function getProduct(slug: string) {
+async function getProduct(slug: string): Promise<{ data: Product | null; error: any }> {
   const { data, error } = await supabase
     .from('products')
     .select('*')
     .eq('slug', slug)
     .single() as { data: Product | null; error: any }
 
-  if (error || !data) {
-    return null
-  }
-
-  return data
+  return { data, error }
 }
 
 async function getRelatedProducts(fragranceFamily: string, currentId: string) {
@@ -60,6 +57,7 @@ export default function ProductDetailPage({
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [activeDiscounts, setActiveDiscounts] = useState<Map<string, any>>(new Map())
   const [popularProducts, setPopularProducts] = useState<Product[]>([])
   const [showDescription, setShowDescription] = useState(false)
@@ -73,7 +71,13 @@ export default function ProductDetailPage({
 
   useEffect(() => {
     async function loadProduct() {
-      const productData = await getProduct(params.slug)
+      const { data: productData, error } = await getProduct(params.slug)
+      if (error && error.code !== 'PGRST116') {
+        // Network/database error, not a 404
+        setLoadError(true)
+        setLoading(false)
+        return
+      }
       if (!productData) {
         notFound()
       }
@@ -128,6 +132,20 @@ export default function ProductDetailPage({
     }
     loadProduct()
   }, [params.slug])
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <p className="text-sm text-gray-500 max-w-sm">Could not load this product. Please try again.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center justify-center rounded-full border border-gray-300 px-6 py-2.5 text-sm font-montserrat font-semibold text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white active:scale-95"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   if (loading || !product) {
     return <LoadingSpinner />
@@ -261,6 +279,8 @@ export default function ProductDetailPage({
                 <div>
                   <button
                     onClick={() => setShowDescription(v => !v)}
+                    aria-expanded={showDescription}
+                    aria-controls="panel-description"
                     className="w-full flex items-center gap-4 py-4 text-left"
                   >
                     <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
@@ -271,11 +291,14 @@ export default function ProductDetailPage({
                   </button>
                   {showDescription && (
                     <div
+                      id="panel-description"
                       className="pb-5 pl-12 pr-2 text-sm font-montserrat text-gray-600 leading-6 [&_p]:mb-2 [&_p:empty]:hidden [&_p:empty]:m-0 [&_br+br]:hidden"
                       dangerouslySetInnerHTML={{
-                        __html: product.description
-                          .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '')
-                          .replace(/(<br\s*\/?>[\s\n]*){2,}/gi, '<br>')
+                        __html: sanitizeHtml(
+                          product.description
+                            .replace(/<p>(\s|&nbsp;)*<\/p>/gi, '')
+                            .replace(/(<br\s*\/?>[\s\n]*){2,}/gi, '<br>')
+                        )
                       }}
                     />
                   )}
@@ -287,6 +310,8 @@ export default function ProductDetailPage({
                 <div>
                   <button
                     onClick={() => setShowFragranceNotes(v => !v)}
+                    aria-expanded={showFragranceNotes}
+                    aria-controls="panel-fragrance-notes"
                     className="w-full flex items-center gap-4 py-4 text-left"
                   >
                     <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
@@ -296,7 +321,7 @@ export default function ProductDetailPage({
                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showFragranceNotes ? 'rotate-180' : ''}`} />
                   </button>
                   {showFragranceNotes && (
-                    <div className="pb-5 pl-12 pr-2 divide-y divide-gray-100">
+                    <div id="panel-fragrance-notes" className="pb-5 pl-12 pr-2 divide-y divide-gray-100">
                       {(product as any).top_notes && (
                         <div className="flex gap-4 py-2.5">
                           <span className="w-32 flex-shrink-0 text-xs uppercase tracking-[0.12em] font-montserrat text-gray-400 pt-0.5">{productTranslations.topNotes}</span>
@@ -324,6 +349,8 @@ export default function ProductDetailPage({
               <div>
                 <button
                   onClick={() => setShowShipping(v => !v)}
+                  aria-expanded={showShipping}
+                  aria-controls="panel-shipping"
                   className="w-full flex items-center gap-4 py-4 text-left"
                 >
                   <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
@@ -333,7 +360,7 @@ export default function ProductDetailPage({
                   <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showShipping ? 'rotate-180' : ''}`} />
                 </button>
                 {showShipping && (
-                  <div className="pb-5 pl-12 pr-2">
+                  <div id="panel-shipping" className="pb-5 pl-12 pr-2">
                     <ProductShippingInfo product={product} />
                   </div>
                 )}

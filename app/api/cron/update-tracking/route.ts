@@ -204,5 +204,5 @@ async function sendDeliveryNotification(
   
   // You can create a separate sendDeliveryEmail function
   // For now, we'll skip email sending
-  console.log(`📧 Would send delivery email to ${order.customer_email}`)
+  console.log('[CRON] Would send delivery email for order:', order.order_number)
 }

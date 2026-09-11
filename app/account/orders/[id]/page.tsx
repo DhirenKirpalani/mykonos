@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/database.types'
 import { formatPrice } from '@/lib/utils'
@@ -535,6 +536,13 @@ export default function OrderDetailsPage() {
       {/* Hero Header */}
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
         <div className="container mx-auto px-4 lg:px-8">
+          {/* Mobile back button */}
+          <div className="mb-4 md:hidden">
+            <Link href="/account/orders" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-luxury-navy transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+              {t.account?.orders || 'Orders'}
+            </Link>
+          </div>
           <div className="mb-6 hidden md:block">
             <Breadcrumbs
               items={[
@@ -846,7 +854,7 @@ export default function OrderDetailsPage() {
                       src={displayImage}
                       alt={item.variant_name || item.product.name}
                       className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-lg flex-shrink-0 bg-gray-50 p-1"
-                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" stroke="%23999" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>') }}
                     />
                   ) : (
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex-shrink-0 bg-gray-100 flex items-center justify-center">

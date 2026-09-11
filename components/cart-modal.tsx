@@ -258,7 +258,7 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     return d ? d.discounted_price : null
   }
 
-  const subtotal = cartItems.reduce((sum, item) => {
+  const { subtotal, originalSubtotal } = cartItems.reduce((acc, item) => {
     let basePrice = region?.code === 'ID' && (item.product as any).price_idr 
       ? (item.product as any).price_idr 
       : (item.product as any).price_usd || 0
@@ -273,10 +273,13 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
     
     // Apply campaign discount if available
     const discounted = getItemDiscountedPrice(item)
-    const itemTotal = (discounted !== null ? discounted : basePrice) * item.quantity
-    return sum + itemTotal
-  }, 0)
+    const effectivePrice = discounted !== null ? discounted : basePrice
+    acc.subtotal += effectivePrice * item.quantity
+    acc.originalSubtotal += basePrice * item.quantity
+    return acc
+  }, { subtotal: 0, originalSubtotal: 0 })
   
+  const discountAmount = originalSubtotal - subtotal
   const total = subtotal
 
   const validateBeforeCheckout = () => {
@@ -564,12 +567,19 @@ export function CartModal({ isOpen, onClose }: CartModalProps) {
                   </div>
                 )}
 
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">{t.cart.subtotal}</span>
-                    <span className="text-sm font-medium text-gray-900">{region ? formatPrice(subtotal, region) : '...'}</span>
+                {/* Show subtotal + discount breakdown only when a campaign discount is applied */}
+                {discountAmount > 0 && (
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600">{t.cart.subtotal}</span>
+                      <span className="text-sm font-medium text-gray-900">{region ? formatPrice(originalSubtotal, region) : '...'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-green-600">{t.cart.discount || 'Discount'}</span>
+                      <span className="text-sm font-medium text-green-600">-{region ? formatPrice(discountAmount, region) : '...'}</span>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="mb-6 flex items-center justify-between border-t border-gray-100 pt-3">
                   <span className="text-lg font-semibold text-gray-900">{t.cart.total}</span>
                   <span className="text-2xl font-bold text-gray-900">{region ? formatPrice(total, region) : '...'}</span>

@@ -164,7 +164,17 @@ export function HeaderDesktop() {
         }
         
         if (data) {
-          const formattedNotifications = data.map((notif: any) => ({
+          // Deduplicate notifications by title + message (keep most recent)
+          const seen = new Map<string, any>()
+          for (const notif of data) {
+            const key = `${notif.title}|${notif.message}`
+            if (!seen.has(key)) {
+              seen.set(key, notif)
+            }
+          }
+          const dedupedData = Array.from(seen.values())
+
+          const formattedNotifications = dedupedData.map((notif: any) => ({
             id: notif.id,
             title: notif.title,
             message: notif.message,

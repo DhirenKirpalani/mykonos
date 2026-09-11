@@ -203,7 +203,7 @@ export async function PATCH(request: Request) {
       shipping_address 
     } = body
     
-    console.log('📥 [API] Update request:', { session_id, current_step, customer_email, shipping_address_id })
+    console.log('[API] Checkout session update:', { session_id, current_step })
 
     if (!session_id) {
       console.error('❌ [API] Missing session_id')

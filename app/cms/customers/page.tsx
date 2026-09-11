@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Search, Eye, Mail, Phone, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth'
 
 interface Customer {
   id?: string
@@ -29,7 +30,7 @@ export default function CustomersPage() {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/customers')
+      const response = await fetchWithAuth('/api/customers')
       if (response.ok) {
         const data = await response.json()
         setCustomers(data)

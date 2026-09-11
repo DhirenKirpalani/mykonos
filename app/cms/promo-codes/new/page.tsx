@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Search, X } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth'
 
 interface Product {
   id: string
@@ -118,7 +119,7 @@ export default function NewPromoCodePage() {
     setSaving(true)
 
     try {
-      const response = await fetch('/api/promo-codes', {
+      const response = await fetchWithAuth('/api/promo-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

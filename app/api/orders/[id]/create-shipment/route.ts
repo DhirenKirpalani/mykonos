@@ -4,6 +4,7 @@ import { sendOrderShippedEmail } from '@/lib/email/order-emails'
 import { dhlClient } from '@/lib/dhl/client'
 import { orderToShipmentRequest, getProductCode } from '@/lib/dhl/helpers'
 import type { DHLShipmentRequest } from '@/lib/dhl/types'
+import { verifyAdminAuth } from '@/lib/auth/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,9 @@ export async function POST(
   console.log('⏰ Timestamp:', new Date().toISOString())
   
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const supabase = createClient(supabaseUrl, supabaseServiceKey)

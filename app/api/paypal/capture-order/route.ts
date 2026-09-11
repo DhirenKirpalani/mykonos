@@ -42,15 +42,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing paypalOrderId or orderId' }, { status: 400 })
     }
 
-    // Check if order is already paid (idempotency guard)
+    // Check if order is already paid (idempotency guard) and get expected amount
     const { data: existingOrder } = await supabase
       .from('orders')
-      .select('payment_status')
+      .select('payment_status, total_amount, currency_code')
       .eq('id', orderId)
       .single()
 
     if (existingOrder?.payment_status === 'paid') {
       return NextResponse.json({ success: true, status: 'paid', orderId, message: 'Already paid' })
+    }
+
+    if (!existingOrder) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
     const accessToken = await getPayPalAccessToken()
@@ -82,6 +86,20 @@ export async function POST(request: NextRequest) {
     const paymentStatus = capture?.status
 
     if (paymentStatus === 'COMPLETED') {
+      // Verify captured amount matches order total to prevent underpayment attacks
+      const capturedAmount = parseFloat(capture?.amount?.value || '0')
+      const expectedAmount = parseFloat(existingOrder.total_amount || '0')
+      const currency = capture?.amount?.currency_code || existingOrder.currency_code
+      if (capturedAmount < expectedAmount) {
+        console.error(`[PAYPAL-CAPTURE] Amount mismatch: captured ${capturedAmount} ${currency}, expected ${expectedAmount} for order ${orderId}`)
+        await logPaymentAudit(orderId, 'capture.amount_mismatch', 'failed', {
+          paypal_order_id: paypalOrderId,
+          captured_amount: capturedAmount,
+          expected_amount: expectedAmount,
+        })
+        return NextResponse.json({ error: 'Payment amount does not match order total' }, { status: 400 })
+      }
+
       // Use atomic RPC to prevent double capture and complete reservation
       const { data: captureResult, error: captureError } = await supabase.rpc('capture_payment_safe', {
         p_order_id: orderId,

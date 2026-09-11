@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 import { sendOrderStatusUpdateEmail } from '@/lib/email/order-emails'
+import { verifyAdminAuth } from '@/lib/auth/admin-auth'
 export const dynamic = 'force-dynamic'
 
 /**
@@ -12,6 +13,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await verifyAdminAuth(request)
+    if (!auth.ok) return auth.response
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -92,7 +96,7 @@ export async function PATCH(
         
         if (userData && (userData.first_name || userData.last_name)) {
           customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
-          console.log('✅ [API] Customer name from users table:', customerName)
+          console.log('[API] Customer name resolved from users table')
         }
       }
       
@@ -100,7 +104,7 @@ export async function PATCH(
       if (customerName === 'Customer') {
         const shippingAddress = typedOrder.shipping_address || {}
         customerName = shippingAddress.full_name || typedOrder.customer_email?.split('@')[0] || 'Customer'
-        console.log('⚠️ [API] Using fallback customer name:', customerName)
+        console.log('[API] Using fallback customer name')
       }
       
       if (typedOrder.customer_email) {

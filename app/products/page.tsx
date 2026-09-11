@@ -26,6 +26,8 @@ function ProductsContent() {
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [isSoldOutLoading, setIsSoldOutLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [retryKey, setRetryKey] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -119,6 +121,7 @@ function ProductsContent() {
   useEffect(() => {
     async function fetchProducts() {
       setIsLoading(true)
+      setFetchError(null)
       const from = (currentPage - 1) * ITEMS_PER_PAGE
       const to = from + ITEMS_PER_PAGE - 1
 
@@ -212,6 +215,7 @@ function ProductsContent() {
 
       if (error || !data) {
         console.error('Error fetching products:', error)
+        setFetchError('Failed to load products. Please try again.')
         setProducts([])
         setTotalCount(0)
       } else {
@@ -222,7 +226,7 @@ function ProductsContent() {
     }
 
     fetchProducts()
-  }, [category, collection, isNew, filter, gender, sort, currentPage, debouncedSearchQuery, region])
+  }, [category, collection, isNew, filter, gender, sort, currentPage, debouncedSearchQuery, region, retryKey])
 
   useEffect(() => {
     // Skip sold-out fetch when price sorting (products query already includes them)
@@ -369,7 +373,7 @@ function ProductsContent() {
               <button
                 key={label}
                 onClick={onClick}
-                className={`relative flex-shrink-0 px-4 py-1.5 text-[11px] font-montserrat font-semibold uppercase tracking-[0.12em] transition-all duration-200 whitespace-nowrap ${
+                className={`relative flex-shrink-0 px-4 py-2.5 text-[11px] font-montserrat font-semibold uppercase tracking-[0.12em] transition-all duration-200 whitespace-nowrap ${
                   active
                     ? 'text-[#B8985F] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#B8985F] after:rounded-full'
                     : 'text-gray-500 hover:text-luxury-navy'
@@ -389,6 +393,16 @@ function ProductsContent() {
             {isLoading ? (
               <div className="flex min-h-[300px] items-center justify-center md:min-h-[400px]">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-luxury-navy"></div>
+              </div>
+            ) : fetchError ? (
+              <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 md:min-h-[400px]">
+                <p className="text-sm text-gray-500 text-center max-w-sm">{fetchError}</p>
+                <button
+                  onClick={() => setRetryKey(k => k + 1)}
+                  className="inline-flex items-center justify-center rounded-full border border-gray-300 px-6 py-2.5 text-sm font-montserrat font-semibold text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white active:scale-95"
+                >
+                  Retry
+                </button>
               </div>
             ) : products.length > 0 || soldOutProducts.length > 0 ? (
               <>
