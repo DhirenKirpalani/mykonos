@@ -89,7 +89,7 @@ export function PageTransitionSpinner() {
         {/* Brand Name */}
         <div className="relative">
           <h2
-            className="font-montserrat text-4xl font-normal tracking-[0.3em] md:text-5xl animate-pulse-subtle"
+            className="font-montserrat text-4xl font-semibold tracking-normal md:text-5xl animate-pulse-subtle"
             style={{ background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
           >
             MYKONOS
