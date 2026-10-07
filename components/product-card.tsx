@@ -407,10 +407,10 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
                       e.stopPropagation()
                       setCurrentImageIndex(prev => prev - 1)
                     }}
-                    className="group/arrow absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-[#B8985F] rounded-full p-1.5 shadow-md transition-all duration-200 active:scale-95"
+                    className="group/arrow absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-30 bg-luxury-navy hover:bg-luxury-navy-light rounded-full p-1.5 shadow-md transition-all duration-200 active:scale-95"
                     aria-label="Previous image"
                   >
-                    <ChevronLeft className="h-4 w-4 text-luxury-navy group-hover/arrow:text-white transition-colors duration-200" />
+                    <ChevronLeft className="h-4 w-4 text-white transition-colors duration-200" />
                   </button>
                 )}
                 {/* Right Arrow */}
@@ -421,10 +421,10 @@ export function ProductCard({ product, className, noBorder = false, activeDiscou
                       e.stopPropagation()
                       setCurrentImageIndex(prev => prev + 1)
                     }}
-                    className="group/arrow absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-[#B8985F] rounded-full p-1.5 shadow-md transition-all duration-200 active:scale-95"
+                    className="group/arrow absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-30 bg-luxury-navy hover:bg-luxury-navy-light rounded-full p-1.5 shadow-md transition-all duration-200 active:scale-95"
                     aria-label="Next image"
                   >
-                    <ChevronRight className="h-4 w-4 text-luxury-navy group-hover/arrow:text-white transition-colors duration-200" />
+                    <ChevronRight className="h-4 w-4 text-white transition-colors duration-200" />
                   </button>
                 )}
                 {/* Image Counter */}

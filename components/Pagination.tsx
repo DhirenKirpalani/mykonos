@@ -31,10 +31,22 @@ export function Pagination({ currentPage, totalPages, totalCount, itemsPerPage, 
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const getPageNumbers = () => {
+  const getPageNumbers = (compact = false) => {
     const pages: (number | string)[] = []
-    const showPages = 5
 
+    if (compact) {
+      // On very small screens: show prev, current, next only (e.g. 1 … 3 … 5)
+      if (totalPages <= 3) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i)
+      } else {
+        if (currentPage > 1) pages.push(currentPage - 1)
+        pages.push(currentPage)
+        if (currentPage < totalPages) pages.push(currentPage + 1)
+      }
+      return pages
+    }
+
+    const showPages = 5
     if (totalPages <= showPages) {
       for (let i = 1; i <= totalPages; i++) pages.push(i)
     } else {
@@ -65,15 +77,51 @@ export function Pagination({ currentPage, totalPages, totalCount, itemsPerPage, 
         </p>
       )}
 
-      <div className="flex items-center gap-1.5 md:gap-2">
+      {/* xs screens: compact 3-page layout */}
+      <div className="flex xs:hidden items-center gap-1">
+        <button
+          onClick={() => goToPage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        {getPageNumbers(true).map((page, index) => (
+          <button
+            key={`xs-${page}-${index}`}
+            onClick={() => goToPage(page as number)}
+            aria-label={`Page ${page}`}
+            aria-current={currentPage === page ? 'page' : undefined}
+            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-montserrat font-semibold transition-all active:scale-95 ${
+              currentPage === page
+                ? 'bg-luxury-navy text-white shadow-md'
+                : 'border border-gray-200 bg-white text-gray-600 hover:border-luxury-gold hover:text-luxury-gold'
+            }`}
+          >
+            {page}
+          </button>
+        ))}
+        <button
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+          aria-label="Next page"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* sm+ screens: full layout */}
+      <div className="hidden xs:flex items-center gap-1.5 md:gap-2">
         {/* Previous */}
         <button
           onClick={() => goToPage(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
           aria-label="Previous page"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </button>
 
         {/* Page Numbers */}
@@ -91,7 +139,7 @@ export function Pagination({ currentPage, totalPages, totalCount, itemsPerPage, 
               onClick={() => goToPage(page as number)}
               aria-label={`Page ${page}`}
               aria-current={currentPage === page ? 'page' : undefined}
-              className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-montserrat font-semibold transition-all active:scale-95 ${
+              className={`flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full text-xs sm:text-sm font-montserrat font-semibold transition-all active:scale-95 ${
                 currentPage === page
                   ? 'bg-luxury-navy text-white shadow-md'
                   : 'border border-gray-200 bg-white text-gray-600 hover:border-luxury-gold hover:text-luxury-gold'
@@ -106,10 +154,10 @@ export function Pagination({ currentPage, totalPages, totalCount, itemsPerPage, 
         <button
           onClick={() => goToPage(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-luxury-navy transition-all hover:border-luxury-navy hover:bg-luxury-navy hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
           aria-label="Next page"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </button>
       </div>
 
