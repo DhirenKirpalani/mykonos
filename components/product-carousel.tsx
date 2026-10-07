@@ -136,7 +136,7 @@ export function ProductCarousel({
               onClick={() => scroll('left')}
               aria-label="Previous products"
               type="button"
-              className="group/arrow absolute left-2 sm:left-3 top-1/2 z-20 -translate-y-1/2 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-sm shadow-lg p-2 sm:p-3 border border-[#e0e0e0] transition-all hover:bg-gradient-to-br hover:from-[#1A56DB] hover:via-[#1E3A8A] hover:to-[#B8985F] hover:border-transparent active:scale-95 cursor-pointer"
+              className="group/arrow absolute left-2 sm:left-3 top-1/2 z-20 -translate-y-1/2 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-sm shadow-lg p-2 sm:p-3 border border-[#e0e0e0] transition-all hover:bg-[#1C2E4A] hover:border-transparent active:scale-95 cursor-pointer"
             >
               <ChevronLeft size={18} className="sm:w-5 sm:h-5 text-[#1C2E4A] group-hover/arrow:text-white transition-colors" aria-hidden="true" />
             </button>
@@ -148,7 +148,7 @@ export function ProductCarousel({
               onClick={() => scroll('right')}
               aria-label="Next products"
               type="button"
-              className="group/arrow absolute right-2 sm:right-3 top-1/2 z-20 -translate-y-1/2 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-sm shadow-lg p-2 sm:p-3 border border-[#e0e0e0] transition-all hover:bg-gradient-to-br hover:from-[#1A56DB] hover:via-[#1E3A8A] hover:to-[#B8985F] hover:border-transparent active:scale-95 cursor-pointer"
+              className="group/arrow absolute right-2 sm:right-3 top-1/2 z-20 -translate-y-1/2 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-sm shadow-lg p-2 sm:p-3 border border-[#e0e0e0] transition-all hover:bg-[#1C2E4A] hover:border-transparent active:scale-95 cursor-pointer"
             >
               <ChevronRight size={18} className="sm:w-5 sm:h-5 text-[#1C2E4A] group-hover/arrow:text-white transition-colors" aria-hidden="true" />
             </button>
@@ -235,7 +235,7 @@ export function ProductCarousel({
               onClick={() => scroll('left')}
               aria-label="Previous products"
               type="button"
-              className="group/arrow absolute left-1 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm p-2 text-luxury-navy shadow-lg transition-all hover:bg-gradient-to-br hover:from-[#1A56DB] hover:via-[#1E3A8A] hover:to-[#B8985F] md:-left-4 lg:-left-6 md:p-2.5 lg:p-3 cursor-pointer active:scale-95"
+              className="group/arrow absolute left-1 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm p-2 text-[#1C2E4A] shadow-lg transition-all hover:bg-[#1C2E4A] md:-left-4 lg:-left-6 md:p-2.5 lg:p-3 cursor-pointer active:scale-95"
             >
               <ChevronLeft size={18} className="md:w-5 md:h-5 lg:h-6 lg:w-6 group-hover/arrow:text-white transition-colors" aria-hidden="true" />
             </button>
@@ -246,7 +246,7 @@ export function ProductCarousel({
               onClick={() => scroll('right')}
               aria-label="Next products"
               type="button"
-              className="group/arrow absolute right-1 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm p-2 text-luxury-navy shadow-lg transition-all hover:bg-gradient-to-br hover:from-[#1A56DB] hover:via-[#1E3A8A] hover:to-[#B8985F] md:-right-4 lg:-right-6 md:p-2.5 lg:p-3 cursor-pointer active:scale-95"
+              className="group/arrow absolute right-1 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm p-2 text-[#1C2E4A] shadow-lg transition-all hover:bg-[#1C2E4A] md:-right-4 lg:-right-6 md:p-2.5 lg:p-3 cursor-pointer active:scale-95"
             >
               <ChevronRight size={18} className="md:w-5 md:h-5 lg:h-6 lg:w-6 group-hover/arrow:text-white transition-colors" aria-hidden="true" />
             </button>
