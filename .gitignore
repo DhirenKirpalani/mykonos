@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# scripts directory (not part of the Next.js app)
+mykonos-apps-script/
+
 # dependencies
 /node_modules
 /.pnp
