@@ -169,36 +169,36 @@ export default function ContactPage() {
           <div className="order-2 lg:order-none">
             <p className="text-[10px] uppercase tracking-[0.25em] text-[#B8985F] mb-3">Get In Touch</p>
             <h2 className="font-playfair text-2xl font-bold text-black mb-8">Email</h2>
-            <form onSubmit={handleSubmit} className="space-y-7">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {[
                 { id: 'name', label: t.contact.name, placeholder: t.contact.yourName, value: formData.name, type: 'text', onChange: (v: string) => setFormData({ ...formData, name: v }) },
                 { id: 'email', label: t.contact.email, placeholder: t.contact.yourEmail, value: formData.email, type: 'text', onChange: (v: string) => setFormData({ ...formData, email: v }) },
               ].map(({ id, label, placeholder, value, type, onChange }) => (
                 <div key={id}>
-                  <label htmlFor={id} className="block text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2">{label}</label>
-                  <div className="border-b border-gray-200 focus-within:border-[#B8985F] transition-colors">
+                  <label htmlFor={id} className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-2">{label}</label>
+                  <div className="rounded-lg border border-gray-300 bg-white px-4 focus-within:border-[#B8985F] focus-within:ring-1 focus-within:ring-[#B8985F]/30 transition-all">
                     <input
                       type={type}
                       id={id}
                       value={value}
                       onChange={(e) => onChange(e.target.value)}
                       placeholder={placeholder}
-                      className="w-full bg-transparent py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none"
+                      className="w-full bg-transparent py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
                     />
                   </div>
                 </div>
               ))}
 
               <div>
-                <label htmlFor="message" className="block text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2">{t.contact.message}</label>
-                <div className="border-b border-gray-200 focus-within:border-[#B8985F] transition-colors">
+                <label htmlFor="message" className="block text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-2">{t.contact.message}</label>
+                <div className="rounded-lg border border-gray-300 bg-white px-4 focus-within:border-[#B8985F] focus-within:ring-1 focus-within:ring-[#B8985F]/30 transition-all">
                   <textarea
                     id="message"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     placeholder={t.contact.yourMessage}
                     rows={5}
-                    className="w-full bg-transparent py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none resize-none"
+                    className="w-full bg-transparent py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none resize-none"
                   />
                 </div>
               </div>

@@ -293,20 +293,25 @@ export function ProductVariantModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div 
-        className="relative w-full md:max-w-4xl md:mx-4 max-h-[80vh] sm:max-h-[85vh] overflow-y-auto bg-white rounded-t-2xl md:rounded-2xl shadow-2xl animate-slide-up md:animate-none"
+        className="relative w-full md:max-w-4xl md:mx-4 max-h-[88vh] sm:max-h-[85vh] flex flex-col bg-white rounded-t-3xl md:rounded-2xl shadow-2xl animate-slide-up md:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Drag handle — mobile only */}
+        <div className="flex justify-center pt-3 pb-1 md:hidden flex-shrink-0">
+          <div className="h-1 w-10 rounded-full bg-gray-200" />
+        </div>
+
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors md:top-4 md:right-4"
           aria-label="Close"
         >
-          <X className="h-4 w-4 text-gray-600" />
+          <X className="h-4 w-4 text-gray-500" />
         </button>
 
-        {/* Content */}
-        <div className="p-3 sm:p-5 md:p-8">
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto flex-1 px-4 pt-2 pb-8 sm:px-6 md:px-8 md:pt-6 md:pb-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
             {/* Product Image Carousel */}
             {(() => {
@@ -376,21 +381,16 @@ export function ProductVariantModal({
 
             {/* Product Details */}
             <div className="flex flex-col">
-              <div className="flex items-start gap-2 flex-wrap mb-2 pr-8 sm:pr-0">
-                <h2 className="text-sm sm:text-base md:text-2xl font-montserrat font-bold text-gray-900 leading-tight break-words flex-1">{product.name}</h2>
-                {(product as any).in_stock && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    In Stock
-                  </span>
-                )}
+              <div className="flex items-start gap-2 flex-wrap mb-3 pr-8 sm:pr-0">
+                <h2 className="text-base sm:text-lg md:text-2xl font-montserrat font-bold text-luxury-navy leading-tight break-words flex-1">{product.name}</h2>
               </div>
               
               {/* Pre-order Shipping Info */}
-              <div className="mb-3 flex items-start gap-2">
-                <svg className="mt-0.5 h-4 w-4 text-[#26AA99] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="mb-4 inline-flex items-start gap-2 bg-teal-50 border border-teal-100 rounded-xl px-3 py-2">
+                <svg className="mt-0.5 h-3.5 w-3.5 text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p className="text-xs md:text-sm text-gray-600">
+                <p className="text-xs text-teal-700 font-medium leading-snug">
                   {(() => {
                     const preOrderDays = (product as any).pre_order_duration_days || 30
                     const today = new Date()
@@ -410,14 +410,14 @@ export function ProductVariantModal({
 
               {/* Price */}
               {!hasVariants && (
-              <div className="mb-4 md:mb-6">
+              <div className="mt-1 mb-4 md:mb-6">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   {(voucher || (noVariantCampaign && noVariantCampaign.discounted_price < basePrice)) && (
-                    <span className="text-lg text-gray-400 line-through">
+                    <span className="text-base text-gray-400 line-through">
                       {formatPrice(basePrice * quantity, currencyCode)}
                     </span>
                   )}
-                  <span className="text-2xl md:text-3xl font-bold text-luxury-navy">
+                  <span className="text-2xl md:text-3xl font-bold text-luxury-gold">
                     {(() => {
                       const price = effectivePrice * (!hasVariants ? quantity : 1)
                       const voucherDiscount = voucher ? (
@@ -447,26 +447,28 @@ export function ProductVariantModal({
 
               {/* Quantity Selector for products without variants */}
               {!hasVariants && mode !== 'wishlist' && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.product.quantity}
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setQuantity(Math.max(minQty, quantity - 1))}
-                      disabled={quantity <= minQty}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="text-lg font-semibold min-w-[3rem] text-center">{quantity}</span>
-                    <button
-                      onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
-                      disabled={quantity >= maxQty}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-gray-300 hover:border-luxury-navy disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-montserrat font-medium text-gray-700">
+                      {t.product.quantity}
+                    </label>
+                    <div className="flex items-center gap-0 rounded-full border border-gray-200 bg-gray-50 p-0.5">
+                      <button
+                        onClick={() => setQuantity(Math.max(minQty, quantity - 1))}
+                        disabled={quantity <= minQty}
+                        className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
+                      >
+                        <Minus className="h-3.5 w-3.5 text-gray-700" />
+                      </button>
+                      <span className="text-base font-semibold min-w-[2.5rem] text-center text-luxury-navy">{quantity}</span>
+                      <button
+                        onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
+                        disabled={quantity >= maxQty}
+                        className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-white hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
+                      >
+                        <Plus className="h-3.5 w-3.5 text-gray-700" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -591,92 +593,91 @@ export function ProductVariantModal({
               )}
 
 
-              {/* Action Buttons */}
-              <div className="space-y-3 mt-auto">
-                {mode === 'wishlist' ? (
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider py-3 md:py-6 text-sm md:text-base"
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
-                        {t.common.loading}
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        <ShoppingCart className="h-5 w-5" />
-                        {t.product.addToWishlist} {selectedVariants.size > 0 && `(${selectedVariants.size})`}
-                      </span>
-                    )}
-                  </Button>
-                ) : mode === 'buy-now' ? (
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-montserrat font-semibold uppercase tracking-wider py-3 md:py-6 text-sm md:text-base"
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
-                        {t.common.loading}
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        <Zap className="h-5 w-5" />
-                        {(() => {
-                          if (voucher) {
-                            // Calculate total net amount for all selected variants
-                            let totalNetAmount = 0
-                            if (hasVariants && selectedVariants.size > 0) {
-                              selectedVariants.forEach(({ variant, quantity }) => {
-                                const variantPrice = isIDR ? variant.price_idr : variant.price_usd
-                                const itemTotal = variantPrice * quantity
-                                const voucherDiscount = voucher.discount_type === 'percentage'
-                                  ? (itemTotal * voucher.discount_value / 100)
-                                  : voucher.discount_value
-                                totalNetAmount += itemTotal - voucherDiscount
-                              })
-                            } else {
-                              const itemTotal = effectivePrice * quantity
-                              const voucherDiscount = voucher.discount_type === 'percentage'
-                                ? (itemTotal * voucher.discount_value / 100)
-                                : voucher.discount_value
-                              totalNetAmount = itemTotal - voucherDiscount
-                            }
-                            return `${t.product.buyNow} with Voucher ${formatPrice(totalNetAmount, currencyCode)}`
-                          }
-                          return `${t.product.buyNow} ${selectedVariants.size > 0 ? `(${selectedVariants.size} ${selectedVariants.size === 1 ? t.product.variant : t.product.variants})` : ''}`
-                        })()}
-                      </span>
-                    )}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-                    className="w-full bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider py-3 md:py-6 text-sm md:text-base"
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
-                        {t.common.loading}
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        <ShoppingCart className="h-5 w-5" />
-                        {t.product.addToCart} {selectedVariants.size > 0 && `(${selectedVariants.size})`}
-                      </span>
-                    )}
-                  </Button>
-                )}
-              </div>
             </div>
           </div>
+        </div>
+
+        {/* Sticky Action Footer */}
+        <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3 sm:px-6 md:px-8 md:py-4">
+          {mode === 'wishlist' ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
+              className="w-full h-12 bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider rounded text-sm md:text-base"
+              size="lg"
+            >
+              {isProcessing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                  {t.common.loading}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <ShoppingCart className="h-4 w-4" />
+                  {t.product.addToWishlist} {selectedVariants.size > 0 && `(${selectedVariants.size})`}
+                </span>
+              )}
+            </Button>
+          ) : mode === 'buy-now' ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
+              className="w-full h-12 bg-luxury-navy hover:bg-luxury-navy-light active:bg-luxury-navy-dark text-white font-montserrat font-semibold uppercase tracking-wider rounded text-sm md:text-base"
+              size="lg"
+            >
+              {isProcessing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                  {t.common.loading}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center">
+                  {(() => {
+                    if (voucher) {
+                      let totalNetAmount = 0
+                      if (hasVariants && selectedVariants.size > 0) {
+                        selectedVariants.forEach(({ variant, quantity }) => {
+                          const variantPrice = isIDR ? variant.price_idr : variant.price_usd
+                          const itemTotal = variantPrice * quantity
+                          const voucherDiscount = voucher.discount_type === 'percentage'
+                            ? (itemTotal * voucher.discount_value / 100)
+                            : voucher.discount_value
+                          totalNetAmount += itemTotal - voucherDiscount
+                        })
+                      } else {
+                        const itemTotal = effectivePrice * quantity
+                        const voucherDiscount = voucher.discount_type === 'percentage'
+                          ? (itemTotal * voucher.discount_value / 100)
+                          : voucher.discount_value
+                        totalNetAmount = itemTotal - voucherDiscount
+                      }
+                      return `${t.product.buyNow} with Voucher ${formatPrice(totalNetAmount, currencyCode)}`
+                    }
+                    return `${t.product.buyNow} ${selectedVariants.size > 0 ? `(${selectedVariants.size} ${selectedVariants.size === 1 ? t.product.variant : t.product.variants})` : ''}`
+                  })()}
+                </span>
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
+              className="w-full h-12 bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider rounded text-sm md:text-base"
+              size="lg"
+            >
+              {isProcessing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                  {t.common.loading}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <ShoppingCart className="h-4 w-4" />
+                  {t.product.addToCart} {selectedVariants.size > 0 && `(${selectedVariants.size})`}
+                </span>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>

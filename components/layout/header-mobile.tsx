@@ -407,16 +407,16 @@ export function HeaderMobile() {
             role="navigation"
             aria-label="Mobile navigation"
           >
-          <div className="px-4 pt-6 pb-6">
+          <div className="px-3 pt-4 pb-4 xs:px-4 xs:pt-6 xs:pb-6">
             {/* MYKONOS Header */}
-            <div className="mb-6 pb-4 border-b border-white/10">
+            <div className="mb-4 pb-3 border-b border-white/10 xs:mb-6 xs:pb-4">
               <Link 
                 href="/" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-4 py-4"
+                className="block px-3 py-3 xs:px-4 xs:py-4"
               >
                 <span 
-                  className="font-montserrat text-2xl font-semibold tracking-normal transition-opacity hover:opacity-80"
+                  className="font-montserrat text-xl xs:text-2xl font-semibold tracking-normal transition-opacity hover:opacity-80"
                   style={{
                     background: 'linear-gradient(90deg, #D9B25E 0%, #FEE19D 50%, #D9B25E 100%)',
                     WebkitBackgroundClip: 'text',
@@ -444,7 +444,7 @@ export function HeaderMobile() {
                   role="menuitem"
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    "block px-4 py-4 text-base font-montserrat font-medium uppercase tracking-[0.12em] rounded-lg transition-colors mb-1",
+                    "block px-3 py-3 xs:px-4 xs:py-4 text-sm xs:text-base font-montserrat font-medium uppercase tracking-[0.12em] rounded-lg transition-colors mb-1",
                     active
                       ? "text-luxury-gold bg-white/[0.07]"
                       : "text-white/80 hover:text-white hover:bg-white/[0.04]"
@@ -465,7 +465,7 @@ export function HeaderMobile() {
                   setMobileMenuOpen(false)
                   setNotificationsOpen(true)
                 }}
-                className="flex items-center gap-3 w-full px-4 py-3.5 text-sm font-medium uppercase tracking-[0.12em] text-white/80 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                className="flex items-center gap-3 w-full px-3 py-3 xs:px-4 xs:py-3.5 text-xs xs:text-sm font-medium uppercase tracking-[0.12em] text-white/80 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
               >
                 <div className="relative flex-shrink-0">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -486,7 +486,7 @@ export function HeaderMobile() {
                     setMobileMenuOpen(false)
                     setWishlistOpen(true)
                   }}
-                  className="flex items-center gap-3 w-full px-4 py-3.5 text-sm font-medium uppercase tracking-[0.12em] text-white/80 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                  className="flex items-center gap-3 w-full px-3 py-3 xs:px-4 xs:py-3.5 text-xs xs:text-sm font-medium uppercase tracking-[0.12em] text-white/80 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
                 >
                   <div className="relative flex-shrink-0">
                     <Heart className="h-4 w-4" aria-hidden="true" />
@@ -512,24 +512,24 @@ export function HeaderMobile() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3.5 text-sm font-medium uppercase tracking-[0.12em] text-white/60 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                  className="flex items-center gap-3 px-3 py-3 xs:px-4 xs:py-3.5 text-xs xs:text-sm font-medium uppercase tracking-[0.12em] text-white/60 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
                 >
                   <Settings className="h-4 w-4 flex-shrink-0" />
                   {t.header.adminPanel || 'Admin Panel'}
                 </Link>
               )}
 
-              <div className="flex items-center gap-3 px-4 py-3.5">
+              <div className="flex items-center gap-3 px-3 py-2.5 xs:px-4 xs:py-3.5">
                 <Globe className="h-4 w-4 flex-shrink-0 text-white/60" />
-                <span className="text-sm font-medium uppercase tracking-[0.12em] text-white/60">{t.header.language}</span>
+                <span className="text-xs xs:text-sm font-medium uppercase tracking-[0.12em] text-white/60">{t.header.language}</span>
                 <div className="ml-auto">
                   <LanguageSwitcher />
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 px-4 py-3.5">
+              <div className="flex items-center gap-3 px-3 py-2.5 xs:px-4 xs:py-3.5">
                 <Globe className="h-4 w-4 flex-shrink-0 text-white/60" />
-                <span className="text-sm font-medium uppercase tracking-[0.12em] text-white/60">{t.header.region}</span>
+                <span className="text-xs xs:text-sm font-medium uppercase tracking-[0.12em] text-white/60">{t.header.region}</span>
                 <div className="ml-auto">
                   <RegionCurrencySelector />
                 </div>

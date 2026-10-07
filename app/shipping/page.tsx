@@ -3,14 +3,15 @@
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { usePageContent } from '@/hooks/usePageContent'
-import { PolicyPageRenderer } from '@/components/PolicyPageRenderer'
+import { PolicyPageRenderer, PolicySkeleton } from '@/components/PolicyPageRenderer'
 
 export default function ShippingPage() {
   const { t, locale } = useLanguage()
-  const { content } = usePageContent('shipping', locale)
+  const { content, updatedAt, loading } = usePageContent('shipping', locale)
 
+  if (loading) return <PolicySkeleton />
   if (content) {
-    return <PolicyPageRenderer content={content} breadcrumbHref="/shipping" />
+    return <PolicyPageRenderer content={content} breadcrumbHref="/shipping" updatedAt={updatedAt} />
   }
 
   return (

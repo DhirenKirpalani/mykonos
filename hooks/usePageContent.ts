@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 export function usePageContent(pageKey: string, locale: string) {
   const [content, setContent] = useState<any>(null)
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -10,11 +11,12 @@ export function usePageContent(pageKey: string, locale: string) {
       .then((d) => {
         if (d.success) {
           setContent(d.content?.[locale] || d.content?.en || null)
+          setUpdatedAt(d.updatedAt || null)
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [pageKey, locale])
 
-  return { content, loading }
+  return { content, loading, updatedAt }
 }
