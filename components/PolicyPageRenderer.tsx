@@ -2,6 +2,31 @@
 
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 
+export function PolicySkeleton() {
+  return (
+    <div className="min-h-screen bg-white animate-pulse">
+      <div className="border-b border-border/40 bg-luxury-gray-light py-12">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="h-10 w-56 rounded bg-gray-200 mb-3" />
+          <div className="h-4 w-36 rounded bg-gray-200" />
+        </div>
+      </div>
+      <div className="container mx-auto px-4 py-12 lg:px-8">
+        <div className="mx-auto max-w-4xl space-y-8">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-3">
+              <div className="h-6 w-48 rounded bg-gray-200" />
+              <div className="h-4 w-full rounded bg-gray-100" />
+              <div className="h-4 w-5/6 rounded bg-gray-100" />
+              <div className="h-4 w-4/6 rounded bg-gray-100" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface PolicySection {
   title: string
   type: 'paragraphs' | 'list' | 'numbered_list' | 'subsections' | 'contact'
@@ -23,10 +48,16 @@ interface PolicyContent {
 export function PolicyPageRenderer({
   content,
   breadcrumbHref,
+  updatedAt,
 }: {
   content: PolicyContent
   breadcrumbHref: string
+  updatedAt?: string | null
 }) {
+  const formattedDate = updatedAt
+    ? new Date(updatedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : (content.subtitle || null)
+
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-border/40 bg-luxury-gray-light py-12">
@@ -37,8 +68,10 @@ export function PolicyPageRenderer({
           <h1 className="font-playfair text-3xl font-bold tracking-[0.05em] text-luxury-navy md:text-4xl lg:text-5xl mb-4">
             {content.title}
           </h1>
-          {content.subtitle && (
-            <p className="font-montserrat text-sm text-gray-500 tracking-wide">{content.subtitle}</p>
+          {formattedDate && (
+            <p className="font-montserrat text-sm text-gray-500 tracking-wide">
+              {updatedAt ? `Last updated: ${formattedDate}` : formattedDate}
+            </p>
           )}
         </div>
       </div>

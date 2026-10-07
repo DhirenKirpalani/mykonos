@@ -311,7 +311,7 @@ export function ProductVariantModal({
         </button>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto flex-1 px-4 pt-2 pb-4 sm:px-6 md:px-8 md:pt-6">
+        <div className="overflow-y-auto flex-1 px-4 pt-2 pb-8 sm:px-6 md:px-8 md:pt-6 md:pb-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
             {/* Product Image Carousel */}
             {(() => {
@@ -410,7 +410,7 @@ export function ProductVariantModal({
 
               {/* Price */}
               {!hasVariants && (
-              <div className="mb-4 md:mb-6">
+              <div className="mt-1 mb-4 md:mb-6">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   {(voucher || (noVariantCampaign && noVariantCampaign.discounted_price < basePrice)) && (
                     <span className="text-base text-gray-400 line-through">
@@ -603,7 +603,7 @@ export function ProductVariantModal({
             <Button
               onClick={handleSubmit}
               disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-              className="w-full h-12 bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider rounded-xl text-sm md:text-base"
+              className="w-full h-12 bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider rounded text-sm md:text-base"
               size="lg"
             >
               {isProcessing ? (
@@ -622,7 +622,7 @@ export function ProductVariantModal({
             <Button
               onClick={handleSubmit}
               disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-              className="w-full h-12 bg-luxury-gold hover:bg-luxury-gold/90 text-luxury-navy font-montserrat font-semibold uppercase tracking-wider rounded-xl text-sm md:text-base"
+              className="w-full h-12 bg-luxury-navy hover:bg-luxury-navy-light active:bg-luxury-navy-dark text-white font-montserrat font-semibold uppercase tracking-wider rounded text-sm md:text-base"
               size="lg"
             >
               {isProcessing ? (
@@ -631,8 +631,7 @@ export function ProductVariantModal({
                   {t.common.loading}
                 </span>
               ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <Zap className="h-4 w-4" />
+                <span className="flex items-center justify-center">
                   {(() => {
                     if (voucher) {
                       let totalNetAmount = 0
@@ -663,7 +662,7 @@ export function ProductVariantModal({
             <Button
               onClick={handleSubmit}
               disabled={isProcessing || (hasVariants && selectedVariants.size === 0)}
-              className="w-full h-12 bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider rounded-xl text-sm md:text-base"
+              className="w-full h-12 bg-luxury-navy hover:bg-luxury-navy-light text-white font-montserrat font-semibold uppercase tracking-wider rounded text-sm md:text-base"
               size="lg"
             >
               {isProcessing ? (
